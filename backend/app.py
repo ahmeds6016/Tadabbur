@@ -16,22 +16,23 @@ from google.cloud import secretmanager
 PROJECT_ID = os.environ.get("GCP_PROJECT")
 LOCATION = os.environ.get("GCP_LOCATION", "us-central1")
 GEMINI_MODEL_ID = os.environ.get("GEMINI_MODEL_ID", "gemini-1.5-flash-001")
-FIREBASE_SECRET_SHORT_NAME = os.environ.get("FIREBASE_SECRET_NAME") 
+FIREBASE_SECRET_NAME = os.environ.get("FIREBASE_SECRET_NAME")  # Full secret name in Cloud Run env
+
+if not PROJECT_ID or not FIREBASE_SECRET_NAME:
+    raise ValueError("GCP_PROJECT and FIREBASE_SECRET_NAME environment variables must be set")
 
 # --- App Initialization ---
 app = Flask(__name__)
 
 # --- CORS Configuration ---
-# Allow requests from localhost (for dev) and any origin (for prod later)
-# Also allow Authorization header
-CORS(app, resources={r"/*": {"origins": ["http://localhost:3000", "*"]}}, supports_credentials=True)
+CORS(app, origins=["http://localhost:3000"], supports_credentials=True)
 
 # --- Firebase Initialization ---
 def initialize_firebase():
     """Initializes Firebase Admin SDK from Secret Manager."""
     try:
         client = secretmanager.SecretManagerServiceClient()
-        full_secret_name = f"projects/{PROJECT_ID}/secrets/{FIREBASE_SECRET_SHORT_NAME}/versions/latest"
+        full_secret_name = f"projects/{PROJECT_ID}/secrets/{FIREBASE_SECRET_NAME}/versions/latest"
         response = client.access_secret_version(name=full_secret_name)
         cred_json = json.loads(response.payload.data.decode("UTF-8"))
         cred = credentials.Certificate(cred_json)
@@ -74,14 +75,12 @@ def build_adaptive_prompt(user_profile, payload):
 
     if user_level == 'beginner':
         system_instruction += """
-        --- BEGINNER INSTRUCTIONS ---
         Explain all concepts in simple, clear English. Avoid complex theological jargon.
         Focus on the primary lesson and practical application for daily life.
         Define any Arabic terms used.
         """
     elif user_level == 'advanced':
         system_instruction += """
-        --- ADVANCED INSTRUCTIONS ---
         Include nuanced linguistic analysis (balagha) where relevant.
         Provide comparisons between the opinions of different mufassiren.
         Reference original Arabic terminology extensively.
@@ -91,19 +90,9 @@ def build_adaptive_prompt(user_profile, payload):
     return system_instruction, user_prompt
 
 # --- API Routes ---
-@app.route("/set_profile", methods=["POST", "OPTIONS"])
+@app.route("/set_profile", methods=["POST"])
 @firebase_auth_required
 def set_profile():
-    if request.method == "OPTIONS":
-        # Preflight request
-        response = app.make_response("")
-        response.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin", "*")
-        response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
-        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
-        response.headers["Access-Control-Allow-Credentials"] = "true"
-        return response
-
-    # Normal POST request
     uid = request.user['uid']
     data = request.get_json()
     level = data.get('level')
@@ -117,18 +106,9 @@ def set_profile():
     except Exception as e:
         return jsonify({"error": "Could not update profile", "details": str(e)}), 500
 
-@app.route("/tafsir", methods=["POST", "OPTIONS"])
+@app.route("/tafsir", methods=["POST"])
 @firebase_auth_required
 def tafsir_handler():
-    if request.method == "OPTIONS":
-        # Preflight request
-        response = app.make_response("")
-        response.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin", "*")
-        response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
-        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
-        response.headers["Access-Control-Allow-Credentials"] = "true"
-        return response
-
     uid = request.user['uid']
     payload = request.get_json()
 
@@ -138,14 +118,14 @@ def tafsir_handler():
         user_profile = user_doc.to_dict() if user_doc.exists else {}
 
         system_prompt, user_prompt = build_adaptive_prompt(user_profile, payload)
-        
+
         credentials, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
         auth_req = GoogleRequest()
         credentials.refresh(auth_req)
         token = credentials.token
 
         headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
-        
+
         VERTEX_ENDPOINT = f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/{PROJECT_ID}/locations/{LOCATION}/publishers/google/models/{GEMINI_MODEL_ID}:generateContent"
 
         body = {
@@ -166,4 +146,6 @@ def tafsir_handler():
         return jsonify({"error": "An error occurred", "details": str(e)}), 500
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
+    # Listen on the PORT environment variable provided by Cloud Run
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host="0.0.0.0", port=port)
