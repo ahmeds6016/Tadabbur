@@ -21,24 +21,19 @@ FIREBASE_SECRET_SHORT_NAME = os.environ.get("FIREBASE_SECRET_NAME")
 # --- App Initialization ---
 app = Flask(__name__)
 
-# --- Explicit CORS Configuration (The Fix) ---
-# This explicitly allows requests from your local development server.
-CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
+# --- Universal CORS Configuration (Development) ---
+# Allows requests from any origin
+CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
 # --- Firebase Initialization ---
 def initialize_firebase():
     """Initializes Firebase Admin SDK from Secret Manager."""
     try:
         client = secretmanager.SecretManagerServiceClient()
-        
-        # Construct the full resource name for the secret
         full_secret_name = f"projects/{PROJECT_ID}/secrets/{FIREBASE_SECRET_SHORT_NAME}/versions/latest"
-        
         response = client.access_secret_version(name=full_secret_name)
-
         secret_payload = response.payload.data.decode("UTF-8")
         cred_json = json.loads(secret_payload)
-        
         cred = credentials.Certificate(cred_json)
         firebase_admin.initialize_app(cred)
         print("Firebase App Initialized successfully.")
