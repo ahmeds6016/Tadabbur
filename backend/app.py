@@ -16,14 +16,13 @@ from google.cloud import secretmanager
 PROJECT_ID = os.environ.get("GCP_PROJECT")
 LOCATION = os.environ.get("GCP_LOCATION", "us-central1")
 GEMINI_MODEL_ID = os.environ.get("GEMINI_MODEL_ID", "gemini-1.5-flash-001")
-FIREBASE_SECRET_NAME = os.environ.get("FIREBASE_SECRET_NAME")
+FIREBASE_SECRET_SHORT_NAME = os.environ.get("FIREBASE_SECRET_NAME") 
 
 # --- App Initialization ---
 app = Flask(__name__)
 
-# --- Explicit CORS Configuration ---
-# This is the guaranteed fix. It tells our app to accept requests
-# from our local development server. We can add our deployed frontend URL here later.
+# --- Explicit CORS Configuration (The Fix) ---
+# This explicitly allows requests from your local development server.
 CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
 
 # --- Firebase Initialization ---
@@ -31,7 +30,12 @@ def initialize_firebase():
     """Initializes Firebase Admin SDK from Secret Manager."""
     try:
         client = secretmanager.SecretManagerServiceClient()
-        response = client.access_secret_version(name=FIREBASE_SECRET_NAME)
+        
+        # Construct the full resource name for the secret
+        full_secret_name = f"projects/{PROJECT_ID}/secrets/{FIREBASE_SECRET_SHORT_NAME}/versions/latest"
+        
+        response = client.access_secret_version(name=full_secret_name)
+
         secret_payload = response.payload.data.decode("UTF-8")
         cred_json = json.loads(secret_payload)
         
@@ -86,7 +90,7 @@ def build_adaptive_prompt(user_profile, payload):
         system_instruction += """
         --- ADVANCED INSTRUCTIONS ---
         Include nuanced linguistic analysis (balagha) where relevant.
-        Provide comparisons between the opinions of different mufassireen.
+        Provide comparisons between the opinions of different mufassiren.
         Reference original Arabic terminology extensively.
         """
 
