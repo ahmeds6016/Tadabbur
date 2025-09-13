@@ -1,0 +1,18 @@
+# Node.js dependencies
+/frontend/node_modules
+/frontend/.next
+/frontend/npm-debug.log*
+/frontend/yarn-debug.log*
+/frontend/yarn-error.log*
+/frontend/out
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Local environment files
+.env
+.env.local
+
+# Build artifacts
+/backend.zip
