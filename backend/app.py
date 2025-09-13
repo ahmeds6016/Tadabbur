@@ -2,7 +2,7 @@ import os
 import json
 from functools import wraps
 from flask import Flask, request, jsonify
-from flask_cors import CORS  # Import CORS
+from flask_cors import CORS  # CORS support
 
 import google.auth
 from google.auth.transport.requests import Request as GoogleRequest
@@ -21,9 +21,9 @@ FIREBASE_SECRET_SHORT_NAME = os.environ.get("FIREBASE_SECRET_NAME")
 # --- App Initialization ---
 app = Flask(__name__)
 
-# --- Universal CORS Configuration (Development) ---
-# Allows requests from any origin
-CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
+# --- Explicit CORS Configuration ---
+# Allows requests from your frontend
+CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}}, supports_credentials=True)
 
 # --- Firebase Initialization ---
 def initialize_firebase():
@@ -46,9 +46,12 @@ db = firestore.client()
 
 # --- Authentication Decorator ---
 def firebase_auth_required(f):
-    """A decorator to protect endpoints with Firebase Authentication."""
+    """Protect endpoints with Firebase Authentication and allow OPTIONS for CORS preflight."""
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        if request.method == "OPTIONS":
+            # Allow preflight requests
+            return jsonify({}), 200
         id_token = request.headers.get('Authorization', '').split('Bearer ')[-1]
         if not id_token:
             return jsonify({"error": "Authorization token is missing"}), 401
@@ -93,7 +96,7 @@ def build_adaptive_prompt(user_profile, payload):
     return system_instruction, user_prompt
 
 # --- API Routes ---
-@app.route("/set_profile", methods=["POST"])
+@app.route("/set_profile", methods=["POST", "OPTIONS"])
 @firebase_auth_required
 def set_profile():
     """Sets or updates a user's profile information."""
@@ -110,10 +113,10 @@ def set_profile():
     except Exception as e:
         return jsonify({"error": "Could not update profile", "details": str(e)}), 500
 
-@app.route("/tafsir", methods=["POST"])
+@app.route("/tafsir", methods=["POST", "OPTIONS"])
 @firebase_auth_required
 def tafsir_handler():
-    """The main endpoint to handle tafsir requests, now adaptive."""
+    """Main endpoint to handle tafsir requests, now adaptive."""
     uid = request.user['uid']
     payload = request.get_json()
 
@@ -130,7 +133,6 @@ def tafsir_handler():
         token = credentials.token
 
         headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
-        
         VERTEX_ENDPOINT = f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/{PROJECT_ID}/locations/{LOCATION}/publishers/google/models/{GEMINI_MODEL_ID}:generateContent"
 
         body = {
@@ -150,6 +152,6 @@ def tafsir_handler():
     except Exception as e:
         return jsonify({"error": "An error occurred", "details": str(e)}), 500
 
+# --- Run App ---
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
-
