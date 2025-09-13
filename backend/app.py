@@ -20,14 +20,17 @@ FIREBASE_SECRET_NAME = os.environ.get("FIREBASE_SECRET_NAME")
 
 # --- App Initialization ---
 app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
+
+# --- Explicit CORS Configuration ---
+# This is the guaranteed fix. It tells our app to accept requests
+# from our local development server. We can add our deployed frontend URL here later.
+CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
 
 # --- Firebase Initialization ---
 def initialize_firebase():
     """Initializes Firebase Admin SDK from Secret Manager."""
     try:
         client = secretmanager.SecretManagerServiceClient()
-        # The environment variable from Cloud Run will be the full resource name of the secret
         response = client.access_secret_version(name=FIREBASE_SECRET_NAME)
         secret_payload = response.payload.data.decode("UTF-8")
         cred_json = json.loads(secret_payload)
