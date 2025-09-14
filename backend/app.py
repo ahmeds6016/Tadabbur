@@ -32,7 +32,12 @@ def initialize_firebase():
     """Initializes Firebase Admin SDK from Secret Manager."""
     try:
         client = secretmanager.SecretManagerServiceClient()
+        print(f"PROJECT_ID from env: {PROJECT_ID}")
+        print(f"FIREBASE_SECRET_NAME from env: {FIREBASE_SECRET_NAME}")
+        
         full_secret_name = f"projects/{PROJECT_ID}/secrets/{FIREBASE_SECRET_NAME}/versions/latest"
+        print(f"Constructed secret name: {full_secret_name}")
+        
         response = client.access_secret_version(name=full_secret_name)
         cred_json = json.loads(response.payload.data.decode("UTF-8"))
         cred = credentials.Certificate(cred_json)
@@ -149,14 +154,3 @@ if __name__ == "__main__":
     # Listen on the PORT environment variable provided by Cloud Run
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port)
-def initialize_firebase():
-    try:
-        client = secretmanager.SecretManagerServiceClient()
-        print(f"PROJECT_ID from env: {PROJECT_ID}")
-        print(f"FIREBASE_SECRET_NAME from env: {FIREBASE_SECRET_NAME}")
-        
-        full_secret_name = f"projects/{PROJECT_ID}/secrets/{FIREBASE_SECRET_NAME}/versions/latest"
-        print(f"Constructed secret name: {full_secret_name}")
-        
-        response = client.access_secret_version(name=full_secret_name)
-        # ... rest of your code
