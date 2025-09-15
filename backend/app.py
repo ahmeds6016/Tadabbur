@@ -16,15 +16,12 @@ import traceback
 # --- Configuration ---
 PROJECT_ID = os.environ.get("GCP_PROJECT")
 LOCATION = os.environ.get("GCP_LOCATION", "us-central1")
-# CORRECTED to the generic, stable model code based on user research
 GEMINI_MODEL_ID = os.environ.get("GEMINI_MODEL_ID", "gemini-2.0-flash") 
 FIREBASE_SECRET_FULL_PATH = os.environ.get("FIREBASE_SECRET_FULL_PATH") 
 
 # --- App Initialization ---
 app = Flask(__name__)
-# Development CORS: allow all origins
 CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
-
 
 # --- Firebase Initialization ---
 def initialize_firebase():
@@ -32,14 +29,10 @@ def initialize_firebase():
     try:
         if not FIREBASE_SECRET_FULL_PATH:
             raise ValueError("CRITICAL STARTUP ERROR: FIREBASE_SECRET_FULL_PATH environment variable not set.")
-
-        print(f"INFO: Attempting to access secret at: {FIREBASE_SECRET_FULL_PATH}")
         client = secretmanager.SecretManagerServiceClient()
         response = client.access_secret_version(name=FIREBASE_SECRET_FULL_PATH)
-
         secret_payload = response.payload.data.decode("UTF-8")
         cred_json = json.loads(secret_payload)
-        
         cred = credentials.Certificate(cred_json)
         firebase_admin.initialize_app(cred)
         print("INFO: Firebase App Initialized successfully.")
@@ -65,7 +58,7 @@ def firebase_auth_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# --- Prompt Engineering (No changes needed) ---
+# --- Prompt Engineering ---
 def build_adaptive_prompt(user_profile, payload):
     user_level = user_profile.get('level', 'beginner')
     query = payload.get("query", "")
@@ -74,7 +67,13 @@ def build_adaptive_prompt(user_profile, payload):
     You are 'Tafsir Simplified', a specialized AI assistant for Qur'anic studies.
     You MUST ALWAYS return a single, valid JSON object and nothing else.
     Your knowledge sources are: Saheeh International, Ibn Kathir, Al-Qurtubi, Al-Jalalayn, and Al-Tabari.
-    The JSON output must strictly follow the required schema.
+    The JSON output must strictly follow this schema:
+    {
+      "verses": [{"surah": "string", "verse_number": "string", "text_saheeh_international": "string"}],
+      "tafsir_explanations": [{"source": "string", "explanation": "string"}],
+      "hadith_refs": [{"reference": "string", "grade": "string", "text_short": "string"}],
+      "lessons_practical_applications": [{"point": "string"}]
+    }
     """
     if user_level == 'beginner':
         system_instruction += """
@@ -91,6 +90,22 @@ def build_adaptive_prompt(user_profile, payload):
     return system_instruction, user_prompt
 
 # --- API Routes ---
+@app.route("/get_profile", methods=["GET"])
+@firebase_auth_required
+def get_profile():
+    """Gets a user's profile information."""
+    uid = request.user['uid']
+    try:
+        user_ref = db.collection('users').document(uid)
+        user_doc = user_ref.get()
+        if user_doc.exists:
+            return jsonify(user_doc.to_dict()), 200
+        else:
+            return jsonify({"error": "Profile not found"}), 404
+    except Exception as e:
+        print(f"ERROR in /get_profile: {type(e).__name__} - {e}")
+        return jsonify({"error": "Could not retrieve profile", "details": str(e)}), 500
+
 @app.route("/set_profile", methods=["POST"])
 @firebase_auth_required
 def set_profile():
@@ -112,43 +127,26 @@ def set_profile():
 def tafsir_handler():
     uid = request.user['uid']
     payload = request.get_json()
-    
     try:
         user_ref = db.collection('users').document(uid)
         user_doc = user_ref.get()
         user_profile = user_doc.to_dict() if user_doc.exists else {}
-        
         system_prompt, user_prompt = build_adaptive_prompt(user_profile, payload)
-        
         credentials, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
         auth_req = GoogleRequest()
         credentials.refresh(auth_req)
         token = credentials.token
-
         VERTEX_ENDPOINT = f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/{PROJECT_ID}/locations/{LOCATION}/publishers/google/models/{GEMINI_MODEL_ID}:generateContent"
-        
         body = {
             "system_instruction": {"parts": {"text": system_prompt}},
             "contents": {"role": "user", "parts": {"text": user_prompt}},
             "generation_config": {
-                "response_mime_type": "application/json",
-                "temperature": 0.2,
-                "maxOutputTokens": 2048,
+                "response_mime_type": "application/json", "temperature": 0.2, "maxOutputTokens": 2048,
             },
         }
-        
-        response = requests.post(
-            VERTEX_ENDPOINT,
-            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
-            json=body,
-            timeout=90
-        )
+        response = requests.post(VERTEX_ENDPOINT, headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"}, json=body, timeout=90)
         response.raise_for_status()
-
-        # Safely parse the complex Gemini response to extract the clean JSON content
         raw_response_json = response.json()
-        
-        # NEW ROBUST PARSING LOGIC
         if 'candidates' in raw_response_json and raw_response_json['candidates']:
             try:
                 generated_text = raw_response_json['candidates'][0]['content']['parts'][0]['text']
@@ -157,42 +155,20 @@ def tafsir_handler():
             except (KeyError, IndexError, json.JSONDecodeError) as e:
                 print(f"CRITICAL ERROR parsing Gemini response structure: {type(e).__name__} - {e}")
                 print(f"Raw Gemini Response: {raw_response_json}")
-                return jsonify({
-                    "error": "Failed to parse the structure of the AI's response.",
-                    "details": "The AI response format was unexpected."
-                }), 500
+                return jsonify({"error": "Failed to parse the structure of the AI's response."}), 500
         else:
-            # This handles cases where the AI returns no candidates (e.g., content safety block)
             print(f"WARNING: Gemini response received with no candidates. Raw Response: {raw_response_json}")
-            return jsonify({
-                "error": "The AI service returned an empty or blocked response.",
-                "details": "This may be due to the query violating safety policies."
-            }), 500
-
-
+            return jsonify({"error": "The AI service returned an empty or blocked response."}), 500
     except requests.exceptions.Timeout as timeout_err:
         print(f"CRITICAL ERROR in /tafsir: Timeout - {timeout_err}")
-        return jsonify({
-            "error": "The AI service took too long to respond.",
-            "details": "This can happen with very complex queries. Please try again or simplify your request."
-        }), 504 # 504 Gateway Timeout is the appropriate status code
-
+        return jsonify({"error": "The AI service took too long to respond."}), 504
     except requests.exceptions.HTTPError as http_err:
         print(f"CRITICAL ERROR in /tafsir: HTTPError - {http_err}, Response content: {http_err.response.text}")
-        return jsonify({
-            "error": "An HTTP error occurred while contacting the AI service.",
-            "details": http_err.response.text
-        }), http_err.response.status_code
-
+        return jsonify({"error": "An HTTP error occurred while contacting the AI service."}), http_err.response.status_code
     except Exception as e:
         print(f"CRITICAL ERROR in /tafsir: {type(e).__name__} - {e}")
         traceback.print_exc()
-        return jsonify({
-            "error": "An internal error occurred while contacting the AI service.",
-            "details": str(e)
-        }), 500
-
+        return jsonify({"error": "An internal error occurred while contacting the AI service."}), 500
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
-
