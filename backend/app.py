@@ -125,10 +125,8 @@ def tafsir_handler():
         credentials.refresh(auth_req)
         token = credentials.token
 
-        # This is the corrected, modern endpoint format for Gemini 2.0
         VERTEX_ENDPOINT = f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/{PROJECT_ID}/locations/{LOCATION}/publishers/google/models/{GEMINI_MODEL_ID}:generateContent"
         
-        # This is the corrected, modern body format for generateContent
         body = {
             "system_instruction": {"parts": {"text": system_prompt}},
             "contents": {"role": "user", "parts": {"text": user_prompt}},
@@ -147,8 +145,31 @@ def tafsir_handler():
         )
         response.raise_for_status()
 
-        response_json = response.json()
-        return response_json
+        # Safely parse the complex Gemini response to extract the clean JSON content
+        raw_response_json = response.json()
+        
+        try:
+            # The actual content is nested inside this structure
+            generated_text = raw_response_json['candidates'][0]['content']['parts'][0]['text']
+            # The model was instructed to return a JSON string, so we parse it again
+            final_json_response = json.loads(generated_text)
+            return jsonify(final_json_response)
+        
+        except (KeyError, IndexError, json.JSONDecodeError) as e:
+            print(f"CRITICAL ERROR parsing Gemini response: {type(e).__name__} - {e}")
+            print(f"Raw Gemini Response: {raw_response_json}")
+            # Return an error if the Gemini response is not in the expected format
+            return jsonify({
+                "error": "Failed to parse the response from the AI service.",
+                "details": "The AI response was not in the expected format."
+            }), 500
+
+    except requests.exceptions.Timeout as timeout_err:
+        print(f"CRITICAL ERROR in /tafsir: Timeout - {timeout_err}")
+        return jsonify({
+            "error": "The AI service took too long to respond.",
+            "details": "This can happen with very complex queries. Please try again or simplify your request."
+        }), 504 # 504 Gateway Timeout is the appropriate status code
 
     except requests.exceptions.HTTPError as http_err:
         print(f"CRITICAL ERROR in /tafsir: HTTPError - {http_err}, Response content: {http_err.response.text}")
