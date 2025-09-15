@@ -148,21 +148,27 @@ def tafsir_handler():
         # Safely parse the complex Gemini response to extract the clean JSON content
         raw_response_json = response.json()
         
-        try:
-            # The actual content is nested inside this structure
-            generated_text = raw_response_json['candidates'][0]['content']['parts'][0]['text']
-            # The model was instructed to return a JSON string, so we parse it again
-            final_json_response = json.loads(generated_text)
-            return jsonify(final_json_response)
-        
-        except (KeyError, IndexError, json.JSONDecodeError) as e:
-            print(f"CRITICAL ERROR parsing Gemini response: {type(e).__name__} - {e}")
-            print(f"Raw Gemini Response: {raw_response_json}")
-            # Return an error if the Gemini response is not in the expected format
+        # NEW ROBUST PARSING LOGIC
+        if 'candidates' in raw_response_json and raw_response_json['candidates']:
+            try:
+                generated_text = raw_response_json['candidates'][0]['content']['parts'][0]['text']
+                final_json_response = json.loads(generated_text)
+                return jsonify(final_json_response)
+            except (KeyError, IndexError, json.JSONDecodeError) as e:
+                print(f"CRITICAL ERROR parsing Gemini response structure: {type(e).__name__} - {e}")
+                print(f"Raw Gemini Response: {raw_response_json}")
+                return jsonify({
+                    "error": "Failed to parse the structure of the AI's response.",
+                    "details": "The AI response format was unexpected."
+                }), 500
+        else:
+            # This handles cases where the AI returns no candidates (e.g., content safety block)
+            print(f"WARNING: Gemini response received with no candidates. Raw Response: {raw_response_json}")
             return jsonify({
-                "error": "Failed to parse the response from the AI service.",
-                "details": "The AI response was not in the expected format."
+                "error": "The AI service returned an empty or blocked response.",
+                "details": "This may be due to the query violating safety policies."
             }), 500
+
 
     except requests.exceptions.Timeout as timeout_err:
         print(f"CRITICAL ERROR in /tafsir: Timeout - {timeout_err}")
@@ -189,3 +195,4 @@ def tafsir_handler():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
+
