@@ -16,21 +16,20 @@ from google.cloud import secretmanager
 PROJECT_ID = os.environ.get("GCP_PROJECT")
 LOCATION = os.environ.get("GCP_LOCATION", "us-central1")
 GEMINI_MODEL_ID = os.environ.get("GEMINI_MODEL_ID", "gemini-1.5-flash-001")
-# This variable will now hold the FULL path to the secret
 FIREBASE_SECRET_FULL_PATH = os.environ.get("FIREBASE_SECRET_FULL_PATH") 
 
 # --- App Initialization ---
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
-# --- Firebase Initialization (Simplified) ---
+# --- Firebase Initialization ---
 def initialize_firebase():
     """Initializes Firebase Admin SDK from a full secret path."""
     try:
         if not FIREBASE_SECRET_FULL_PATH:
-            raise ValueError("FIREBASE_SECRET_FULL_PATH environment variable not set.")
+            raise ValueError("CRITICAL STARTUP ERROR: FIREBASE_SECRET_FULL_PATH environment variable not set.")
 
-        print(f"Attempting to access secret at: {FIREBASE_SECRET_FULL_PATH}")
+        print(f"INFO: Attempting to access secret at: {FIREBASE_SECRET_FULL_PATH}")
         client = secretmanager.SecretManagerServiceClient()
         response = client.access_secret_version(name=FIREBASE_SECRET_FULL_PATH)
 
@@ -39,9 +38,10 @@ def initialize_firebase():
         
         cred = credentials.Certificate(cred_json)
         firebase_admin.initialize_app(cred)
-        print("Firebase App Initialized successfully.")
+        print("INFO: Firebase App Initialized successfully.")
     except Exception as e:
-        print(f"CRITICAL ERROR initializing Firebase: {e}")
+        # This enhanced logging is crucial for debugging
+        print(f"CRITICAL STARTUP ERROR in initialize_firebase: {type(e).__name__} - {e}")
         raise
 
 initialize_firebase()
@@ -62,32 +62,27 @@ def firebase_auth_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# --- Prompt Engineering ---
+# --- Prompt Engineering (No changes needed) ---
 def build_adaptive_prompt(user_profile, payload):
     user_level = user_profile.get('level', 'beginner')
     query = payload.get("query", "")
     approach = payload.get("approach", "tafsir")
-
     system_instruction = """
     You are 'Tafsir Simplified', a specialized AI assistant for Qur'anic studies.
     You MUST ALWAYS return a single, valid JSON object and nothing else.
     Your knowledge sources are: Saheeh International, Ibn Kathir, Al-Qurtubi, Al-Jalalayn, and Al-Tabari.
     The JSON output must strictly follow the required schema.
     """
-
     if user_level == 'beginner':
         system_instruction += """
         --- BEGINNER INSTRUCTIONS ---
         Explain all concepts in simple, clear English. Avoid complex theological jargon.
-        Focus on the primary lesson and practical application for daily life.
-        Define any Arabic terms used.
+        Focus on the primary lesson and practical application for daily life. Define any Arabic terms used.
         """
     elif user_level == 'advanced':
         system_instruction += """
         --- ADVANCED INSTRUCTIONS ---
-        Include nuanced linguistic analysis (balagha) where relevant.
-        Provide comparisons between the opinions of different mufassiren.
-        Reference original Arabic terminology extensively.
+        Include nuanced linguistic analysis (balagha) where relevant. Provide comparisons between different mufassireen. Reference original Arabic terminology.
         """
     user_prompt = f"User Level: '{user_level}'. Approach: '{approach}'. Query: '{query}'. Generate the JSON response now."
     return system_instruction, user_prompt
@@ -106,6 +101,7 @@ def set_profile():
         user_ref.set({'level': level}, merge=True)
         return jsonify({"status": "success", "uid": uid, "level": level}), 200
     except Exception as e:
+        print(f"ERROR in /set_profile: {type(e).__name__} - {e}")
         return jsonify({"error": "Could not update profile", "details": str(e)}), 500
 
 @app.route("/tafsir", methods=["POST"])
@@ -127,22 +123,14 @@ def tafsir_handler():
         headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
         VERTEX_ENDPOINT = f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/{PROJECT_ID}/locations/{LOCATION}/publishers/google/models/{GEMINI_MODEL_ID}:generateContent"
 
-        body = {
-            "system_instruction": {"parts": {"text": system_prompt}},
-            "contents": {"role": "user", "parts": {"text": user_prompt}},
-            "generation_config": {
-                "response_mime_type": "application/json",
-                "temperature": 0.2,
-                "maxOutputTokens": 2048,
-            },
-        }
+        body = { "system_instruction": {"parts": {"text": system_prompt}}, "contents": {"role": "user", "parts": {"text": user_prompt}}, "generation_config": { "response_mime_type": "application/json", "temperature": 0.2, "maxOutputTokens": 2048, }, }
         response = requests.post(VERTEX_ENDPOINT, headers=headers, json=body, timeout=90)
         response.raise_for_status()
         return response.json()
     except Exception as e:
-        return jsonify({"error": "An error occurred", "details": str(e)}), 500
+        # This enhanced logging is crucial for debugging
+        print(f"CRITICAL ERROR in /tafsir: {type(e).__name__} - {e}")
+        return jsonify({"error": "An internal error occurred while contacting the AI service.", "details": str(e)}), 500
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
-
-
