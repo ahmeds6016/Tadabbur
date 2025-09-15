@@ -11,6 +11,7 @@ import requests
 import firebase_admin
 from firebase_admin import credentials, auth, firestore
 from google.cloud import secretmanager
+import traceback
 
 # --- Configuration ---
 PROJECT_ID = os.environ.get("GCP_PROJECT")
@@ -82,7 +83,7 @@ def build_adaptive_prompt(user_profile, payload):
     elif user_level == 'advanced':
         system_instruction += """
         --- ADVANCED INSTRUCTIONS ---
-        Include nuanced linguistic analysis (balagha) where relevant. Provide comparisons between different mufassireen. Reference original Arabic terminology.
+        Include nuanced linguistic analysis (balagha) where relevant. Provide comparisons between different mufassiren. Reference original Arabic terminology.
         """
     user_prompt = f"User Level: '{user_level}'. Approach: '{approach}'. Query: '{query}'. Generate the JSON response now."
     return system_instruction, user_prompt
@@ -109,28 +110,84 @@ def set_profile():
 def tafsir_handler():
     uid = request.user['uid']
     payload = request.get_json()
+    
     try:
+        print("STEP 1: Fetching user profile from Firestore")
         user_ref = db.collection('users').document(uid)
         user_doc = user_ref.get()
         user_profile = user_doc.to_dict() if user_doc.exists else {}
+        print(f"DEBUG: user_profile = {user_profile}")
+
+        print("STEP 2: Building adaptive prompt")
         system_prompt, user_prompt = build_adaptive_prompt(user_profile, payload)
-        
+        print(f"DEBUG: system_prompt = {system_prompt[:100]}...")  # First 100 chars
+        print(f"DEBUG: user_prompt = {user_prompt[:100]}...")      # First 100 chars
+
+        print("STEP 3: Authenticating with Google")
         credentials, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
         auth_req = GoogleRequest()
         credentials.refresh(auth_req)
         token = credentials.token
+        print(f"DEBUG: Google token acquired (first 20 chars): {token[:20]}...")
 
-        headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
-        VERTEX_ENDPOINT = f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/{PROJECT_ID}/locations/{LOCATION}/publishers/google/models/{GEMINI_MODEL_ID}:generateContent"
+        VERTEX_ENDPOINT = (
+            f"https://{LOCATION}-aiplatform.googleapis.com/v1/"
+            f"projects/{PROJECT_ID}/locations/{LOCATION}/publishers/google/models/{GEMINI_MODEL_ID}:generateContent"
+        )
+        print(f"DEBUG: Vertex Endpoint = {VERTEX_ENDPOINT}")
 
-        body = { "system_instruction": {"parts": {"text": system_prompt}}, "contents": {"role": "user", "parts": {"text": user_prompt}}, "generation_config": { "response_mime_type": "application/json", "temperature": 0.2, "maxOutputTokens": 2048, }, }
-        response = requests.post(VERTEX_ENDPOINT, headers=headers, json=body, timeout=90)
+        body = {
+            "system_instruction": {"parts": {"text": system_prompt}},
+            "contents": {"role": "user", "parts": {"text": user_prompt}},
+            "generation_config": {
+                "response_mime_type": "application/json",
+                "temperature": 0.2,
+                "maxOutputTokens": 2048,
+            },
+        }
+        print(f"DEBUG: Request body prepared")
+
+        print("STEP 4: Sending request to Vertex AI")
+        response = requests.post(
+            VERTEX_ENDPOINT,
+            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+            json=body,
+            timeout=90
+        )
+        print(f"DEBUG: Response status code = {response.status_code}")
         response.raise_for_status()
-        return response.json()
+
+        print("STEP 5: Logging full Vertex AI response")
+        try:
+            response_json = response.json()
+            print(f"DEBUG: Vertex AI JSON response: {json.dumps(response_json, indent=2)[:1000]}...")  # First 1000 chars
+        except Exception as json_err:
+            print(f"ERROR parsing JSON from Vertex AI: {json_err}")
+            print(f"Raw response content: {response.text}")
+            return jsonify({
+                "error": "Received non-JSON response from Vertex AI",
+                "details": response.text
+            }), 500
+
+        print("STEP 6: Returning JSON response")
+        return response_json
+
+    except requests.exceptions.HTTPError as http_err:
+        print(f"HTTPError: {http_err}, Response content: {response.text}")
+        return jsonify({
+            "error": "HTTP error from Vertex AI",
+            "details": response.text
+        }), response.status_code
+
     except Exception as e:
-        # This enhanced logging is crucial for debugging
         print(f"CRITICAL ERROR in /tafsir: {type(e).__name__} - {e}")
-        return jsonify({"error": "An internal error occurred while contacting the AI service.", "details": str(e)}), 500
+        traceback.print_exc()
+        return jsonify({
+            "error": "An internal error occurred while contacting the AI service.",
+            "details": str(e)
+        }), 500
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
+
