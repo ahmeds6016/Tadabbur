@@ -4,70 +4,65 @@ import { initializeApp } from 'firebase/app';
 import { 
   getAuth, 
   onAuthStateChanged, 
+  createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword,
-  signOut
+  signOut 
 } from 'firebase/auth';
-import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore';
 
-// =================================================================
-// PASTE YOUR FIREBASE CONFIG OBJECT HERE
-// (The one you copied from the Firebase Console)
-// =================================================================
+// --- PASTE YOUR FIREBASE CONFIG OBJECT HERE ---
 const firebaseConfig = {
   apiKey: "AIzaSyBKPuVvuJC1bTUsZsZkiMHRoBRRqF6YqVU",
   authDomain: "tafsir-simplified-6b262.firebaseapp.com",
   projectId: "tafsir-simplified-6b262",
-  storageBucket: "tafsir-simplified-6b262.firebasestorage.app",
+  storageBucket: "tafsir-simplified-6b262.appspot.com",
   messagingSenderId: "69730898944",
   appId: "1:69730898944:web:ee2cbeee72be8d856474e5",
   measurementId: "G-7RZD1G66YH"
 };
-// =================================================================
+// ---------------------------------------------
 
-// --- BACKEND URL ---
-// PASTE YOUR DEPLOYED CLOUD RUN URL HERE
+// --- PASTE YOUR DEPLOYED CLOUD RUN URL HERE ---
 const BACKEND_URL = 'https://tafsir-backend-612616741510.us-central1.run.app';
-// ---
+// ---------------------------------------------
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const db = getFirestore(app);
-
 
 export default function HomePage() {
   const [user, setUser] = useState(null);
-  const [userProfile, setUserProfile] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
-
-  // --- Login State ---
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoginView, setIsLoginView] = useState(true);
+  const [error, setError] = useState('');
+  const [isSignUp, setIsSignUp] = useState(true);
+  
+  const [userLevel, setUserLevel] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // --- App State ---
-  const [approach, setApproach] = useState('tafsir');
-  const [query, setQuery] = useState('Surah An-Nas');
-  const [response, setResponse] = useState(null);
-  const [isQueryLoading, setIsQueryLoading] = useState(false);
+  // Fetches the user's saved level from the backend
+  const fetchUserLevel = async (currentUser) => {
+    if (!currentUser) return;
+    try {
+      const token = await currentUser.getIdToken();
+      const response = await fetch(`${BACKEND_URL}/get_profile`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('No profile found');
+      const data = await response.json();
+      if (data && data.level) {
+        setUserLevel(data.level);
+      }
+    } catch (err) {
+      console.log("User has no saved profile, will proceed to onboarding.");
+    }
+  };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      setUser(currentUser);
       if (currentUser) {
-        setUser(currentUser);
-        // Fetch user profile from Firestore
-        const userDocRef = doc(db, 'users', currentUser.uid);
-        const userDocSnap = await getDoc(userDocRef);
-        if (userDocSnap.exists()) {
-          setUserProfile(userDocSnap.data());
-        } else {
-          setUserProfile({}); // No profile set yet
-        }
+        await fetchUserLevel(currentUser);
       } else {
-        setUser(null);
-        setUserProfile(null);
+        setUserLevel(null);
       }
       setIsLoading(false);
     });
@@ -76,203 +71,192 @@ export default function HomePage() {
 
   const handleAuthAction = async (e) => {
     e.preventDefault();
-    setIsLoading(true);
     setError('');
     try {
-      if (isLoginView) {
-        await signInWithEmailAndPassword(auth, email, password);
-      } else {
+      if (isSignUp) {
         await createUserWithEmailAndPassword(auth, email, password);
+      } else {
+        await signInWithEmailAndPassword(auth, email, password);
       }
     } catch (err) {
       setError(err.message);
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const handleSetLevel = async (level) => {
-    if (!user) return;
-    setIsLoading(true);
     setError('');
+    if (!user) return;
     try {
-      const idToken = await user.getIdToken();
-      const res = await fetch(`${BACKEND_URL}/set_profile`, {
+      const token = await user.getIdToken();
+      const response = await fetch(`${BACKEND_URL}/set_profile`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`
-        },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ level }),
       });
-      if (!res.ok) throw new Error('Failed to set profile.');
-      setUserProfile({ level });
+      if (!response.ok) throw new Error('Failed to set level');
+      setUserLevel(level);
     } catch (err) {
       setError(err.message);
-    } finally {
-      setIsLoading(false);
     }
   };
-
-  const handleQuery = async (e) => {
-    e.preventDefault();
-    if (!user) return;
-    setIsQueryLoading(true);
-    setError('');
-    setResponse(null);
-    try {
-      const idToken = await user.getIdToken();
-      const res = await fetch(`${BACKEND_URL}/tafsir`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`
-        },
-        body: JSON.stringify({ approach, query }),
-      });
-      if (!res.ok) {
-         const errorData = await res.json();
-         throw new Error(errorData.error || 'Backend request failed.');
-      }
-      const data = await res.json();
-      setResponse(data.candidates[0].content.parts[0].text);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setIsQueryLoading(false);
-    }
-  };
-
-  // --- RENDER LOGIC ---
-
+  
   if (isLoading) {
-    return <div className="loading-spinner"></div>;
+    return <div className="container"><div className="card"><h1>Loading...</h1></div></div>;
   }
 
-  // 1. If user is NOT logged in, show the Login/Sign Up form
   if (!user) {
     return (
-      <main>
-        <div className="container">
-          <h1>Welcome to Tafsir Simplified</h1>
-          <h3>{isLoginView ? 'Sign In' : 'Create an Account'}</h3>
-          <form onSubmit={handleAuthAction}>
-            <div className="form-group">
-              <label htmlFor="email">Email</label>
-              <input type="email" id="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-            </div>
-            <div className="form-group">
-              <label htmlFor="password">Password</label>
-              <input type="password" id="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-            </div>
-            <button type="submit">{isLoginView ? 'Sign In' : 'Sign Up'}</button>
-          </form>
-          <button onClick={() => setIsLoginView(!isLoginView)}>
-            {isLoginView ? 'Need an account? Sign Up' : 'Have an account? Sign In'}
-          </button>
-          {error && <p className="error-message">{error}</p>}
-        </div>
-      </main>
-    );
-  }
-  
-  // 2. If user IS logged in but has NOT set their level, show the onboarding
-  if (!userProfile?.level) {
-    return (
-      <main>
-        <div className="container">
-          <h2>Welcome, {user.email}!</h2>
-          <p>Please select your knowledge level to personalize your experience.</p>
-          <button onClick={() => handleSetLevel('beginner')}>I'm just starting my journey</button>
-          <button onClick={() => handleSetLevel('intermediate')}>I have some background knowledge</button>
-          <button onClick={() => handleSetLevel('advanced')}>I study the Qur'an regularly</button>
-          {error && <p className="error-message">{error}</p>}
-        </div>
-      </main>
-    );
-  }
-
-  // 3. If user IS logged in and has set their level, show the main app
-  return (
-    <main>
       <div className="container">
-        <div className="header">
-          <div>
-            <h1>Tafsir Simplified</h1>
-            <p className="user-info">Signed in as {user.email} ({userProfile.level})</p>
-          </div>
-          <button onClick={() => signOut(auth)} className="logout-btn">Sign Out</button>
-        </div>
-        
-        <form onSubmit={handleQuery}>
-          <div className="form-group">
-            <label htmlFor="approach">1. Choose an Approach:</label>
-            <select id="approach" value={approach} onChange={(e) => setApproach(e.target.value)}>
-              <option value="tafsir">Tafsir-Based Study (by Surah/Verse)</option>
-              <option value="thematic">Thematic Study (by Topic)</option>
-              <option value="historical">Historical Context (Asbab al-Nuzul)</option>
-            </select>
-          </div>
-          <div className="form-group">
-            <label htmlFor="query">2. Enter Surah, Verse, or Topic:</label>
-            <input id="query" type="text" value={query} onChange={(e) => setQuery(e.target.value)} />
-          </div>
-          <button type="submit" disabled={isQueryLoading}>
-            {isQueryLoading ? 'Loading...' : 'Get Tafsir'}
+        <div className="card">
+          <h1>Welcome to Tafsir Simplified</h1>
+          <p>{isSignUp ? 'Create an account to get started.' : 'Sign in to your account.'}</p>
+          <form onSubmit={handleAuthAction} className="form">
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" required />
+            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" required />
+            <button type="submit">{isSignUp ? 'Sign Up' : 'Sign In'}</button>
+          </form>
+          {error && <p className="error">{error}</p>}
+          <button onClick={() => setIsSignUp(!isSignUp)} className="toggle-auth">
+            {isSignUp ? 'Already have an account? Sign In' : 'Need an account? Sign Up'}
           </button>
-        </form>
-
-        {error && <p className="error-message">{error}</p>}
-        
-        {isQueryLoading && <div className="loading-spinner"></div>}
-
-        {response && <RenderResponse response={response} />}
+        </div>
       </div>
-    </main>
+    );
+  }
+
+  if (user && !userLevel) {
+    return (
+      <div className="container">
+        <div className="card">
+          <h1>Welcome, {user.email}!</h1>
+          <p>Please select your knowledge level to personalize your experience.</p>
+          <div className="level-buttons">
+            <button onClick={() => handleSetLevel('beginner')}>I'm just starting</button>
+            <button onClick={() => handleSetLevel('intermediate')}>I have some knowledge</button>
+            <button onClick={() => handleSetLevel('advanced')}>I study regularly</button>
+          </div>
+          {error && <p className="error">{error}</p>}
+           <button onClick={() => signOut(auth)} className="logout-button">Sign Out</button>
+        </div>
+      </div>
+    );
+  }
+
+  return <MainApp user={user} userLevel={userLevel} />;
+}
+
+// Main application component
+function MainApp({ user, userLevel }) {
+  const [approach, setApproach] = useState('tafsir');
+  const [query, setQuery] = useState('');
+  const [response, setResponse] = useState(null);
+  const [error, setError] = useState('');
+  const [isTafsirLoading, setIsTafsirLoading] = useState(false);
+
+  const handleGetTafsir = async (e) => {
+    e.preventDefault();
+    if (!query) return;
+    setIsTafsirLoading(true);
+    setResponse(null);
+    setError('');
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch(`${BACKEND_URL}/tafsir`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ approach, query }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'An unknown error occurred while fetching Tafsir.');
+      }
+      setResponse(data);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsTafsirLoading(false);
+    }
+  };
+
+  return (
+    <div className="container">
+      <div className="card main-app">
+        <div className="header">
+          <h1>Tafsir Simplified</h1>
+          <div className="user-info">
+            <span>{user.email} ({userLevel})</span>
+            <button onClick={() => signOut(auth)} className="logout-button">Sign Out</button>
+          </div>
+        </div>
+        <form onSubmit={handleGetTafsir} className="form tafsir-form">
+          <select value={approach} onChange={(e) => setApproach(e.target.value)}>
+            <option value="tafsir">Tafsir-Based Study</option>
+            <option value="thematic">Thematic Study</option>
+            <option value="historical">Historical Context</option>
+          </select>
+          <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Enter Surah, Verse, or Topic..." />
+          <button type="submit" disabled={isTafsirLoading}>{isTafsirLoading ? 'Loading...' : 'Get Tafsir'}</button>
+        </form>
+        {error && <p className="error">{error}</p>}
+        {isTafsirLoading && <div className="loading-spinner"></div>}
+        {response && <ResultsDisplay data={response} />}
+      </div>
+    </div>
   );
 }
 
-// A helper component to render the structured response nicely
-function RenderResponse({ response }) {
-  try {
-    const data = JSON.parse(response);
-    return (
-      <div className="response-container">
-        {data.verses && (
-          <div className="response-item">
-            <h3>Verses</h3>
-            {data.verses.map((v, i) => <p key={i}><strong>{v.surah} {v.verse_number}:</strong> {v.text_saheeh_international}</p>)}
-          </div>
-        )}
-        {data.tafsir_explanations && (
-           <div className="response-item">
-             <h3>Tafsir Explanations</h3>
-             {data.tafsir_explanations.map((t, i) => <div key={i}><h4>{t.source}</h4><p>{t.explanation}</p></div>)}
-           </div>
-        )}
-        {data.lessons_practical_applications && (
-           <div className="response-item">
-             <h3>Lessons & Applications</h3>
-             <ul>{data.lessons_practical_applications.map((l, i) => <li key={i}>{l}</li>)}</ul>
-           </div>
-        )}
-         {data.summary_table && (
-           <div className="response-item">
-             <h3>Summary</h3>
-             <p>{data.summary_table.concise_summary}</p>
-           </div>
-        )}
-      </div>
-    );
-  } catch (e) {
-    // If the response isn't valid JSON, show the raw text.
-    return (
-      <div className="response-container">
-        <h3>Raw Response</h3>
-        <pre>{response}</pre>
-      </div>
-    );
-  }
-}
+// New component to display the results beautifully
+function ResultsDisplay({ data }) {
+  if (!data || !data.verses) return <div className="results-container"><p>No results to display.</p></div>;
+  return (
+    <div className="results-container">
+      {data.verses && data.verses.length > 0 && (
+        <div className="result-section">
+          <h2>Relevant Verses</h2>
+          {data.verses.map((verse, index) => (
+            <div key={index} className="verse-card">
+              <p className="verse-ref"><strong>{verse.surah}, Verse {verse.verse_number}</strong></p>
+              <p><em>"{verse.text_saheeh_international}"</em></p>
+            </div>
+          ))}
+        </div>
+      )}
 
+      {data.tafsir_explanations && data.tafsir_explanations.length > 0 && (
+         <div className="result-section">
+          <h2>Tafsir Explanations</h2>
+          {data.tafsir_explanations.map((tafsir, index) => (
+            <details key={index} className="tafsir-details">
+              <summary><strong>{tafsir.source}</strong></summary>
+              <p>{tafsir.explanation}</p>
+            </details>
+          ))}
+        </div>
+      )}
+
+      {data.hadith_refs && data.hadith_refs.length > 0 && (
+         <div className="result-section">
+          <h2>Hadith References</h2>
+          {data.hadith_refs.map((hadith, index) => (
+            <div key={index} className="hadith-card">
+                <p><strong>{hadith.reference} (Grade: {hadith.grade})</strong></p>
+                <p>"{hadith.text_short}"</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+       {data.lessons_practical_applications && data.lessons_practical_applications.length > 0 && (
+         <div className="result-section">
+          <h2>Lessons & Practical Applications</h2>
+          <ul>
+            {data.lessons_practical_applications.map((lesson, index) => (
+              <li key={index}>{lesson.point}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
 
