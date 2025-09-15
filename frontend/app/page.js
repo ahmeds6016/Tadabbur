@@ -9,7 +9,7 @@ import {
   signOut 
 } from 'firebase/auth';
 
-// --- PASTE YOUR FIREBASE CONFIG OBJECT HERE ---
+// --- Firebase Config ---
 const firebaseConfig = {
   apiKey: "AIzaSyBKPuVvuJC1bTUsZsZkiMHRoBRRqF6YqVU",
   authDomain: "tafsir-simplified-6b262.firebaseapp.com",
@@ -19,11 +19,9 @@ const firebaseConfig = {
   appId: "1:69730898944:web:ee2cbeee72be8d856474e5",
   measurementId: "G-7RZD1G66YH"
 };
-// ---------------------------------------------
 
-// --- PASTE YOUR DEPLOYED CLOUD RUN URL HERE ---
+// --- Backend URL ---
 const BACKEND_URL = 'https://tafsir-backend-612616741510.us-central1.run.app';
-// ---------------------------------------------
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -34,11 +32,10 @@ export default function HomePage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSignUp, setIsSignUp] = useState(true);
-  
   const [userLevel, setUserLevel] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetches the user's saved level from the backend
+  // Fetch user level from backend
   const fetchUserLevel = async (currentUser) => {
     if (!currentUser) return;
     try {
@@ -48,22 +45,17 @@ export default function HomePage() {
       });
       if (!response.ok) throw new Error('No profile found');
       const data = await response.json();
-      if (data && data.level) {
-        setUserLevel(data.level);
-      }
-    } catch (err) {
-      console.log("User has no saved profile, will proceed to onboarding.");
+      if (data?.level) setUserLevel(data.level);
+    } catch {
+      console.log("No saved profile, proceeding to onboarding.");
     }
   };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
-      if (currentUser) {
-        await fetchUserLevel(currentUser);
-      } else {
-        setUserLevel(null);
-      }
+      if (currentUser) await fetchUserLevel(currentUser);
+      else setUserLevel(null);
       setIsLoading(false);
     });
     return () => unsubscribe();
@@ -73,11 +65,8 @@ export default function HomePage() {
     e.preventDefault();
     setError('');
     try {
-      if (isSignUp) {
-        await createUserWithEmailAndPassword(auth, email, password);
-      } else {
-        await signInWithEmailAndPassword(auth, email, password);
-      }
+      if (isSignUp) await createUserWithEmailAndPassword(auth, email, password);
+      else await signInWithEmailAndPassword(auth, email, password);
     } catch (err) {
       setError(err.message);
     }
@@ -99,53 +88,47 @@ export default function HomePage() {
       setError(err.message);
     }
   };
-  
-  if (isLoading) {
-    return <div className="container"><div className="card"><h1>Loading...</h1></div></div>;
-  }
 
-  if (!user) {
-    return (
-      <div className="container">
-        <div className="card">
-          <h1>Welcome to Tafsir Simplified</h1>
-          <p>{isSignUp ? 'Create an account to get started.' : 'Sign in to your account.'}</p>
-          <form onSubmit={handleAuthAction} className="form">
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" required />
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" required />
-            <button type="submit">{isSignUp ? 'Sign Up' : 'Sign In'}</button>
-          </form>
-          {error && <p className="error">{error}</p>}
-          <button onClick={() => setIsSignUp(!isSignUp)} className="toggle-auth">
-            {isSignUp ? 'Already have an account? Sign In' : 'Need an account? Sign Up'}
-          </button>
-        </div>
-      </div>
-    );
-  }
+  if (isLoading) return <div className="container"><div className="card"><h1>Loading...</h1></div></div>;
 
-  if (user && !userLevel) {
-    return (
-      <div className="container">
-        <div className="card">
-          <h1>Welcome, {user.email}!</h1>
-          <p>Please select your knowledge level to personalize your experience.</p>
-          <div className="level-buttons">
-            <button onClick={() => handleSetLevel('beginner')}>I'm just starting</button>
-            <button onClick={() => handleSetLevel('intermediate')}>I have some knowledge</button>
-            <button onClick={() => handleSetLevel('advanced')}>I study regularly</button>
-          </div>
-          {error && <p className="error">{error}</p>}
-           <button onClick={() => signOut(auth)} className="logout-button">Sign Out</button>
-        </div>
+  if (!user) return (
+    <div className="container">
+      <div className="card">
+        <h1>Welcome to Tafsir Simplified</h1>
+        <p>{isSignUp ? 'Create an account to get started.' : 'Sign in to your account.'}</p>
+        <form onSubmit={handleAuthAction} className="form">
+          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" required />
+          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" required />
+          <button type="submit">{isSignUp ? 'Sign Up' : 'Sign In'}</button>
+        </form>
+        {error && <p className="error">{error}</p>}
+        <button onClick={() => setIsSignUp(!isSignUp)} className="toggle-auth">
+          {isSignUp ? 'Already have an account? Sign In' : 'Need an account? Sign Up'}
+        </button>
       </div>
-    );
-  }
+    </div>
+  );
+
+  if (user && !userLevel) return (
+    <div className="container">
+      <div className="card">
+        <h1>Welcome, {user.email}!</h1>
+        <p>Please select your knowledge level to personalize your experience.</p>
+        <div className="level-buttons">
+          <button onClick={() => handleSetLevel('beginner')}>I'm just starting</button>
+          <button onClick={() => handleSetLevel('intermediate')}>I have some knowledge</button>
+          <button onClick={() => handleSetLevel('advanced')}>I study regularly</button>
+        </div>
+        {error && <p className="error">{error}</p>}
+        <button onClick={() => signOut(auth)} className="logout-button">Sign Out</button>
+      </div>
+    </div>
+  );
 
   return <MainApp user={user} userLevel={userLevel} />;
 }
 
-// Main application component
+// Main app component
 function MainApp({ user, userLevel }) {
   const [approach, setApproach] = useState('tafsir');
   const [query, setQuery] = useState('');
@@ -167,9 +150,7 @@ function MainApp({ user, userLevel }) {
         body: JSON.stringify({ approach, query }),
       });
       const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'An unknown error occurred while fetching Tafsir.');
-      }
+      if (!res.ok) throw new Error(data.error || 'Unknown error fetching Tafsir.');
       setResponse(data);
     } catch (err) {
       setError(err.message);
@@ -195,7 +176,9 @@ function MainApp({ user, userLevel }) {
             <option value="historical">Historical Context</option>
           </select>
           <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Enter Surah, Verse, or Topic..." />
-          <button type="submit" disabled={isTafsirLoading}>{isTafsirLoading ? 'Loading...' : 'Get Tafsir'}</button>
+          <button type="submit" disabled={isTafsirLoading}>
+            {isTafsirLoading ? 'Loading...' : 'Get Tafsir'}
+          </button>
         </form>
         {error && <p className="error">{error}</p>}
         {isTafsirLoading && <div className="loading-spinner"></div>}
@@ -205,15 +188,30 @@ function MainApp({ user, userLevel }) {
   );
 }
 
-// New component to display the results beautifully
+// Robust results display
 function ResultsDisplay({ data }) {
-  if (!data || !data.verses) return <div className="results-container"><p>No results to display.</p></div>;
+  if (!data) return <div className="results-container"><p>No results to display.</p></div>;
+
+  const {
+    verses = [],
+    tafsir_explanations = [],
+    hadith_refs = [],
+    lessons_practical_applications = []
+  } = data;
+
+  if (
+    verses.length === 0 &&
+    tafsir_explanations.length === 0 &&
+    hadith_refs.length === 0 &&
+    lessons_practical_applications.length === 0
+  ) return <div className="results-container"><p>No results to display.</p></div>;
+
   return (
     <div className="results-container">
-      {data.verses && data.verses.length > 0 && (
+      {verses.length > 0 && (
         <div className="result-section">
           <h2>Relevant Verses</h2>
-          {data.verses.map((verse, index) => (
+          {verses.map((verse, index) => (
             <div key={index} className="verse-card">
               <p className="verse-ref"><strong>{verse.surah}, Verse {verse.verse_number}</strong></p>
               <p><em>"{verse.text_saheeh_international}"</em></p>
@@ -222,10 +220,10 @@ function ResultsDisplay({ data }) {
         </div>
       )}
 
-      {data.tafsir_explanations && data.tafsir_explanations.length > 0 && (
-         <div className="result-section">
+      {tafsir_explanations.length > 0 && (
+        <div className="result-section">
           <h2>Tafsir Explanations</h2>
-          {data.tafsir_explanations.map((tafsir, index) => (
+          {tafsir_explanations.map((tafsir, index) => (
             <details key={index} className="tafsir-details">
               <summary><strong>{tafsir.source}</strong></summary>
               <p>{tafsir.explanation}</p>
@@ -234,23 +232,23 @@ function ResultsDisplay({ data }) {
         </div>
       )}
 
-      {data.hadith_refs && data.hadith_refs.length > 0 && (
-         <div className="result-section">
+      {hadith_refs.length > 0 && (
+        <div className="result-section">
           <h2>Hadith References</h2>
-          {data.hadith_refs.map((hadith, index) => (
+          {hadith_refs.map((hadith, index) => (
             <div key={index} className="hadith-card">
-                <p><strong>{hadith.reference} (Grade: {hadith.grade})</strong></p>
-                <p>"{hadith.text_short}"</p>
+              <p><strong>{hadith.reference} (Grade: {hadith.grade})</strong></p>
+              <p>"{hadith.text_short}"</p>
             </div>
           ))}
         </div>
       )}
 
-       {data.lessons_practical_applications && data.lessons_practical_applications.length > 0 && (
-         <div className="result-section">
+      {lessons_practical_applications.length > 0 && (
+        <div className="result-section">
           <h2>Lessons & Practical Applications</h2>
           <ul>
-            {data.lessons_practical_applications.map((lesson, index) => (
+            {lessons_practical_applications.map((lesson, index) => (
               <li key={index}>{lesson.point}</li>
             ))}
           </ul>
@@ -259,4 +257,3 @@ function ResultsDisplay({ data }) {
     </div>
   );
 }
-
