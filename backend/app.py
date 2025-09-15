@@ -16,12 +16,15 @@ import traceback
 # --- Configuration ---
 PROJECT_ID = os.environ.get("GCP_PROJECT")
 LOCATION = os.environ.get("GCP_LOCATION", "us-central1")
-GEMINI_MODEL_ID = os.environ.get("GEMINI_MODEL_ID", "gemini-1.5-flash-001")
+# CORRECTED to the generic, stable model code based on user research
+GEMINI_MODEL_ID = os.environ.get("GEMINI_MODEL_ID", "gemini-2.0-flash") 
 FIREBASE_SECRET_FULL_PATH = os.environ.get("FIREBASE_SECRET_FULL_PATH") 
 
 # --- App Initialization ---
 app = Flask(__name__)
+# Development CORS: allow all origins
 CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
+
 
 # --- Firebase Initialization ---
 def initialize_firebase():
@@ -41,7 +44,6 @@ def initialize_firebase():
         firebase_admin.initialize_app(cred)
         print("INFO: Firebase App Initialized successfully.")
     except Exception as e:
-        # This enhanced logging is crucial for debugging
         print(f"CRITICAL STARTUP ERROR in initialize_firebase: {type(e).__name__} - {e}")
         raise
 
@@ -112,30 +114,21 @@ def tafsir_handler():
     payload = request.get_json()
     
     try:
-        print("STEP 1: Fetching user profile from Firestore")
         user_ref = db.collection('users').document(uid)
         user_doc = user_ref.get()
         user_profile = user_doc.to_dict() if user_doc.exists else {}
-        print(f"DEBUG: user_profile = {user_profile}")
-
-        print("STEP 2: Building adaptive prompt")
+        
         system_prompt, user_prompt = build_adaptive_prompt(user_profile, payload)
-        print(f"DEBUG: system_prompt = {system_prompt[:100]}...")  # First 100 chars
-        print(f"DEBUG: user_prompt = {user_prompt[:100]}...")      # First 100 chars
-
-        print("STEP 3: Authenticating with Google")
+        
         credentials, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
         auth_req = GoogleRequest()
         credentials.refresh(auth_req)
         token = credentials.token
-        print(f"DEBUG: Google token acquired (first 20 chars): {token[:20]}...")
 
-        VERTEX_ENDPOINT = (
-            f"https://{LOCATION}-aiplatform.googleapis.com/v1/"
-            f"projects/{PROJECT_ID}/locations/{LOCATION}/publishers/google/models/{GEMINI_MODEL_ID}:generateContent"
-        )
-        print(f"DEBUG: Vertex Endpoint = {VERTEX_ENDPOINT}")
-
+        # This is the corrected, modern endpoint format for Gemini 2.0
+        VERTEX_ENDPOINT = f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/{PROJECT_ID}/locations/{LOCATION}/publishers/google/models/{GEMINI_MODEL_ID}:generateContent"
+        
+        # This is the corrected, modern body format for generateContent
         body = {
             "system_instruction": {"parts": {"text": system_prompt}},
             "contents": {"role": "user", "parts": {"text": user_prompt}},
@@ -145,39 +138,24 @@ def tafsir_handler():
                 "maxOutputTokens": 2048,
             },
         }
-        print(f"DEBUG: Request body prepared")
-
-        print("STEP 4: Sending request to Vertex AI")
+        
         response = requests.post(
             VERTEX_ENDPOINT,
             headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
             json=body,
             timeout=90
         )
-        print(f"DEBUG: Response status code = {response.status_code}")
         response.raise_for_status()
 
-        print("STEP 5: Logging full Vertex AI response")
-        try:
-            response_json = response.json()
-            print(f"DEBUG: Vertex AI JSON response: {json.dumps(response_json, indent=2)[:1000]}...")  # First 1000 chars
-        except Exception as json_err:
-            print(f"ERROR parsing JSON from Vertex AI: {json_err}")
-            print(f"Raw response content: {response.text}")
-            return jsonify({
-                "error": "Received non-JSON response from Vertex AI",
-                "details": response.text
-            }), 500
-
-        print("STEP 6: Returning JSON response")
+        response_json = response.json()
         return response_json
 
     except requests.exceptions.HTTPError as http_err:
-        print(f"HTTPError: {http_err}, Response content: {response.text}")
+        print(f"CRITICAL ERROR in /tafsir: HTTPError - {http_err}, Response content: {http_err.response.text}")
         return jsonify({
-            "error": "HTTP error from Vertex AI",
-            "details": response.text
-        }), response.status_code
+            "error": "An HTTP error occurred while contacting the AI service.",
+            "details": http_err.response.text
+        }), http_err.response.status_code
 
     except Exception as e:
         print(f"CRITICAL ERROR in /tafsir: {type(e).__name__} - {e}")
@@ -190,4 +168,3 @@ def tafsir_handler():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
-
