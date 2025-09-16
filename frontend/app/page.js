@@ -116,7 +116,7 @@ export default function HomePage() {
         <div className="level-grid">
           <div className="level-card" onClick={() => handleSetLevel('beginner')}>
             <h3>Casual</h3>
-            <p>I'm just starting</p>
+            <p>I&apos;m just starting</p>
           </div>
           <div className="level-card" onClick={() => handleSetLevel('intermediate')}>
             <h3>Intermediate</h3>
