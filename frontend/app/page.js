@@ -33,11 +33,9 @@ export default function HomePage() {
   const [error, setError] = useState('');
   const [isSignUp, setIsSignUp] = useState(true);
   const [userLevel, setUserLevel] = useState(null);
-  const [verbosity, setVerbosity] = useState('balanced');
-  const [focus, setFocus] = useState('spiritual');
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchUserProfile = async (currentUser) => {
+  const fetchUserLevel = async (currentUser) => {
     if (!currentUser) return;
     try {
       const token = await currentUser.getIdToken();
@@ -47,8 +45,6 @@ export default function HomePage() {
       if (!response.ok) throw new Error('No profile found');
       const data = await response.json();
       if (data?.level) setUserLevel(data.level);
-      if (data?.verbosity) setVerbosity(data.verbosity);
-      if (data?.focus) setFocus(data.focus);
     } catch {
       console.log("No saved profile, proceeding to onboarding.");
     }
@@ -57,12 +53,8 @@ export default function HomePage() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
-      if (currentUser) await fetchUserProfile(currentUser);
-      else {
-        setUserLevel(null);
-        setVerbosity('balanced');
-        setFocus('spiritual');
-      }
+      if (currentUser) await fetchUserLevel(currentUser);
+      else setUserLevel(null);
       setIsLoading(false);
     });
     return () => unsubscribe();
@@ -79,23 +71,18 @@ export default function HomePage() {
     }
   };
 
-  const handleSetProfile = async (level, verbosity, focus) => {
+  const handleSetLevel = async (level) => {
     setError('');
     if (!user) return;
     try {
       const token = await user.getIdToken();
       const response = await fetch(`${BACKEND_URL}/set_profile`, {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json', 
-          'Authorization': `Bearer ${token}` 
-        },
-        body: JSON.stringify({ level, verbosity, focus }),
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ level }),
       });
-      if (!response.ok) throw new Error('Failed to set profile');
+      if (!response.ok) throw new Error('Failed to set level');
       setUserLevel(level);
-      setVerbosity(verbosity);
-      setFocus(focus);
     } catch (err) {
       setError(err.message);
     }
@@ -121,48 +108,35 @@ export default function HomePage() {
     </div>
   );
 
-if (user && !userLevel) return (
-  <div className="container">
-    <div className="card onboarding-card">
-      <h1>Welcome, {user.email}!</h1>
-      <p>Select your knowledge level and style to personalize your Tafsir experience:</p>
-      <div className="level-grid">
-        <div className="level-card" onClick={() => handleSetProfile('casual', 'brief', 'spiritual')}>
-          <h3>Casual Reader</h3>
-          <p>Level: Casual</p>
-          <p>Verbosity: Brief</p>
-          <p>Focus: Spiritual</p>
+  if (user && !userLevel) return (
+    <div className="container">
+      <div className="card">
+        <h1>Welcome, {user.email}!</h1>
+        <p>Please select your knowledge level to personalize your experience.</p>
+        <div className="level-grid">
+          <div className="level-card" onClick={() => handleSetLevel('beginner')}>
+            <h3>Casual</h3>
+            <p>I'm just starting</p>
+          </div>
+          <div className="level-card" onClick={() => handleSetLevel('intermediate')}>
+            <h3>Intermediate</h3>
+            <p>I have some knowledge</p>
+          </div>
+          <div className="level-card" onClick={() => handleSetLevel('advanced')}>
+            <h3>Advanced</h3>
+            <p>I study regularly</p>
+          </div>
         </div>
-        <div className="level-card" onClick={() => handleSetProfile('beginner', 'balanced', 'spiritual')}>
-          <h3>Beginner</h3>
-          <p>Level: Beginner</p>
-          <p>Verbosity: Balanced</p>
-          <p>Focus: Spiritual</p>
-        </div>
-        <div className="level-card" onClick={() => handleSetProfile('intermediate', 'balanced', 'practical')}>
-          <h3>Intermediate</h3>
-          <p>Level: Intermediate</p>
-          <p>Verbosity: Balanced</p>
-          <p>Focus: Practical</p>
-        </div>
-        <div className="level-card" onClick={() => handleSetProfile('advanced', 'detailed', 'linguistic')}>
-          <h3>Advanced</h3>
-          <p>Level: Advanced</p>
-          <p>Verbosity: Detailed</p>
-          <p>Focus: Linguistic</p>
-        </div>
+        {error && <p className="error">{error}</p>}
+        <button onClick={() => signOut(auth)} className="logout-button">Sign Out</button>
       </div>
-      {error && <p className="error">{error}</p>}
-      <button onClick={() => signOut(auth)} className="logout-button">Sign Out</button>
     </div>
-  </div>
-);
+  );
 
-
-  return <MainApp user={user} userLevel={userLevel} verbosity={verbosity} focus={focus} />;
+  return <MainApp user={user} userLevel={userLevel} />;
 }
 
-function MainApp({ user, userLevel, verbosity, focus }) {
+function MainApp({ user, userLevel }) {
   const [approach, setApproach] = useState('tafsir');
   const [query, setQuery] = useState('');
   const [response, setResponse] = useState(null);
@@ -179,11 +153,8 @@ function MainApp({ user, userLevel, verbosity, focus }) {
       const token = await user.getIdToken();
       const res = await fetch(`${BACKEND_URL}/tafsir`, {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json', 
-          'Authorization': `Bearer ${token}` 
-        },
-        body: JSON.stringify({ approach, query, verbosity, focus }),
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ approach, query }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Unknown error fetching Tafsir.');
@@ -202,7 +173,6 @@ function MainApp({ user, userLevel, verbosity, focus }) {
           <h1>Tafsir Simplified</h1>
           <div className="user-info">
             <span>{user.email} ({userLevel})</span>
-            <span> | Verbosity: {verbosity}, Focus: {focus}</span>
             <button onClick={() => signOut(auth)} className="logout-button">Sign Out</button>
           </div>
         </div>
@@ -245,10 +215,10 @@ function ResultsDisplay({ data }) {
   return (
     <div className="results-container">
       {verses.length > 0 && (
-        <div className="result-section">
+        <div className="result-section fade-in-up">
           <h2>Relevant Verses</h2>
           {verses.map((verse, index) => (
-            <div key={index} className="verse-card">
+            <div key={index} className="verse-card fade-in-up" style={{ animationDelay: `${index * 0.1}s` }}>
               <p className="verse-ref"><strong>{verse.surah}, Verse {verse.verse_number}</strong></p>
               <p><em>&quot;{verse.text_saheeh_international}&quot;</em></p>
             </div>
@@ -257,10 +227,10 @@ function ResultsDisplay({ data }) {
       )}
 
       {tafsir_explanations.length > 0 && (
-        <div className="result-section">
+        <div className="result-section fade-in-up" style={{ animationDelay: `${verses.length * 0.1}s` }}>
           <h2>Tafsir Explanations</h2>
           {tafsir_explanations.map((tafsir, index) => (
-            <details key={index} className="tafsir-details">
+            <details key={index} className="tafsir-details fade-in-up" style={{ animationDelay: `${index * 0.1}s` }}>
               <summary><strong>{tafsir.source}</strong></summary>
               <p>{tafsir.explanation}</p>
             </details>
@@ -269,10 +239,10 @@ function ResultsDisplay({ data }) {
       )}
 
       {hadith_refs.length > 0 && (
-        <div className="result-section">
+        <div className="result-section fade-in-up" style={{ animationDelay: `${(verses.length + tafsir_explanations.length) * 0.1}s` }}>
           <h2>Hadith References</h2>
           {hadith_refs.map((hadith, index) => (
-            <div key={index} className="hadith-card">
+            <div key={index} className="hadith-card fade-in-up" style={{ animationDelay: `${index * 0.1}s` }}>
               <p><strong>{hadith.reference} (Grade: {hadith.grade})</strong></p>
               <p>&quot;{hadith.text_short}&quot;</p>
             </div>
@@ -281,11 +251,11 @@ function ResultsDisplay({ data }) {
       )}
 
       {lessons_practical_applications.length > 0 && (
-        <div className="result-section">
+        <div className="result-section fade-in-up" style={{ animationDelay: `${(verses.length + tafsir_explanations.length + hadith_refs.length) * 0.1}s` }}>
           <h2>Lessons & Practical Applications</h2>
           <ul>
             {lessons_practical_applications.map((lesson, index) => (
-              <li key={index}>{lesson.point}</li>
+              <li key={index} className="fade-in-up" style={{ animationDelay: `${index * 0.1}s` }}>{lesson.point}</li>
             ))}
           </ul>
         </div>
