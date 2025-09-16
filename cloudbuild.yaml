@@ -10,3 +10,4 @@ images:
 - 'gcr.io/tafsir-simplified/tafsir-backend:latest'
 options:
   logging: CLOUD_LOGGING_ONLY
+
