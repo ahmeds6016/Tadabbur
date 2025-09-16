@@ -121,22 +121,43 @@ export default function HomePage() {
     </div>
   );
 
-  if (user && !userLevel) return (
-    <div className="container">
-      <div className="card">
-        <h1>Welcome, {user.email}!</h1>
-        <p>Please select your knowledge level and preferences to personalize your experience.</p>
-        <div className="level-buttons">
-          <button onClick={() => handleSetProfile('casual', 'brief', 'spiritual')}>I'm a casual reader</button>
-          <button onClick={() => handleSetProfile('beginner', 'balanced', 'spiritual')}>I'm just starting</button>
-          <button onClick={() => handleSetProfile('intermediate', 'balanced', 'practical')}>I have some knowledge</button>
-          <button onClick={() => handleSetProfile('advanced', 'detailed', 'linguistic')}>I study regularly</button>
+if (user && !userLevel) return (
+  <div className="container">
+    <div className="card onboarding-card">
+      <h1>Welcome, {user.email}!</h1>
+      <p>Select your knowledge level and style to personalize your Tafsir experience:</p>
+      <div className="level-grid">
+        <div className="level-card" onClick={() => handleSetProfile('casual', 'brief', 'spiritual')}>
+          <h3>Casual Reader</h3>
+          <p>Level: Casual</p>
+          <p>Verbosity: Brief</p>
+          <p>Focus: Spiritual</p>
         </div>
-        {error && <p className="error">{error}</p>}
-        <button onClick={() => signOut(auth)} className="logout-button">Sign Out</button>
+        <div className="level-card" onClick={() => handleSetProfile('beginner', 'balanced', 'spiritual')}>
+          <h3>Beginner</h3>
+          <p>Level: Beginner</p>
+          <p>Verbosity: Balanced</p>
+          <p>Focus: Spiritual</p>
+        </div>
+        <div className="level-card" onClick={() => handleSetProfile('intermediate', 'balanced', 'practical')}>
+          <h3>Intermediate</h3>
+          <p>Level: Intermediate</p>
+          <p>Verbosity: Balanced</p>
+          <p>Focus: Practical</p>
+        </div>
+        <div className="level-card" onClick={() => handleSetProfile('advanced', 'detailed', 'linguistic')}>
+          <h3>Advanced</h3>
+          <p>Level: Advanced</p>
+          <p>Verbosity: Detailed</p>
+          <p>Focus: Linguistic</p>
+        </div>
       </div>
+      {error && <p className="error">{error}</p>}
+      <button onClick={() => signOut(auth)} className="logout-button">Sign Out</button>
     </div>
-  );
+  </div>
+);
+
 
   return <MainApp user={user} userLevel={userLevel} verbosity={verbosity} focus={focus} />;
 }
