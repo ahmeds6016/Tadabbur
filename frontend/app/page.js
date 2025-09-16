@@ -1,12 +1,12 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react'; // Import useCallback
-import { initializeApp } from 'firebase/app';
-import { 
-  getAuth, 
-  onAuthStateChanged, 
-  createUserWithEmailAndPassword, 
-  signInWithEmailAndPassword, 
-  signOut 
+import { useState, useEffect, useCallback } from 'react';
+import { initializeApp, getApps } from 'firebase/app';
+import {
+  getAuth,
+  onAuthStateChanged,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut
 } from 'firebase/auth';
 
 // --- Firebase Config ---
@@ -23,7 +23,8 @@ const firebaseConfig = {
 // --- Backend URL ---
 const BACKEND_URL = 'https://tafsir-backend-612616741510.us-central1.run.app';
 
-const app = initializeApp(firebaseConfig);
+// Avoid duplicate initialization
+const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
 // --- Main Component ---
@@ -37,7 +38,7 @@ export default function HomePage() {
     try {
       const token = await currentUser.getIdToken();
       const response = await fetch(`${BACKEND_URL}/get_profile`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` }
       });
       if (!response.ok) throw new Error('No profile found');
       const data = await response.json();
@@ -45,12 +46,14 @@ export default function HomePage() {
         setUserProfile(data);
       }
     } catch {
-      console.log("No saved profile, proceeding to onboarding.");
+      console.log('No saved profile, proceeding to onboarding.');
     }
   };
 
   useEffect(() => {
+    let isMounted = true;
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (!isMounted) return;
       setUser(currentUser);
       if (currentUser) {
         await fetchUserProfile(currentUser);
@@ -59,11 +62,20 @@ export default function HomePage() {
       }
       setIsLoading(false);
     });
-    return () => unsubscribe();
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
   }, []);
 
   if (isLoading) {
-    return <div className="container"><div className="card"><h1>Loading...</h1></div></div>;
+    return (
+      <div className="container">
+        <div className="card">
+          <h1>Loading...</h1>
+        </div>
+      </div>
+    );
   }
   if (!user) {
     return <AuthComponent />;
@@ -97,15 +109,31 @@ function AuthComponent() {
     <div className="container">
       <div className="card">
         <h1>Welcome to Tafsir Simplified</h1>
-        <p>{isSignUp ? 'Create an account to get started.' : 'Sign in to your account.'}</p>
+        <p>
+          {isSignUp ? 'Create an account to get started.' : 'Sign in to your account.'}
+        </p>
         <form onSubmit={handleAuthAction} className="form">
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" required />
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" required />
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Email"
+            required
+          />
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Password"
+            required
+          />
           <button type="submit">{isSignUp ? 'Sign Up' : 'Sign In'}</button>
         </form>
         {error && <p className="error">{error}</p>}
         <button onClick={() => setIsSignUp(!isSignUp)} className="toggle-auth">
-          {isSignUp ? 'Already have an account? Sign In' : 'Need an account? Sign Up'}
+          {isSignUp
+            ? 'Already have an account? Sign In'
+            : 'Need an account? Sign Up'}
         </button>
       </div>
     </div>
@@ -123,39 +151,44 @@ function OnboardingComponent({ user, onProfileComplete }) {
       const token = await user.getIdToken();
       const response = await fetch(`${BACKEND_URL}/set_profile`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify(profile),
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(profile)
       });
       if (!response.ok) throw new Error('Failed to save profile.');
       onProfileComplete(profile);
     } catch (err) {
       setError(err.message);
     }
-  }, [user, profile, onProfileComplete]); // Added dependencies
+  }, [user, profile, onProfileComplete]);
 
   const handleSelect = (key, value) => {
-    setProfile(prev => ({ ...prev, [key]: value }));
-    setStep(prev => prev + 1);
+    setProfile((prev) => ({ ...prev, [key]: value }));
+    setStep((prev) => prev + 1);
   };
-  
+
   useEffect(() => {
     if (step === 4) {
       handleSetProfile();
     }
-  }, [step, handleSetProfile]); // Correctly add handleSetProfile to dependency array
+  }, [step, handleSetProfile]); // ✅ Fixed dependency
 
   return (
     <div className="container">
       <div className="card">
         <h1>Welcome, {user.email}!</h1>
         <p>Let&apos;s personalize your experience.</p>
-        
+
         {step === 1 && (
           <div>
             <h2>First, what is your knowledge level?</h2>
             <div className="level-buttons">
               <button onClick={() => handleSelect('level', 'beginner')}>Beginner</button>
-              <button onClick={() => handleSelect('level', 'intermediate')}>Intermediate</button>
+              <button onClick={() => handleSelect('level', 'intermediate')}>
+                Intermediate
+              </button>
               <button onClick={() => handleSelect('level', 'advanced')}>Advanced</button>
             </div>
           </div>
@@ -165,9 +198,15 @@ function OnboardingComponent({ user, onProfileComplete }) {
           <div>
             <h2>What is your primary focus?</h2>
             <div className="level-buttons">
-              <button onClick={() => handleSelect('focus', 'practical')}>Practical Lessons</button>
-              <button onClick={() => handleSelect('focus', 'linguistic')}>Linguistic Details</button>
-              <button onClick={() => handleSelect('focus', 'comparative')}>Comparative Analysis</button>
+              <button onClick={() => handleSelect('focus', 'practical')}>
+                Practical Lessons
+              </button>
+              <button onClick={() => handleSelect('focus', 'linguistic')}>
+                Linguistic Details
+              </button>
+              <button onClick={() => handleSelect('focus', 'comparative')}>
+                Comparative Analysis
+              </button>
             </div>
           </div>
         )}
@@ -176,22 +215,29 @@ function OnboardingComponent({ user, onProfileComplete }) {
           <div>
             <h2>How detailed would you like the answers?</h2>
             <div className="level-buttons">
-              <button onClick={() => handleSelect('verbosity', 'short')}>Short & Concise</button>
-              <button onClick={() => handleSelect('verbosity', 'medium')}>Medium Detail</button>
-              <button onClick={() => handleSelect('verbosity', 'detailed')}>Very Detailed</button>
+              <button onClick={() => handleSelect('verbosity', 'short')}>
+                Short &amp; Concise
+              </button>
+              <button onClick={() => handleSelect('verbosity', 'medium')}>
+                Medium Detail
+              </button>
+              <button onClick={() => handleSelect('verbosity', 'detailed')}>
+                Very Detailed
+              </button>
             </div>
           </div>
         )}
-        
+
         {error && <p className="error">{error}</p>}
-        <button onClick={() => signOut(auth)} className="logout-button">Sign Out</button>
+        <button onClick={() => signOut(auth)} className="logout-button">
+          Sign Out
+        </button>
       </div>
     </div>
   );
 }
 
 function MainApp({ user, userProfile }) {
-  // ... (This component remains the same, but for completeness, it's included)
   const [approach, setApproach] = useState('tafsir');
   const [query, setQuery] = useState('');
   const [response, setResponse] = useState(null);
@@ -208,8 +254,11 @@ function MainApp({ user, userProfile }) {
       const token = await user.getIdToken();
       const res = await fetch(`${BACKEND_URL}/tafsir`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ approach, query }),
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ approach, query })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Unknown error fetching Tafsir.');
@@ -227,8 +276,13 @@ function MainApp({ user, userProfile }) {
         <div className="header">
           <h1>Tafsir Simplified</h1>
           <div className="user-info">
-            <span>{user.email} ({userProfile.level}, {userProfile.focus}, {userProfile.verbosity})</span>
-            <button onClick={() => signOut(auth)} className="logout-button">Sign Out</button>
+            <span>
+              {user.email} ({userProfile.level}, {userProfile.focus},{' '}
+              {userProfile.verbosity})
+            </span>
+            <button onClick={() => signOut(auth)} className="logout-button">
+              Sign Out
+            </button>
           </div>
         </div>
         <form onSubmit={handleGetTafsir} className="form tafsir-form">
@@ -237,7 +291,12 @@ function MainApp({ user, userProfile }) {
             <option value="thematic">Thematic Study</option>
             <option value="historical">Historical Context</option>
           </select>
-          <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Enter Surah, Verse, or Topic..." />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Enter Surah, Verse, or Topic..."
+          />
           <button type="submit" disabled={isTafsirLoading}>
             {isTafsirLoading ? 'Loading...' : 'Get Tafsir'}
           </button>
@@ -251,49 +310,76 @@ function MainApp({ user, userProfile }) {
 }
 
 function ResultsDisplay({ data }) {
-    if (!data) return <div className="results-container"><p>No results to display.</p></div>;
-    const { verses = [], tafsir_explanations = [], lessons_practical_applications = [] } = data;
-
-    if (verses.length === 0 && tafsir_explanations.length === 0 && lessons_practical_applications.length === 0) {
-        return <div className="results-container"><p>No relevant information found in the source text for your query.</p></div>;
-    }
-
+  if (!data) {
     return (
-        <div className="results-container">
-          {verses.length > 0 && (
-            <div className="result-section">
-              <h2>Relevant Verses</h2>
-              {verses.map((verse, index) => (
-                <div key={index} className="verse-card">
-                  <p className="verse-ref"><strong>{verse.surah}, Verse {verse.verse_number}</strong></p>
-                  <p><em>&quot;{verse.text_saheeh_international}&quot;</em></p>
-                </div>
-              ))}
+      <div className="results-container">
+        <p>No results to display.</p>
+      </div>
+    );
+  }
+
+  const {
+    verses = [],
+    tafsir_explanations = [],
+    lessons_practical_applications = []
+  } = data;
+
+  if (
+    verses.length === 0 &&
+    tafsir_explanations.length === 0 &&
+    lessons_practical_applications.length === 0
+  ) {
+    return (
+      <div className="results-container">
+        <p>No relevant information found in the source text for your query.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="results-container">
+      {verses.length > 0 && (
+        <div className="result-section">
+          <h2>Relevant Verses</h2>
+          {verses.map((verse, index) => (
+            <div key={index} className="verse-card">
+              <p className="verse-ref">
+                <strong>
+                  {verse.surah}, Verse {verse.verse_number}
+                </strong>
+              </p>
+              <p>
+                <em>&quot;{verse.text_saheeh_international}&quot;</em>
+              </p>
             </div>
-          )}
-    
-          {tafsir_explanations.length > 0 && (
-            <div className="result-section">
-              <h2>Tafsir Explanations</h2>
-              {tafsir_explanations.map((tafsir, index) => (
-                <details key={index} className="tafsir-details" open>
-                  <summary><strong>{tafsir.source}</strong></summary>
-                  <p>{tafsir.explanation}</p>
-                </details>
-              ))}
-            </div>
-          )}
-    
-          {lessons_practical_applications.length > 0 && (
-            <div className="result-section">
-              <h2>Lessons & Practical Applications</h2>
-              <ul>
-                {lessons_practical_applications.map((lesson, index) => (
-                  <li key={index}>{lesson.point}</li>
-                ))}
-              </ul>
-            </div>
-          )}
+          ))}
         </div>
-      );
+      )}
+
+      {tafsir_explanations.length > 0 && (
+        <div className="result-section">
+          <h2>Tafsir Explanations</h2>
+          {tafsir_explanations.map((tafsir, index) => (
+            <details key={index} className="tafsir-details" open>
+              <summary>
+                <strong>{tafsir.source}</strong>
+              </summary>
+              <p>{tafsir.explanation}</p>
+            </details>
+          ))}
+        </div>
+      )}
+
+      {lessons_practical_applications.length > 0 && (
+        <div className="result-section">
+          <h2>Lessons &amp; Practical Applications</h2>
+          <ul>
+            {lessons_practical_applications.map((lesson, index) => (
+              <li key={index}>{lesson.point}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
 }
