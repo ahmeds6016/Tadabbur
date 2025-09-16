@@ -12,9 +12,9 @@ import {
 // --- Firebase Config ---
 const firebaseConfig = {
   apiKey: "AIzaSyBKPuVvuJC1bTUsZsZkiMHRoBRRqF6YqVU",
-  authDomain: "tafsir-simplified-6b22.firebaseapp.com",
-  projectId: "tafsir-simplified-6b22",
-  storageBucket: "tafsir-simplified-6b22.appspot.com",
+  authDomain: "tafsir-simplified-6b262.firebaseapp.com", // Corrected
+  projectId: "tafsir-simplified-6b262",
+  storageBucket: "tafsir-simplified-6b262.appspot.com",
   messagingSenderId: "69730898944",
   appId: "1:69730898944:web:ee2cbeee72be8d856474e5",
   measurementId: "G-7RZD1G66YH"
