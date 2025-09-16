@@ -1,220 +1,273 @@
-import os
-import json
-from functools import wraps
-from flask import Flask, request, jsonify
-from flask_cors import CORS
+'use client';
+import { useState, useEffect } from 'react';
+import { initializeApp } from 'firebase/app';
+import { 
+  getAuth, 
+  onAuthStateChanged, 
+  createUserWithEmailAndPassword, 
+  signInWithEmailAndPassword, 
+  signOut 
+} from 'firebase/auth';
 
-import google.auth
-from google.auth.transport.requests import Request as GoogleRequest
-import requests
+// --- Firebase Config ---
+const firebaseConfig = {
+  apiKey: "AIzaSyBKPuVvuJC1bTUsZsZkiMHRoBRRqF6YqVU",
+  authDomain: "tafsir-simplified-6b262.firebaseapp.com",
+  projectId: "tafsir-simplified-6b262",
+  storageBucket: "tafsir-simplified-6b262.appspot.com",
+  messagingSenderId: "69730898944",
+  appId: "1:69730898944:web:ee2cbeee72be8d856474e5",
+  measurementId: "G-7RZD1G66YH"
+};
 
-import firebase_admin
-from firebase_admin import credentials, auth, firestore
-from google.cloud import secretmanager
-import traceback
+// --- Backend URL ---
+const BACKEND_URL = 'https://tafsir-backend-612616741510.us-central1.run.app';
 
-# --- Configuration ---
-PROJECT_ID = os.environ.get("GCP_PROJECT")
-LOCATION = os.environ.get("GCP_LOCATION", "us-central1")
-GEMINI_MODEL_ID = os.environ.get("GEMINI_MODEL_ID", "gemini-2.0-flash")
-FIREBASE_SECRET_FULL_PATH = os.environ.get("FIREBASE_SECRET_FULL_PATH")
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
 
-# --- App Initialization ---
-app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
+export default function HomePage() {
+  const [user, setUser] = useState(null);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isSignUp, setIsSignUp] = useState(true);
+  const [userLevel, setUserLevel] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedLevel, setSelectedLevel] = useState(null);
 
-# --- Firebase Initialization ---
-def initialize_firebase():
-    try:
-        if not FIREBASE_SECRET_FULL_PATH:
-            raise ValueError("CRITICAL STARTUP ERROR: FIREBASE_SECRET_FULL_PATH environment variable not set.")
-        client = secretmanager.SecretManagerServiceClient()
-        response = client.access_secret_version(name=FIREBASE_SECRET_FULL_PATH)
-        secret_payload = response.payload.data.decode("UTF-8")
-        cred_json = json.loads(secret_payload)
-        cred = credentials.Certificate(cred_json)
-        firebase_admin.initialize_app(cred)
-        print("INFO: Firebase App Initialized successfully.")
-    except Exception as e:
-        print(f"CRITICAL STARTUP ERROR in initialize_firebase: {type(e).__name__} - {e}")
-        raise
+  const fetchUserLevel = async (currentUser) => {
+    if (!currentUser) return;
+    try {
+      const token = await currentUser.getIdToken();
+      const response = await fetch(`${BACKEND_URL}/get_profile`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('No profile found');
+      const data = await response.json();
+      if (data?.level) setUserLevel(data.level);
+    } catch {
+      console.log("No saved profile, proceeding to onboarding.");
+    }
+  };
 
-initialize_firebase()
-db = firestore.client()
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      setUser(currentUser);
+      if (currentUser) await fetchUserLevel(currentUser);
+      else setUserLevel(null);
+      setIsLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
 
-# --- Authentication Decorator ---
-def firebase_auth_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        id_token = request.headers.get('Authorization', '').split('Bearer ')[-1]
-        if not id_token:
-            return jsonify({"error": "Authorization token is missing"}), 401
-        try:
-            decoded_token = auth.verify_id_token(id_token)
-            request.user = decoded_token
-        except Exception as e:
-            return jsonify({"error": "Invalid or expired token", "details": str(e)}), 401
-        return f(*args, **kwargs)
-    return decorated_function
+  const handleAuthAction = async (e) => {
+    e.preventDefault();
+    setError('');
+    try {
+      if (isSignUp) await createUserWithEmailAndPassword(auth, email, password);
+      else await signInWithEmailAndPassword(auth, email, password);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
 
-# --- Prompt Engineering ---
-def build_adaptive_prompt(user_profile, payload):
-    level = user_profile.get('level', 'beginner')
-    focus = user_profile.get('focus', 'practical')  # optional
-    verbosity = user_profile.get('verbosity', 'medium')  # optional
-    query = payload.get("query", "")
-    approach = payload.get("approach", "tafsir")
+  const handleSetLevel = async (level) => {
+    if (!user) return;
+    setSelectedLevel(level); // For UI animation
+    setError('');
+    try {
+      const token = await user.getIdToken();
+      const response = await fetch(`${BACKEND_URL}/set_profile`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ level }),
+      });
+      if (!response.ok) throw new Error('Failed to set level');
+      setTimeout(() => setUserLevel(level), 300); // Short delay for animation
+    } catch (err) {
+      setError(err.message);
+      setSelectedLevel(null);
+    }
+  };
 
-    system_instruction = f"""
-You are 'Tafsir Simplified', a specialized AI assistant for Qur'anic studies.
-You MUST ALWAYS return a single, valid JSON object and nothing else.
-Your knowledge sources are: Saheeh International, Tafsir Ibn Kathir, Tafsir al-Qurtubi, Tafsir al-Jalalayn, and Tafsir al-Tabari.
-The JSON output must strictly follow this schema:
-{{
-  "verses": [{{"surah": "string", "verse_number": "string", "text_saheeh_international": "string"}}],
-  "tafsir_explanations": [{{"source": "string", "explanation": "string"}}],
-  "hadith_refs": [{{"reference": "string", "grade": "string", "text_short": "string"}}],
-  "lessons_practical_applications": [{{"point": "string"}}]
-}}
-"""
+  if (isLoading) return <div className="container"><div className="card"><h1>Loading...</h1></div></div>;
 
-    # Adapt instructions based on user level
-    if level == 'casual':
-        system_instruction += """
---- CASUAL INSTRUCTIONS ---
-Keep explanations very short, simple, and practical. Focus on easy takeaways. Minimal Arabic terminology.
-"""
-    elif level == 'beginner':
-        system_instruction += """
---- BEGINNER INSTRUCTIONS ---
-Explain all concepts in simple English. Include definitions of Arabic terms and short practical lessons.
-"""
-    elif level == 'intermediate':
-        system_instruction += """
---- INTERMEDIATE INSTRUCTIONS ---
-Include some linguistic notes, brief comparisons of different scholars, moderate depth. Focus on both meaning and context.
-"""
-    elif level == 'advanced':
-        system_instruction += """
---- ADVANCED INSTRUCTIONS ---
-Provide full linguistic and theological nuance, detailed comparisons between mufassirīn, reference original Arabic terminology where relevant.
-"""
+  if (!user) return (
+    <div className="container">
+      <div className="card">
+        <h1>Welcome to Tafsir Simplified</h1>
+        <p>{isSignUp ? 'Create an account to get started.' : 'Sign in to your account.'}</p>
+        <form onSubmit={handleAuthAction} className="form">
+          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" required />
+          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" required />
+          <button type="submit">{isSignUp ? 'Sign Up' : 'Sign In'}</button>
+        </form>
+        {error && <p className="error">{error}</p>}
+        <button onClick={() => setIsSignUp(!isSignUp)} className="toggle-auth">
+          {isSignUp ? 'Already have an account? Sign In' : 'Need an account? Sign Up'}
+        </button>
+      </div>
+    </div>
+  );
 
-    # Adjust focus
-    if focus == 'practical':
-        system_instruction += "Emphasize lessons and applications for daily life.\n"
-    elif focus == 'linguistic':
-        system_instruction += "Emphasize Arabic grammar, root meanings, and rhetorical devices.\n"
-    elif focus == 'comparative':
-        system_instruction += "Compare views of different tafsīr scholars and highlight differences.\n"
-    elif focus == 'thematic':
-        system_instruction += "Connect verses across the Qur'an on the requested theme.\n"
+  if (user && !userLevel) return (
+    <div className="container">
+      <div className="card">
+        <h1>Welcome, {user.email}!</h1>
+        <p>Please select your knowledge level to personalize your experience.</p>
+        <div className="level-grid">
+          {[
+            { key: 'beginner', label: "I'm just starting" },
+            { key: 'intermediate', label: "I have some knowledge" },
+            { key: 'advanced', label: "I study regularly" }
+          ].map((level) => (
+            <div
+              key={level.key}
+              className={`level-card ${selectedLevel === level.key ? 'selected' : ''}`}
+              onClick={() => handleSetLevel(level.key)}
+            >
+              <h3>{level.label}</h3>
+              <p>{level.key === 'beginner' ? 'Simple explanations, practical lessons.' :
+                  level.key === 'intermediate' ? 'More details, key tafsir points.' :
+                  'In-depth, includes Arabic terminology and comparisons.'}</p>
+            </div>
+          ))}
+        </div>
+        {error && <p className="error">{error}</p>}
+        <button onClick={() => signOut(auth)} className="logout-button">Sign Out</button>
+      </div>
+    </div>
+  );
 
-    # Adjust verbosity
-    if verbosity == 'short':
-        system_instruction += "Keep responses concise.\n"
-    elif verbosity == 'medium':
-        system_instruction += "Provide balanced detail.\n"
-    elif verbosity == 'detailed':
-        system_instruction += "Provide in-depth analysis with examples and context.\n"
+  return <MainApp user={user} userLevel={userLevel} selectedLevel={selectedLevel} />;
+}
 
-    user_prompt = f"User Level: '{level}', Focus: '{focus}', Verbosity: '{verbosity}'. Approach: '{approach}'. Query: '{query}'. Generate the JSON response now."
-    return system_instruction, user_prompt
+// --- Main App remains unchanged ---
+function MainApp({ user, userLevel }) {
+  const [approach, setApproach] = useState('tafsir');
+  const [query, setQuery] = useState('');
+  const [response, setResponse] = useState(null);
+  const [error, setError] = useState('');
+  const [isTafsirLoading, setIsTafsirLoading] = useState(false);
 
-# --- API Routes ---
-@app.route("/get_profile", methods=["GET"])
-@firebase_auth_required
-def get_profile():
-    uid = request.user['uid']
-    try:
-        user_ref = db.collection('users').document(uid)
-        user_doc = user_ref.get()
-        if user_doc.exists:
-            return jsonify(user_doc.to_dict()), 200
-        else:
-            return jsonify({"error": "Profile not found"}), 404
-    except Exception as e:
-        print(f"ERROR in /get_profile: {type(e).__name__} - {e}")
-        return jsonify({"error": "Could not retrieve profile", "details": str(e)}), 500
+  const handleGetTafsir = async (e) => {
+    e.preventDefault();
+    if (!query) return;
+    setIsTafsirLoading(true);
+    setResponse(null);
+    setError('');
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch(`${BACKEND_URL}/tafsir`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ approach, query }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Unknown error fetching Tafsir.');
+      setResponse(data);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsTafsirLoading(false);
+    }
+  };
 
-@app.route("/set_profile", methods=["POST"])
-@firebase_auth_required
-def set_profile():
-    uid = request.user['uid']
-    data = request.get_json()
-    level = data.get('level')
-    focus = data.get('focus', 'practical')
-    verbosity = data.get('verbosity', 'medium')
+  return (
+    <div className="container">
+      <div className="card main-app">
+        <div className="header">
+          <h1>Tafsir Simplified</h1>
+          <div className="user-info">
+            <span>{user.email} ({userLevel})</span>
+            <button onClick={() => signOut(auth)} className="logout-button">Sign Out</button>
+          </div>
+        </div>
+        <form onSubmit={handleGetTafsir} className="form tafsir-form">
+          <select value={approach} onChange={(e) => setApproach(e.target.value)}>
+            <option value="tafsir">Tafsir-Based Study</option>
+            <option value="thematic">Thematic Study</option>
+            <option value="historical">Historical Context</option>
+          </select>
+          <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Enter Surah, Verse, or Topic..." />
+          <button type="submit" disabled={isTafsirLoading}>
+            {isTafsirLoading ? 'Loading...' : 'Get Tafsir'}
+          </button>
+        </form>
+        {error && <p className="error">{error}</p>}
+        {isTafsirLoading && <div className="loading-spinner"></div>}
+        {response && <ResultsDisplay data={response} />}
+      </div>
+    </div>
+  );
+}
 
-    if level not in ['casual', 'beginner', 'intermediate', 'advanced']:
-        return jsonify({"error": "Invalid level specified"}), 400
-    if focus not in ['practical', 'linguistic', 'comparative', 'thematic']:
-        return jsonify({"error": "Invalid focus specified"}), 400
-    if verbosity not in ['short', 'medium', 'detailed']:
-        return jsonify({"error": "Invalid verbosity specified"}), 400
+function ResultsDisplay({ data }) {
+  if (!data) return <div className="results-container"><p>No results to display.</p></div>;
 
-    try:
-        user_ref = db.collection('users').document(uid)
-        user_ref.set({'level': level, 'focus': focus, 'verbosity': verbosity}, merge=True)
-        return jsonify({"status": "success", "uid": uid, "level": level, "focus": focus, "verbosity": verbosity}), 200
-    except Exception as e:
-        print(f"ERROR in /set_profile: {type(e).__name__} - {e}")
-        return jsonify({"error": "Could not update profile", "details": str(e)}), 500
+  const {
+    verses = [],
+    tafsir_explanations = [],
+    hadith_refs = [],
+    lessons_practical_applications = []
+  } = data;
 
-@app.route("/tafsir", methods=["POST"])
-@firebase_auth_required
-def tafsir_handler():
-    uid = request.user['uid']
-    payload = request.get_json()
-    try:
-        user_ref = db.collection('users').document(uid)
-        user_doc = user_ref.get()
-        user_profile = user_doc.to_dict() if user_doc.exists else {}
-        system_prompt, user_prompt = build_adaptive_prompt(user_profile, payload)
+  if (
+    verses.length === 0 &&
+    tafsir_explanations.length === 0 &&
+    hadith_refs.length === 0 &&
+    lessons_practical_applications.length === 0
+  ) return <div className="results-container"><p>No results to display.</p></div>;
 
-        credentials, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
-        auth_req = GoogleRequest()
-        credentials.refresh(auth_req)
-        token = credentials.token
+  return (
+    <div className="results-container">
+      {verses.length > 0 && (
+        <div className="result-section">
+          <h2>Relevant Verses</h2>
+          {verses.map((verse, index) => (
+            <div key={index} className="verse-card">
+              <p className="verse-ref"><strong>{verse.surah}, Verse {verse.verse_number}</strong></p>
+              <p><em>&quot;{verse.text_saheeh_international}&quot;</em></p>
+            </div>
+          ))}
+        </div>
+      )}
 
-        VERTEX_ENDPOINT = f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/{PROJECT_ID}/locations/{LOCATION}/publishers/google/models/{GEMINI_MODEL_ID}:generateContent"
-        body = {
-            "system_instruction": {"parts": {"text": system_prompt}},
-            "contents": {"role": "user", "parts": {"text": user_prompt}},
-            "generation_config": {
-                "response_mime_type": "application/json",
-                "temperature": 0.2,
-                "maxOutputTokens": 2048,
-            },
-        }
+      {tafsir_explanations.length > 0 && (
+        <div className="result-section">
+          <h2>Tafsir Explanations</h2>
+          {tafsir_explanations.map((tafsir, index) => (
+            <details key={index} className="tafsir-details">
+              <summary><strong>{tafsir.source}</strong></summary>
+              <p>{tafsir.explanation}</p>
+            </details>
+          ))}
+        </div>
+      )}
 
-        response = requests.post(VERTEX_ENDPOINT, headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"}, json=body, timeout=90)
-        response.raise_for_status()
-        raw_response_json = response.json()
+      {hadith_refs.length > 0 && (
+        <div className="result-section">
+          <h2>Hadith References</h2>
+          {hadith_refs.map((hadith, index) => (
+            <div key={index} className="hadith-card">
+              <p><strong>{hadith.reference} (Grade: {hadith.grade})</strong></p>
+              <p>&quot;{hadith.text_short}&quot;</p>
+            </div>
+          ))}
+        </div>
+      )}
 
-        if 'candidates' in raw_response_json and raw_response_json['candidates']:
-            try:
-                generated_text = raw_response_json['candidates'][0]['content']['parts'][0]['text']
-                final_json_response = json.loads(generated_text)
-                return jsonify(final_json_response)
-            except (KeyError, IndexError, json.JSONDecodeError) as e:
-                print(f"CRITICAL ERROR parsing Gemini response structure: {type(e).__name__} - {e}")
-                print(f"Raw Gemini Response: {raw_response_json}")
-                return jsonify({"error": "Failed to parse the structure of the AI's response."}), 500
-        else:
-            print(f"WARNING: Gemini response received with no candidates. Raw Response: {raw_response_json}")
-            return jsonify({"error": "The AI service returned an empty or blocked response."}), 500
-
-    except requests.exceptions.Timeout as timeout_err:
-        print(f"CRITICAL ERROR in /tafsir: Timeout - {timeout_err}")
-        return jsonify({"error": "The AI service took too long to respond."}), 504
-    except requests.exceptions.HTTPError as http_err:
-        print(f"CRITICAL ERROR in /tafsir: HTTPError - {http_err}, Response content: {http_err.response.text}")
-        return jsonify({"error": "An HTTP error occurred while contacting the AI service."}), http_err.response.status_code
-    except Exception as e:
-        print(f"CRITICAL ERROR in /tafsir: {type(e).__name__} - {e}")
-        traceback.print_exc()
-        return jsonify({"error": "An internal error occurred while contacting the AI service."}), 500
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
+      {lessons_practical_applications.length > 0 && (
+        <div className="result-section">
+          <h2>Lessons & Practical Applications</h2>
+          <ul>
+            {lessons_practical_applications.map((lesson, index) => (
+              <li key={index}>{lesson.point}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
