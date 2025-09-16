@@ -35,7 +35,6 @@ export default function HomePage() {
   const [userLevel, setUserLevel] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch user level from backend
   const fetchUserLevel = async (currentUser) => {
     if (!currentUser) return;
     try {
@@ -115,7 +114,7 @@ export default function HomePage() {
         <h1>Welcome, {user.email}!</h1>
         <p>Please select your knowledge level to personalize your experience.</p>
         <div className="level-buttons">
-          <button onClick={() => handleSetLevel('beginner')}>I'm just starting</button>
+          <button onClick={() => handleSetLevel('beginner')}>I&apos;m just starting</button>
           <button onClick={() => handleSetLevel('intermediate')}>I have some knowledge</button>
           <button onClick={() => handleSetLevel('advanced')}>I study regularly</button>
         </div>
@@ -128,7 +127,6 @@ export default function HomePage() {
   return <MainApp user={user} userLevel={userLevel} />;
 }
 
-// Main app component
 function MainApp({ user, userLevel }) {
   const [approach, setApproach] = useState('tafsir');
   const [query, setQuery] = useState('');
@@ -188,7 +186,6 @@ function MainApp({ user, userLevel }) {
   );
 }
 
-// Robust results display
 function ResultsDisplay({ data }) {
   if (!data) return <div className="results-container"><p>No results to display.</p></div>;
 
@@ -214,7 +211,7 @@ function ResultsDisplay({ data }) {
           {verses.map((verse, index) => (
             <div key={index} className="verse-card">
               <p className="verse-ref"><strong>{verse.surah}, Verse {verse.verse_number}</strong></p>
-              <p><em>"{verse.text_saheeh_international}"</em></p>
+              <p><em>&quot;{verse.text_saheeh_international}&quot;</em></p>
             </div>
           ))}
         </div>
@@ -238,7 +235,7 @@ function ResultsDisplay({ data }) {
           {hadith_refs.map((hadith, index) => (
             <div key={index} className="hadith-card">
               <p><strong>{hadith.reference} (Grade: {hadith.grade})</strong></p>
-              <p>"{hadith.text_short}"</p>
+              <p>&quot;{hadith.text_short}&quot;</p>
             </div>
           ))}
         </div>
