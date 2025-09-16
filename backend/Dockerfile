@@ -14,3 +14,4 @@ ENV PORT 8080
 
 # Start app with gunicorn
 CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "1", "--threads", "8", "--timeout", "120", "app:app"]
+
