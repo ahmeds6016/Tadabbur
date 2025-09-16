@@ -33,9 +33,11 @@ export default function HomePage() {
   const [error, setError] = useState('');
   const [isSignUp, setIsSignUp] = useState(true);
   const [userLevel, setUserLevel] = useState(null);
+  const [verbosity, setVerbosity] = useState('balanced');
+  const [focus, setFocus] = useState('spiritual');
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchUserLevel = async (currentUser) => {
+  const fetchUserProfile = async (currentUser) => {
     if (!currentUser) return;
     try {
       const token = await currentUser.getIdToken();
@@ -45,6 +47,8 @@ export default function HomePage() {
       if (!response.ok) throw new Error('No profile found');
       const data = await response.json();
       if (data?.level) setUserLevel(data.level);
+      if (data?.verbosity) setVerbosity(data.verbosity);
+      if (data?.focus) setFocus(data.focus);
     } catch {
       console.log("No saved profile, proceeding to onboarding.");
     }
@@ -53,8 +57,12 @@ export default function HomePage() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
-      if (currentUser) await fetchUserLevel(currentUser);
-      else setUserLevel(null);
+      if (currentUser) await fetchUserProfile(currentUser);
+      else {
+        setUserLevel(null);
+        setVerbosity('balanced');
+        setFocus('spiritual');
+      }
       setIsLoading(false);
     });
     return () => unsubscribe();
@@ -71,18 +79,23 @@ export default function HomePage() {
     }
   };
 
-  const handleSetLevel = async (level) => {
+  const handleSetProfile = async (level, verbosity, focus) => {
     setError('');
     if (!user) return;
     try {
       const token = await user.getIdToken();
       const response = await fetch(`${BACKEND_URL}/set_profile`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ level }),
+        headers: { 
+          'Content-Type': 'application/json', 
+          'Authorization': `Bearer ${token}` 
+        },
+        body: JSON.stringify({ level, verbosity, focus }),
       });
-      if (!response.ok) throw new Error('Failed to set level');
+      if (!response.ok) throw new Error('Failed to set profile');
       setUserLevel(level);
+      setVerbosity(verbosity);
+      setFocus(focus);
     } catch (err) {
       setError(err.message);
     }
@@ -112,11 +125,12 @@ export default function HomePage() {
     <div className="container">
       <div className="card">
         <h1>Welcome, {user.email}!</h1>
-        <p>Please select your knowledge level to personalize your experience.</p>
+        <p>Please select your knowledge level and preferences to personalize your experience.</p>
         <div className="level-buttons">
-          <button onClick={() => handleSetLevel('beginner')}>I&apos;m just starting</button>
-          <button onClick={() => handleSetLevel('intermediate')}>I have some knowledge</button>
-          <button onClick={() => handleSetLevel('advanced')}>I study regularly</button>
+          <button onClick={() => handleSetProfile('casual', 'brief', 'spiritual')}>I'm a casual reader</button>
+          <button onClick={() => handleSetProfile('beginner', 'balanced', 'spiritual')}>I'm just starting</button>
+          <button onClick={() => handleSetProfile('intermediate', 'balanced', 'practical')}>I have some knowledge</button>
+          <button onClick={() => handleSetProfile('advanced', 'detailed', 'linguistic')}>I study regularly</button>
         </div>
         {error && <p className="error">{error}</p>}
         <button onClick={() => signOut(auth)} className="logout-button">Sign Out</button>
@@ -124,10 +138,10 @@ export default function HomePage() {
     </div>
   );
 
-  return <MainApp user={user} userLevel={userLevel} />;
+  return <MainApp user={user} userLevel={userLevel} verbosity={verbosity} focus={focus} />;
 }
 
-function MainApp({ user, userLevel }) {
+function MainApp({ user, userLevel, verbosity, focus }) {
   const [approach, setApproach] = useState('tafsir');
   const [query, setQuery] = useState('');
   const [response, setResponse] = useState(null);
@@ -144,8 +158,11 @@ function MainApp({ user, userLevel }) {
       const token = await user.getIdToken();
       const res = await fetch(`${BACKEND_URL}/tafsir`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ approach, query }),
+        headers: { 
+          'Content-Type': 'application/json', 
+          'Authorization': `Bearer ${token}` 
+        },
+        body: JSON.stringify({ approach, query, verbosity, focus }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Unknown error fetching Tafsir.');
@@ -164,6 +181,7 @@ function MainApp({ user, userLevel }) {
           <h1>Tafsir Simplified</h1>
           <div className="user-info">
             <span>{user.email} ({userLevel})</span>
+            <span> | Verbosity: {verbosity}, Focus: {focus}</span>
             <button onClick={() => signOut(auth)} className="logout-button">Sign Out</button>
           </div>
         </div>
