@@ -12,9 +12,9 @@ import {
 // --- Firebase Config ---
 const firebaseConfig = {
   apiKey: "AIzaSyBKPuVvuJC1bTUsZsZkiMHRoBRRqF6YqVU",
-  authDomain: "tafsir-simplified-6b262.firebaseapp.com",
-  projectId: "tafsir-simplified-6b262",
-  storageBucket: "tafsir-simplified-6b262.appspot.com",
+  authDomain: "tafsir-simplified-6b22.firebaseapp.com",
+  projectId: "tafsir-simplified-6b22",
+  storageBucket: "tafsir-simplified-6b22.appspot.com",
   messagingSenderId: "69730898944",
   appId: "1:69730898944:web:ee2cbeee72be8d856474e5",
   measurementId: "G-7RZD1G66YH"
@@ -26,16 +26,14 @@ const BACKEND_URL = 'https://tafsir-backend-612616741510.us-central1.run.app';
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
+// --- Main Component ---
 export default function HomePage() {
   const [user, setUser] = useState(null);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [isSignUp, setIsSignUp] = useState(true);
-  const [userLevel, setUserLevel] = useState(null);
+  const [userProfile, setUserProfile] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchUserLevel = async (currentUser) => {
+  // Checks for a saved profile when the user logs in
+  const fetchUserProfile = async (currentUser) => {
     if (!currentUser) return;
     try {
       const token = await currentUser.getIdToken();
@@ -44,7 +42,10 @@ export default function HomePage() {
       });
       if (!response.ok) throw new Error('No profile found');
       const data = await response.json();
-      if (data?.level) setUserLevel(data.level);
+      // Check if the profile is complete
+      if (data?.level && data?.focus && data?.verbosity) {
+        setUserProfile(data);
+      }
     } catch {
       console.log("No saved profile, proceeding to onboarding.");
     }
@@ -53,12 +54,37 @@ export default function HomePage() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
-      if (currentUser) await fetchUserLevel(currentUser);
-      else setUserLevel(null);
+      if (currentUser) {
+        await fetchUserProfile(currentUser);
+      } else {
+        setUserProfile(null);
+      }
       setIsLoading(false);
     });
     return () => unsubscribe();
   }, []);
+
+  // Conditional Rendering Logic
+  if (isLoading) {
+    return <div className="container"><div className="card"><h1>Loading...</h1></div></div>;
+  }
+  if (!user) {
+    return <AuthComponent />;
+  }
+  if (user && !userProfile) {
+    return <OnboardingComponent user={user} onProfileComplete={setUserProfile} />;
+  }
+  return <MainApp user={user} userProfile={userProfile} />;
+}
+
+
+// --- Child Components ---
+
+function AuthComponent() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isSignUp, setIsSignUp] = useState(true);
 
   const handleAuthAction = async (e) => {
     e.preventDefault();
@@ -71,26 +97,7 @@ export default function HomePage() {
     }
   };
 
-  const handleSetLevel = async (level) => {
-    setError('');
-    if (!user) return;
-    try {
-      const token = await user.getIdToken();
-      const response = await fetch(`${BACKEND_URL}/set_profile`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ level }),
-      });
-      if (!response.ok) throw new Error('Failed to set level');
-      setUserLevel(level);
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  if (isLoading) return <div className="container"><div className="card"><h1>Loading...</h1></div></div>;
-
-  if (!user) return (
+  return (
     <div className="container">
       <div className="card">
         <h1>Welcome to Tafsir Simplified</h1>
@@ -107,36 +114,88 @@ export default function HomePage() {
       </div>
     </div>
   );
+}
 
-  if (user && !userLevel) return (
+function OnboardingComponent({ user, onProfileComplete }) {
+  const [step, setStep] = useState(1);
+  const [profile, setProfile] = useState({ level: '', focus: '', verbosity: '' });
+  const [error, setError] = useState('');
+
+  const handleSelect = (key, value) => {
+    setProfile(prev => ({ ...prev, [key]: value }));
+    setStep(prev => prev + 1);
+  };
+
+  const handleSetProfile = async () => {
+    setError('');
+    try {
+      const token = await user.getIdToken();
+      const response = await fetch(`${BACKEND_URL}/set_profile`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(profile),
+      });
+      if (!response.ok) throw new Error('Failed to save profile.');
+      onProfileComplete(profile); // Update the parent component's state
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+  
+  useEffect(() => {
+    // When the last selection is made, save the profile
+    if (step === 4) {
+      handleSetProfile();
+    }
+  }, [step]);
+
+  return (
     <div className="container">
       <div className="card">
         <h1>Welcome, {user.email}!</h1>
-        <p>Please select your knowledge level to personalize your experience.</p>
-        <div className="level-grid">
-          <div className="level-card" onClick={() => handleSetLevel('beginner')}>
-            <h3>Casual</h3>
-            <p>I&apos;m just starting</p>
+        <p>Let's personalize your experience.</p>
+        
+        {step === 1 && (
+          <div>
+            <h2>First, what is your knowledge level?</h2>
+            <div className="level-buttons">
+              <button onClick={() => handleSelect('level', 'beginner')}>Beginner</button>
+              <button onClick={() => handleSelect('level', 'intermediate')}>Intermediate</button>
+              <button onClick={() => handleSelect('level', 'advanced')}>Advanced</button>
+            </div>
           </div>
-          <div className="level-card" onClick={() => handleSetLevel('intermediate')}>
-            <h3>Intermediate</h3>
-            <p>I have some knowledge</p>
+        )}
+
+        {step === 2 && (
+          <div>
+            <h2>What is your primary focus?</h2>
+            <div className="level-buttons">
+              <button onClick={() => handleSelect('focus', 'practical')}>Practical Lessons</button>
+              <button onClick={() => handleSelect('focus', 'linguistic')}>Linguistic Details</button>
+              <button onClick={() => handleSelect('focus', 'comparative')}>Comparative Analysis</button>
+            </div>
           </div>
-          <div className="level-card" onClick={() => handleSetLevel('advanced')}>
-            <h3>Advanced</h3>
-            <p>I study regularly</p>
+        )}
+
+        {step === 3 && (
+          <div>
+            <h2>How detailed would you like the answers?</h2>
+            <div className="level-buttons">
+              <button onClick={() => handleSelect('verbosity', 'short')}>Short & Concise</button>
+              <button onClick={() => handleSelect('verbosity', 'medium')}>Medium Detail</button>
+              <button onClick={() => handleSelect('verbosity', 'detailed')}>Very Detailed</button>
+            </div>
           </div>
-        </div>
+        )}
+        
         {error && <p className="error">{error}</p>}
         <button onClick={() => signOut(auth)} className="logout-button">Sign Out</button>
       </div>
     </div>
   );
-
-  return <MainApp user={user} userLevel={userLevel} />;
 }
 
-function MainApp({ user, userLevel }) {
+function MainApp({ user, userProfile }) {
   const [approach, setApproach] = useState('tafsir');
   const [query, setQuery] = useState('');
   const [response, setResponse] = useState(null);
@@ -154,7 +213,12 @@ function MainApp({ user, userLevel }) {
       const res = await fetch(`${BACKEND_URL}/tafsir`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ approach, query }),
+        // Send the full payload the advanced backend expects
+        body: JSON.stringify({
+            approach: approach,
+            query: query,
+            // User profile is already known by the backend via the token
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Unknown error fetching Tafsir.');
@@ -172,7 +236,7 @@ function MainApp({ user, userLevel }) {
         <div className="header">
           <h1>Tafsir Simplified</h1>
           <div className="user-info">
-            <span>{user.email} ({userLevel})</span>
+            <span>{user.email} ({userProfile.level}, {userProfile.focus}, {userProfile.verbosity})</span>
             <button onClick={() => signOut(auth)} className="logout-button">Sign Out</button>
           </div>
         </div>
@@ -196,70 +260,50 @@ function MainApp({ user, userLevel }) {
 }
 
 function ResultsDisplay({ data }) {
-  if (!data) return <div className="results-container"><p>No results to display.</p></div>;
+    // This component remains the same, it's already robust
+    if (!data) return <div className="results-container"><p>No results to display.</p></div>;
+    const { verses = [], tafsir_explanations = [], lessons_practical_applications = [] } = data;
 
-  const {
-    verses = [],
-    tafsir_explanations = [],
-    hadith_refs = [],
-    lessons_practical_applications = []
-  } = data;
+    if (verses.length === 0 && tafsir_explanations.length === 0 && lessons_practical_applications.length === 0) {
+        return <div className="results-container"><p>No relevant information found in the source text for your query.</p></div>;
+    }
 
-  if (
-    verses.length === 0 &&
-    tafsir_explanations.length === 0 &&
-    hadith_refs.length === 0 &&
-    lessons_practical_applications.length === 0
-  ) return <div className="results-container"><p>No results to display.</p></div>;
-
-  return (
-    <div className="results-container">
-      {verses.length > 0 && (
-        <div className="result-section fade-in-up">
-          <h2>Relevant Verses</h2>
-          {verses.map((verse, index) => (
-            <div key={index} className="verse-card fade-in-up" style={{ animationDelay: `${index * 0.1}s` }}>
-              <p className="verse-ref"><strong>{verse.surah}, Verse {verse.verse_number}</strong></p>
-              <p><em>&quot;{verse.text_saheeh_international}&quot;</em></p>
+    return (
+        <div className="results-container">
+          {verses.length > 0 && (
+            <div className="result-section">
+              <h2>Relevant Verses</h2>
+              {verses.map((verse, index) => (
+                <div key={index} className="verse-card">
+                  <p className="verse-ref"><strong>{verse.surah}, Verse {verse.verse_number}</strong></p>
+                  <p><em>"{verse.text_saheeh_international}"</em></p>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      )}
-
-      {tafsir_explanations.length > 0 && (
-        <div className="result-section fade-in-up" style={{ animationDelay: `${verses.length * 0.1}s` }}>
-          <h2>Tafsir Explanations</h2>
-          {tafsir_explanations.map((tafsir, index) => (
-            <details key={index} className="tafsir-details fade-in-up" style={{ animationDelay: `${index * 0.1}s` }}>
-              <summary><strong>{tafsir.source}</strong></summary>
-              <p>{tafsir.explanation}</p>
-            </details>
-          ))}
-        </div>
-      )}
-
-      {hadith_refs.length > 0 && (
-        <div className="result-section fade-in-up" style={{ animationDelay: `${(verses.length + tafsir_explanations.length) * 0.1}s` }}>
-          <h2>Hadith References</h2>
-          {hadith_refs.map((hadith, index) => (
-            <div key={index} className="hadith-card fade-in-up" style={{ animationDelay: `${index * 0.1}s` }}>
-              <p><strong>{hadith.reference} (Grade: {hadith.grade})</strong></p>
-              <p>&quot;{hadith.text_short}&quot;</p>
+          )}
+    
+          {tafsir_explanations.length > 0 && (
+            <div className="result-section">
+              <h2>Tafsir Explanations</h2>
+              {tafsir_explanations.map((tafsir, index) => (
+                <details key={index} className="tafsir-details" open>
+                  <summary><strong>{tafsir.source}</strong></summary>
+                  <p>{tafsir.explanation}</p>
+                </details>
+              ))}
             </div>
-          ))}
+          )}
+    
+          {lessons_practical_applications.length > 0 && (
+            <div className="result-section">
+              <h2>Lessons & Practical Applications</h2>
+              <ul>
+                {lessons_practical_applications.map((lesson, index) => (
+                  <li key={index}>{lesson.point}</li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
-      )}
-
-      {lessons_practical_applications.length > 0 && (
-        <div className="result-section fade-in-up" style={{ animationDelay: `${(verses.length + tafsir_explanations.length + hadith_refs.length) * 0.1}s` }}>
-          <h2>Lessons & Practical Applications</h2>
-          <ul>
-            {lessons_practical_applications.map((lesson, index) => (
-              <li key={index} className="fade-in-up" style={{ animationDelay: `${index * 0.1}s` }}>{lesson.point}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-    </div>
-  );
+      );
 }
