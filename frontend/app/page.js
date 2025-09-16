@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react'; // Import useCallback
 import { initializeApp } from 'firebase/app';
 import { 
   getAuth, 
@@ -12,7 +12,7 @@ import {
 // --- Firebase Config ---
 const firebaseConfig = {
   apiKey: "AIzaSyBKPuVvuJC1bTUsZsZkiMHRoBRRqF6YqVU",
-  authDomain: "tafsir-simplified-6b262.firebaseapp.com", // Corrected
+  authDomain: "tafsir-simplified-6b262.firebaseapp.com",
   projectId: "tafsir-simplified-6b262",
   storageBucket: "tafsir-simplified-6b262.appspot.com",
   messagingSenderId: "69730898944",
@@ -32,7 +32,6 @@ export default function HomePage() {
   const [userProfile, setUserProfile] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Checks for a saved profile when the user logs in
   const fetchUserProfile = async (currentUser) => {
     if (!currentUser) return;
     try {
@@ -42,7 +41,6 @@ export default function HomePage() {
       });
       if (!response.ok) throw new Error('No profile found');
       const data = await response.json();
-      // Check if the profile is complete
       if (data?.level && data?.focus && data?.verbosity) {
         setUserProfile(data);
       }
@@ -64,7 +62,6 @@ export default function HomePage() {
     return () => unsubscribe();
   }, []);
 
-  // Conditional Rendering Logic
   if (isLoading) {
     return <div className="container"><div className="card"><h1>Loading...</h1></div></div>;
   }
@@ -76,7 +73,6 @@ export default function HomePage() {
   }
   return <MainApp user={user} userProfile={userProfile} />;
 }
-
 
 // --- Child Components ---
 
@@ -121,12 +117,7 @@ function OnboardingComponent({ user, onProfileComplete }) {
   const [profile, setProfile] = useState({ level: '', focus: '', verbosity: '' });
   const [error, setError] = useState('');
 
-  const handleSelect = (key, value) => {
-    setProfile(prev => ({ ...prev, [key]: value }));
-    setStep(prev => prev + 1);
-  };
-
-  const handleSetProfile = async () => {
+  const handleSetProfile = useCallback(async () => {
     setError('');
     try {
       const token = await user.getIdToken();
@@ -136,24 +127,28 @@ function OnboardingComponent({ user, onProfileComplete }) {
         body: JSON.stringify(profile),
       });
       if (!response.ok) throw new Error('Failed to save profile.');
-      onProfileComplete(profile); // Update the parent component's state
+      onProfileComplete(profile);
     } catch (err) {
       setError(err.message);
     }
+  }, [user, profile, onProfileComplete]); // Added dependencies
+
+  const handleSelect = (key, value) => {
+    setProfile(prev => ({ ...prev, [key]: value }));
+    setStep(prev => prev + 1);
   };
   
   useEffect(() => {
-    // When the last selection is made, save the profile
     if (step === 4) {
       handleSetProfile();
     }
-  }, [step]);
+  }, [step, handleSetProfile]); // Correctly add handleSetProfile to dependency array
 
   return (
     <div className="container">
       <div className="card">
         <h1>Welcome, {user.email}!</h1>
-        <p>Let's personalize your experience.</p>
+        <p>Let&apos;s personalize your experience.</p>
         
         {step === 1 && (
           <div>
@@ -196,6 +191,7 @@ function OnboardingComponent({ user, onProfileComplete }) {
 }
 
 function MainApp({ user, userProfile }) {
+  // ... (This component remains the same, but for completeness, it's included)
   const [approach, setApproach] = useState('tafsir');
   const [query, setQuery] = useState('');
   const [response, setResponse] = useState(null);
@@ -213,12 +209,7 @@ function MainApp({ user, userProfile }) {
       const res = await fetch(`${BACKEND_URL}/tafsir`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        // Send the full payload the advanced backend expects
-        body: JSON.stringify({
-            approach: approach,
-            query: query,
-            // User profile is already known by the backend via the token
-        }),
+        body: JSON.stringify({ approach, query }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Unknown error fetching Tafsir.');
@@ -260,7 +251,6 @@ function MainApp({ user, userProfile }) {
 }
 
 function ResultsDisplay({ data }) {
-    // This component remains the same, it's already robust
     if (!data) return <div className="results-container"><p>No results to display.</p></div>;
     const { verses = [], tafsir_explanations = [], lessons_practical_applications = [] } = data;
 
@@ -276,7 +266,7 @@ function ResultsDisplay({ data }) {
               {verses.map((verse, index) => (
                 <div key={index} className="verse-card">
                   <p className="verse-ref"><strong>{verse.surah}, Verse {verse.verse_number}</strong></p>
-                  <p><em>"{verse.text_saheeh_international}"</em></p>
+                  <p><em>&quot;{verse.text_saheeh_international}&quot;</em></p>
                 </div>
               ))}
             </div>
