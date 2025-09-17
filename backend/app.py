@@ -35,11 +35,12 @@ LOCATION = os.environ.get("GCP_LOCATION", "us-central1")
 GEMINI_MODEL_ID = os.environ.get("GEMINI_MODEL_ID", "gemini-2.0-flash")
 FIREBASE_SECRET_FULL_PATH = os.environ.get("FIREBASE_SECRET_FULL_PATH")
 INDEX_ENDPOINT_ID = os.environ.get("INDEX_ENDPOINT_ID")
+DEPLOYED_INDEX_ID = os.environ.get("DEPLOYED_INDEX_ID")
 GCS_BUCKET_NAME = os.environ.get("GCS_BUCKET_NAME")
 GCS_CHUNKS_PATH = 'jalalayn_chunks.json'
 
 # --- Startup Validation (Fail Fast) ---
-if not FIREBASE_SECRET_FULL_PATH or not INDEX_ENDPOINT_ID or not GCS_BUCKET_NAME:
+if not FIREBASE_SECRET_FULL_PATH or not INDEX_ENDPOINT_ID or not DEPLOYED_INDEX_ID or not GCS_BUCKET_NAME:
     raise ValueError("CRITICAL STARTUP ERROR: Missing required RAG environment variables")
 
 # Global variable for in-memory cache
@@ -294,6 +295,7 @@ def tafsir_handler():
         index_endpoint = aiplatform.MatchingEngineIndexEndpoint(index_endpoint_name=endpoint_resource_name)
         
         neighbors_result = index_endpoint.find_neighbors(
+            deployed_index_id=DEPLOYED_INDEX_ID,
             queries=[query_embedding], 
             num_neighbors=5
         )
@@ -384,7 +386,9 @@ def health_check():
         "firebase_initialized": len(firebase_admin._apps) > 0,
         "chunks_loaded": len(TAFSIR_CHUNKS) > 0,
         "project_id": PROJECT_ID,
-        "location": LOCATION
+        "location": LOCATION,
+        "index_endpoint_id": INDEX_ENDPOINT_ID,
+        "deployed_index_id": DEPLOYED_INDEX_ID
     }
     return jsonify(status), 200
 
