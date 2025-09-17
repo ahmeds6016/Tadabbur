@@ -13,7 +13,7 @@ import vertexai
 from vertexai.language_models import TextEmbeddingModel
 from google.cloud import aiplatform
 from google.cloud import storage
-from google.cloud import secretmanager # Ensure this import is here
+from google.cloud import secretmanager
 
 # --- Configuration ---
 PROJECT_ID = os.environ.get("GCP_PROJECT", "tafsir-simplified")
@@ -30,11 +30,18 @@ if not FIREBASE_SECRET_FULL_PATH or not INDEX_ENDPOINT_ID or not GCS_BUCKET_NAME
 
 # --- App Initialization ---
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
+# *** THIS IS THE CORRECTED LINE ***
+# Add your live frontend URL to the list of allowed origins
+CORS(app, resources={r"/*": {
+    "origins": [
+        "http://localhost:3000", 
+        "https://tafsir-frontend-612616741510.us-central1.run.app"
+    ]
+}}, supports_credentials=True)
 
+# (The rest of the file is exactly the same)
 TAFSIR_CHUNKS = {}
 
-# --- Data Loading & Firebase Initialization ---
 def load_chunks_from_gcs():
     global TAFSIR_CHUNKS
     try:
@@ -53,11 +60,8 @@ def load_chunks_from_gcs():
         raise
 
 def initialize_firebase():
-    """Initializes Firebase Admin SDK from a secret path."""
     try:
-        # *** THIS IS THE CORRECTED LINE ***
         client = secretmanager.SecretManagerServiceClient()
-        
         response = client.access_secret_version(name=FIREBASE_SECRET_FULL_PATH)
         secret_payload = response.payload.data.decode("UTF-8")
         cred_json = json.loads(secret_payload)
@@ -68,11 +72,9 @@ def initialize_firebase():
         print(f"CRITICAL STARTUP ERROR in initialize_firebase: {type(e).__name__} - {e}")
         raise
 
-# Initialize services on startup
 initialize_firebase()
 load_chunks_from_gcs()
 vertexai.init(project=PROJECT_ID, location=LOCATION)
 db = firestore.client()
 
-# --- (The rest of the file is correct and remains the same) ---
-# ... [firebase_auth_required, build_adaptive_prompt, /get_profile, /set_profile, /tafsir, if __name__ == "__main__"] ...
+# ... (The rest of your endpoints and functions are correct and unchanged) ...
