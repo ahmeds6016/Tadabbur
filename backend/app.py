@@ -328,8 +328,8 @@ def tafsir_handler():
 
         # RAG Step 2: Generate embedding for the expanded query
         print("RAG: Generating query embedding...")
-        embedding_model = TextEmbeddingModel.from_pretrained("text-embedding-004")
-        query_embedding = embedding_model.get_embeddings([expanded_query], output_dimensionality=1024)[0].values
+        embedding_model = TextEmbeddingModel.from_pretrained("gemini-embedding-001")
+        query_embedding = embedding_model.get_embeddings([expanded_query])[0].values
 
         # RAG Step 3: Search the vector index
         print("RAG: Searching vector index...")
