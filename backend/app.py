@@ -37,7 +37,11 @@ FIREBASE_SECRET_FULL_PATH = os.environ.get("FIREBASE_SECRET_FULL_PATH")
 INDEX_ENDPOINT_ID = os.environ.get("INDEX_ENDPOINT_ID")
 DEPLOYED_INDEX_ID = os.environ.get("DEPLOYED_INDEX_ID")
 GCS_BUCKET_NAME = os.environ.get("GCS_BUCKET_NAME")
-GCS_CHUNKS_PATH = 'jalalayn_chunks.json'
+
+# Multi-source chunk file paths
+GCS_JALALAYN_PATH = 'jalalayn_chunks.json'
+GCS_QURTUBI_PATH = 'qurtubi_chunks.json'
+GCS_IBN_KATHIR_PATH = 'ibn_kathir_chunks.json'
 
 # --- Startup Validation (Fail Fast) ---
 if not FIREBASE_SECRET_FULL_PATH or not INDEX_ENDPOINT_ID or not DEPLOYED_INDEX_ID or not GCS_BUCKET_NAME:
@@ -48,26 +52,58 @@ TAFSIR_CHUNKS = {}
 
 # --- Data Loading & Firebase Initialization ---
 def load_chunks_from_gcs():
-    """Load Jalalayn chunks from Google Cloud Storage"""
+    """Load chunks from all three tafsir sources"""
     global TAFSIR_CHUNKS
     try:
-        print(f"INFO: Loading chunks from gs://{GCS_BUCKET_NAME}/{GCS_CHUNKS_PATH}")
         storage_client = storage.Client()
         bucket = storage_client.bucket(GCS_BUCKET_NAME)
-        blob = bucket.blob(GCS_CHUNKS_PATH)
         
-        if not blob.exists():
-            raise FileNotFoundError(f"{GCS_CHUNKS_PATH} not found in bucket {GCS_BUCKET_NAME}")
+        # Define all source files
+        chunk_files = [
+            (GCS_JALALAYN_PATH, "al-Jalalayn"),
+            (GCS_QURTUBI_PATH, "al-Qurtubi"), 
+            (GCS_IBN_KATHIR_PATH, "Ibn Kathir")
+        ]
         
-        contents = blob.download_as_string()
-        chunks_list = json.loads(contents)
+        total_chunks = 0
         
-        # Convert list to dictionary with proper IDs
-        for i, chunk in enumerate(chunks_list):
-            datapoint_id = f"jalalayn_page_{chunk.get('page_number', i)}_{i}"
-            TAFSIR_CHUNKS[datapoint_id] = chunk.get('text', '')
+        for file_path, source_name in chunk_files:
+            try:
+                print(f"INFO: Loading {source_name} chunks from gs://{GCS_BUCKET_NAME}/{file_path}")
+                blob = bucket.blob(file_path)
+                
+                if not blob.exists():
+                    print(f"WARNING: {file_path} not found, skipping {source_name}")
+                    continue
+                
+                contents = blob.download_as_string()
+                chunks_list = json.loads(contents)
+                
+                # Convert list to dictionary with source-specific IDs
+                source_chunks = 0
+                for i, chunk in enumerate(chunks_list):
+                    # Create unique IDs that include source information
+                    if source_name == "al-Jalalayn":
+                        datapoint_id = f"jalalayn_page_{chunk.get('page_number', i)}_{i}"
+                    elif source_name == "al-Qurtubi":
+                        datapoint_id = f"qurtubi_page_{chunk.get('page_number', i)}_{i}"
+                    elif source_name == "Ibn Kathir":
+                        datapoint_id = f"ibn_kathir_page_{chunk.get('page_number', i)}_{chunk.get('chunk_index_on_page', i)}"
+                    
+                    TAFSIR_CHUNKS[datapoint_id] = chunk.get('text', '')
+                    source_chunks += 1
+                
+                print(f"INFO: Loaded {source_chunks} chunks from {source_name}")
+                total_chunks += source_chunks
+                
+            except Exception as e:
+                print(f"ERROR loading {source_name}: {type(e).__name__} - {e}")
+                continue
         
-        print(f"INFO: Successfully loaded {len(TAFSIR_CHUNKS)} chunks into memory")
+        print(f"INFO: Successfully loaded {total_chunks} total chunks from all sources")
+        
+        if total_chunks == 0:
+            raise RuntimeError("CRITICAL: No chunks loaded from any source")
         
     except Exception as e:
         print(f"CRITICAL STARTUP ERROR loading chunks: {type(e).__name__} - {e}")
@@ -115,15 +151,15 @@ def expand_query(query: str, token: str) -> str:
         VERTEX_ENDPOINT = f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/{PROJECT_ID}/locations/{LOCATION}/publishers/google/models/{GEMINI_MODEL_ID}:generateContent"
         
         expansion_prompt = f"""
-You are helping expand a query to search Islamic tafsir (Quranic commentary) texts, specifically Tafsir al-Jalalayn.
+You are helping expand a query to search Islamic tafsir (Quranic commentary) texts from multiple classical sources including Tafsir al-Jalalayn, al-Qurtubi, and Ibn Kathir.
 
 Original query: "{query}"
 
-Expand this query by adding relevant Islamic terms, Arabic concepts, Quranic themes, and related theological concepts that would help find relevant tafsir passages. Consider:
+Expand this query by adding relevant Islamic terms, Arabic concepts, Quranic themes, and related theological concepts that would help find relevant tafsir passages from these classical commentaries. Consider:
 - Related Arabic terminology
 - Connected Quranic verses or themes  
-- Islamic jurisprudence concepts
-- Historical context
+- Islamic jurisprudence concepts (especially for al-Qurtubi)
+- Historical context and hadith references (especially for Ibn Kathir)
 - Theological implications
 
 Keep the expansion concise but comprehensive. Return only the expanded query text, nothing else.
@@ -166,8 +202,12 @@ def build_adaptive_prompt(user_profile, payload):
 
     system_instruction = f"""
 You are 'Tafsir Simplified', a specialized AI assistant for Qur'anic studies.
-Your primary source is Tafsir al-Jalalayn when provided in the context.
-You MUST base your answer on the provided CONTEXT when available.
+You have access to three major classical tafsir sources:
+- Tafsir al-Jalalayn (concise, essential interpretations)
+- Tafsir al-Qurtubi (juridical focus, legal rulings)
+- Tafsir Ibn Kathir (detailed commentary with hadith references)
+
+You MUST base your answer on the provided CONTEXT from these classical sources.
 You MUST ALWAYS return a single, valid JSON object and nothing else.
 
 USER PROFILE: Knowledge Level='{level}', Focus='{focus}', Verbosity='{verbosity}'.
@@ -180,6 +220,8 @@ JSON Schema:
   "hadith_refs": [{{"reference": "string", "grade": "string", "text_short": "string"}}],
   "lessons_practical_applications": [{{"point": "string"}}]
 }}
+
+When citing explanations, indicate the source (al-Jalalayn, al-Qurtubi, or Ibn Kathir) in the "source" field.
 """
 
     # Level-specific instructions
@@ -190,17 +232,17 @@ JSON Schema:
     elif level == "intermediate":
         system_instruction += "Include brief linguistic notes and moderate theological depth. Explain key Arabic terms and their significance.\n"
     elif level == "advanced":
-        system_instruction += "Provide full linguistic and theological nuance with detailed scholarly analysis. Include Arabic terminology and comparative perspectives.\n"
+        system_instruction += "Provide full linguistic and theological nuance with detailed scholarly analysis. Include Arabic terminology and comparative perspectives between the three sources.\n"
 
     # Focus-specific instructions
     if focus == "practical":
-        system_instruction += "Emphasize lessons and practical applications for daily Muslim life.\n"
+        system_instruction += "Emphasize lessons and practical applications for daily Muslim life, especially from al-Jalalayn.\n"
     elif focus == "linguistic":
-        system_instruction += "Emphasize Arabic grammar, word roots, rhetorical devices, and linguistic beauty of the Quran.\n"
+        system_instruction += "Emphasize Arabic grammar, word roots, rhetorical devices from all sources, especially detailed linguistic analysis.\n"
     elif focus == "comparative":
-        system_instruction += "Compare different scholarly interpretations and highlight areas of consensus or difference.\n"
+        system_instruction += "Compare different interpretations between al-Jalalayn, al-Qurtubi, and Ibn Kathir. Highlight areas of consensus or difference.\n"
     elif focus == "thematic":
-        system_instruction += "Connect verses to broader Quranic themes and cross-reference related passages.\n"
+        system_instruction += "Connect verses to broader Quranic themes and cross-reference related passages across all three sources.\n"
 
     # Verbosity-specific instructions
     if verbosity == "short":
@@ -208,9 +250,9 @@ JSON Schema:
     elif verbosity == "medium":
         system_instruction += "Provide balanced detail without overwhelming information.\n"
     elif verbosity == "detailed":
-        system_instruction += "Provide comprehensive analysis with examples, context, and thorough explanations.\n"
+        system_instruction += "Provide comprehensive analysis with examples, context, and thorough explanations from multiple sources.\n"
 
-    user_prompt = f"USER QUERY: '{query}'. Generate the JSON response now based on the provided context."
+    user_prompt = f"USER QUERY: '{query}'. Generate the JSON response now based on the provided context from the classical tafsir sources."
     return system_instruction, user_prompt
 
 # --- API Routes ---
@@ -311,7 +353,7 @@ def tafsir_handler():
         context_string = "\n\n---\n\n".join(context_texts)
         
         if not context_string:
-            return jsonify({"error": "Could not find relevant passages in Tafsir al-Jalalayn for your query."}), 404
+            return jsonify({"error": "Could not find relevant passages in the classical tafsir sources for your query."}), 404
 
         # RAG Step 5: Get user profile and build adaptive prompt
         uid = request.user["uid"]
@@ -324,7 +366,7 @@ def tafsir_handler():
         final_prompt = f"""
 {system_instruction}
 
-Based on the following context from Tafsir al-Jalalayn, respond to the user's request:
+Based on the following context from classical tafsir sources (al-Jalalayn, al-Qurtubi, and Ibn Kathir), respond to the user's request:
 
 CONTEXT:
 {context_string}
@@ -385,6 +427,8 @@ def health_check():
         "status": "healthy",
         "firebase_initialized": len(firebase_admin._apps) > 0,
         "chunks_loaded": len(TAFSIR_CHUNKS) > 0,
+        "total_chunks": len(TAFSIR_CHUNKS),
+        "sources": "al-Jalalayn, al-Qurtubi, Ibn Kathir",
         "project_id": PROJECT_ID,
         "location": LOCATION,
         "index_endpoint_id": INDEX_ENDPOINT_ID,
@@ -395,4 +439,3 @@ def health_check():
 # --- Cloud Run Entry Point ---
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)), debug=False)
-
