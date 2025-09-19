@@ -1,7 +1,11 @@
 import os
 import json
 import traceback
+import time
+import hashlib
 from functools import wraps
+from collections import defaultdict
+from datetime import datetime, timedelta
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -47,8 +51,131 @@ GCS_IBN_KATHIR_PATH = 'ibn_kathir_chunks.json'
 if not FIREBASE_SECRET_FULL_PATH or not INDEX_ENDPOINT_ID or not DEPLOYED_INDEX_ID or not GCS_BUCKET_NAME:
     raise ValueError("CRITICAL STARTUP ERROR: Missing required RAG environment variables")
 
-# Global variable for in-memory cache
+# Global variables
 TAFSIR_CHUNKS = {}
+RESPONSE_CACHE = {}  # In-memory cache
+USER_RATE_LIMITS = defaultdict(list)  # Rate limiting
+ANALYTICS = defaultdict(int)  # Usage analytics
+
+# Popular query suggestions
+QUERY_SUGGESTIONS = [
+    "2:255", "Ayat al-Kursi", "1:1", "Fatiha", "charity", "prayer", "jihad", 
+    "taqwa", "patience", "forgiveness", "Day of Judgment", "paradise", 
+    "mercy of Allah", "guidance", "faith", "gratitude", "justice"
+]
+
+# Verse cross-references database (simplified)
+VERSE_CROSS_REFS = {
+    "2:255": ["2:256", "7:180", "59:23", "112:1-4"],
+    "1:1": ["113:1", "114:1", "17:110", "96:1"],
+    "charity": ["2:261-274", "9:60", "57:7", "63:10"],
+    "prayer": ["2:43", "4:103", "20:14", "62:9-10"]
+}
+
+# Arabic text samples (in production, this would be from a database)
+ARABIC_TEXTS = {
+    "2:255": "اللَّهُ لَا إِلَٰهَ إِلَّا هُوَ الْحَيُّ الْقَيُّومُ",
+    "1:1": "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ"
+}
+
+# Source authority weights by query type
+SOURCE_WEIGHTS = {
+    "legal": {"al-Qurtubi": 0.5, "Ibn Kathir": 0.3, "al-Jalalayn": 0.2},
+    "historical": {"Ibn Kathir": 0.5, "al-Qurtubi": 0.3, "al-Jalalayn": 0.2},
+    "concise": {"al-Jalalayn": 0.5, "al-Qurtubi": 0.3, "Ibn Kathir": 0.2},
+    "default": {"al-Jalalayn": 0.33, "al-Qurtubi": 0.33, "Ibn Kathir": 0.34}
+}
+
+# --- Utility Functions ---
+def get_cache_key(query, user_profile):
+    """Generate cache key for response"""
+    cache_data = f"{query}_{json.dumps(user_profile, sort_keys=True)}"
+    return hashlib.md5(cache_data.encode()).hexdigest()
+
+def is_rate_limited(user_id, limit=50, window_hours=1):
+    """Check if user is rate limited"""
+    now = datetime.now()
+    window_start = now - timedelta(hours=window_hours)
+    
+    # Clean old entries
+    USER_RATE_LIMITS[user_id] = [
+        timestamp for timestamp in USER_RATE_LIMITS[user_id] 
+        if timestamp > window_start
+    ]
+    
+    # Check limit
+    if len(USER_RATE_LIMITS[user_id]) >= limit:
+        return True
+    
+    # Add current request
+    USER_RATE_LIMITS[user_id].append(now)
+    return False
+
+def classify_query_type(query):
+    """Classify query to determine source weighting"""
+    legal_keywords = ["halal", "haram", "ruling", "law", "jurisprudence", "legal", "permissible"]
+    historical_keywords = ["story", "history", "Prophet", "Moses", "Jesus", "Abraham", "battle"]
+    concise_keywords = ["brief", "short", "quick", "summary", "simple"]
+    
+    query_lower = query.lower()
+    
+    if any(keyword in query_lower for keyword in legal_keywords):
+        return "legal"
+    elif any(keyword in query_lower for keyword in historical_keywords):
+        return "historical"
+    elif any(keyword in query_lower for keyword in concise_keywords):
+        return "concise"
+    else:
+        return "default"
+
+def get_cross_references(query):
+    """Get cross-references for the query"""
+    query_lower = query.lower()
+    for key, refs in VERSE_CROSS_REFS.items():
+        if key in query_lower or any(ref in query_lower for ref in refs):
+            return refs
+    return []
+
+def get_arabic_text(query):
+    """Get Arabic text if available"""
+    for verse_ref, arabic in ARABIC_TEXTS.items():
+        if verse_ref in query:
+            return arabic
+    return None
+
+def validate_response(response_data):
+    """Validate response quality"""
+    try:
+        required_fields = ["verses", "tafsir_explanations", "lessons_practical_applications"]
+        if not all(field in response_data for field in required_fields):
+            return False, "Missing required fields"
+        
+        # Check if at least one tafsir explanation has substantial content
+        explanations = response_data.get("tafsir_explanations", [])
+        substantial_explanations = [
+            exp for exp in explanations 
+            if len(exp.get("explanation", "")) > 50 and 
+            "Limited relevant content" not in exp.get("explanation", "")
+        ]
+        
+        if len(substantial_explanations) == 0:
+            return False, "No substantial explanations found"
+        
+        return True, "Valid response"
+    except Exception as e:
+        return False, f"Validation error: {e}"
+
+# --- Error Handler ---
+def handle_errors(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except Exception as e:
+            print(f"ERROR in {f.__name__}: {type(e).__name__} - {e}")
+            traceback.print_exc()
+            return jsonify({'error': 'Internal server error'}), 500
+    return decorated_function
 
 # --- Data Loading & Firebase Initialization ---
 def load_chunks_from_gcs():
@@ -191,71 +318,273 @@ Keep the expansion concise but comprehensive. Return only the expanded query tex
         print(f"WARNING: Query expansion error: {e}")
         return query
 
-# --- Prompt Builder ---
-def build_adaptive_prompt(user_profile, payload):
-    """Build adaptive prompt based on user profile and preferences"""
-    level = user_profile.get("level", "beginner")
-    focus = user_profile.get("focus", "practical")
-    verbosity = user_profile.get("verbosity", "medium")
-    query = payload.get("query", "")
-    approach = payload.get("approach", "tafsir")
+# --- Enhanced Multi-Source RAG Functions ---
+def perform_diversified_rag_search(query, expand_query, embedding_model, index_endpoint, query_type="default"):
+    """
+    Enhanced RAG with source weighting based on query type
+    """
+    
+    # Step 1: Single expanded query (maintains semantic relevance)
+    query_embedding = embedding_model.get_embeddings([expand_query], output_dimensionality=1024)[0].values
+    
+    # Step 2: Retrieve larger pool of candidates (25 chunks for better diversity)
+    neighbors_result = index_endpoint.find_neighbors(
+        deployed_index_id=DEPLOYED_INDEX_ID,
+        queries=[query_embedding],
+        num_neighbors=25  # Increased for better source coverage
+    )
+    
+    # Step 3: Intelligent source diversification with weighting
+    source_chunks = {
+        'al-Jalalayn': [],
+        'al-Qurtubi': [],
+        'Ibn Kathir': []
+    }
+    
+    # Categorize all retrieved chunks by source
+    for neighbor in neighbors_result[0]:
+        chunk_id = neighbor.id
+        chunk_text = TAFSIR_CHUNKS.get(chunk_id, '')
+        distance = neighbor.distance
+        
+        if not chunk_text:
+            continue
+            
+        chunk_data = {
+            'text': chunk_text,
+            'distance': distance,
+            'chunk_id': chunk_id
+        }
+        
+        if chunk_id.startswith('jalalayn'):
+            source_chunks['al-Jalalayn'].append(chunk_data)
+        elif chunk_id.startswith('qurtubi'):
+            source_chunks['al-Qurtubi'].append(chunk_data)
+        elif chunk_id.startswith('ibn_kathir'):
+            source_chunks['Ibn Kathir'].append(chunk_data)
+    
+    # Step 4: Weighted selection based on query type
+    weights = SOURCE_WEIGHTS.get(query_type, SOURCE_WEIGHTS["default"])
+    selected_chunks = []
+    context_by_source = {}
+    
+    for source_name, chunks in source_chunks.items():
+        if chunks:
+            # Sort by distance (most relevant first)
+            sorted_chunks = sorted(chunks, key=lambda x: x['distance'])
+            
+            # Apply weighting - take more chunks from preferred sources
+            weight = weights.get(source_name, 0.33)
+            num_chunks = max(2, int(weight * 10))  # 2-5 chunks based on weight
+            
+            top_chunks = sorted_chunks[:num_chunks]
+            selected_chunks.extend(top_chunks)
+            context_by_source[source_name] = [chunk['text'] for chunk in top_chunks]
+        else:
+            # Mark source as having no relevant content
+            context_by_source[source_name] = []
+    
+    return selected_chunks, context_by_source
 
-    system_instruction = f"""
-You are 'Tafsir Simplified', a specialized AI assistant for Qur'anic studies.
-You have access to three major classical tafsir sources:
-- Tafsir al-Jalalayn (concise, essential interpretations)
-- Tafsir al-Qurtubi (juridical focus, legal rulings)
-- Tafsir Ibn Kathir (detailed commentary with hadith references)
+def build_structured_context(context_by_source, arabic_text=None, cross_refs=None):
+    """
+    Build enhanced context blocks with Arabic text and cross-references
+    """
+    context_sections = []
+    
+    # Add Arabic text if available
+    if arabic_text:
+        context_sections.append(f"--- ARABIC TEXT ---\n{arabic_text}\n")
+    
+    # Add cross-references if available
+    if cross_refs:
+        refs_text = ", ".join(cross_refs)
+        context_sections.append(f"--- RELATED VERSES ---\n{refs_text}\n")
+    
+    # Add source content
+    for source_name, chunks in context_by_source.items():
+        if chunks:
+            section = f"--- {source_name.upper()} ---\n"
+            section += "\n\n".join(chunks)
+            context_sections.append(section)
+        else:
+            # Include placeholder for sources with no content
+            section = f"--- {source_name.upper()} ---\n[No highly relevant passages found]"
+            context_sections.append(section)
+    
+    return "\n\n" + "\n\n".join(context_sections)
 
-You MUST base your answer on the provided CONTEXT from these classical sources.
-You MUST ALWAYS return a single, valid JSON object and nothing else.
+def build_enhanced_prompt(query, context_by_source, user_profile, arabic_text=None, cross_refs=None, query_type="default"):
+    """
+    Enhanced prompt with Arabic text, cross-references, and source weighting
+    """
+    structured_context = build_structured_context(context_by_source, arabic_text, cross_refs)
+    
+    # Assess content quality and depth for each source
+    source_quality = {}
+    for source, chunks in context_by_source.items():
+        if chunks:
+            total_content = ' '.join(chunks)
+            source_quality[source] = len(total_content)
+        else:
+            source_quality[source] = 0
+    
+    prompt = f"""You are an expert Islamic scholar providing Quranic commentary (tafsir) analysis.
 
-USER PROFILE: Knowledge Level='{level}', Focus='{focus}', Verbosity='{verbosity}'.
-USER APPROACH: '{approach}'.
+QUERY: "{query}"
+QUERY TYPE: {query_type}
 
-JSON Schema:
+CONTEXT FROM CLASSICAL TAFSIR SOURCES:
+{structured_context}
+
+CRITICAL INSTRUCTIONS - ENHANCED SCHOLARLY APPROACH:
+1. **Source Authority**: Consider source expertise - al-Qurtubi for legal matters, Ibn Kathir for historical context, al-Jalalayn for concise explanations
+2. **Arabic Integration**: If Arabic text is provided, reference it appropriately in explanations
+3. **Cross-References**: If related verses are provided, mention relevant connections
+4. **Quality Over Balance**: Emphasize sources with substantial relevant content while acknowledging all available sources
+5. **Scholarly Integrity**: Never fabricate content - acknowledge when sources have limited relevant material
+6. User preference: {user_profile.get('knowledge_level', 'intermediate')} level, {user_profile.get('verbosity', 'balanced')} detail
+
+ENHANCED JSON FORMAT:
 {{
-  "verses": [{{"surah": "string", "verse_number": "string", "text_saheeh_international": "string"}}],
-  "tafsir_explanations": [{{"source": "string", "explanation": "string"}}],
-  "hadith_refs": [{{"reference": "string", "grade": "string", "text_short": "string"}}],
-  "lessons_practical_applications": [{{"point": "string"}}]
+    "verses": [
+        {{"surah": "string", "verse_number": "string", "text_saheeh_international": "string", "arabic_text": "{arabic_text or 'Not available'}"}}
+    ],
+    "tafsir_explanations": [
+        {{"source": "al-Jalalayn", "explanation": "Detailed explanation with source expertise consideration"}},
+        {{"source": "al-Qurtubi", "explanation": "Detailed explanation emphasizing legal/jurisprudential aspects when relevant"}},
+        {{"source": "Ibn Kathir", "explanation": "Detailed explanation emphasizing historical context and hadith when relevant"}}
+    ],
+    "cross_references": [
+        {{"verse": "string", "relevance": "brief explanation of connection"}}
+    ],
+    "lessons_practical_applications": [
+        {{"point": "Key lesson 1"}}, {{"point": "Key lesson 2"}}, {{"point": "Key lesson 3"}}
+    ],
+    "summary": "Synthesis reflecting scholarly depth and source expertise"
 }}
 
-When citing explanations, indicate the source (al-Jalalayn, al-Qurtubi, or Ibn Kathir) in the "source" field.
-"""
+SCHOLARLY PRINCIPLE: Provide authentic, well-attributed commentary that respects each source's scholarly strengths."""
+    
+    return prompt
 
-    # Level-specific instructions
-    if level == "casual":
-        system_instruction += "Keep explanations short, simple, and practical for everyday Muslims.\n"
-    elif level == "beginner":
-        system_instruction += "Explain concepts in simple English with clear definitions of Arabic terms. Avoid complex theological discussions.\n"
-    elif level == "intermediate":
-        system_instruction += "Include brief linguistic notes and moderate theological depth. Explain key Arabic terms and their significance.\n"
-    elif level == "advanced":
-        system_instruction += "Provide full linguistic and theological nuance with detailed scholarly analysis. Include Arabic terminology and comparative perspectives between the three sources.\n"
+def get_user_profile(user_id):
+    """Get user profile from Firestore"""
+    try:
+        if not user_id:
+            return {}
+        user_doc = db.collection("users").document(user_id).get()
+        return user_doc.to_dict() if user_doc.exists else {}
+    except Exception as e:
+        print(f"WARNING: Could not get user profile: {e}")
+        return {}
 
-    # Focus-specific instructions
-    if focus == "practical":
-        system_instruction += "Emphasize lessons and practical applications for daily Muslim life, especially from al-Jalalayn.\n"
-    elif focus == "linguistic":
-        system_instruction += "Emphasize Arabic grammar, word roots, rhetorical devices from all sources, especially detailed linguistic analysis.\n"
-    elif focus == "comparative":
-        system_instruction += "Compare different interpretations between al-Jalalayn, al-Qurtubi, and Ibn Kathir. Highlight areas of consensus or difference.\n"
-    elif focus == "thematic":
-        system_instruction += "Connect verses to broader Quranic themes and cross-reference related passages across all three sources.\n"
-
-    # Verbosity-specific instructions
-    if verbosity == "short":
-        system_instruction += "Keep responses concise and to the point.\n"
-    elif verbosity == "medium":
-        system_instruction += "Provide balanced detail without overwhelming information.\n"
-    elif verbosity == "detailed":
-        system_instruction += "Provide comprehensive analysis with examples, context, and thorough explanations from multiple sources.\n"
-
-    user_prompt = f"USER QUERY: '{query}'. Generate the JSON response now based on the provided context from the classical tafsir sources."
-    return system_instruction, user_prompt
+def format_for_export(response_data, format_type='markdown'):
+    """Format response data for export"""
+    if format_type == 'json':
+        return json.dumps(response_data, indent=2, ensure_ascii=False)
+    
+    # Markdown format
+    content = "# Tafsir Response\n\n"
+    
+    # Verses
+    if response_data.get('verses'):
+        content += "## Relevant Verses\n\n"
+        for verse in response_data['verses']:
+            if verse.get('arabic_text') and verse['arabic_text'] != 'Not available':
+                content += f"**{verse['surah']}, Verse {verse['verse_number']}**\n\n"
+                content += f"{verse['arabic_text']}\n\n"
+                content += f"*{verse['text_saheeh_international']}*\n\n"
+            else:
+                content += f"**{verse['surah']}, Verse {verse['verse_number']}**\n\n"
+                content += f"*{verse['text_saheeh_international']}*\n\n"
+    
+    # Tafsir explanations
+    if response_data.get('tafsir_explanations'):
+        content += "## Tafsir Explanations\n\n"
+        for tafsir in response_data['tafsir_explanations']:
+            content += f"### {tafsir['source']}\n\n"
+            content += f"{tafsir['explanation']}\n\n"
+    
+    # Cross-references
+    if response_data.get('cross_references'):
+        content += "## Related Verses\n\n"
+        for ref in response_data['cross_references']:
+            content += f"- **{ref['verse']}**: {ref['relevance']}\n"
+        content += "\n"
+    
+    # Lessons
+    if response_data.get('lessons_practical_applications'):
+        content += "## Lessons & Practical Applications\n\n"
+        for lesson in response_data['lessons_practical_applications']:
+            content += f"- {lesson['point']}\n"
+        content += "\n"
+    
+    # Summary
+    if response_data.get('summary'):
+        content += "## Summary\n\n"
+        content += f"{response_data['summary']}\n\n"
+    
+    content += "---\n*Generated by Tafsir Simplified*"
+    return content
 
 # --- API Routes ---
+@app.route("/suggestions", methods=["GET"])
+def get_suggestions():
+    """Get query suggestions"""
+    return jsonify({
+        "suggestions": QUERY_SUGGESTIONS,
+        "popular_topics": ["2:255", "charity", "prayer", "forgiveness", "patience"],
+        "verse_examples": ["1:1", "2:255", "112:1-4", "113:1", "114:1"]
+    }), 200
+
+@app.route("/analytics", methods=["GET"])
+@firebase_auth_required
+def get_analytics():
+    """Get usage analytics (admin only)"""
+    try:
+        # Check if user is admin (implement your admin check logic)
+        user_email = request.user.get('email', '')
+        if not user_email.endswith('@yourdomain.com'):  # Replace with your admin domain
+            return jsonify({"error": "Unauthorized"}), 403
+        
+        return jsonify({
+            "total_queries": sum(ANALYTICS.values()),
+            "popular_queries": dict(sorted(ANALYTICS.items(), key=lambda x: x[1], reverse=True)[:10]),
+            "active_users": len(USER_RATE_LIMITS),
+            "cache_hit_rate": len(RESPONSE_CACHE) / max(sum(ANALYTICS.values()), 1)
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/export/<format_type>", methods=["POST"])
+@firebase_auth_required
+def export_response(format_type):
+    """Export response in specified format"""
+    try:
+        if format_type not in ['markdown', 'json']:
+            return jsonify({"error": "Invalid format. Use 'markdown' or 'json'"}), 400
+        
+        data = request.get_json()
+        response_data = data.get('response_data')
+        
+        if not response_data:
+            return jsonify({"error": "No response data provided"}), 400
+        
+        content = format_for_export(response_data, format_type)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"tafsir_response_{timestamp}.{format_type if format_type != 'markdown' else 'md'}"
+        
+        return jsonify({
+            "content": content,
+            "filename": filename,
+            "format": format_type
+        }), 200
+        
+    except Exception as e:
+        print(f"ERROR in export: {e}")
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/get_profile", methods=["GET"])
 @firebase_auth_required
 def get_profile():
@@ -307,15 +636,40 @@ def set_profile():
 
 @app.route("/tafsir", methods=["POST"])
 @firebase_auth_required
+@handle_errors
 def tafsir_handler():
-    """Main tafsir endpoint with RAG pipeline"""
-    payload = request.get_json()
-    query = payload.get("query")
-    
-    if not query:
-        return jsonify({"error": "Query is missing"}), 400
-
+    """Enhanced tafsir endpoint with caching, rate limiting, and quality validation"""
     try:
+        data = request.get_json()
+        query = data.get('query', '').strip()
+        user_id = request.user.get('uid')
+        
+        if not query:
+            return jsonify({'error': 'Query is required'}), 400
+        
+        # Rate limiting check
+        if is_rate_limited(user_id):
+            return jsonify({'error': 'Rate limit exceeded. Please try again later.'}), 429
+        
+        # Analytics tracking
+        ANALYTICS[query] += 1
+        
+        # Get user profile for personalization
+        user_profile = get_user_profile(user_id)
+        
+        # Check cache first
+        cache_key = get_cache_key(query, user_profile)
+        if cache_key in RESPONSE_CACHE:
+            print(f"Cache hit for query: {query}")
+            return jsonify(RESPONSE_CACHE[cache_key]), 200
+        
+        # Classify query type for source weighting
+        query_type = classify_query_type(query)
+        
+        # Get Arabic text and cross-references
+        arabic_text = get_arabic_text(query)
+        cross_refs = get_cross_references(query)
+        
         # Get authentication token for Vertex AI
         credentials, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
         auth_req = GoogleRequest()
@@ -323,68 +677,42 @@ def tafsir_handler():
         token = credentials.token
 
         # RAG Step 1: Expand the query for better semantic matching
-        print(f"RAG: Processing query: '{query}'")
+        print(f"RAG: Processing query: '{query}' (type: {query_type})")
         expanded_query = expand_query(query, token)
 
-        # RAG Step 2: Generate embedding for the expanded query
-        # FIXED: Specify output_dimensionality=1024 to match your vector database
-        print("RAG: Generating query embedding...")
+        # RAG Step 2: Initialize models
         embedding_model = TextEmbeddingModel.from_pretrained("gemini-embedding-001")
-        query_embedding = embedding_model.get_embeddings([expanded_query], output_dimensionality=1024)[0].values
-
-        # RAG Step 3: Search the vector index
-        print("RAG: Searching vector index...")
         endpoint_resource_name = f"projects/{PROJECT_ID}/locations/{LOCATION}/indexEndpoints/{INDEX_ENDPOINT_ID}"
         index_endpoint = aiplatform.MatchingEngineIndexEndpoint(index_endpoint_name=endpoint_resource_name)
         
-        neighbors_result = index_endpoint.find_neighbors(
-            deployed_index_id=DEPLOYED_INDEX_ID,
-            queries=[query_embedding], 
-            num_neighbors=5
+        # RAG Step 3: Perform enhanced diversified search
+        selected_chunks, context_by_source = perform_diversified_rag_search(
+            query, expanded_query, embedding_model, index_endpoint, query_type
         )
-
-        # RAG Step 4: Retrieve relevant context from chunks
-        print("RAG: Retrieving context from chunks...")
-        context_texts = []
-        for neighbor in neighbors_result[0]:
-            chunk_text = TAFSIR_CHUNKS.get(neighbor.id, '')
-            if chunk_text:
-                context_texts.append(chunk_text)
         
-        context_string = "\n\n---\n\n".join(context_texts)
+        # Debug logging
+        print(f"Query: {query} | Type: {query_type}")
+        print(f"Sources with content: {[s for s, c in context_by_source.items() if c]}")
+        print(f"Total chunks retrieved: {len(selected_chunks)}")
+        for source, chunks in context_by_source.items():
+            print(f"{source}: {len(chunks)} chunks")
+        if arabic_text:
+            print(f"Arabic text included: {arabic_text[:50]}...")
+        if cross_refs:
+            print(f"Cross-references: {cross_refs}")
         
-        if not context_string:
-            return jsonify({"error": "Could not find relevant passages in the classical tafsir sources for your query."}), 404
-
-        # RAG Step 5: Get user profile and build adaptive prompt
-        uid = request.user["uid"]
-        user_doc = db.collection("users").document(uid).get()
-        user_profile = user_doc.to_dict() if user_doc.exists else {}
-
-        system_instruction, user_prompt = build_adaptive_prompt(user_profile, payload)
+        # RAG Step 4: Build enhanced prompt
+        prompt = build_enhanced_prompt(query, context_by_source, user_profile, arabic_text, cross_refs, query_type)
         
-        # RAG Step 6: Create final prompt with retrieved context
-        final_prompt = f"""
-{system_instruction}
-
-Based on the following context from classical tafsir sources (al-Jalalayn, al-Qurtubi, and Ibn Kathir), respond to the user's request:
-
-CONTEXT:
-{context_string}
-
-{user_prompt}
-"""
-
-        # RAG Step 7: Generate final response using Gemini
-        print("RAG: Generating final response...")
+        # RAG Step 5: Generate response with Gemini
         VERTEX_ENDPOINT = f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/{PROJECT_ID}/locations/{LOCATION}/publishers/google/models/{GEMINI_MODEL_ID}:generateContent"
         
         body = {
-            "contents": [{"role": "user", "parts": [{"text": final_prompt}]}],
+            "contents": [{"role": "user", "parts": [{"text": prompt}]}],
             "generation_config": {
                 "response_mime_type": "application/json", 
                 "temperature": 0.2, 
-                "maxOutputTokens": 4096
+                "maxOutputTokens": 8192
             },
         }
 
@@ -396,13 +724,32 @@ CONTEXT:
         )
         response.raise_for_status()
 
-        # Parse and return response
+        # Parse and validate response
         raw_response = response.json()
         if "candidates" in raw_response and raw_response["candidates"]:
             try:
                 generated_text = raw_response["candidates"][0]["content"]["parts"][0]["text"]
                 final_json = json.loads(generated_text)
+                
+                # Validate response quality
+                is_valid, validation_msg = validate_response(final_json)
+                if not is_valid:
+                    print(f"Response validation failed: {validation_msg}")
+                    # Don't cache invalid responses
+                    return jsonify({"error": "Generated response did not meet quality standards. Please try again."}), 500
+                
+                # Cache successful response (in production, use Redis with TTL)
+                RESPONSE_CACHE[cache_key] = final_json
+                
+                # Clean cache if it gets too large (basic memory management)
+                if len(RESPONSE_CACHE) > 1000:
+                    # Remove oldest 20% of entries
+                    keys_to_remove = list(RESPONSE_CACHE.keys())[:200]
+                    for key in keys_to_remove:
+                        del RESPONSE_CACHE[key]
+                
                 return jsonify(final_json), 200
+                
             except (KeyError, IndexError, json.JSONDecodeError) as e:
                 print(f"ERROR parsing Gemini response: {type(e).__name__} - {e}")
                 print(f"Raw response: {raw_response}")
@@ -418,25 +765,19 @@ CONTEXT:
     except Exception as e:
         print(f"CRITICAL ERROR in /tafsir RAG pipeline: {type(e).__name__} - {e}")
         traceback.print_exc()
-        return jsonify({"error": "An internal error occurred in the RAG pipeline"}), 500
+        return jsonify({"error": "Internal server error"}), 500
 
 # --- Health Check ---
 @app.route("/health", methods=["GET"])
 def health_check():
     """Health check endpoint"""
-    status = {
+    return jsonify({
         "status": "healthy",
-        "firebase_initialized": len(firebase_admin._apps) > 0,
-        "chunks_loaded": len(TAFSIR_CHUNKS) > 0,
-        "total_chunks": len(TAFSIR_CHUNKS),
-        "sources": "al-Jalalayn, al-Qurtubi, Ibn Kathir",
-        "project_id": PROJECT_ID,
-        "location": LOCATION,
-        "index_endpoint_id": INDEX_ENDPOINT_ID,
-        "deployed_index_id": DEPLOYED_INDEX_ID
-    }
-    return jsonify(status), 200
+        "timestamp": datetime.now().isoformat(),
+        "chunks_loaded": len(TAFSIR_CHUNKS),
+        "cache_size": len(RESPONSE_CACHE)
+    }), 200
 
-# --- Cloud Run Entry Point ---
+# --- Main ---
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)), debug=False)
+    app.run(debug=False, host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
