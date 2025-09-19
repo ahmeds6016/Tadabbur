@@ -860,6 +860,46 @@ def debug_sources():
             "error": str(e),
             "traceback": traceback.format_exc()
         }), 500
+# After the /debug-sources route (around line 680-690)
+# and before the "# --- Main ---" section
+
+@app.route('/debug-id-match', methods=['GET'])
+def debug_id_match():
+    # Test specific chunk IDs from the debug output
+    test_cases = {
+        "jalalayn_works": {
+            "chunk_id": "jalalayn_page_49_46",
+            "text_exists": "jalalayn_page_49_46" in TAFSIR_CHUNKS,
+            "text_preview": TAFSIR_CHUNKS.get("jalalayn_page_49_46", "NOT_FOUND")[:100]
+        },
+        "ibn_kathir_fails": {
+            "chunk_id": "ibn_kathir_page_1464_1463", 
+            "text_exists": "ibn_kathir_page_1464_1463" in TAFSIR_CHUNKS,
+            "text_preview": TAFSIR_CHUNKS.get("ibn_kathir_page_1464_1463", "NOT_FOUND")[:100]
+        },
+        "qurtubi_fails": {
+            "chunk_id": "qurtubi_vol_3_page_415_1664",
+            "text_exists": "qurtubi_vol_3_page_415_1664" in TAFSIR_CHUNKS, 
+            "text_preview": TAFSIR_CHUNKS.get("qurtubi_vol_3_page_415_1664", "NOT_FOUND")[:100]
+        }
+    }
+    
+    # Also show what IDs are actually being generated for each source
+    sample_generated_ids = {
+        "jalalayn_ids": [k for k in TAFSIR_CHUNKS.keys() if k.startswith('jalalayn')][:3],
+        "qurtubi_ids": [k for k in TAFSIR_CHUNKS.keys() if k.startswith('qurtubi')][:3], 
+        "ibn_kathir_ids": [k for k in TAFSIR_CHUNKS.keys() if k.startswith('ibn_kathir')][:3]
+    }
+    
+    return jsonify({
+        "test_cases": test_cases,
+        "sample_generated_ids": sample_generated_ids
+    })
+
+# --- Main ---
+if __name__ == "__main__":
+
+
 # --- Main ---
 if __name__ == "__main__":
     app.run(debug=False, host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
