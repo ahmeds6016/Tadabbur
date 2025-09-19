@@ -777,7 +777,89 @@ def health_check():
         "chunks_loaded": len(TAFSIR_CHUNKS),
         "cache_size": len(RESPONSE_CACHE)
     }), 200
+# Add this after the /health route and before the "# --- Main ---" section
 
+@app.route('/debug-sources', methods=['GET'])
+def debug_sources():
+    """Debug endpoint to see what sources are actually in the vector index"""
+    try:
+        # Test with multiple queries to get a good sample
+        test_queries = ["Allah", "Quran", "verse", "surah", "Prophet", "Islam"]
+        all_sources = set()
+        source_counts = {}
+        sample_texts = {}
+        
+        # Get authentication token for Vertex AI
+        credentials, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
+        auth_req = GoogleRequest()
+        credentials.refresh(auth_req)
+        token = credentials.token
+        
+        # Initialize models
+        embedding_model = TextEmbeddingModel.from_pretrained("gemini-embedding-001")
+        endpoint_resource_name = f"projects/{PROJECT_ID}/locations/{LOCATION}/indexEndpoints/{INDEX_ENDPOINT_ID}"
+        index_endpoint = aiplatform.MatchingEngineIndexEndpoint(index_endpoint_name=endpoint_resource_name)
+        
+        for query in test_queries:
+            try:
+                # Get embedding and search
+                query_embedding = embedding_model.get_embeddings([query], output_dimensionality=1024)[0].values
+                neighbors_result = index_endpoint.find_neighbors(
+                    deployed_index_id=DEPLOYED_INDEX_ID,
+                    queries=[query_embedding],
+                    num_neighbors=10
+                )
+                
+                print(f"DEBUG: Query '{query}' returned {len(neighbors_result[0])} results")
+                
+                for neighbor in neighbors_result[0]:
+                    chunk_id = neighbor.id
+                    chunk_text = TAFSIR_CHUNKS.get(chunk_id, '')
+                    
+                    # Determine source from chunk_id
+                    if chunk_id.startswith('jalalayn'):
+                        source = 'Tafsir al-Jalalayn'
+                    elif chunk_id.startswith('qurtubi'):
+                        source = 'Tafsir al-Qurtubi'
+                    elif chunk_id.startswith('ibn_kathir'):
+                        source = 'Tafsir Ibn Kathir'
+                    else:
+                        source = 'Unknown'
+                    
+                    all_sources.add(source)
+                    source_counts[source] = source_counts.get(source, 0) + 1
+                    
+                    # Store a sample text for each source
+                    if source not in sample_texts:
+                        sample_texts[source] = {
+                            'text_preview': chunk_text[:150] if chunk_text else 'No text found',
+                            'chunk_id': chunk_id
+                        }
+                        
+            except Exception as e:
+                print(f"Error with query '{query}': {str(e)}")
+                continue
+        
+        return jsonify({
+            "status": "success",
+            "total_unique_sources": len(all_sources),
+            "sources_found": list(all_sources),
+            "source_distribution": source_counts,
+            "sample_data": sample_texts,
+            "vector_index_total_count": len(TAFSIR_CHUNKS),
+            "chunks_by_source": {
+                "jalalayn_chunks": len([k for k in TAFSIR_CHUNKS.keys() if k.startswith('jalalayn')]),
+                "qurtubi_chunks": len([k for k in TAFSIR_CHUNKS.keys() if k.startswith('qurtubi')]),
+                "ibn_kathir_chunks": len([k for k in TAFSIR_CHUNKS.keys() if k.startswith('ibn_kathir')])
+            }
+        })
+        
+    except Exception as e:
+        return jsonify({
+            "status": "error", 
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }), 500
 # --- Main ---
 if __name__ == "__main__":
     app.run(debug=False, host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
