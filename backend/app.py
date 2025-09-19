@@ -895,6 +895,45 @@ def debug_id_match():
         "sample_generated_ids": sample_generated_ids
     })
 
+@app.route('/debug-vector-ids', methods=['GET'])
+def debug_vector_ids():
+    """Get more vector index IDs to understand the pattern"""
+    try:
+        # Get authentication token
+        credentials, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
+        auth_req = GoogleRequest()
+        credentials.refresh(auth_req)
+        
+        # Initialize models
+        embedding_model = TextEmbeddingModel.from_pretrained("gemini-embedding-001")
+        endpoint_resource_name = f"projects/{PROJECT_ID}/locations/{LOCATION}/indexEndpoints/{INDEX_ENDPOINT_ID}"
+        index_endpoint = aiplatform.MatchingEngineIndexEndpoint(index_endpoint_name=endpoint_resource_name)
+        
+        # Get sample IDs from vector index
+        query_embedding = embedding_model.get_embeddings(["sample"], output_dimensionality=1024)[0].values
+        neighbors_result = index_endpoint.find_neighbors(
+            deployed_index_id=DEPLOYED_INDEX_ID,
+            queries=[query_embedding],
+            num_neighbors=50
+        )
+        
+        vector_ids = [neighbor.id for neighbor in neighbors_result[0]]
+        
+        # Categorize by source
+        jalalayn_ids = [id for id in vector_ids if 'jalalayn' in id][:10]
+        qurtubi_ids = [id for id in vector_ids if 'qurtubi' in id][:10]
+        ibn_kathir_ids = [id for id in vector_ids if 'ibn_kathir' in id][:10]
+        
+        return jsonify({
+            "jalalayn_sample_ids": jalalayn_ids,
+            "qurtubi_sample_ids": qurtubi_ids,
+            "ibn_kathir_sample_ids": ibn_kathir_ids,
+            "total_vector_ids_sampled": len(vector_ids)
+        })
+        
+    except Exception as e:
+        return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
+
 # --- Main ---
 if __name__ == "__main__":
     app.run(debug=False, host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
