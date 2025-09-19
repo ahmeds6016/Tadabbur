@@ -206,16 +206,24 @@ def load_chunks_from_gcs():
                 contents = blob.download_as_string()
                 chunks_list = json.loads(contents)
                 
-                # Convert list to dictionary with source-specific IDs
+                # Convert list to dictionary with source-specific IDs that match vector index format
                 source_chunks = 0
                 for i, chunk in enumerate(chunks_list):
-                    # Create unique IDs that include source information
+                    # Create unique IDs that match the existing vector index format
                     if source_name == "al-Jalalayn":
+                        # Keep existing format (it works with vector index)
                         datapoint_id = f"jalalayn_page_{chunk.get('page_number', i)}_{i}"
                     elif source_name == "al-Qurtubi":
-                        datapoint_id = f"qurtubi_page_{chunk.get('page_number', i)}_{i}"
+                        # Match vector index format: qurtubi_vol_X_page_Y_Z
+                        vol = chunk.get('volume', 1)
+                        page = chunk.get('page_number', i)
+                        datapoint_id = f"qurtubi_vol_{vol}_page_{page}_{i}"
                     elif source_name == "Ibn Kathir":
-                        datapoint_id = f"ibn_kathir_page_{chunk.get('page_number', i)}_{chunk.get('chunk_index_on_page', i)}"
+                        # Match vector index format with high page numbers from 10-volume compilation
+                        page = chunk.get('page_number', i)
+                        chunk_idx = chunk.get('chunk_index_on_page', i)
+                        # Ibn Kathir was processed as one massive PDF, so page numbers are already high
+                        datapoint_id = f"ibn_kathir_page_{page}_{chunk_idx}"
                     
                     TAFSIR_CHUNKS[datapoint_id] = chunk.get('text', '')
                     source_chunks += 1
@@ -895,40 +903,58 @@ def debug_id_match():
         "sample_generated_ids": sample_generated_ids
     })
 
-@app.route('/debug-vector-ids', methods=['GET'])
-def debug_vector_ids():
-    """Get more vector index IDs to understand the pattern"""
+@app.route('/debug-large-sample', methods=['GET'])
+def debug_large_sample():
+    """Get larger sample of loaded chunk IDs and check pattern matching"""
     try:
-        # Get authentication token
-        credentials, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
-        auth_req = GoogleRequest()
-        credentials.refresh(auth_req)
+        # Show samples of what we loaded vs what vector index expects
+        loaded_samples = {}
+        for source in ['jalalayn', 'qurtubi', 'ibn_kathir']:
+            source_keys = [k for k in TAFSIR_CHUNKS.keys() if k.startswith(source)]
+            loaded_samples[f"{source}_loaded"] = source_keys[:15]  # Show 15 samples each
+            
+        # Test some specific patterns that might exist in vector index
+        test_patterns = {
+            "qurtubi_vol_1_tests": [
+                f"qurtubi_vol_1_page_{i}_{j}" for i in range(1, 20) for j in range(0, 3)
+            ][:10],
+            "qurtubi_vol_2_tests": [
+                f"qurtubi_vol_2_page_{i}_{j}" for i in range(1, 20) for j in range(0, 3) 
+            ][:10],
+            "ibn_kathir_high_page_tests": [
+                f"ibn_kathir_page_{i}_{j}" for i in range(1400, 1470) for j in range(0, 5)
+            ][:15]
+        }
         
-        # Initialize models
-        embedding_model = TextEmbeddingModel.from_pretrained("gemini-embedding-001")
-        endpoint_resource_name = f"projects/{PROJECT_ID}/locations/{LOCATION}/indexEndpoints/{INDEX_ENDPOINT_ID}"
-        index_endpoint = aiplatform.MatchingEngineIndexEndpoint(index_endpoint_name=endpoint_resource_name)
+        # Check which test patterns exist in our loaded chunks
+        pattern_matches = {}
+        for pattern_name, test_ids in test_patterns.items():
+            matches = [tid for tid in test_ids if tid in TAFSIR_CHUNKS]
+            pattern_matches[pattern_name] = {
+                "matches_found": len(matches),
+                "sample_matches": matches[:5],
+                "total_tested": len(test_ids)
+            }
         
-        # Get sample IDs from vector index
-        query_embedding = embedding_model.get_embeddings(["sample"], output_dimensionality=1024)[0].values
-        neighbors_result = index_endpoint.find_neighbors(
-            deployed_index_id=DEPLOYED_INDEX_ID,
-            queries=[query_embedding],
-            num_neighbors=50
-        )
-        
-        vector_ids = [neighbor.id for neighbor in neighbors_result[0]]
-        
-        # Categorize by source
-        jalalayn_ids = [id for id in vector_ids if 'jalalayn' in id][:10]
-        qurtubi_ids = [id for id in vector_ids if 'qurtubi' in id][:10]
-        ibn_kathir_ids = [id for id in vector_ids if 'ibn_kathir' in id][:10]
+        # Also check actual data from chunk files to understand structure
+        sample_metadata = {}
+        for source in ['jalalayn', 'qurtubi', 'ibn_kathir']:
+            source_keys = [k for k in TAFSIR_CHUNKS.keys() if k.startswith(source)]
+            if source_keys:
+                sample_key = source_keys[0]
+                # Try to extract metadata from key structure
+                parts = sample_key.split('_')
+                sample_metadata[source] = {
+                    "sample_key": sample_key,
+                    "key_parts": parts,
+                    "total_chunks": len(source_keys)
+                }
         
         return jsonify({
-            "jalalayn_sample_ids": jalalayn_ids,
-            "qurtubi_sample_ids": qurtubi_ids,
-            "ibn_kathir_sample_ids": ibn_kathir_ids,
-            "total_vector_ids_sampled": len(vector_ids)
+            "loaded_samples": loaded_samples,
+            "pattern_test_results": pattern_matches,
+            "metadata_analysis": sample_metadata,
+            "total_chunks_loaded": len(TAFSIR_CHUNKS)
         })
         
     except Exception as e:
