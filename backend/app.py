@@ -777,8 +777,8 @@ def health_check():
         "chunks_loaded": len(TAFSIR_CHUNKS),
         "cache_size": len(RESPONSE_CACHE)
     }), 200
-# Add this after the /health route and before the "# --- Main ---" section
 
+# --- Debug Endpoints ---
 @app.route('/debug-sources', methods=['GET'])
 def debug_sources():
     """Debug endpoint to see what sources are actually in the vector index"""
@@ -860,11 +860,10 @@ def debug_sources():
             "error": str(e),
             "traceback": traceback.format_exc()
         }), 500
-# After the /debug-sources route (around line 680-690)
-# and before the "# --- Main ---" section
 
 @app.route('/debug-id-match', methods=['GET'])
 def debug_id_match():
+    """Test specific chunk IDs from the debug output"""
     # Test specific chunk IDs from the debug output
     test_cases = {
         "jalalayn_works": {
@@ -895,10 +894,6 @@ def debug_id_match():
         "test_cases": test_cases,
         "sample_generated_ids": sample_generated_ids
     })
-
-# --- Main ---
-if __name__ == "__main__":
-
 
 # --- Main ---
 if __name__ == "__main__":
