@@ -219,11 +219,17 @@ def load_chunks_from_gcs():
                         page = chunk.get('page_number', i)
                         datapoint_id = f"qurtubi_vol_{vol}_page_{page}_{i}"
                     elif source_name == "Ibn Kathir":
-                        # Match vector index format with high page numbers from 10-volume compilation
-                        page = chunk.get('page_number', i)
-                        chunk_idx = chunk.get('chunk_index_on_page', i)
-                        # Ibn Kathir was processed as one massive PDF, so page numbers are already high
-                        datapoint_id = f"ibn_kathir_page_{page}_{chunk_idx}"
+                        # FIXED: Apply +1463 offset to match vector index numbering
+                        # Vector index expects ibn_kathir_page_1464_1463 format
+                        # Your chunks are sequential paragraphs numbered 1, 2, 3...
+                        page = chunk.get('page_number', i)  # Sequential paragraph number
+                        chunk_idx = chunk.get('chunk_index_on_page', i)  # Usually 0
+                        
+                        # Apply offset: paragraph 1 -> page 1464, paragraph 2 -> page 1465, etc.
+                        adjusted_page = page + 1463
+                        adjusted_chunk_idx = chunk_idx + 1463  # Also adjust chunk index
+                        
+                        datapoint_id = f"ibn_kathir_page_{adjusted_page}_{adjusted_chunk_idx}"
                     
                     TAFSIR_CHUNKS[datapoint_id] = chunk.get('text', '')
                     source_chunks += 1
@@ -879,12 +885,12 @@ def debug_id_match():
             "text_exists": "jalalayn_page_49_46" in TAFSIR_CHUNKS,
             "text_preview": TAFSIR_CHUNKS.get("jalalayn_page_49_46", "NOT_FOUND")[:100]
         },
-        "ibn_kathir_fails": {
+        "ibn_kathir_test": {
             "chunk_id": "ibn_kathir_page_1464_1463", 
             "text_exists": "ibn_kathir_page_1464_1463" in TAFSIR_CHUNKS,
             "text_preview": TAFSIR_CHUNKS.get("ibn_kathir_page_1464_1463", "NOT_FOUND")[:100]
         },
-        "qurtubi_fails": {
+        "qurtubi_test": {
             "chunk_id": "qurtubi_vol_3_page_415_1664",
             "text_exists": "qurtubi_vol_3_page_415_1664" in TAFSIR_CHUNKS, 
             "text_preview": TAFSIR_CHUNKS.get("qurtubi_vol_3_page_415_1664", "NOT_FOUND")[:100]
