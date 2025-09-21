@@ -1,5 +1,6 @@
 import os
 import json
+import re
 import traceback
 import time
 import hashlib
@@ -33,16 +34,20 @@ CORS(app, resources={r"/*": {
     ]
 }}, supports_credentials=True)
 
-# --- Configuration ---
-PROJECT_ID = os.environ.get("GCP_PROJECT", "tafsir-simplified")
+# --- Configuration (UPDATED for cross-project setup) ---
+# Firebase project (Auth, Firestore, Users, Quran texts)
+FIREBASE_PROJECT = os.environ.get("FIREBASE_PROJECT", "tafsir-simplified-6b262")
+# GCP infrastructure project (Vertex AI, GCS, Cloud Run)
+GCP_INFRASTRUCTURE_PROJECT = os.environ.get("GCP_INFRASTRUCTURE_PROJECT", "tafsir-simplified")
 LOCATION = os.environ.get("GCP_LOCATION", "us-central1")
 GEMINI_MODEL_ID = os.environ.get("GEMINI_MODEL_ID", "gemini-2.0-flash")
 FIREBASE_SECRET_FULL_PATH = os.environ.get("FIREBASE_SECRET_FULL_PATH")
 INDEX_ENDPOINT_ID = os.environ.get("INDEX_ENDPOINT_ID")
 DEPLOYED_INDEX_ID = os.environ.get("DEPLOYED_INDEX_ID")
 GCS_BUCKET_NAME = os.environ.get("GCS_BUCKET_NAME")
+FIRESTORE_DATABASE_ID = "tafsir-db"
 
-# Multi-source chunk file paths
+# Multi-source chunk file paths (for RAG)
 GCS_JALALAYN_PATH = 'jalalayn_chunks.json'
 GCS_QURTUBI_PATH = 'qurtubi_chunks.json'
 GCS_IBN_KATHIR_PATH = 'ibn_kathir_chunks.json'
@@ -56,6 +61,51 @@ TAFSIR_CHUNKS = {}
 RESPONSE_CACHE = {}  # In-memory cache
 USER_RATE_LIMITS = defaultdict(list)  # Rate limiting
 ANALYTICS = defaultdict(int)  # Usage analytics
+db = None  # Firestore client
+
+# --- NEW: Complete Quran Metadata for Verse Validation ---
+QURAN_METADATA = {
+    1: {"name": "Al-Fatihah", "verses": 7}, 2: {"name": "Al-Baqarah", "verses": 286}, 3: {"name": "Aal-E-Imran", "verses": 200},
+    4: {"name": "An-Nisa", "verses": 176}, 5: {"name": "Al-Ma'idah", "verses": 120}, 6: {"name": "Al-An'am", "verses": 165},
+    7: {"name": "Al-A'raf", "verses": 206}, 8: {"name": "Al-Anfal", "verses": 75}, 9: {"name": "At-Tawbah", "verses": 129},
+    10: {"name": "Yunus", "verses": 109}, 11: {"name": "Hud", "verses": 123}, 12: {"name": "Yusuf", "verses": 111},
+    13: {"name": "Ar-Ra'd", "verses": 43}, 14: {"name": "Ibrahim", "verses": 52}, 15: {"name": "Al-Hijr", "verses": 99},
+    16: {"name": "An-Nahl", "verses": 128}, 17: {"name": "Al-Isra", "verses": 111}, 18: {"name": "Al-Kahf", "verses": 110},
+    19: {"name": "Maryam", "verses": 98}, 20: {"name": "Taha", "verses": 135}, 21: {"name": "Al-Anbya", "verses": 112},
+    22: {"name": "Al-Hajj", "verses": 78}, 23: {"name": "Al-Mu'minun", "verses": 118}, 24: {"name": "An-Nur", "verses": 64},
+    25: {"name": "Al-Furqan", "verses": 77}, 26: {"name": "Ash-Shu'ara", "verses": 227}, 27: {"name": "An-Naml", "verses": 93},
+    28: {"name": "Al-Qasas", "verses": 88}, 29: {"name": "Al-Ankabut", "verses": 69}, 30: {"name": "Ar-Rum", "verses": 60},
+    31: {"name": "Luqman", "verses": 34}, 32: {"name": "As-Sajdah", "verses": 30}, 33: {"name": "Al-Ahzab", "verses": 73},
+    34: {"name": "Saba", "verses": 54}, 35: {"name": "Fatir", "verses": 45}, 36: {"name": "Ya-Sin", "verses": 83},
+    37: {"name": "As-Saffat", "verses": 182}, 38: {"name": "Sad", "verses": 88}, 39: {"name": "Az-Zumar", "verses": 75},
+    40: {"name": "Ghafir", "verses": 85}, 41: {"name": "Fussilat", "verses": 54}, 42: {"name": "Ash-Shuraa", "verses": 53},
+    43: {"name": "Az-Zukhruf", "verses": 89}, 44: {"name": "Ad-Dukhan", "verses": 59}, 45: {"name": "Al-Jathiyah", "verses": 37},
+    46: {"name": "Al-Ahqaf", "verses": 35}, 47: {"name": "Muhammad", "verses": 38}, 48: {"name": "Al-Fath", "verses": 29},
+    49: {"name": "Al-Hujurat", "verses": 18}, 50: {"name": "Qaf", "verses": 45}, 51: {"name": "Adh-Dhariyat", "verses": 60},
+    52: {"name": "At-Tur", "verses": 49}, 53: {"name": "An-Najm", "verses": 62}, 54: {"name": "Al-Qamar", "verses": 55},
+    55: {"name": "Ar-Rahman", "verses": 78}, 56: {"name": "Al-Waqi'ah", "verses": 96}, 57: {"name": "Al-Hadid", "verses": 29},
+    58: {"name": "Al-Mujadila", "verses": 22}, 59: {"name": "Al-Hashr", "verses": 24}, 60: {"name": "Al-Mumtahanah", "verses": 13},
+    61: {"name": "As-Saf", "verses": 14}, 62: {"name": "Al-Jumu'ah", "verses": 11}, 63: {"name": "Al-Munafiqun", "verses": 11},
+    64: {"name": "At-Taghabun", "verses": 18}, 65: {"name": "At-Talaq", "verses": 12}, 66: {"name": "At-Tahrim", "verses": 12},
+    67: {"name": "Al-Mulk", "verses": 30}, 68: {"name": "Al-Qalam", "verses": 52}, 69: {"name": "Al-Haqqah", "verses": 52},
+    70: {"name": "Al-Ma'arij", "verses": 44}, 71: {"name": "Nuh", "verses": 28}, 72: {"name": "Al-Jinn", "verses": 28},
+    73: {"name": "Al-Muzzammil", "verses": 20}, 74: {"name": "Al-Muddaththir", "verses": 56}, 75: {"name": "Al-Qiyamah", "verses": 40},
+    76: {"name": "Al-Insan", "verses": 31}, 77: {"name": "Al-Mursalat", "verses": 50}, 78: {"name": "An-Naba", "verses": 40},
+    79: {"name": "An-Nazi'at", "verses": 46}, 80: {"name": "Abasa", "verses": 42}, 81: {"name": "At-Takwir", "verses": 29},
+    82: {"name": "Al-Infitar", "verses": 19}, 83: {"name": "Al-Mutaffifin", "verses": 36}, 84: {"name": "Al-Inshiqaq", "verses": 25},
+    85: {"name": "Al-Buruj", "verses": 22}, 86: {"name": "At-Tariq", "verses": 17}, 87: {"name": "Al-A'la", "verses": 19},
+    88: {"name": "Al-Ghashiyah", "verses": 26}, 89: {"name": "Al-Fajr", "verses": 30}, 90: {"name": "Al-Balad", "verses": 20},
+    91: {"name": "Ash-Shams", "verses": 15}, 92: {"name": "Al-Layl", "verses": 21}, 93: {"name": "Ad-Duhaa", "verses": 11},
+    94: {"name": "Ash-Sharh", "verses": 8}, 95: {"name": "At-Tin", "verses": 8}, 96: {"name": "Al-Alaq", "verses": 19},
+    97: {"name": "Al-Qadr", "verses": 5}, 98: {"name": "Al-Bayyinah", "verses": 8}, 99: {"name": "Az-Zalzalah", "verses": 8},
+    100: {"name": "Al-Adiyat", "verses": 11}, 101: {"name": "Al-Qari'ah", "verses": 11}, 102: {"name": "At-Takathur", "verses": 8},
+    103: {"name": "Al-Asr", "verses": 3}, 104: {"name": "Al-Humazah", "verses": 9}, 105: {"name": "Al-Fil", "verses": 5},
+    106: {"name": "Quraysh", "verses": 4}, 107: {"name": "Al-Ma'un", "verses": 7}, 108: {"name": "Al-Kawthar", "verses": 3},
+    109: {"name": "Al-Kafirun", "verses": 6}, 110: {"name": "An-Nasr", "verses": 3}, 111: {"name": "Al-Masad", "verses": 5},
+    112: {"name": "Al-Ikhlas", "verses": 4}, 113: {"name": "Al-Falaq", "verses": 5}, 114: {"name": "An-Nas", "verses": 6}
+}
+
+SURAHS_BY_NAME = {info["name"].lower(): num for num, info in QURAN_METADATA.items()}
 
 # Popular query suggestions
 QUERY_SUGGESTIONS = [
@@ -72,12 +122,6 @@ VERSE_CROSS_REFS = {
     "prayer": ["2:43", "4:103", "20:14", "62:9-10"]
 }
 
-# Arabic text samples (in production, this would be from a database)
-ARABIC_TEXTS = {
-    "2:255": "اللَّهُ لَا إِلَٰهَ إِلَّا هُوَ الْحَيُّ الْقَيُّومُ",
-    "1:1": "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ"
-}
-
 # Source authority weights by query type
 SOURCE_WEIGHTS = {
     "legal": {"al-Qurtubi": 0.5, "Ibn Kathir": 0.3, "al-Jalalayn": 0.2},
@@ -85,6 +129,89 @@ SOURCE_WEIGHTS = {
     "concise": {"al-Jalalayn": 0.5, "al-Qurtubi": 0.3, "Ibn Kathir": 0.2},
     "default": {"al-Jalalayn": 0.33, "al-Qurtubi": 0.33, "Ibn Kathir": 0.34}
 }
+
+# --- NEW: Query Normalization Functions ---
+def validate_verse_reference(surah, verse):
+    """Validate that surah and verse numbers are within valid ranges"""
+    if surah not in QURAN_METADATA:
+        return False, f"Invalid Surah: {surah}. The Quran has 114 Surahs."
+    
+    max_verses = QURAN_METADATA[surah]["verses"]
+    if not (1 <= verse <= max_verses):
+        surah_name = QURAN_METADATA[surah]["name"]
+        return False, f"Invalid verse: {verse}. Surah {surah} ('{surah_name}') only has {max_verses} verses."
+    
+    return True, "Valid reference"
+
+def normalize_verse_reference(query):
+    """
+    Normalize different verse reference formats to standard (surah, verse) tuple
+    Returns (surah_num, verse_num) if verse reference detected, None otherwise
+    """
+    query_clean = re.sub(r'^(verse|ayat|ayah)\s+', '', query.lower().strip())
+    
+    # Pattern 1: "2:255", "2 : 255"
+    pattern1 = re.match(r'^(\d+)\s*:\s*(\d+)$', query_clean)
+    if pattern1:
+        surah, verse = int(pattern1.group(1)), int(pattern1.group(2))
+        is_valid, msg = validate_verse_reference(surah, verse)
+        if is_valid:
+            return (surah, verse)
+    
+    # Pattern 2: "Surah 2 verse 255", "Al-Baqarah verse 255"
+    pattern2 = re.search(r'(?:surah\s+)?(?:al-)?(\w+)\s+(?:verse|ayat|ayah)\s+(\d+)', query_clean)
+    if pattern2:
+        surah_name = pattern2.group(1).lower()
+        verse_num = int(pattern2.group(2))
+        
+        # Try to find surah by name
+        for name, surah_num in SURAHS_BY_NAME.items():
+            if surah_name in name or name in surah_name:
+                is_valid, msg = validate_verse_reference(surah_num, verse_num)
+                if is_valid:
+                    return (surah_num, verse_num)
+    
+    # Pattern 3: "surah 2 ayat 255" or similar
+    pattern3 = re.search(r'surah\s+(\d+).*?(\d+)', query_clean)
+    if pattern3:
+        surah, verse = int(pattern3.group(1)), int(pattern3.group(2))
+        is_valid, msg = validate_verse_reference(surah, verse)
+        if is_valid:
+            return (surah, verse)
+    
+    return None
+
+# --- NEW: Firestore Verse Lookup ---
+def get_verse_from_firestore(surah_num, verse_num):
+    """Retrieve verse text from Firestore"""
+    try:
+        doc_ref = db.collection('quran_texts').document(f'surah_{surah_num}')
+        doc = doc_ref.get()
+        
+        if doc.exists:
+            verses = doc.to_dict().get('verses', {})
+            verse_data = verses.get(str(verse_num))
+            
+            if verse_data:
+                return {
+                    'surah_number': surah_num,
+                    'verse_number': verse_num,
+                    'surah_name': QURAN_METADATA[surah_num]["name"],
+                    'arabic': verse_data.get('arabic', ''),
+                    'english': verse_data.get('en_sahih', ''),
+                    'transliteration': verse_data.get('en_transliteration', '')
+                }
+        
+        return None
+    except Exception as e:
+        print(f"Firestore lookup error: {e}")
+        return None
+
+def get_arabic_text_from_verse_data(verse_data):
+    """Extract Arabic text for use in RAG context"""
+    if verse_data and verse_data.get('arabic'):
+        return verse_data['arabic']
+    return None
 
 # --- Utility Functions ---
 def get_cache_key(query, user_profile):
@@ -136,13 +263,6 @@ def get_cross_references(query):
             return refs
     return []
 
-def get_arabic_text(query):
-    """Get Arabic text if available"""
-    for verse_ref, arabic in ARABIC_TEXTS.items():
-        if verse_ref in query:
-            return arabic
-    return None
-
 def validate_response(response_data):
     """Validate response quality"""
     try:
@@ -182,7 +302,7 @@ def load_chunks_from_gcs():
     """Load chunks from all three tafsir sources"""
     global TAFSIR_CHUNKS
     try:
-        storage_client = storage.Client()
+        storage_client = storage.Client(project=GCP_INFRASTRUCTURE_PROJECT)
         bucket = storage_client.bucket(GCS_BUCKET_NAME)
         
         # Define all source files
@@ -219,16 +339,11 @@ def load_chunks_from_gcs():
                         page = chunk.get('page_number', i)
                         datapoint_id = f"qurtubi_vol_{vol}_page_{page}_{i}"
                     elif source_name == "Ibn Kathir":
-                        # FIXED: Apply +1463 offset to match vector index numbering
-                        # Vector index expects ibn_kathir_page_1464_1463 format
-                        # Your chunks are sequential paragraphs numbered 1, 2, 3...
-                        page = chunk.get('page_number', i)  # Sequential paragraph number
-                        chunk_idx = chunk.get('chunk_index_on_page', i)  # Usually 0
-                        
-                        # Apply offset: paragraph 1 -> page 1464, paragraph 2 -> page 1465, etc.
+                        # Apply +1463 offset to match vector index numbering
+                        page = chunk.get('page_number', i)
+                        chunk_idx = chunk.get('chunk_index_on_page', i)
                         adjusted_page = page + 1463
-                        adjusted_chunk_idx = chunk_idx + 1463  # Also adjust chunk index
-                        
+                        adjusted_chunk_idx = chunk_idx + 1463
                         datapoint_id = f"ibn_kathir_page_{adjusted_page}_{adjusted_chunk_idx}"
                     
                     TAFSIR_CHUNKS[datapoint_id] = chunk.get('text', '')
@@ -251,15 +366,23 @@ def load_chunks_from_gcs():
         raise
 
 def initialize_firebase():
-    """Initialize Firebase Admin SDK"""
+    """Initialize Firebase Admin SDK and Firestore"""
+    global db
     try:
         client = secretmanager.SecretManagerServiceClient()
         response = client.access_secret_version(name=FIREBASE_SECRET_FULL_PATH)
         secret_payload = response.payload.data.decode("UTF-8")
         cred_json = json.loads(secret_payload)
         cred = credentials.Certificate(cred_json)
-        firebase_admin.initialize_app(cred)
-        print("INFO: Firebase App Initialized successfully")
+        
+        # Initialize Firebase app for the unified project
+        firebase_admin.initialize_app(cred, {'projectId': FIREBASE_PROJECT})
+        
+        # Initialize Firestore client for the unified project
+        db = firestore.client(project=FIREBASE_PROJECT, database=FIRESTORE_DATABASE_ID)
+        
+        print(f"INFO: Firebase App initialized for project '{FIREBASE_PROJECT}'")
+        print(f"INFO: Firestore client connected to database '{FIRESTORE_DATABASE_ID}'")
     except Exception as e:
         print(f"CRITICAL STARTUP ERROR in initialize_firebase: {type(e).__name__} - {e}")
         raise
@@ -267,8 +390,7 @@ def initialize_firebase():
 # Initialize services on startup (fail fast if any critical component fails)
 initialize_firebase()
 load_chunks_from_gcs()
-vertexai.init(project=PROJECT_ID, location=LOCATION)
-db = firestore.client()
+vertexai.init(project=GCP_INFRASTRUCTURE_PROJECT, location=LOCATION)
 
 # --- Firebase Auth Decorator ---
 def firebase_auth_required(f):
@@ -289,7 +411,7 @@ def firebase_auth_required(f):
 def expand_query(query: str, token: str) -> str:
     """Expand user query to better match tafsir content using LLM"""
     try:
-        VERTEX_ENDPOINT = f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/{PROJECT_ID}/locations/{LOCATION}/publishers/google/models/{GEMINI_MODEL_ID}:generateContent"
+        VERTEX_ENDPOINT = f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/{GCP_INFRASTRUCTURE_PROJECT}/locations/{LOCATION}/publishers/google/models/{GEMINI_MODEL_ID}:generateContent"
         
         expansion_prompt = f"""
 You are helping expand a query to search Islamic tafsir (Quranic commentary) texts from multiple classical sources including Tafsir al-Jalalayn, al-Qurtubi, and Ibn Kathir.
@@ -333,13 +455,11 @@ Keep the expansion concise but comprehensive. Return only the expanded query tex
         return query
 
 # --- Enhanced Multi-Source RAG Functions ---
-def perform_diversified_rag_search(query, expand_query, embedding_model, index_endpoint, query_type="default"):
-    """
-    Enhanced RAG with source weighting based on query type
-    """
+def perform_diversified_rag_search(query, expanded_query, embedding_model, index_endpoint, query_type="default"):
+    """Enhanced RAG with source weighting based on query type"""
     
     # Step 1: Single expanded query (maintains semantic relevance)
-    query_embedding = embedding_model.get_embeddings([expand_query], output_dimensionality=1024)[0].values
+    query_embedding = embedding_model.get_embeddings([expanded_query], output_dimensionality=1024)[0].values
     
     # Step 2: Retrieve larger pool of candidates (25 chunks for better diversity)
     neighbors_result = index_endpoint.find_neighbors(
@@ -401,9 +521,7 @@ def perform_diversified_rag_search(query, expand_query, embedding_model, index_e
     return selected_chunks, context_by_source
 
 def build_structured_context(context_by_source, arabic_text=None, cross_refs=None):
-    """
-    Build enhanced context blocks with Arabic text and cross-references
-    """
+    """Build enhanced context blocks with Arabic text and cross-references"""
     context_sections = []
     
     # Add Arabic text if available
@@ -428,25 +546,28 @@ def build_structured_context(context_by_source, arabic_text=None, cross_refs=Non
     
     return "\n\n" + "\n\n".join(context_sections)
 
-def build_enhanced_prompt(query, context_by_source, user_profile, arabic_text=None, cross_refs=None, query_type="default"):
-    """
-    Enhanced prompt with Arabic text, cross-references, and source weighting
-    """
+def build_enhanced_prompt(query, context_by_source, user_profile, arabic_text=None, cross_refs=None, query_type="default", verse_data=None):
+    """Enhanced prompt with Arabic text, cross-references, and verse data integration"""
     structured_context = build_structured_context(context_by_source, arabic_text, cross_refs)
     
-    # Assess content quality and depth for each source
-    source_quality = {}
-    for source, chunks in context_by_source.items():
-        if chunks:
-            total_content = ' '.join(chunks)
-            source_quality[source] = len(total_content)
-        else:
-            source_quality[source] = 0
+    # Add verse information if available
+    verse_info = ""
+    if verse_data:
+        verse_info = f"""
+--- VERSE DETAILS ---
+Surah: {verse_data['surah_number']} ({verse_data['surah_name']})
+Verse: {verse_data['verse_number']}
+Arabic: {verse_data['arabic']}
+English Translation: {verse_data['english']}
+Transliteration: {verse_data['transliteration']}
+"""
     
     prompt = f"""You are an expert Islamic scholar providing Quranic commentary (tafsir) analysis.
 
 QUERY: "{query}"
 QUERY TYPE: {query_type}
+
+{verse_info}
 
 CONTEXT FROM CLASSICAL TAFSIR SOURCES:
 {structured_context}
@@ -462,7 +583,7 @@ CRITICAL INSTRUCTIONS - ENHANCED SCHOLARLY APPROACH:
 ENHANCED JSON FORMAT:
 {{
     "verses": [
-        {{"surah": "string", "verse_number": "string", "text_saheeh_international": "string", "arabic_text": "{arabic_text or 'Not available'}"}}
+        {{"surah": "string", "verse_number": "string", "text_saheeh_international": "string", "arabic_text": "{arabic_text or verse_data.get('arabic', 'Not available') if verse_data else 'Not available'}"}}
     ],
     "tafsir_explanations": [
         {{"source": "al-Jalalayn", "explanation": "Detailed explanation with source expertise consideration"}},
@@ -648,11 +769,29 @@ def set_profile():
         print(f"ERROR in /set_profile: {type(e).__name__} - {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route("/verse/<int:surah>/<int:verse>", methods=["GET"])
+def get_specific_verse(surah, verse):
+    """Direct endpoint for verse lookup"""
+    try:
+        # Validate verse reference
+        is_valid, msg = validate_verse_reference(surah, verse)
+        if not is_valid:
+            return jsonify({"error": "Invalid verse reference", "message": msg}), 400
+        
+        verse_data = get_verse_from_firestore(surah, verse)
+        if verse_data:
+            return jsonify(verse_data)
+        else:
+            return jsonify({'error': f'Verse {surah}:{verse} not found'}), 404
+    except Exception as e:
+        print(f"Error in verse lookup: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
 @app.route("/tafsir", methods=["POST"])
 @firebase_auth_required
 @handle_errors
 def tafsir_handler():
-    """Enhanced tafsir endpoint with caching, rate limiting, and quality validation"""
+    """Enhanced tafsir endpoint with verse lookup + tafsir commentary integration"""
     try:
         data = request.get_json()
         query = data.get('query', '').strip()
@@ -677,12 +816,32 @@ def tafsir_handler():
             print(f"Cache hit for query: {query}")
             return jsonify(RESPONSE_CACHE[cache_key]), 200
         
-        # Classify query type for source weighting
-        query_type = classify_query_type(query)
+        # NEW: Check if this is a verse reference query
+        verse_ref = normalize_verse_reference(query)
+        verse_data = None
+        arabic_text = None
         
-        # Get Arabic text and cross-references
-        arabic_text = get_arabic_text(query)
-        cross_refs = get_cross_references(query)
+        if verse_ref:
+            # Direct verse query - get translation data
+            surah_num, verse_num = verse_ref
+            verse_data = get_verse_from_firestore(surah_num, verse_num)
+            if not verse_data:
+                return jsonify({'error': f'Verse {surah_num}:{verse_num} not found'}), 404
+            
+            # Extract Arabic text for RAG context
+            arabic_text = get_arabic_text_from_verse_data(verse_data)
+            
+            # Modify query for RAG search to focus on this specific verse
+            rag_query = f"Surah {surah_num} verse {verse_num} {query}"
+        else:
+            # Thematic query - use original query for RAG
+            rag_query = query
+        
+        # Classify query type for source weighting
+        query_type = classify_query_type(rag_query)
+        
+        # Get cross-references
+        cross_refs = get_cross_references(rag_query)
         
         # Get authentication token for Vertex AI
         credentials, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
@@ -691,21 +850,23 @@ def tafsir_handler():
         token = credentials.token
 
         # RAG Step 1: Expand the query for better semantic matching
-        print(f"RAG: Processing query: '{query}' (type: {query_type})")
-        expanded_query = expand_query(query, token)
+        print(f"RAG: Processing query: '{rag_query}' (type: {query_type})")
+        expanded_query = expand_query(rag_query, token)
 
         # RAG Step 2: Initialize models
         embedding_model = TextEmbeddingModel.from_pretrained("gemini-embedding-001")
-        endpoint_resource_name = f"projects/{PROJECT_ID}/locations/{LOCATION}/indexEndpoints/{INDEX_ENDPOINT_ID}"
+        endpoint_resource_name = f"projects/{GCP_INFRASTRUCTURE_PROJECT}/locations/{LOCATION}/indexEndpoints/{INDEX_ENDPOINT_ID}"
         index_endpoint = aiplatform.MatchingEngineIndexEndpoint(index_endpoint_name=endpoint_resource_name)
         
         # RAG Step 3: Perform enhanced diversified search
         selected_chunks, context_by_source = perform_diversified_rag_search(
-            query, expanded_query, embedding_model, index_endpoint, query_type
+            rag_query, expanded_query, embedding_model, index_endpoint, query_type
         )
         
         # Debug logging
-        print(f"Query: {query} | Type: {query_type}")
+        print(f"Original Query: {query}")
+        print(f"RAG Query: {rag_query} | Type: {query_type}")
+        print(f"Verse Reference: {verse_ref}")
         print(f"Sources with content: {[s for s, c in context_by_source.items() if c]}")
         print(f"Total chunks retrieved: {len(selected_chunks)}")
         for source, chunks in context_by_source.items():
@@ -715,11 +876,11 @@ def tafsir_handler():
         if cross_refs:
             print(f"Cross-references: {cross_refs}")
         
-        # RAG Step 4: Build enhanced prompt
-        prompt = build_enhanced_prompt(query, context_by_source, user_profile, arabic_text, cross_refs, query_type)
+        # RAG Step 4: Build enhanced prompt with verse data integration
+        prompt = build_enhanced_prompt(rag_query, context_by_source, user_profile, arabic_text, cross_refs, query_type, verse_data)
         
         # RAG Step 5: Generate response with Gemini
-        VERTEX_ENDPOINT = f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/{PROJECT_ID}/locations/{LOCATION}/publishers/google/models/{GEMINI_MODEL_ID}:generateContent"
+        VERTEX_ENDPOINT = f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/{GCP_INFRASTRUCTURE_PROJECT}/locations/{LOCATION}/publishers/google/models/{GEMINI_MODEL_ID}:generateContent"
         
         body = {
             "contents": [{"role": "user", "parts": [{"text": prompt}]}],
@@ -744,6 +905,22 @@ def tafsir_handler():
             try:
                 generated_text = raw_response["candidates"][0]["content"]["parts"][0]["text"]
                 final_json = json.loads(generated_text)
+                
+                # NEW: Enhance response with verse data if available
+                if verse_data:
+                    # Update the verses field with actual verse data
+                    final_json["verses"] = [{
+                        "surah": verse_data['surah_name'],
+                        "verse_number": str(verse_data['verse_number']),
+                        "text_saheeh_international": verse_data['english'],
+                        "arabic_text": verse_data['arabic']
+                    }]
+                    
+                    # Add query type indicator
+                    final_json["query_type"] = "direct_verse"
+                    final_json["verse_reference"] = f"{verse_data['surah_number']}:{verse_data['verse_number']}"
+                else:
+                    final_json["query_type"] = "thematic"
                 
                 # Validate response quality
                 is_valid, validation_msg = validate_response(final_json)
@@ -789,7 +966,9 @@ def health_check():
         "status": "healthy",
         "timestamp": datetime.now().isoformat(),
         "chunks_loaded": len(TAFSIR_CHUNKS),
-        "cache_size": len(RESPONSE_CACHE)
+        "cache_size": len(RESPONSE_CACHE),
+        "firebase_project": FIREBASE_PROJECT,
+        "infrastructure_project": GCP_INFRASTRUCTURE_PROJECT
     }), 200
 
 # --- Debug Endpoints ---
@@ -811,7 +990,7 @@ def debug_sources():
         
         # Initialize models
         embedding_model = TextEmbeddingModel.from_pretrained("gemini-embedding-001")
-        endpoint_resource_name = f"projects/{PROJECT_ID}/locations/{LOCATION}/indexEndpoints/{INDEX_ENDPOINT_ID}"
+        endpoint_resource_name = f"projects/{GCP_INFRASTRUCTURE_PROJECT}/locations/{LOCATION}/indexEndpoints/{INDEX_ENDPOINT_ID}"
         index_endpoint = aiplatform.MatchingEngineIndexEndpoint(index_endpoint_name=endpoint_resource_name)
         
         for query in test_queries:
@@ -909,63 +1088,7 @@ def debug_id_match():
         "sample_generated_ids": sample_generated_ids
     })
 
-@app.route('/debug-large-sample', methods=['GET'])
-def debug_large_sample():
-    """Get larger sample of loaded chunk IDs and check pattern matching"""
-    try:
-        # Show samples of what we loaded vs what vector index expects
-        loaded_samples = {}
-        for source in ['jalalayn', 'qurtubi', 'ibn_kathir']:
-            source_keys = [k for k in TAFSIR_CHUNKS.keys() if k.startswith(source)]
-            loaded_samples[f"{source}_loaded"] = source_keys[:15]  # Show 15 samples each
-            
-        # Test some specific patterns that might exist in vector index
-        test_patterns = {
-            "qurtubi_vol_1_tests": [
-                f"qurtubi_vol_1_page_{i}_{j}" for i in range(1, 20) for j in range(0, 3)
-            ][:10],
-            "qurtubi_vol_2_tests": [
-                f"qurtubi_vol_2_page_{i}_{j}" for i in range(1, 20) for j in range(0, 3) 
-            ][:10],
-            "ibn_kathir_high_page_tests": [
-                f"ibn_kathir_page_{i}_{j}" for i in range(1400, 1470) for j in range(0, 5)
-            ][:15]
-        }
-        
-        # Check which test patterns exist in our loaded chunks
-        pattern_matches = {}
-        for pattern_name, test_ids in test_patterns.items():
-            matches = [tid for tid in test_ids if tid in TAFSIR_CHUNKS]
-            pattern_matches[pattern_name] = {
-                "matches_found": len(matches),
-                "sample_matches": matches[:5],
-                "total_tested": len(test_ids)
-            }
-        
-        # Also check actual data from chunk files to understand structure
-        sample_metadata = {}
-        for source in ['jalalayn', 'qurtubi', 'ibn_kathir']:
-            source_keys = [k for k in TAFSIR_CHUNKS.keys() if k.startswith(source)]
-            if source_keys:
-                sample_key = source_keys[0]
-                # Try to extract metadata from key structure
-                parts = sample_key.split('_')
-                sample_metadata[source] = {
-                    "sample_key": sample_key,
-                    "key_parts": parts,
-                    "total_chunks": len(source_keys)
-                }
-        
-        return jsonify({
-            "loaded_samples": loaded_samples,
-            "pattern_test_results": pattern_matches,
-            "metadata_analysis": sample_metadata,
-            "total_chunks_loaded": len(TAFSIR_CHUNKS)
-        })
-        
-    except Exception as e:
-        return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
-
 # --- Main ---
 if __name__ == "__main__":
-    app.run(debug=False, host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
+    port = int(os.environ.get("PORT", 8080))
+    app.run(debug=False, host="0.0.0.0", port=port)
