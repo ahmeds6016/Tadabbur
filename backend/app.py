@@ -18,6 +18,7 @@ from google.auth.transport.requests import Request as GoogleRequest
 import firebase_admin
 from firebase_admin import credentials, auth, firestore
 from google.cloud import secretmanager
+from google.cloud import firestore as gcp_firestore
 
 # Imports for RAG and Query Expansion
 import vertexai
@@ -45,7 +46,6 @@ FIREBASE_SECRET_FULL_PATH = os.environ.get("FIREBASE_SECRET_FULL_PATH")
 INDEX_ENDPOINT_ID = os.environ.get("INDEX_ENDPOINT_ID")
 DEPLOYED_INDEX_ID = os.environ.get("DEPLOYED_INDEX_ID")
 GCS_BUCKET_NAME = os.environ.get("GCS_BUCKET_NAME")
-FIRESTORE_DATABASE_ID = "tafsir-db"
 
 # Multi-source chunk file paths (for RAG)
 GCS_JALALAYN_PATH = 'jalalayn_chunks.json'
@@ -56,12 +56,13 @@ GCS_IBN_KATHIR_PATH = 'ibn_kathir_chunks.json'
 if not FIREBASE_SECRET_FULL_PATH or not INDEX_ENDPOINT_ID or not DEPLOYED_INDEX_ID or not GCS_BUCKET_NAME:
     raise ValueError("CRITICAL STARTUP ERROR: Missing required RAG environment variables")
 
-# Global variables
+# Global variables - UPDATED for dual database setup
+users_db = None     # Firebase Admin SDK -> (default) database for users/auth
+quran_db = None     # Google Cloud client -> tafsir-db database for Quran texts
 TAFSIR_CHUNKS = {}
 RESPONSE_CACHE = {}  # In-memory cache
 USER_RATE_LIMITS = defaultdict(list)  # Rate limiting
 ANALYTICS = defaultdict(int)  # Usage analytics
-db = None  # Firestore client
 
 # --- NEW: Complete Quran Metadata for Verse Validation ---
 QURAN_METADATA = {
@@ -181,11 +182,11 @@ def normalize_verse_reference(query):
     
     return None
 
-# --- NEW: Firestore Verse Lookup ---
+# --- NEW: Firestore Verse Lookup (UPDATED for dual database) ---
 def get_verse_from_firestore(surah_num, verse_num):
-    """Retrieve verse text from Firestore"""
+    """Retrieve verse text from tafsir-db database"""
     try:
-        doc_ref = db.collection('quran_texts').document(f'surah_{surah_num}')
+        doc_ref = quran_db.collection('quran_texts').document(f'surah_{surah_num}')
         doc = doc_ref.get()
         
         if doc.exists:
@@ -297,7 +298,7 @@ def handle_errors(f):
             return jsonify({'error': 'Internal server error'}), 500
     return decorated_function
 
-# --- Data Loading & Firebase Initialization ---
+# --- Data Loading & Firebase Initialization (UPDATED for dual database) ---
 def load_chunks_from_gcs():
     """Load chunks from all three tafsir sources"""
     global TAFSIR_CHUNKS
@@ -366,23 +367,47 @@ def load_chunks_from_gcs():
         raise
 
 def initialize_firebase():
-    """Initialize Firebase Admin SDK and Firestore"""
-    global db
+    """Initialize dual database connections"""
+    global users_db, quran_db
+    
     try:
+        # Get service account credentials from Secret Manager
         client = secretmanager.SecretManagerServiceClient()
         response = client.access_secret_version(name=FIREBASE_SECRET_FULL_PATH)
         secret_payload = response.payload.data.decode("UTF-8")
         cred_json = json.loads(secret_payload)
+        
+        # 1. Initialize Firebase Admin SDK for auth and user profiles
+        # This connects to the (default) database automatically
         cred = credentials.Certificate(cred_json)
-        
-        # Initialize Firebase app for the unified project
         firebase_admin.initialize_app(cred, {'projectId': FIREBASE_PROJECT})
+        users_db = firestore.client()  # (default) database
         
-        # Initialize Firestore client for the unified project
-        db = firestore.client(project=FIREBASE_PROJECT, database=FIRESTORE_DATABASE_ID)
+        print(f"INFO: Firebase Admin SDK initialized for project '{FIREBASE_PROJECT}'")
+        print(f"INFO: User profiles database connected: (default)")
         
-        print(f"INFO: Firebase App initialized for project '{FIREBASE_PROJECT}'")
-        print(f"INFO: Firestore client connected to database '{FIRESTORE_DATABASE_ID}'")
+        # 2. Initialize Google Cloud Firestore client for Quran texts
+        # This can connect to specific databases like 'tafsir-db'
+        quran_db = gcp_firestore.Client(
+            project=FIREBASE_PROJECT,
+            database='tafsir-db'
+        )
+        
+        print(f"INFO: Quran texts database connected: tafsir-db")
+        
+        # 3. Test both connections
+        try:
+            # Test user database
+            users_collections = list(users_db.collections())
+            print(f"INFO: Users database verified - found {len(users_collections)} collections")
+            
+            # Test Quran database  
+            quran_collections = list(quran_db.collections())
+            print(f"INFO: Quran database verified - found {len(quran_collections)} collections")
+            
+        except Exception as e:
+            print(f"WARNING: Database verification failed: {e}")
+            
     except Exception as e:
         print(f"CRITICAL STARTUP ERROR in initialize_firebase: {type(e).__name__} - {e}")
         raise
@@ -604,11 +629,11 @@ SCHOLARLY PRINCIPLE: Provide authentic, well-attributed commentary that respects
     return prompt
 
 def get_user_profile(user_id):
-    """Get user profile from Firestore"""
+    """Get user profile from (default) database"""
     try:
         if not user_id:
             return {}
-        user_doc = db.collection("users").document(user_id).get()
+        user_doc = users_db.collection("users").document(user_id).get()
         return user_doc.to_dict() if user_doc.exists else {}
     except Exception as e:
         print(f"WARNING: Could not get user profile: {e}")
@@ -723,10 +748,10 @@ def export_response(format_type):
 @app.route("/get_profile", methods=["GET"])
 @firebase_auth_required
 def get_profile():
-    """Get user's learning profile"""
+    """Get user's learning profile from (default) database"""
     uid = request.user["uid"]
     try:
-        user_doc = db.collection("users").document(uid).get()
+        user_doc = users_db.collection("users").document(uid).get()
         if user_doc.exists:
             return jsonify(user_doc.to_dict()), 200
         return jsonify({"error": "Profile not found"}), 404
@@ -737,7 +762,7 @@ def get_profile():
 @app.route("/set_profile", methods=["POST"])
 @firebase_auth_required  
 def set_profile():
-    """Set or update user's learning profile"""
+    """Set or update user's learning profile in (default) database"""
     uid = request.user["uid"]
     data = request.get_json()
     
@@ -759,7 +784,7 @@ def set_profile():
             "focus": focus, 
             "verbosity": verbosity
         }
-        db.collection("users").document(uid).set(profile_data, merge=True)
+        users_db.collection("users").document(uid).set(profile_data, merge=True)
         return jsonify({
             "status": "success", 
             "uid": uid,
