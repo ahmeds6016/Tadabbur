@@ -1,9 +1,11 @@
 Flask==3.0.3
-Flask-Cors==4.0.1
+flask-cors==4.0.0
 requests==2.32.3
 google-auth==2.30.0
+gunicorn==22.0.0
 firebase-admin==6.5.0
 google-cloud-secret-manager==2.19.0
-google-cloud-storage==2.18.0
-gunicorn==22.0.0
-google-cloud-aiplatform>=1.38.1
+google-cloud-firestore==2.18.0
+google-cloud-aiplatform==1.60.0
+google-cloud-storage==2.16.0
+vertexai==1.60.0
