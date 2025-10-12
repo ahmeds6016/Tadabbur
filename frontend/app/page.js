@@ -10,10 +10,7 @@ import {
   signOut
 } from 'firebase/auth';
 
-// ============================================================================
-// FIREBASE CONFIGURATION
-// ============================================================================
-
+// Firebase Configuration
 const firebaseConfig = {
   apiKey: "AIzaSyBKPuVvuJC1bTUsZsZkiMHRoBRRqF6YqVU",
   authDomain: "tafsir-simplified-6b262.firebaseapp.com",
@@ -24,10 +21,9 @@ const firebaseConfig = {
   measurementId: "G-7RZD1G66YH"
 };
 
-// Backend URL
 const BACKEND_URL = 'https://tafsir-backend-612616741510.us-central1.run.app';
 
-// Initialize Firebase (avoid duplicate initialization)
+// Initialize Firebase
 const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
@@ -49,7 +45,7 @@ export default function HomePage() {
       });
       if (!response.ok) throw new Error('No profile found');
       const data = await response.json();
-      if (data?.level && data?.focus && data?.verbosity) {
+      if (data?.level || data?.persona) {
         setUserProfile(data);
       }
     } catch (error) {
@@ -161,13 +157,30 @@ function AuthComponent() {
 }
 
 // ============================================================================
-// ONBOARDING COMPONENT
+// ONBOARDING COMPONENT WITH ENHANCED PERSONA SYSTEM
 // ============================================================================
 
 function OnboardingComponent({ user, onProfileComplete }) {
   const [step, setStep] = useState(1);
-  const [profile, setProfile] = useState({ level: '', focus: '', verbosity: '' });
+  const [profile, setProfile] = useState({ level: '', focus: '', verbosity: '', persona: '' });
   const [error, setError] = useState('');
+  const [personas, setPersonas] = useState([]);
+
+  // Fetch available personas on mount
+  useEffect(() => {
+    const fetchPersonas = async () => {
+      try {
+        const res = await fetch(`${BACKEND_URL}/personas`);
+        if (res.ok) {
+          const data = await res.json();
+          setPersonas(Object.entries(data.personas));
+        }
+      } catch (err) {
+        console.log('Could not fetch personas');
+      }
+    };
+    fetchPersonas();
+  }, []);
 
   const handleSetProfile = useCallback(async () => {
     setError('');
@@ -194,7 +207,7 @@ function OnboardingComponent({ user, onProfileComplete }) {
   };
 
   useEffect(() => {
-    if (step === 4) {
+    if (step === 5) {
       handleSetProfile();
     }
   }, [step, handleSetProfile]);
@@ -204,12 +217,42 @@ function OnboardingComponent({ user, onProfileComplete }) {
       <div className="card">
         <h1>Welcome, {user.email}!</h1>
         <p style={{ fontSize: '1.1rem', marginBottom: '32px' }}>
-          Let&apos;s personalize your Tafsir experience.
+          Let&apos;s personalize your Tafsir experience in 4 simple steps.
         </p>
 
-        {step === 1 && (
+        {/* Step 1: Persona Selection */}
+        {step === 1 && personas.length > 0 && (
           <div>
-            <h2>First, what is your knowledge level?</h2>
+            <h2>Choose Your Learning Profile</h2>
+            <p style={{ marginBottom: '20px', color: '#666' }}>
+              Select the profile that best matches your current Islamic knowledge and learning goals.
+            </p>
+            <div className="level-buttons">
+              {personas.map(([key, persona]) => (
+                <button key={key} onClick={() => handleSelect('persona', key)}>
+                  <div style={{ fontSize: '2rem', marginBottom: '8px' }}>
+                    {key === 'new_revert' && '🌱'}
+                    {key === 'revert' && '📗'}
+                    {key === 'practicing_muslim' && '🕌'}
+                    {key === 'scholar' && '📚'}
+                    {key === 'student' && '🎓'}
+                    {key === 'teacher' && '👨‍🏫'}
+                    {key === 'seeker' && '🔍'}
+                  </div>
+                  {persona.name}
+                  <div style={{ fontSize: '0.85rem', marginTop: '4px', opacity: 0.7 }}>
+                    {persona.description}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Step 2: Knowledge Level */}
+        {step === 2 && (
+          <div>
+            <h2>What is your knowledge level?</h2>
             <div className="level-buttons">
               <button onClick={() => handleSelect('level', 'beginner')}>
                 <div style={{ fontSize: '2rem', marginBottom: '8px' }}>📚</div>
@@ -236,7 +279,8 @@ function OnboardingComponent({ user, onProfileComplete }) {
           </div>
         )}
 
-        {step === 2 && (
+        {/* Step 3: Focus Area */}
+        {step === 3 && (
           <div>
             <h2>What is your primary focus?</h2>
             <div className="level-buttons">
@@ -265,7 +309,8 @@ function OnboardingComponent({ user, onProfileComplete }) {
           </div>
         )}
 
-        {step === 3 && (
+        {/* Step 4: Verbosity */}
+        {step === 4 && (
           <div>
             <h2>How detailed would you like the answers?</h2>
             <div className="level-buttons">
@@ -321,7 +366,7 @@ function MainApp({ user, userProfile }) {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [rateLimitWarning, setRateLimitWarning] = useState('');
 
-  // Fetch suggestions on component mount
+  // Fetch suggestions on mount
   useEffect(() => {
     const fetchSuggestions = async () => {
       try {
@@ -395,8 +440,6 @@ function MainApp({ user, userProfile }) {
       
       if (res.ok) {
         const data = await res.json();
-        
-        // Create download
         const blob = new Blob([data.content], { 
           type: format === 'json' ? 'application/json' : 'text/markdown' 
         });
@@ -414,15 +457,21 @@ function MainApp({ user, userProfile }) {
     }
   };
 
+  // Display persona name if available
+  const getProfileDisplay = () => {
+    if (userProfile.persona) {
+      return `Persona: ${userProfile.persona.replace('_', ' ')}`;
+    }
+    return `${userProfile.level} • ${userProfile.focus} • ${userProfile.verbosity}`;
+  };
+
   return (
     <div className="container">
       <div className="card main-app">
         <div className="header">
           <h1>Tafsir Simplified</h1>
           <div className="user-info">
-            <span>
-              {user.email} • {userProfile.level} • {userProfile.focus} • {userProfile.verbosity}
-            </span>
+            <span>{user.email} • {getProfileDisplay()}</span>
             <button onClick={() => signOut(auth)} className="logout-button">
               Sign Out
             </button>
@@ -507,13 +556,7 @@ function MainApp({ user, userProfile }) {
 // ============================================================================
 
 function EnhancedResultsDisplay({ data }) {
-  if (!data) {
-    return (
-      <div className="results-container">
-        <p>No results to display.</p>
-      </div>
-    );
-  }
+  if (!data) return <div className="results-container"><p>No results to display.</p></div>;
 
   const {
     verses = [],
@@ -523,11 +566,7 @@ function EnhancedResultsDisplay({ data }) {
     summary = ''
   } = data;
 
-  if (
-    verses.length === 0 &&
-    tafsir_explanations.length === 0 &&
-    lessons_practical_applications.length === 0
-  ) {
+  if (verses.length === 0 && tafsir_explanations.length === 0 && lessons_practical_applications.length === 0) {
     return (
       <div className="results-container">
         <p>No relevant information found in the source text for your query.</p>
@@ -543,14 +582,10 @@ function EnhancedResultsDisplay({ data }) {
           {verses.map((verse, index) => (
             <div key={index} className="verse-card enhanced">
               <p className="verse-ref">
-                <strong>
-                  Surah {verse.surah}, Verse {verse.verse_number}
-                </strong>
+                <strong>Surah {verse.surah}, Verse {verse.verse_number}</strong>
               </p>
               {verse.arabic_text && verse.arabic_text !== 'Not available' && (
-                <p className="arabic-text" dir="rtl">
-                  {verse.arabic_text}
-                </p>
+                <p className="arabic-text" dir="rtl">{verse.arabic_text}</p>
               )}
               <p className="translation">
                 <em>&quot;{verse.text_saheeh_international}&quot;</em>
@@ -597,9 +632,7 @@ function EnhancedResultsDisplay({ data }) {
           <h2>Lessons &amp; Practical Applications</h2>
           <ul className="lessons-list">
             {lessons_practical_applications.map((lesson, index) => (
-              <li key={index} className="lesson-item">
-                {lesson.point}
-              </li>
+              <li key={index} className="lesson-item">{lesson.point}</li>
             ))}
           </ul>
         </div>
