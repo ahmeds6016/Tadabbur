@@ -316,8 +316,19 @@ def load_chunks_from_verse_files():
     """
     global TAFSIR_CHUNKS, CHUNK_SOURCE_MAP
     try:
+        print(f"INFO: Initializing storage client for project: {GCP_INFRASTRUCTURE_PROJECT}")
         storage_client = storage.Client(project=GCP_INFRASTRUCTURE_PROJECT)
+        
+        print(f"INFO: Accessing bucket: {GCS_BUCKET_NAME}")
         bucket = storage_client.bucket(GCS_BUCKET_NAME)
+        
+        # Test bucket access
+        try:
+            bucket.exists()
+            print(f"INFO: Successfully connected to bucket: {GCS_BUCKET_NAME}")
+        except Exception as bucket_error:
+            print(f"ERROR: Cannot access bucket {GCS_BUCKET_NAME}: {bucket_error}")
+            raise
         
         # Load files in EXACT order they were embedded
         verse_files = [
@@ -339,15 +350,22 @@ def load_chunks_from_verse_files():
         # Load all verses in order
         for file_path in verse_files:
             try:
-                print(f"INFO: Loading {file_path}")
+                print(f"INFO: Attempting to load {file_path}")
+                print(f"INFO: Bucket: {GCS_BUCKET_NAME}, Path: {file_path}")
                 blob = bucket.blob(file_path)
                 
+                print(f"INFO: Checking if blob exists...")
                 if not blob.exists():
-                    print(f"WARNING: {file_path} not found, skipping")
+                    print(f"ERROR: File not found: gs://{GCS_BUCKET_NAME}/{file_path}")
                     continue
                 
+                print(f"INFO: Downloading {file_path}...")
                 contents = blob.download_as_string().decode('utf-8')
+                print(f"INFO: Downloaded {len(contents)} bytes")
+                
+                print(f"INFO: Parsing JSON...")
                 verses = json.loads(contents)
+                print(f"INFO: Parsed {len(verses)} verse objects")
                 
                 # Determine source
                 if 'ibnkathir' in file_path.lower():
@@ -364,8 +382,13 @@ def load_chunks_from_verse_files():
                 
                 print(f"INFO: Loaded {len(verses)} verses from {file_path}")
                 
+            except json.JSONDecodeError as json_err:
+                print(f"ERROR: Invalid JSON in {file_path}: {json_err}")
+                continue
             except Exception as e:
-                print(f"ERROR loading {file_path}: {e}")
+                print(f"ERROR loading {file_path}: {type(e).__name__} - {e}")
+                import traceback as tb
+                print(f"Traceback: {tb.format_exc()}")
                 continue
         
         print(f"INFO: Total verses loaded: {len(all_verses)}")
@@ -454,7 +477,9 @@ def load_chunks_from_verse_files():
         print(f"INFO: Total chunks in memory: {len(TAFSIR_CHUNKS)}")
         
         if total_chunks == 0:
-            raise RuntimeError("CRITICAL: No chunks loaded")
+            error_msg = f"CRITICAL: No chunks loaded from any source. Attempted to load from gs://{GCS_BUCKET_NAME}/processed/. Check: 1) GCS permissions 2) File paths 3) File contents"
+            print(error_msg)
+            raise RuntimeError(error_msg)
         
     except Exception as e:
         print(f"CRITICAL STARTUP ERROR loading chunks: {type(e).__name__} - {e}")
