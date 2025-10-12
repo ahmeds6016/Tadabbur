@@ -1,4 +1,5 @@
 'use client';
+
 import { useState, useEffect, useCallback } from 'react';
 import { initializeApp, getApps } from 'firebase/app';
 import {
@@ -9,7 +10,10 @@ import {
   signOut
 } from 'firebase/auth';
 
-// --- Firebase Config ---
+// ============================================================================
+// FIREBASE CONFIGURATION
+// ============================================================================
+
 const firebaseConfig = {
   apiKey: "AIzaSyBKPuVvuJC1bTUsZsZkiMHRoBRRqF6YqVU",
   authDomain: "tafsir-simplified-6b262.firebaseapp.com",
@@ -20,14 +24,17 @@ const firebaseConfig = {
   measurementId: "G-7RZD1G66YH"
 };
 
-// --- Backend URL ---
+// Backend URL
 const BACKEND_URL = 'https://tafsir-backend-612616741510.us-central1.run.app';
 
-// Avoid duplicate initialization
+// Initialize Firebase (avoid duplicate initialization)
 const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
-// --- Main Component ---
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
+
 export default function HomePage() {
   const [user, setUser] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
@@ -45,7 +52,7 @@ export default function HomePage() {
       if (data?.level && data?.focus && data?.verbosity) {
         setUserProfile(data);
       }
-    } catch {
+    } catch (error) {
       console.log('No saved profile, proceeding to onboarding.');
     }
   };
@@ -72,21 +79,27 @@ export default function HomePage() {
     return (
       <div className="container">
         <div className="card">
-          <h1>Loading...</h1>
+          <div className="loading-spinner"></div>
+          <h2 style={{ textAlign: 'center', marginTop: '20px' }}>Loading Tafsir Simplified...</h2>
         </div>
       </div>
     );
   }
+
   if (!user) {
     return <AuthComponent />;
   }
+
   if (user && !userProfile) {
     return <OnboardingComponent user={user} onProfileComplete={setUserProfile} />;
   }
+
   return <MainApp user={user} userProfile={userProfile} />;
 }
 
-// --- Child Components ---
+// ============================================================================
+// AUTHENTICATION COMPONENT
+// ============================================================================
 
 function AuthComponent() {
   const [email, setEmail] = useState('');
@@ -98,8 +111,11 @@ function AuthComponent() {
     e.preventDefault();
     setError('');
     try {
-      if (isSignUp) await createUserWithEmailAndPassword(auth, email, password);
-      else await signInWithEmailAndPassword(auth, email, password);
+      if (isSignUp) {
+        await createUserWithEmailAndPassword(auth, email, password);
+      } else {
+        await signInWithEmailAndPassword(auth, email, password);
+      }
     } catch (err) {
       setError(err.message);
     }
@@ -109,8 +125,10 @@ function AuthComponent() {
     <div className="container">
       <div className="card">
         <h1>Welcome to Tafsir Simplified</h1>
-        <p>
-          {isSignUp ? 'Create an account to get started.' : 'Sign in to your account.'}
+        <p style={{ fontSize: '1.1rem', color: '#666', marginBottom: '24px' }}>
+          {isSignUp 
+            ? 'Create an account to explore classical Islamic tafsir with AI-powered insights.' 
+            : 'Sign in to continue your Quranic journey.'}
         </p>
         <form onSubmit={handleAuthAction} className="form">
           <input
@@ -119,6 +137,7 @@ function AuthComponent() {
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Email"
             required
+            style={{ marginBottom: '12px' }}
           />
           <input
             type="password"
@@ -126,6 +145,7 @@ function AuthComponent() {
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Password"
             required
+            style={{ marginBottom: '16px' }}
           />
           <button type="submit">{isSignUp ? 'Sign Up' : 'Sign In'}</button>
         </form>
@@ -139,6 +159,10 @@ function AuthComponent() {
     </div>
   );
 }
+
+// ============================================================================
+// ONBOARDING COMPONENT
+// ============================================================================
 
 function OnboardingComponent({ user, onProfileComplete }) {
   const [step, setStep] = useState(1);
@@ -179,17 +203,35 @@ function OnboardingComponent({ user, onProfileComplete }) {
     <div className="container">
       <div className="card">
         <h1>Welcome, {user.email}!</h1>
-        <p>Let&apos;s personalize your experience.</p>
+        <p style={{ fontSize: '1.1rem', marginBottom: '32px' }}>
+          Let&apos;s personalize your Tafsir experience.
+        </p>
 
         {step === 1 && (
           <div>
             <h2>First, what is your knowledge level?</h2>
             <div className="level-buttons">
-              <button onClick={() => handleSelect('level', 'beginner')}>Beginner</button>
-              <button onClick={() => handleSelect('level', 'intermediate')}>
-                Intermediate
+              <button onClick={() => handleSelect('level', 'beginner')}>
+                <div style={{ fontSize: '2rem', marginBottom: '8px' }}>📚</div>
+                Beginner
+                <div style={{ fontSize: '0.85rem', marginTop: '4px', opacity: 0.7 }}>
+                  New to tafsir
+                </div>
               </button>
-              <button onClick={() => handleSelect('level', 'advanced')}>Advanced</button>
+              <button onClick={() => handleSelect('level', 'intermediate')}>
+                <div style={{ fontSize: '2rem', marginBottom: '8px' }}>🎓</div>
+                Intermediate
+                <div style={{ fontSize: '0.85rem', marginTop: '4px', opacity: 0.7 }}>
+                  Some background
+                </div>
+              </button>
+              <button onClick={() => handleSelect('level', 'advanced')}>
+                <div style={{ fontSize: '2rem', marginBottom: '8px' }}>📖</div>
+                Advanced
+                <div style={{ fontSize: '0.85rem', marginTop: '4px', opacity: 0.7 }}>
+                  Deep knowledge
+                </div>
+              </button>
             </div>
           </div>
         )}
@@ -199,13 +241,25 @@ function OnboardingComponent({ user, onProfileComplete }) {
             <h2>What is your primary focus?</h2>
             <div className="level-buttons">
               <button onClick={() => handleSelect('focus', 'practical')}>
+                <div style={{ fontSize: '2rem', marginBottom: '8px' }}>🤲</div>
                 Practical Lessons
+                <div style={{ fontSize: '0.85rem', marginTop: '4px', opacity: 0.7 }}>
+                  Daily applications
+                </div>
               </button>
               <button onClick={() => handleSelect('focus', 'linguistic')}>
+                <div style={{ fontSize: '2rem', marginBottom: '8px' }}>✍️</div>
                 Linguistic Details
+                <div style={{ fontSize: '0.85rem', marginTop: '4px', opacity: 0.7 }}>
+                  Arabic insights
+                </div>
               </button>
               <button onClick={() => handleSelect('focus', 'comparative')}>
+                <div style={{ fontSize: '2rem', marginBottom: '8px' }}>📊</div>
                 Comparative Analysis
+                <div style={{ fontSize: '0.85rem', marginTop: '4px', opacity: 0.7 }}>
+                  Multiple views
+                </div>
               </button>
             </div>
           </div>
@@ -216,26 +270,46 @@ function OnboardingComponent({ user, onProfileComplete }) {
             <h2>How detailed would you like the answers?</h2>
             <div className="level-buttons">
               <button onClick={() => handleSelect('verbosity', 'short')}>
+                <div style={{ fontSize: '2rem', marginBottom: '8px' }}>⚡</div>
                 Short &amp; Concise
+                <div style={{ fontSize: '0.85rem', marginTop: '4px', opacity: 0.7 }}>
+                  Quick summaries
+                </div>
               </button>
               <button onClick={() => handleSelect('verbosity', 'medium')}>
+                <div style={{ fontSize: '2rem', marginBottom: '8px' }}>📝</div>
                 Medium Detail
+                <div style={{ fontSize: '0.85rem', marginTop: '4px', opacity: 0.7 }}>
+                  Balanced depth
+                </div>
               </button>
               <button onClick={() => handleSelect('verbosity', 'detailed')}>
+                <div style={{ fontSize: '2rem', marginBottom: '8px' }}>📚</div>
                 Very Detailed
+                <div style={{ fontSize: '0.85rem', marginTop: '4px', opacity: 0.7 }}>
+                  Comprehensive
+                </div>
               </button>
             </div>
           </div>
         )}
 
         {error && <p className="error">{error}</p>}
-        <button onClick={() => signOut(auth)} className="logout-button">
+        <button 
+          onClick={() => signOut(auth)} 
+          className="logout-button"
+          style={{ marginTop: '32px' }}
+        >
           Sign Out
         </button>
       </div>
     </div>
   );
 }
+
+// ============================================================================
+// MAIN APPLICATION COMPONENT
+// ============================================================================
 
 function MainApp({ user, userProfile }) {
   const [approach, setApproach] = useState('tafsir');
@@ -245,10 +319,7 @@ function MainApp({ user, userProfile }) {
   const [isTafsirLoading, setIsTafsirLoading] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-
-  // Enhanced state for new features
   const [rateLimitWarning, setRateLimitWarning] = useState('');
-  const [exportFormat, setExportFormat] = useState('markdown');
 
   // Fetch suggestions on component mount
   useEffect(() => {
@@ -269,6 +340,7 @@ function MainApp({ user, userProfile }) {
   const handleGetTafsir = async (e) => {
     e.preventDefault();
     if (!query) return;
+    
     setIsTafsirLoading(true);
     setResponse(null);
     setError('');
@@ -349,8 +421,7 @@ function MainApp({ user, userProfile }) {
           <h1>Tafsir Simplified</h1>
           <div className="user-info">
             <span>
-              {user.email} ({userProfile.level}, {userProfile.focus},{' '}
-              {userProfile.verbosity})
+              {user.email} • {userProfile.level} • {userProfile.focus} • {userProfile.verbosity}
             </span>
             <button onClick={() => signOut(auth)} className="logout-button">
               Sign Out
@@ -364,10 +435,10 @@ function MainApp({ user, userProfile }) {
             onClick={() => setShowSuggestions(!showSuggestions)}
             className="suggestions-toggle"
           >
-            {showSuggestions ? 'Hide' : 'Show'} Suggestions
+            {showSuggestions ? '🔼 Hide' : '🔽 Show'} Suggestions
           </button>
           
-          {showSuggestions && (
+          {showSuggestions && suggestions.length > 0 && (
             <div className="suggestions-grid">
               {suggestions.slice(0, 12).map((suggestion, index) => (
                 <button
@@ -375,7 +446,7 @@ function MainApp({ user, userProfile }) {
                   onClick={() => handleSuggestionClick(suggestion)}
                   className="suggestion-chip"
                 >
-                  {suggestion}
+                  <span>{suggestion}</span>
                 </button>
               ))}
             </div>
@@ -384,15 +455,15 @@ function MainApp({ user, userProfile }) {
 
         <form onSubmit={handleGetTafsir} className="form tafsir-form">
           <select value={approach} onChange={(e) => setApproach(e.target.value)}>
-            <option value="tafsir">Tafsir-Based Study</option>
-            <option value="thematic">Thematic Study</option>
-            <option value="historical">Historical Context</option>
+            <option value="tafsir">📖 Tafsir-Based Study</option>
+            <option value="thematic">🔍 Thematic Study</option>
+            <option value="historical">📜 Historical Context</option>
           </select>
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Enter Surah, Verse, or Topic (e.g., 2:255, charity, prayer)..."
+            placeholder="Enter Surah:Verse (e.g., 2:255) or topic (e.g., charity, prayer)..."
           />
           <button type="submit" disabled={isTafsirLoading}>
             {isTafsirLoading ? 'Loading...' : 'Get Tafsir'}
@@ -405,8 +476,10 @@ function MainApp({ user, userProfile }) {
           </div>
         )}
         
-        {error && <p className="error">{error}</p>}
-        {isTafsirLoading && <div className="loading-spinner"></div>}
+        {error && <p className="error">❌ {error}</p>}
+        {isTafsirLoading && (
+          <div className="loading-spinner"></div>
+        )}
         
         {response && (
           <>
@@ -428,6 +501,10 @@ function MainApp({ user, userProfile }) {
     </div>
   );
 }
+
+// ============================================================================
+// RESULTS DISPLAY COMPONENT
+// ============================================================================
 
 function EnhancedResultsDisplay({ data }) {
   if (!data) {
@@ -467,7 +544,7 @@ function EnhancedResultsDisplay({ data }) {
             <div key={index} className="verse-card enhanced">
               <p className="verse-ref">
                 <strong>
-                  {verse.surah}, Verse {verse.verse_number}
+                  Surah {verse.surah}, Verse {verse.verse_number}
                 </strong>
               </p>
               {verse.arabic_text && verse.arabic_text !== 'Not available' && (
@@ -520,7 +597,9 @@ function EnhancedResultsDisplay({ data }) {
           <h2>Lessons &amp; Practical Applications</h2>
           <ul className="lessons-list">
             {lessons_practical_applications.map((lesson, index) => (
-              <li key={index} className="lesson-item">{lesson.point}</li>
+              <li key={index} className="lesson-item">
+                {lesson.point}
+              </li>
             ))}
           </ul>
         </div>
