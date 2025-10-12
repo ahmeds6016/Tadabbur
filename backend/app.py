@@ -7,8 +7,6 @@ import hashlib
 from functools import wraps
 from collections import defaultdict
 from datetime import datetime, timedelta
-from enum import Enum
-from typing import Dict, List, Optional
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -70,101 +68,9 @@ users_db = None     # Firebase Admin SDK -> (default) database for users/auth
 quran_db = None     # Google Cloud client -> tafsir-db database for Quran texts
 TAFSIR_CHUNKS = {}
 CHUNK_SOURCE_MAP = {}  # Maps chunk_id to source name
-VERSE_METADATA = {}  # NEW: Structured metadata storage
 RESPONSE_CACHE = {}  # In-memory cache
 USER_RATE_LIMITS = defaultdict(list)  # Rate limiting
 ANALYTICS = defaultdict(int)  # Usage analytics
-
-# ============================================================================
-# NEW: ENHANCED QUERY CLASSIFICATION & PERSONA SYSTEM
-# ============================================================================
-
-# Source name variations for detection
-SOURCE_PATTERNS = {
-    'ibn-kathir': ['ibn kathir', 'kathir', 'ibn katheer', 'katheer', 'ibn-kathir', 'kathīr'],
-    'al-qurtubi': ['qurtubi', 'qurtubī', 'al-qurtubi', 'al qurtubi', 'cortubi', 'qurṭubī']
-}
-
-# Metadata query keywords
-METADATA_KEYWORDS = {
-    'hadith': ['hadith', 'narration', 'narrated', 'reported', 'transmitted', 
-               'tradition', 'prophet said', 'narrates', 'relates', 'hadis',
-               'riwayah', 'authentic', 'sahih', 'hasan', 'weak', 'chain',
-               'cited', 'mentions hadith', 'quotes hadith'],
-    
-    'scholar_citations': ['scholar', 'citation', 'cited', 'quotes', 'quoted',
-                         'reference', 'mentioned', 'source', 'says', 'stated',
-                         'according to', 'opinion', 'view', 'interpretation',
-                         'scholars say', 'scholars mention', 'scholars quoted'],
-    
-    'phrase_analysis': ['phrase', 'linguistic', 'grammar', 'word', 'meaning',
-                       'etymology', 'root', 'arabic', 'language', 'term',
-                       'breakdown', 'analysis', 'nahw', 'sarf', 'what does',
-                       'mean', 'definition'],
-    
-    'topics': ['topic', 'theme', 'subject', 'discusses', 'about',
-               'regarding', 'concerning', 'deals with', 'covers'],
-}
-
-# Comprehensive persona system (7 personas)
-PERSONAS = {
-    "new_revert": {
-        "name": "New Revert",
-        "tone": "warm, encouraging, patient",
-        "vocabulary": "simple, everyday",
-        "response_length": "200-300 words",
-        "include_hadith": False,
-        "scholarly_debates": False
-    },
-    "revert": {
-        "name": "Revert Muslim (1-5 years)",
-        "tone": "supportive, informative",
-        "vocabulary": "moderate",
-        "response_length": "300-400 words",
-        "include_hadith": True,
-        "scholarly_debates": False
-    },
-    "practicing_muslim": {
-        "name": "Practicing Muslim",
-        "tone": "respectful, balanced",
-        "vocabulary": "moderate",
-        "response_length": "400-500 words",
-        "include_hadith": True,
-        "scholarly_debates": True
-    },
-    "scholar": {
-        "name": "Scholar/Advanced Student",
-        "tone": "academic, precise",
-        "vocabulary": "advanced, technical",
-        "response_length": "800-1000 words",
-        "include_hadith": True,
-        "scholarly_debates": True
-    },
-    "student": {
-        "name": "Islamic Studies Student",
-        "tone": "educational, comprehensive",
-        "vocabulary": "academic",
-        "response_length": "600-800 words",
-        "include_hadith": True,
-        "scholarly_debates": True
-    },
-    "teacher": {
-        "name": "Teacher/Imam/Educator",
-        "tone": "pedagogical, clear",
-        "vocabulary": "accessible",
-        "response_length": "400-600 words",
-        "include_hadith": True,
-        "scholarly_debates": True
-    },
-    "seeker": {
-        "name": "Spiritual Seeker",
-        "tone": "warm, reflective",
-        "vocabulary": "accessible",
-        "response_length": "300-400 words",
-        "include_hadith": True,
-        "scholarly_debates": False
-    }
-}
 
 # --- Complete Quran Metadata for Verse Validation ---
 QURAN_METADATA = {
@@ -232,146 +138,6 @@ SOURCE_WEIGHTS = {
     "concise": {"al-Qurtubi": 0.5, "Ibn Kathir": 0.5},
     "default": {"Ibn Kathir": 0.5, "al-Qurtubi": 0.5}
 }
-
-# ============================================================================
-# NEW: SOURCE & METADATA DETECTION FUNCTIONS
-# ============================================================================
-
-def extract_source_from_query(query: str) -> Optional[str]:
-    """
-    Extract which tafsir source the user is asking about
-    
-    Examples:
-        "hadith in ibn kathir 2:180" → 'ibn-kathir'
-        "what does qurtubi say about 2:255" → 'al-qurtubi'
-        "explain 2:180" → None (both sources)
-    """
-    query_lower = query.lower()
-    
-    for source_id, patterns in SOURCE_PATTERNS.items():
-        if any(pattern in query_lower for pattern in patterns):
-            return source_id
-    
-    return None
-
-def detect_metadata_type_from_query(query: str) -> Optional[str]:
-    """
-    Detect which specific metadata type the user is asking for.
-    
-    Returns: 'hadith', 'scholar_citations', 'phrase_analysis', 'topics', or None
-    """
-    query_lower = query.lower()
-    
-    for metadata_type, keywords in METADATA_KEYWORDS.items():
-        if any(keyword in query_lower for keyword in keywords):
-            return metadata_type
-    
-    return None
-
-def is_metadata_query(query: str, verse_ref: Optional[tuple]) -> bool:
-    """Detect if query is asking for specific metadata"""
-    if not verse_ref:
-        return False
-    
-    return detect_metadata_type_from_query(query) is not None
-
-def classify_query_with_confidence(query: str, verse_ref: Optional[tuple]) -> tuple:
-    """
-    Enhanced classification with source and metadata detection
-    
-    Returns: (query_type, confidence, metadata_type, source)
-    """
-    query_lower = query.lower()
-    
-    # Detect source and metadata type
-    source = extract_source_from_query(query)
-    metadata_type = detect_metadata_type_from_query(query)
-    
-    # Classification logic
-    if is_metadata_query(query, verse_ref):
-        return ('metadata', 0.95, metadata_type, source)
-    elif verse_ref:
-        return ('direct_verse', 0.85, None, source)
-    else:
-        return ('semantic', 0.7, None, None)
-
-# ============================================================================
-# NEW: METADATA EXTRACTION FUNCTIONS
-# ============================================================================
-
-def get_verse_metadata_direct(surah: int, verse: int, metadata_type: Optional[str] = None, source: Optional[str] = None) -> List[Dict]:
-    """
-    Direct lookup of verse metadata with optional filtering
-    
-    Args:
-        surah: Surah number
-        verse: Verse number
-        metadata_type: Optional - 'hadith', 'scholar_citations', etc.
-        source: Optional - 'ibn-kathir', 'al-qurtubi'
-    
-    Returns:
-        List of metadata results
-    """
-    results = []
-    
-    # Determine which sources to check
-    sources_to_check = ['ibn-kathir', 'al-qurtubi'] if not source else [source]
-    
-    for src in sources_to_check:
-        chunk_id = f"{src}:{surah}:{verse}"
-        
-        if chunk_id in VERSE_METADATA:
-            metadata = VERSE_METADATA[chunk_id]
-            
-            if metadata_type and metadata_type in metadata:
-                # Return only the requested metadata type
-                filtered_data = {
-                    'source': 'Ibn Kathir' if src == 'ibn-kathir' else 'al-Qurtubi',
-                    'surah': surah,
-                    'verse': verse,
-                    metadata_type: metadata.get(metadata_type, [])
-                }
-            else:
-                # Return all available metadata
-                filtered_data = {
-                    'source': 'Ibn Kathir' if src == 'ibn-kathir' else 'al-Qurtubi',
-                    'surah': surah,
-                    'verse': verse,
-                    **metadata
-                }
-            
-            results.append(filtered_data)
-    
-    return results
-
-def format_metadata_response(verse_ref: tuple, metadata_type: str, metadata_results: List[Dict], source: Optional[str]) -> Dict:
-    """Format metadata into user-friendly response"""
-    
-    if not metadata_results:
-        source_msg = f" from {source}" if source else ""
-        return {
-            'query_type': 'direct_metadata',
-            'verse_reference': f"{verse_ref[0]}:{verse_ref[1]}",
-            'metadata_type': metadata_type,
-            'source_requested': source,
-            'sources': [],
-            'message': f"No {metadata_type} found for verse {verse_ref[0]}:{verse_ref[1]}{source_msg}"
-        }
-    
-    formatted = {
-        'query_type': 'direct_metadata',
-        'verse_reference': f"{verse_ref[0]}:{verse_ref[1]}",
-        'metadata_type': metadata_type,
-        'source_requested': source,
-        'sources': metadata_results
-    }
-    
-    # Summary
-    total_items = sum(len(result.get(metadata_type, [])) for result in metadata_results)
-    source_msg = f" by {source}" if source else " in all sources"
-    formatted['summary'] = f"Found {total_items} {metadata_type} reference(s) in verse {verse_ref[0]}:{verse_ref[1]}{source_msg}"
-    
-    return formatted
 
 # --- Query Normalization Functions ---
 def validate_verse_reference(surah, verse):
@@ -540,17 +306,18 @@ def handle_errors(f):
             return jsonify({'error': 'Internal server error'}), 500
     return decorated_function
 
-# --- UPDATED: Data Loading with Source-Prefixed IDs and Metadata Storage ---
+# --- UPDATED: Data Loading with Source-Prefixed IDs for Sliding Window ---
 def load_chunks_from_verse_files():
     """
-    Load chunks from verse JSON files with sliding window ID format AND structured metadata.
+    Load chunks from verse JSON files with sliding window ID format.
     Creates IDs like: ibn-kathir:1:1, al-qurtubi:2:255
+    Matches the embedding generation script exactly.
     
     Source Coverage:
     - Ibn Kathir: Complete Quran (114 Surahs, ~2,146 verses)
     - al-Qurtubi: Partial coverage (Surahs 1-4, up to Surah 4:22, ~485 verses)
     """
-    global TAFSIR_CHUNKS, CHUNK_SOURCE_MAP, VERSE_METADATA
+    global TAFSIR_CHUNKS, CHUNK_SOURCE_MAP
     
     try:
         print(f"INFO: Initializing storage client for project: {GCP_INFRASTRUCTURE_PROJECT}")
@@ -616,7 +383,7 @@ def load_chunks_from_verse_files():
         
         print(f"INFO: Total verses loaded: {len(all_verses)}")
         
-        # Process verses into chunks AND metadata
+        # Process verses into chunks with source-prefixed IDs
         for verse in all_verses:
             surah = verse.get('surah')
             verse_num = verse.get('verse_number') or verse.get('verse_numbers')
@@ -672,22 +439,14 @@ def load_chunks_from_verse_files():
             # CRITICAL: Create chunk ID matching embedding format: source:surah:verse
             chunk_id = f"{source}:{surah}:{verse_num}"
             
-            # Store chunk text
+            # Store chunk
+            # Note: Vector index may have segment IDs like ibn-kathir:1:1_0
+            # We store base ID here and handle segments in retrieve function
             if full_text.strip():
                 TAFSIR_CHUNKS[chunk_id] = full_text
                 CHUNK_SOURCE_MAP[chunk_id] = "Ibn Kathir" if source == "ibn-kathir" else "al-Qurtubi"
-                
-                # NEW: Store structured metadata
-                VERSE_METADATA[chunk_id] = {
-                    'hadith': verse.get('hadith', []),
-                    'scholar_citations': verse.get('scholar_citations', []),
-                    'phrase_analysis': verse.get('phrase_analysis', []),
-                    'topics': verse.get('topics', []),
-                    'commentary': verse.get('commentary', ''),
-                }
         
         print(f"INFO: Successfully loaded {len(TAFSIR_CHUNKS)} chunks")
-        print(f"INFO: Successfully loaded {len(VERSE_METADATA)} metadata entries")
         print(f"INFO: Source breakdown - Ibn Kathir: {source_counts['ibn-kathir']} verses, al-Qurtubi: {source_counts['al-qurtubi']} verses")
         print(f"INFO: Sample chunk IDs: {list(TAFSIR_CHUNKS.keys())[:5]}")
         
@@ -931,10 +690,6 @@ def build_enhanced_prompt(query, context_by_source, user_profile, arabic_text=No
     """Enhanced prompt with Arabic text, cross-references, and verse data integration"""
     structured_context = build_structured_context(context_by_source, arabic_text, cross_refs)
     
-    # Get persona if available
-    persona_name = user_profile.get('persona', 'practicing_muslim')
-    persona = PERSONAS.get(persona_name, PERSONAS['practicing_muslim'])
-    
     # Add verse information if available
     verse_info = ""
     if verse_data:
@@ -948,13 +703,6 @@ Transliteration: {verse_data['transliteration']}
 """
     
     prompt = f"""You are an expert Islamic scholar providing Quranic commentary (tafsir) analysis.
-
-USER PROFILE: {persona['name']}
-- Tone: {persona['tone']}
-- Vocabulary: {persona['vocabulary']}
-- Response length: {persona['response_length']}
-- Include hadith: {'Yes' if persona['include_hadith'] else 'No'}
-- Scholarly debates: {'Yes' if persona['scholarly_debates'] else 'No'}
 
 QUERY: "{query}"
 QUERY TYPE: {query_type}
@@ -975,7 +723,7 @@ CRITICAL INSTRUCTIONS:
 4. **Cross-References**: If related verses are provided, mention relevant connections
 5. **Quality Over Balance**: Emphasize sources with substantial relevant content
 6. **Scholarly Integrity**: Never fabricate - acknowledge when sources have limited material
-7. **Persona Adaptation**: Adapt response to user profile (tone, length, complexity)
+7. User preference: {user_profile.get('knowledge_level', 'intermediate')} level, {user_profile.get('verbosity', 'balanced')} detail
 
 JSON FORMAT:
 {{
@@ -1057,10 +805,7 @@ def format_for_export(response_data, format_type='markdown'):
     content += "---\n*Generated by Tafsir Simplified*"
     return content
 
-# ============================================================================
-# API ROUTES
-# ============================================================================
-
+# --- API Routes ---
 @app.route("/suggestions", methods=["GET"])
 def get_suggestions():
     """Get query suggestions"""
@@ -1137,35 +882,24 @@ def set_profile():
     uid = request.user["uid"]
     data = request.get_json()
     
-    # Support both old and new profile systems
     level = data.get("level")
     focus = data.get("focus", "practical")
     verbosity = data.get("verbosity", "medium")
-    persona = data.get("persona")  # NEW: Support persona system
 
     # Validate profile data
-    if level and level not in ["casual", "beginner", "intermediate", "advanced"]:
+    if level not in ["casual", "beginner", "intermediate", "advanced"]:
         return jsonify({"error": "Invalid level"}), 400
     if focus not in ["practical", "linguistic", "comparative", "thematic"]:
         return jsonify({"error": "Invalid focus"}), 400
     if verbosity not in ["short", "medium", "detailed"]:
         return jsonify({"error": "Invalid verbosity"}), 400
-    if persona and persona not in PERSONAS:
-        return jsonify({"error": "Invalid persona", "available": list(PERSONAS.keys())}), 400
 
     try:
-        profile_data = {}
-        
-        # Old system
-        if level:
-            profile_data["level"] = level
-            profile_data["focus"] = focus
-            profile_data["verbosity"] = verbosity
-        
-        # NEW: Persona system
-        if persona:
-            profile_data["persona"] = persona
-        
+        profile_data = {
+            "level": level,
+            "focus": focus, 
+            "verbosity": verbosity
+        }
         users_db.collection("users").document(uid).set(profile_data, merge=True)
         return jsonify({
             "status": "success", 
@@ -1175,25 +909,6 @@ def set_profile():
     except Exception as e:
         print(f"ERROR in /set_profile: {type(e).__name__} - {e}")
         return jsonify({"error": str(e)}), 500
-
-# NEW: Persona endpoints
-@app.route("/personas", methods=["GET"])
-def list_personas():
-    """List available user personas"""
-    persona_info = {}
-    
-    for name, config in PERSONAS.items():
-        persona_info[name] = {
-            'name': config['name'],
-            'description': f"{config['tone']} | {config['response_length']}",
-            'tone': config['tone'],
-            'response_length': config['response_length']
-        }
-    
-    return jsonify({
-        'personas': persona_info,
-        'count': len(persona_info)
-    }), 200
 
 @app.route("/verse/<int:surah>/<int:verse>", methods=["GET"])
 def get_specific_verse(surah, verse):
@@ -1212,38 +927,11 @@ def get_specific_verse(surah, verse):
         print(f"Error in verse lookup: {e}")
         return jsonify({'error': 'Internal server error'}), 500
 
-# NEW: Metadata endpoint
-@app.route("/metadata/<int:surah>/<int:verse>", methods=["GET"])
-def get_metadata_endpoint(surah, verse):
-    """Direct metadata access endpoint"""
-    try:
-        metadata_type = request.args.get('type')
-        source = request.args.get('source')
-        
-        # Convert source to internal format if provided
-        if source:
-            source = 'ibn-kathir' if 'kathir' in source.lower() else 'al-qurtubi' if 'qurtubi' in source.lower() else source
-        
-        results = get_verse_metadata_direct(surah, verse, metadata_type, source)
-        
-        if not results:
-            return jsonify({
-                'error': f'No metadata found for verse {surah}:{verse}'
-            }), 404
-        
-        return jsonify({
-            'verse': f'{surah}:{verse}',
-            'metadata': results
-        }), 200
-    except Exception as e:
-        print(f"Error in metadata lookup: {e}")
-        return jsonify({'error': 'Internal server error'}), 500
-
 @app.route("/tafsir", methods=["POST"])
 @firebase_auth_required
 @handle_errors
 def tafsir_handler():
-    """Enhanced tafsir endpoint with 3-route system: metadata/direct/semantic"""
+    """Enhanced tafsir endpoint with verse lookup + tafsir commentary integration"""
     try:
         data = request.get_json()
         query = data.get('query', '').strip()
@@ -1273,30 +961,6 @@ def tafsir_handler():
         verse_data = None
         arabic_text = None
         
-        # NEW: Enhanced query classification with source and metadata detection
-        query_class_type, confidence, metadata_type, source = classify_query_with_confidence(query, verse_ref)
-        
-        print(f"Query classified: type={query_class_type}, confidence={confidence}, metadata={metadata_type}, source={source}")
-        
-        # ROUTE 1: Targeted Metadata Query (NEW!)
-        if query_class_type == 'metadata' and verse_ref:
-            print(f"→ ROUTE 1: Targeted metadata lookup")
-            surah_num, verse_num = verse_ref
-            
-            # Convert source format
-            if source:
-                source_internal = source
-            else:
-                source_internal = None
-            
-            results = get_verse_metadata_direct(surah_num, verse_num, metadata_type, source_internal)
-            response = format_metadata_response(verse_ref, metadata_type, results, source)
-            
-            # Cache and return
-            RESPONSE_CACHE[cache_key] = response
-            return jsonify(response), 200
-        
-        # ROUTE 2 & 3: Continue with existing logic (direct verse or semantic)
         if verse_ref:
             surah_num, verse_num = verse_ref
             verse_data = get_verse_from_firestore(surah_num, verse_num)
@@ -1308,7 +972,7 @@ def tafsir_handler():
         else:
             rag_query = query
         
-        # Classify query for RAG
+        # Classify query
         query_type = classify_query_type(rag_query)
         cross_refs = get_cross_references(rag_query)
         
@@ -1381,14 +1045,6 @@ def tafsir_handler():
                 else:
                     final_json["query_type"] = "thematic"
                 
-                # Add metadata
-                final_json["_metadata"] = {
-                    "classification": query_class_type,
-                    "confidence": confidence,
-                    "persona_used": user_profile.get('persona', 'default'),
-                    "sources_used": list(context_by_source.keys())
-                }
-                
                 # Validate
                 is_valid, validation_msg = validate_response(final_json)
                 if not is_valid:
@@ -1430,7 +1086,6 @@ def health_check():
         "status": "healthy",
         "timestamp": datetime.now().isoformat(),
         "chunks_loaded": len(TAFSIR_CHUNKS),
-        "metadata_entries": len(VERSE_METADATA),
         "cache_size": len(RESPONSE_CACHE),
         "firebase_project": FIREBASE_PROJECT,
         "infrastructure_project": GCP_INFRASTRUCTURE_PROJECT,
@@ -1439,8 +1094,6 @@ def health_check():
         "deployed_index_id": DEPLOYED_INDEX_ID,
         "embedding_model": EMBEDDING_MODEL,
         "embedding_dimension": EMBEDDING_DIMENSION,
-        "personas_available": list(PERSONAS.keys()),
-        "persona_count": len(PERSONAS),
         "source_coverage": {
             "Ibn Kathir": "Complete Quran (114 Surahs)",
             "al-Qurtubi": "Surahs 1-4 (up to Surah 4:22)"
@@ -1478,10 +1131,6 @@ def debug_index():
                 "ibn_kathir": ibn_kathir_count,
                 "al_qurtubi": qurtubi_count
             },
-            "metadata_entries": {
-                "total": len(VERSE_METADATA),
-                "sample_keys": list(VERSE_METADATA.keys())[:5]
-            },
             "source_coverage": {
                 "Ibn Kathir": "Complete Quran (all 114 Surahs)",
                 "al-Qurtubi": "Surahs 1-4 only (up to Surah 4:22)"
@@ -1506,4 +1155,3 @@ def debug_index():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
     app.run(debug=False, host="0.0.0.0", port=port)
-
