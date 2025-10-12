@@ -35,7 +35,7 @@ CORS(app, resources={r"/*": {
     ]
 }}, supports_credentials=True)
 
-# --- Configuration (UPDATED for cross-project setup) ---
+# --- Configuration (UPDATED for new vector index) ---
 # Firebase project (Auth, Firestore, Users, Quran texts)
 FIREBASE_PROJECT = os.environ.get("FIREBASE_PROJECT", "tafsir-simplified-6b262")
 # GCP infrastructure project (Vertex AI, GCS, Cloud Run)
@@ -43,14 +43,20 @@ GCP_INFRASTRUCTURE_PROJECT = os.environ.get("GCP_INFRASTRUCTURE_PROJECT", "tafsi
 LOCATION = os.environ.get("GCP_LOCATION", "us-central1")
 GEMINI_MODEL_ID = os.environ.get("GEMINI_MODEL_ID", "gemini-2.0-flash")
 FIREBASE_SECRET_FULL_PATH = os.environ.get("FIREBASE_SECRET_FULL_PATH")
-INDEX_ENDPOINT_ID = os.environ.get("INDEX_ENDPOINT_ID")
-DEPLOYED_INDEX_ID = os.environ.get("DEPLOYED_INDEX_ID")
-GCS_BUCKET_NAME = os.environ.get("GCS_BUCKET_NAME")
 
-# Multi-source chunk file paths (for RAG)
-GCS_JALALAYN_PATH = 'jalalayn_chunks.json'
-GCS_QURTUBI_PATH = 'qurtubi_chunks.json'
-GCS_IBN_KATHIR_PATH = 'ibn_kathir_chunks.json'
+# UPDATED: New vector index configuration (1536 dimensions)
+INDEX_ENDPOINT_ID = os.environ.get("INDEX_ENDPOINT_ID", "1431531154015518720")
+DEPLOYED_INDEX_ID = os.environ.get("DEPLOYED_INDEX_ID", "deployed_tafsir_v1")
+VECTOR_INDEX_ID = os.environ.get("VECTOR_INDEX_ID", "4724823565902282752")
+
+GCS_BUCKET_NAME = os.environ.get("GCS_BUCKET_NAME", "tafsir-simplified-sources")
+
+# UPDATED: Embedding dimension (must match vector index)
+EMBEDDING_DIMENSION = 1536  # Changed from 1024 to 1536
+
+# Source coverage information
+# Ibn Kathir: Complete Quran (114 Surahs)
+# Al-Qurtubi: Surahs 1-4 (up to Surah 4, Verse 22)
 
 # --- Startup Validation (Fail Fast) ---
 if not FIREBASE_SECRET_FULL_PATH or not INDEX_ENDPOINT_ID or not DEPLOYED_INDEX_ID or not GCS_BUCKET_NAME:
@@ -60,11 +66,12 @@ if not FIREBASE_SECRET_FULL_PATH or not INDEX_ENDPOINT_ID or not DEPLOYED_INDEX_
 users_db = None     # Firebase Admin SDK -> (default) database for users/auth
 quran_db = None     # Google Cloud client -> tafsir-db database for Quran texts
 TAFSIR_CHUNKS = {}
+CHUNK_SOURCE_MAP = {}  # Maps chunk_id to source name
 RESPONSE_CACHE = {}  # In-memory cache
 USER_RATE_LIMITS = defaultdict(list)  # Rate limiting
 ANALYTICS = defaultdict(int)  # Usage analytics
 
-# --- NEW: Complete Quran Metadata for Verse Validation ---
+# --- Complete Quran Metadata for Verse Validation ---
 QURAN_METADATA = {
     1: {"name": "Al-Fatihah", "verses": 7}, 2: {"name": "Al-Baqarah", "verses": 286}, 3: {"name": "Aal-E-Imran", "verses": 200},
     4: {"name": "An-Nisa", "verses": 176}, 5: {"name": "Al-Ma'idah", "verses": 120}, 6: {"name": "Al-An'am", "verses": 165},
@@ -125,13 +132,13 @@ VERSE_CROSS_REFS = {
 
 # Source authority weights by query type
 SOURCE_WEIGHTS = {
-    "legal": {"al-Qurtubi": 0.5, "Ibn Kathir": 0.3, "al-Jalalayn": 0.2},
-    "historical": {"Ibn Kathir": 0.5, "al-Qurtubi": 0.3, "al-Jalalayn": 0.2},
-    "concise": {"al-Jalalayn": 0.5, "al-Qurtubi": 0.3, "Ibn Kathir": 0.2},
-    "default": {"al-Jalalayn": 0.33, "al-Qurtubi": 0.33, "Ibn Kathir": 0.34}
+    "legal": {"al-Qurtubi": 0.6, "Ibn Kathir": 0.4},
+    "historical": {"Ibn Kathir": 0.6, "al-Qurtubi": 0.4},
+    "concise": {"al-Qurtubi": 0.5, "Ibn Kathir": 0.5},
+    "default": {"Ibn Kathir": 0.5, "al-Qurtubi": 0.5}
 }
 
-# --- NEW: Query Normalization Functions ---
+# --- Query Normalization Functions ---
 def validate_verse_reference(surah, verse):
     """Validate that surah and verse numbers are within valid ranges"""
     if surah not in QURAN_METADATA:
@@ -182,7 +189,7 @@ def normalize_verse_reference(query):
     
     return None
 
-# --- NEW: Firestore Verse Lookup (UPDATED for dual database) ---
+# --- Firestore Verse Lookup ---
 def get_verse_from_firestore(surah_num, verse_num):
     """Retrieve verse text from tafsir-db database"""
     try:
@@ -298,72 +305,160 @@ def handle_errors(f):
             return jsonify({'error': 'Internal server error'}), 500
     return decorated_function
 
-# --- Data Loading & Firebase Initialization (UPDATED for dual database) ---
-def load_chunks_from_gcs():
-    """Load chunks from all three tafsir sources"""
-    global TAFSIR_CHUNKS
+# --- UPDATED: Data Loading with Exact ID Mapping from Embedding Generation ---
+def load_chunks_from_verse_files():
+    """
+    Load verse text with IDs matching the embedding generation logic
+    
+    Source Coverage:
+    - Ibn Kathir: Complete Quran (114 Surahs, ~6,300+ verses)
+    - al-Qurtubi: Partial coverage (Surahs 1-4, up to Surah 4:22, ~485 verses)
+    """
+    global TAFSIR_CHUNKS, CHUNK_SOURCE_MAP
     try:
         storage_client = storage.Client(project=GCP_INFRASTRUCTURE_PROJECT)
         bucket = storage_client.bucket(GCS_BUCKET_NAME)
         
-        # Define all source files
-        chunk_files = [
-            (GCS_JALALAYN_PATH, "al-Jalalayn"),
-            (GCS_QURTUBI_PATH, "al-Qurtubi"), 
-            (GCS_IBN_KATHIR_PATH, "Ibn Kathir")
+        # Load files in EXACT order they were embedded
+        verse_files = [
+            'processed/ibnkathir-Fatiha-Tawbah_fixed.json',
+            'processed/ibnkathir-Yunus-Ankabut_FINAL_fixed.json',
+            'processed/ibnkathir-Rum-Nas_FINAL_fixed.json',
+            'processed/al-Qurtubi Vol. 1_FINAL_fixed.json',
+            'processed/al-Qurtubi Vol. 2_FINAL_fixed.json',
+            'processed/al-Qurtubi Vol. 3_fixed.json',
+            'processed/al-Qurtubi Vol. 4_FINAL_fixed.json'
         ]
         
-        total_chunks = 0
+        # Replicates embedding generation logic
+        MAX_CHUNK_SIZE = 15000
+        OVERLAP_SIZE = 1000
         
-        for file_path, source_name in chunk_files:
+        all_verses = []
+        
+        # Load all verses in order
+        for file_path in verse_files:
             try:
-                print(f"INFO: Loading {source_name} chunks from gs://{GCS_BUCKET_NAME}/{file_path}")
+                print(f"INFO: Loading {file_path}")
                 blob = bucket.blob(file_path)
                 
                 if not blob.exists():
-                    print(f"WARNING: {file_path} not found, skipping {source_name}")
+                    print(f"WARNING: {file_path} not found, skipping")
                     continue
                 
-                contents = blob.download_as_string()
-                chunks_list = json.loads(contents)
+                contents = blob.download_as_string().decode('utf-8')
+                verses = json.loads(contents)
                 
-                # Convert list to dictionary with source-specific IDs that match vector index format
-                source_chunks = 0
-                for i, chunk in enumerate(chunks_list):
-                    # Create unique IDs that match the existing vector index format
-                    if source_name == "al-Jalalayn":
-                        # Keep existing format (it works with vector index)
-                        datapoint_id = f"jalalayn_page_{chunk.get('page_number', i)}_{i}"
-                    elif source_name == "al-Qurtubi":
-                        # Match vector index format: qurtubi_vol_X_page_Y_Z
-                        vol = chunk.get('volume', 1)
-                        page = chunk.get('page_number', i)
-                        datapoint_id = f"qurtubi_vol_{vol}_page_{page}_{i}"
-                    elif source_name == "Ibn Kathir":
-                        # Apply +1463 offset to match vector index numbering
-                        page = chunk.get('page_number', i)
-                        chunk_idx = chunk.get('chunk_index_on_page', i)
-                        adjusted_page = page + 1463
-                        adjusted_chunk_idx = chunk_idx + 1463
-                        datapoint_id = f"ibn_kathir_page_{adjusted_page}_{adjusted_chunk_idx}"
-                    
-                    TAFSIR_CHUNKS[datapoint_id] = chunk.get('text', '')
-                    source_chunks += 1
+                # Determine source
+                if 'ibnkathir' in file_path.lower():
+                    source = 'Ibn Kathir'
+                elif 'qurtubi' in file_path.lower():
+                    source = 'al-Qurtubi'
+                else:
+                    source = 'Unknown'
                 
-                print(f"INFO: Loaded {source_chunks} chunks from {source_name}")
-                total_chunks += source_chunks
+                # Add source to each verse
+                for verse in verses:
+                    verse['_source'] = source
+                    all_verses.append(verse)
+                
+                print(f"INFO: Loaded {len(verses)} verses from {file_path}")
                 
             except Exception as e:
-                print(f"ERROR loading {source_name}: {type(e).__name__} - {e}")
+                print(f"ERROR loading {file_path}: {e}")
                 continue
         
-        print(f"INFO: Successfully loaded {total_chunks} total chunks from all sources")
+        print(f"INFO: Total verses loaded: {len(all_verses)}")
+        
+        # Process verses with same logic as embedding generation
+        segment_id = 1
+        total_chunks = 0
+        
+        for verse_obj in all_verses:
+            # Build text exactly as in embed_all_chunks.py
+            text_parts = []
+            
+            # Surah and verse info
+            surah = verse_obj.get('surah', '')
+            verse_num = verse_obj.get('verse_number') or verse_obj.get('verse_numbers', '')
+            if verse_num:
+                text_parts.append(f"Surah {surah}, Verse {verse_num}")
+            
+            # Verse text
+            if verse_obj.get('verse_text'):
+                text_parts.append(f"\nVerse Text: {verse_obj['verse_text']}")
+            
+            # Topics and commentary
+            if verse_obj.get('topics'):
+                for topic in verse_obj['topics']:
+                    if topic.get('topic_header'):
+                        text_parts.append(f"\n\n{topic['topic_header']}")
+                    if topic.get('commentary'):
+                        text_parts.append(f"\n{topic['commentary']}")
+            
+            full_text = ''.join(text_parts).strip()
+            
+            if not full_text:
+                continue
+            
+            source = verse_obj.get('_source', 'Unknown')
+            
+            # Apply same splitting logic as embedding generation
+            if len(full_text) <= MAX_CHUNK_SIZE:
+                # Single chunk
+                chunk_id = str(segment_id)
+                TAFSIR_CHUNKS[chunk_id] = full_text
+                CHUNK_SOURCE_MAP[chunk_id] = source
+                segment_id += 1
+                total_chunks += 1
+            else:
+                # Split into multiple segments with overlap
+                start = 0
+                sub_segment = 0
+                
+                while start < len(full_text):
+                    end = start + MAX_CHUNK_SIZE
+                    
+                    # Find sentence boundary
+                    if end < len(full_text):
+                        last_period = full_text.rfind('.', start, end)
+                        last_question = full_text.rfind('?', start, end)
+                        last_exclaim = full_text.rfind('!', start, end)
+                        boundary = max(last_period, last_question, last_exclaim)
+                        
+                        if boundary > start:
+                            end = boundary + 1
+                    
+                    # Extract segment
+                    segment_text = full_text[start:end].strip()
+                    
+                    # Create ID with sub-segment
+                    chunk_id = f"{segment_id}_{sub_segment}"
+                    TAFSIR_CHUNKS[chunk_id] = segment_text
+                    CHUNK_SOURCE_MAP[chunk_id] = source
+                    
+                    # Move to next segment with overlap
+                    start = end - OVERLAP_SIZE if end < len(full_text) else end
+                    sub_segment += 1
+                    total_chunks += 1
+                
+                segment_id += 1
+        
+        print(f"INFO: Successfully loaded {total_chunks} chunks from {len(all_verses)} verses")
+        
+        # Count by source
+        ibn_kathir_count = sum(1 for v in all_verses if v.get('_source') == 'Ibn Kathir')
+        qurtubi_count = sum(1 for v in all_verses if v.get('_source') == 'al-Qurtubi')
+        
+        print(f"INFO: Source breakdown - Ibn Kathir: {ibn_kathir_count} verses, al-Qurtubi: {qurtubi_count} verses")
+        print(f"INFO: Total chunks in memory: {len(TAFSIR_CHUNKS)}")
         
         if total_chunks == 0:
-            raise RuntimeError("CRITICAL: No chunks loaded from any source")
+            raise RuntimeError("CRITICAL: No chunks loaded")
         
     except Exception as e:
         print(f"CRITICAL STARTUP ERROR loading chunks: {type(e).__name__} - {e}")
+        traceback.print_exc()
         raise
 
 def initialize_firebase():
@@ -378,16 +473,14 @@ def initialize_firebase():
         cred_json = json.loads(secret_payload)
         
         # 1. Initialize Firebase Admin SDK for auth and user profiles
-        # This connects to the (default) database automatically
         cred = credentials.Certificate(cred_json)
         firebase_admin.initialize_app(cred, {'projectId': FIREBASE_PROJECT})
-        users_db = firestore.client()  # (default) database
+        users_db = firestore.client()
         
         print(f"INFO: Firebase Admin SDK initialized for project '{FIREBASE_PROJECT}'")
         print(f"INFO: User profiles database connected: (default)")
         
         # 2. Initialize Google Cloud Firestore client for Quran texts
-        # This can connect to specific databases like 'tafsir-db'
         quran_db = gcp_firestore.Client(
             project=FIREBASE_PROJECT,
             database='tafsir-db'
@@ -397,11 +490,9 @@ def initialize_firebase():
         
         # 3. Test both connections
         try:
-            # Test user database
             users_collections = list(users_db.collections())
             print(f"INFO: Users database verified - found {len(users_collections)} collections")
             
-            # Test Quran database  
             quran_collections = list(quran_db.collections())
             print(f"INFO: Quran database verified - found {len(quran_collections)} collections")
             
@@ -414,7 +505,7 @@ def initialize_firebase():
 
 # Initialize services on startup (fail fast if any critical component fails)
 initialize_firebase()
-load_chunks_from_gcs()
+load_chunks_from_verse_files()
 vertexai.init(project=GCP_INFRASTRUCTURE_PROJECT, location=LOCATION)
 
 # --- Firebase Auth Decorator ---
@@ -439,14 +530,16 @@ def expand_query(query: str, token: str) -> str:
         VERTEX_ENDPOINT = f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/{GCP_INFRASTRUCTURE_PROJECT}/locations/{LOCATION}/publishers/google/models/{GEMINI_MODEL_ID}:generateContent"
         
         expansion_prompt = f"""
-You are helping expand a query to search Islamic tafsir (Quranic commentary) texts from multiple classical sources including Tafsir al-Jalalayn, al-Qurtubi, and Ibn Kathir.
+You are helping expand a query to search Islamic tafsir (Quranic commentary) texts from classical sources:
+- Tafsir Ibn Kathir (complete Quran coverage)
+- Tafsir al-Qurtubi (Surahs 1-4, up to verse 4:22)
 
 Original query: "{query}"
 
-Expand this query by adding relevant Islamic terms, Arabic concepts, Quranic themes, and related theological concepts that would help find relevant tafsir passages from these classical commentaries. Consider:
+Expand this query by adding relevant Islamic terms, Arabic concepts, Quranic themes, and related theological concepts that would help find relevant tafsir passages. Consider:
 - Related Arabic terminology
 - Connected Quranic verses or themes  
-- Islamic jurisprudence concepts (especially for al-Qurtubi)
+- Islamic jurisprudence concepts (especially for al-Qurtubi on early Surahs)
 - Historical context and hadith references (especially for Ibn Kathir)
 - Theological implications
 
@@ -479,28 +572,27 @@ Keep the expansion concise but comprehensive. Return only the expanded query tex
         print(f"WARNING: Query expansion error: {e}")
         return query
 
-# --- Enhanced Multi-Source RAG Functions ---
+# --- UPDATED: Enhanced Multi-Source RAG Functions with 1536 dimensions ---
 def perform_diversified_rag_search(query, expanded_query, embedding_model, index_endpoint, query_type="default"):
-    """Enhanced RAG with source weighting based on query type"""
+    """Enhanced RAG with source weighting based on query type - UPDATED for 1536 dimensions"""
     
-    # Step 1: Single expanded query (maintains semantic relevance)
-    query_embedding = embedding_model.get_embeddings([expanded_query], output_dimensionality=1024)[0].values
+    # Step 1: Generate query embedding with correct dimension
+    query_embedding = embedding_model.get_embeddings([expanded_query], output_dimensionality=EMBEDDING_DIMENSION)[0].values
     
-    # Step 2: Retrieve larger pool of candidates (25 chunks for better diversity)
+    # Step 2: Retrieve larger pool of candidates (20 chunks for better diversity)
     neighbors_result = index_endpoint.find_neighbors(
         deployed_index_id=DEPLOYED_INDEX_ID,
         queries=[query_embedding],
-        num_neighbors=25  # Increased for better source coverage
+        num_neighbors=20
     )
     
     # Step 3: Intelligent source diversification with weighting
     source_chunks = {
-        'al-Jalalayn': [],
-        'al-Qurtubi': [],
-        'Ibn Kathir': []
+        'Ibn Kathir': [],
+        'al-Qurtubi': []
     }
     
-    # Categorize all retrieved chunks by source
+    # Categorize all retrieved chunks by source using our mapping
     for neighbor in neighbors_result[0]:
         chunk_id = neighbor.id
         chunk_text = TAFSIR_CHUNKS.get(chunk_id, '')
@@ -515,12 +607,11 @@ def perform_diversified_rag_search(query, expanded_query, embedding_model, index
             'chunk_id': chunk_id
         }
         
-        if chunk_id.startswith('jalalayn'):
-            source_chunks['al-Jalalayn'].append(chunk_data)
-        elif chunk_id.startswith('qurtubi'):
-            source_chunks['al-Qurtubi'].append(chunk_data)
-        elif chunk_id.startswith('ibn_kathir'):
-            source_chunks['Ibn Kathir'].append(chunk_data)
+        # Get source from mapping (most reliable)
+        source = CHUNK_SOURCE_MAP.get(chunk_id, 'Ibn Kathir')  # Default to Ibn Kathir
+        
+        if source in source_chunks:
+            source_chunks[source].append(chunk_data)
     
     # Step 4: Weighted selection based on query type
     weights = SOURCE_WEIGHTS.get(query_type, SOURCE_WEIGHTS["default"])
@@ -532,15 +623,14 @@ def perform_diversified_rag_search(query, expanded_query, embedding_model, index
             # Sort by distance (most relevant first)
             sorted_chunks = sorted(chunks, key=lambda x: x['distance'])
             
-            # Apply weighting - take more chunks from preferred sources
-            weight = weights.get(source_name, 0.33)
-            num_chunks = max(2, int(weight * 10))  # 2-5 chunks based on weight
+            # Apply weighting
+            weight = weights.get(source_name, 0.5)
+            num_chunks = max(2, int(weight * 10))
             
             top_chunks = sorted_chunks[:num_chunks]
             selected_chunks.extend(top_chunks)
             context_by_source[source_name] = [chunk['text'] for chunk in top_chunks]
         else:
-            # Mark source as having no relevant content
             context_by_source[source_name] = []
     
     return selected_chunks, context_by_source
@@ -565,7 +655,6 @@ def build_structured_context(context_by_source, arabic_text=None, cross_refs=Non
             section += "\n\n".join(chunks)
             context_sections.append(section)
         else:
-            # Include placeholder for sources with no content
             section = f"--- {source_name.upper()} ---\n[No highly relevant passages found]"
             context_sections.append(section)
     
@@ -597,34 +686,36 @@ QUERY TYPE: {query_type}
 CONTEXT FROM CLASSICAL TAFSIR SOURCES:
 {structured_context}
 
-CRITICAL INSTRUCTIONS - ENHANCED SCHOLARLY APPROACH:
-1. **Source Authority**: Consider source expertise - al-Qurtubi for legal matters, Ibn Kathir for historical context, al-Jalalayn for concise explanations
-2. **Arabic Integration**: If Arabic text is provided, reference it appropriately in explanations
-3. **Cross-References**: If related verses are provided, mention relevant connections
-4. **Quality Over Balance**: Emphasize sources with substantial relevant content while acknowledging all available sources
-5. **Scholarly Integrity**: Never fabricate content - acknowledge when sources have limited relevant material
-6. User preference: {user_profile.get('knowledge_level', 'intermediate')} level, {user_profile.get('verbosity', 'balanced')} detail
+SOURCE COVERAGE INFORMATION:
+- **Ibn Kathir**: Complete Quran (all 114 Surahs)
+- **al-Qurtubi**: Surahs 1-4 only (up to Surah 4, Verse 22)
 
-ENHANCED JSON FORMAT:
+CRITICAL INSTRUCTIONS:
+1. **Source Authority**: al-Qurtubi excels in legal/jurisprudential matters, Ibn Kathir in historical context and hadith
+2. **Coverage Awareness**: If the query is about verses beyond Surah 4:22, explain that al-Qurtubi commentary is not available for those verses
+3. **Arabic Integration**: If Arabic text is provided, reference it appropriately
+4. **Cross-References**: If related verses are provided, mention relevant connections
+5. **Quality Over Balance**: Emphasize sources with substantial relevant content
+6. **Scholarly Integrity**: Never fabricate - acknowledge when sources have limited material
+7. User preference: {user_profile.get('knowledge_level', 'intermediate')} level, {user_profile.get('verbosity', 'balanced')} detail
+
+JSON FORMAT:
 {{
     "verses": [
         {{"surah": "string", "verse_number": "string", "text_saheeh_international": "string", "arabic_text": "{arabic_text or verse_data.get('arabic', 'Not available') if verse_data else 'Not available'}"}}
     ],
     "tafsir_explanations": [
-        {{"source": "al-Jalalayn", "explanation": "Detailed explanation with source expertise consideration"}},
-        {{"source": "al-Qurtubi", "explanation": "Detailed explanation emphasizing legal/jurisprudential aspects when relevant"}},
+        {{"source": "al-Qurtubi", "explanation": "Detailed explanation emphasizing legal/jurisprudential aspects when relevant. If verse is beyond Surah 4:22, state: 'Al-Qurtubi's tafsir is not available for this verse (coverage ends at Surah 4:22).'"}},
         {{"source": "Ibn Kathir", "explanation": "Detailed explanation emphasizing historical context and hadith when relevant"}}
     ],
     "cross_references": [
-        {{"verse": "string", "relevance": "brief explanation of connection"}}
+        {{"verse": "string", "relevance": "brief explanation"}}
     ],
     "lessons_practical_applications": [
         {{"point": "Key lesson 1"}}, {{"point": "Key lesson 2"}}, {{"point": "Key lesson 3"}}
     ],
-    "summary": "Synthesis reflecting scholarly depth and source expertise"
-}}
-
-SCHOLARLY PRINCIPLE: Provide authentic, well-attributed commentary that respects each source's scholarly strengths."""
+    "summary": "Synthesis reflecting scholarly depth"
+}}"""
     
     return prompt
 
@@ -703,9 +794,8 @@ def get_suggestions():
 def get_analytics():
     """Get usage analytics (admin only)"""
     try:
-        # Check if user is admin (implement your admin check logic)
         user_email = request.user.get('email', '')
-        if not user_email.endswith('@yourdomain.com'):  # Replace with your admin domain
+        if not user_email.endswith('@yourdomain.com'):
             return jsonify({"error": "Unauthorized"}), 403
         
         return jsonify({
@@ -748,7 +838,7 @@ def export_response(format_type):
 @app.route("/get_profile", methods=["GET"])
 @firebase_auth_required
 def get_profile():
-    """Get user's learning profile from (default) database"""
+    """Get user's learning profile"""
     uid = request.user["uid"]
     try:
         user_doc = users_db.collection("users").document(uid).get()
@@ -762,7 +852,7 @@ def get_profile():
 @app.route("/set_profile", methods=["POST"])
 @firebase_auth_required  
 def set_profile():
-    """Set or update user's learning profile in (default) database"""
+    """Set or update user's learning profile"""
     uid = request.user["uid"]
     data = request.get_json()
     
@@ -772,11 +862,11 @@ def set_profile():
 
     # Validate profile data
     if level not in ["casual", "beginner", "intermediate", "advanced"]:
-        return jsonify({"error": "Invalid level. Must be: casual, beginner, intermediate, or advanced"}), 400
+        return jsonify({"error": "Invalid level"}), 400
     if focus not in ["practical", "linguistic", "comparative", "thematic"]:
-        return jsonify({"error": "Invalid focus. Must be: practical, linguistic, comparative, or thematic"}), 400
+        return jsonify({"error": "Invalid focus"}), 400
     if verbosity not in ["short", "medium", "detailed"]:
-        return jsonify({"error": "Invalid verbosity. Must be: short, medium, or detailed"}), 400
+        return jsonify({"error": "Invalid verbosity"}), 400
 
     try:
         profile_data = {
@@ -798,7 +888,6 @@ def set_profile():
 def get_specific_verse(surah, verse):
     """Direct endpoint for verse lookup"""
     try:
-        # Validate verse reference
         is_valid, msg = validate_verse_reference(surah, verse)
         if not is_valid:
             return jsonify({"error": "Invalid verse reference", "message": msg}), 400
@@ -825,86 +914,72 @@ def tafsir_handler():
         if not query:
             return jsonify({'error': 'Query is required'}), 400
         
-        # Rate limiting check
+        # Rate limiting
         if is_rate_limited(user_id):
-            return jsonify({'error': 'Rate limit exceeded. Please try again later.'}), 429
+            return jsonify({'error': 'Rate limit exceeded'}), 429
         
-        # Analytics tracking
+        # Analytics
         ANALYTICS[query] += 1
         
-        # Get user profile for personalization
+        # Get user profile
         user_profile = get_user_profile(user_id)
         
-        # Check cache first
+        # Check cache
         cache_key = get_cache_key(query, user_profile)
         if cache_key in RESPONSE_CACHE:
             print(f"Cache hit for query: {query}")
             return jsonify(RESPONSE_CACHE[cache_key]), 200
         
-        # NEW: Check if this is a verse reference query
+        # Check if verse reference query
         verse_ref = normalize_verse_reference(query)
         verse_data = None
         arabic_text = None
         
         if verse_ref:
-            # Direct verse query - get translation data
             surah_num, verse_num = verse_ref
             verse_data = get_verse_from_firestore(surah_num, verse_num)
             if not verse_data:
                 return jsonify({'error': f'Verse {surah_num}:{verse_num} not found'}), 404
             
-            # Extract Arabic text for RAG context
             arabic_text = get_arabic_text_from_verse_data(verse_data)
-            
-            # Modify query for RAG search to focus on this specific verse
             rag_query = f"Surah {surah_num} verse {verse_num} {query}"
         else:
-            # Thematic query - use original query for RAG
             rag_query = query
         
-        # Classify query type for source weighting
+        # Classify query
         query_type = classify_query_type(rag_query)
-        
-        # Get cross-references
         cross_refs = get_cross_references(rag_query)
         
-        # Get authentication token for Vertex AI
+        # Get auth token
         credentials, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
         auth_req = GoogleRequest()
         credentials.refresh(auth_req)
         token = credentials.token
 
-        # RAG Step 1: Expand the query for better semantic matching
+        # RAG pipeline
         print(f"RAG: Processing query: '{rag_query}' (type: {query_type})")
         expanded_query = expand_query(rag_query, token)
 
-        # RAG Step 2: Initialize models
+        # Initialize models
         embedding_model = TextEmbeddingModel.from_pretrained("gemini-embedding-001")
         endpoint_resource_name = f"projects/{GCP_INFRASTRUCTURE_PROJECT}/locations/{LOCATION}/indexEndpoints/{INDEX_ENDPOINT_ID}"
         index_endpoint = aiplatform.MatchingEngineIndexEndpoint(index_endpoint_name=endpoint_resource_name)
         
-        # RAG Step 3: Perform enhanced diversified search
+        # Perform search
         selected_chunks, context_by_source = perform_diversified_rag_search(
             rag_query, expanded_query, embedding_model, index_endpoint, query_type
         )
         
         # Debug logging
-        print(f"Original Query: {query}")
-        print(f"RAG Query: {rag_query} | Type: {query_type}")
-        print(f"Verse Reference: {verse_ref}")
-        print(f"Sources with content: {[s for s, c in context_by_source.items() if c]}")
-        print(f"Total chunks retrieved: {len(selected_chunks)}")
-        for source, chunks in context_by_source.items():
-            print(f"{source}: {len(chunks)} chunks")
-        if arabic_text:
-            print(f"Arabic text included: {arabic_text[:50]}...")
-        if cross_refs:
-            print(f"Cross-references: {cross_refs}")
+        print(f"Query: {query} | Type: {query_type}")
+        print(f"Verse Ref: {verse_ref}")
+        print(f"Sources: {[s for s, c in context_by_source.items() if c]}")
+        print(f"Total chunks: {len(selected_chunks)}")
         
-        # RAG Step 4: Build enhanced prompt with verse data integration
+        # Build prompt
         prompt = build_enhanced_prompt(rag_query, context_by_source, user_profile, arabic_text, cross_refs, query_type, verse_data)
         
-        # RAG Step 5: Generate response with Gemini
+        # Generate response
         VERTEX_ENDPOINT = f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/{GCP_INFRASTRUCTURE_PROJECT}/locations/{LOCATION}/publishers/google/models/{GEMINI_MODEL_ID}:generateContent"
         
         body = {
@@ -924,42 +999,37 @@ def tafsir_handler():
         )
         response.raise_for_status()
 
-        # Parse and validate response
+        # Parse response
         raw_response = response.json()
         if "candidates" in raw_response and raw_response["candidates"]:
             try:
                 generated_text = raw_response["candidates"][0]["content"]["parts"][0]["text"]
                 final_json = json.loads(generated_text)
                 
-                # NEW: Enhance response with verse data if available
+                # Enhance with verse data if available
                 if verse_data:
-                    # Update the verses field with actual verse data
                     final_json["verses"] = [{
                         "surah": verse_data['surah_name'],
                         "verse_number": str(verse_data['verse_number']),
                         "text_saheeh_international": verse_data['english'],
                         "arabic_text": verse_data['arabic']
                     }]
-                    
-                    # Add query type indicator
                     final_json["query_type"] = "direct_verse"
                     final_json["verse_reference"] = f"{verse_data['surah_number']}:{verse_data['verse_number']}"
                 else:
                     final_json["query_type"] = "thematic"
                 
-                # Validate response quality
+                # Validate
                 is_valid, validation_msg = validate_response(final_json)
                 if not is_valid:
                     print(f"Response validation failed: {validation_msg}")
-                    # Don't cache invalid responses
-                    return jsonify({"error": "Generated response did not meet quality standards. Please try again."}), 500
+                    return jsonify({"error": "Response quality standards not met"}), 500
                 
-                # Cache successful response (in production, use Redis with TTL)
+                # Cache
                 RESPONSE_CACHE[cache_key] = final_json
                 
-                # Clean cache if it gets too large (basic memory management)
+                # Manage cache size
                 if len(RESPONSE_CACHE) > 1000:
-                    # Remove oldest 20% of entries
                     keys_to_remove = list(RESPONSE_CACHE.keys())[:200]
                     for key in keys_to_remove:
                         del RESPONSE_CACHE[key]
@@ -967,19 +1037,18 @@ def tafsir_handler():
                 return jsonify(final_json), 200
                 
             except (KeyError, IndexError, json.JSONDecodeError) as e:
-                print(f"ERROR parsing Gemini response: {type(e).__name__} - {e}")
-                print(f"Raw response: {raw_response}")
+                print(f"ERROR parsing response: {type(e).__name__} - {e}")
                 return jsonify({"error": "Failed to parse AI response"}), 500
         else:
-            print(f"ERROR: Unexpected response structure: {raw_response}")
-            return jsonify({"error": "AI service returned empty or blocked response"}), 500
+            print(f"ERROR: Unexpected response structure")
+            return jsonify({"error": "AI service returned empty response"}), 500
 
     except requests.exceptions.Timeout:
         return jsonify({"error": "AI service timed out"}), 504
     except requests.exceptions.HTTPError as http_err:
-        return jsonify({"error": f"HTTP error: {http_err}", "details": http_err.response.text}), http_err.response.status_code
+        return jsonify({"error": f"HTTP error: {http_err}"}), http_err.response.status_code
     except Exception as e:
-        print(f"CRITICAL ERROR in /tafsir RAG pipeline: {type(e).__name__} - {e}")
+        print(f"CRITICAL ERROR in /tafsir: {type(e).__name__} - {e}")
         traceback.print_exc()
         return jsonify({"error": "Internal server error"}), 500
 
@@ -993,125 +1062,64 @@ def health_check():
         "chunks_loaded": len(TAFSIR_CHUNKS),
         "cache_size": len(RESPONSE_CACHE),
         "firebase_project": FIREBASE_PROJECT,
-        "infrastructure_project": GCP_INFRASTRUCTURE_PROJECT
+        "infrastructure_project": GCP_INFRASTRUCTURE_PROJECT,
+        "vector_index_id": VECTOR_INDEX_ID,
+        "embedding_dimension": EMBEDDING_DIMENSION,
+        "source_coverage": {
+            "Ibn Kathir": "Complete Quran (114 Surahs)",
+            "al-Qurtubi": "Surahs 1-4 (up to Surah 4:22)"
+        }
     }), 200
 
-# --- Debug Endpoints ---
-@app.route('/debug-sources', methods=['GET'])
-def debug_sources():
-    """Debug endpoint to see what sources are actually in the vector index"""
+# --- Debug Endpoint ---
+@app.route('/debug-index', methods=['GET'])
+def debug_index():
+    """Debug endpoint to verify index configuration"""
     try:
-        # Test with multiple queries to get a good sample
-        test_queries = ["Allah", "Quran", "verse", "surah", "Prophet", "Islam"]
-        all_sources = set()
-        source_counts = {}
-        sample_texts = {}
+        # Count chunks by source using the mapping
+        ibn_kathir_count = sum(1 for source in CHUNK_SOURCE_MAP.values() if source == 'Ibn Kathir')
+        qurtubi_count = sum(1 for source in CHUNK_SOURCE_MAP.values() if source == 'al-Qurtubi')
         
-        # Get authentication token for Vertex AI
-        credentials, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
-        auth_req = GoogleRequest()
-        credentials.refresh(auth_req)
-        token = credentials.token
+        # Sample IDs from each source
+        ibn_kathir_samples = [k for k, v in CHUNK_SOURCE_MAP.items() if v == 'Ibn Kathir'][:5]
+        qurtubi_samples = [k for k, v in CHUNK_SOURCE_MAP.items() if v == 'al-Qurtubi'][:5]
         
-        # Initialize models
-        embedding_model = TextEmbeddingModel.from_pretrained("gemini-embedding-001")
-        endpoint_resource_name = f"projects/{GCP_INFRASTRUCTURE_PROJECT}/locations/{LOCATION}/indexEndpoints/{INDEX_ENDPOINT_ID}"
-        index_endpoint = aiplatform.MatchingEngineIndexEndpoint(index_endpoint_name=endpoint_resource_name)
-        
-        for query in test_queries:
-            try:
-                # Get embedding and search
-                query_embedding = embedding_model.get_embeddings([query], output_dimensionality=1024)[0].values
-                neighbors_result = index_endpoint.find_neighbors(
-                    deployed_index_id=DEPLOYED_INDEX_ID,
-                    queries=[query_embedding],
-                    num_neighbors=10
-                )
-                
-                print(f"DEBUG: Query '{query}' returned {len(neighbors_result[0])} results")
-                
-                for neighbor in neighbors_result[0]:
-                    chunk_id = neighbor.id
-                    chunk_text = TAFSIR_CHUNKS.get(chunk_id, '')
-                    
-                    # Determine source from chunk_id
-                    if chunk_id.startswith('jalalayn'):
-                        source = 'Tafsir al-Jalalayn'
-                    elif chunk_id.startswith('qurtubi'):
-                        source = 'Tafsir al-Qurtubi'
-                    elif chunk_id.startswith('ibn_kathir'):
-                        source = 'Tafsir Ibn Kathir'
-                    else:
-                        source = 'Unknown'
-                    
-                    all_sources.add(source)
-                    source_counts[source] = source_counts.get(source, 0) + 1
-                    
-                    # Store a sample text for each source
-                    if source not in sample_texts:
-                        sample_texts[source] = {
-                            'text_preview': chunk_text[:150] if chunk_text else 'No text found',
-                            'chunk_id': chunk_id
-                        }
-                        
-            except Exception as e:
-                print(f"Error with query '{query}': {str(e)}")
-                continue
+        # Sample text previews
+        ibn_kathir_text = {k: TAFSIR_CHUNKS[k][:200] + '...' for k in ibn_kathir_samples if k in TAFSIR_CHUNKS}
+        qurtubi_text = {k: TAFSIR_CHUNKS[k][:200] + '...' for k in qurtubi_samples if k in TAFSIR_CHUNKS}
         
         return jsonify({
             "status": "success",
-            "total_unique_sources": len(all_sources),
-            "sources_found": list(all_sources),
-            "source_distribution": source_counts,
-            "sample_data": sample_texts,
-            "vector_index_total_count": len(TAFSIR_CHUNKS),
-            "chunks_by_source": {
-                "jalalayn_chunks": len([k for k in TAFSIR_CHUNKS.keys() if k.startswith('jalalayn')]),
-                "qurtubi_chunks": len([k for k in TAFSIR_CHUNKS.keys() if k.startswith('qurtubi')]),
-                "ibn_kathir_chunks": len([k for k in TAFSIR_CHUNKS.keys() if k.startswith('ibn_kathir')])
+            "configuration": {
+                "index_endpoint_id": INDEX_ENDPOINT_ID,
+                "deployed_index_id": DEPLOYED_INDEX_ID,
+                "vector_index_id": VECTOR_INDEX_ID,
+                "embedding_dimension": EMBEDDING_DIMENSION
+            },
+            "chunks_loaded": {
+                "total": len(TAFSIR_CHUNKS),
+                "ibn_kathir": ibn_kathir_count,
+                "al_qurtubi": qurtubi_count
+            },
+            "source_coverage": {
+                "Ibn Kathir": "Complete Quran (all 114 Surahs)",
+                "al-Qurtubi": "Surahs 1-4 only (up to Surah 4:22)"
+            },
+            "sample_ids": {
+                "ibn_kathir": ibn_kathir_samples,
+                "al_qurtubi": qurtubi_samples
+            },
+            "sample_text_previews": {
+                "ibn_kathir": ibn_kathir_text,
+                "al_qurtubi": qurtubi_text
             }
         })
-        
     except Exception as e:
         return jsonify({
-            "status": "error", 
+            "status": "error",
             "error": str(e),
             "traceback": traceback.format_exc()
         }), 500
-
-@app.route('/debug-id-match', methods=['GET'])
-def debug_id_match():
-    """Test specific chunk IDs from the debug output"""
-    # Test specific chunk IDs from the debug output
-    test_cases = {
-        "jalalayn_works": {
-            "chunk_id": "jalalayn_page_49_46",
-            "text_exists": "jalalayn_page_49_46" in TAFSIR_CHUNKS,
-            "text_preview": TAFSIR_CHUNKS.get("jalalayn_page_49_46", "NOT_FOUND")[:100]
-        },
-        "ibn_kathir_test": {
-            "chunk_id": "ibn_kathir_page_1464_1463", 
-            "text_exists": "ibn_kathir_page_1464_1463" in TAFSIR_CHUNKS,
-            "text_preview": TAFSIR_CHUNKS.get("ibn_kathir_page_1464_1463", "NOT_FOUND")[:100]
-        },
-        "qurtubi_test": {
-            "chunk_id": "qurtubi_vol_3_page_415_1664",
-            "text_exists": "qurtubi_vol_3_page_415_1664" in TAFSIR_CHUNKS, 
-            "text_preview": TAFSIR_CHUNKS.get("qurtubi_vol_3_page_415_1664", "NOT_FOUND")[:100]
-        }
-    }
-    
-    # Also show what IDs are actually being generated for each source
-    sample_generated_ids = {
-        "jalalayn_ids": [k for k in TAFSIR_CHUNKS.keys() if k.startswith('jalalayn')][:3],
-        "qurtubi_ids": [k for k in TAFSIR_CHUNKS.keys() if k.startswith('qurtubi')][:3], 
-        "ibn_kathir_ids": [k for k in TAFSIR_CHUNKS.keys() if k.startswith('ibn_kathir')][:3]
-    }
-    
-    return jsonify({
-        "test_cases": test_cases,
-        "sample_generated_ids": sample_generated_ids
-    })
 
 # --- Main ---
 if __name__ == "__main__":
