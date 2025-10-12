@@ -309,7 +309,6 @@ def handle_errors(f):
 def load_chunks_from_verse_files():
     """
     Load verse text with IDs matching the embedding generation logic
-    
     Source Coverage:
     - Ibn Kathir: Complete Quran (114 Surahs, ~6,300+ verses)
     - al-Qurtubi: Partial coverage (Surahs 1-4, up to Surah 4:22, ~485 verses)
@@ -330,160 +329,110 @@ def load_chunks_from_verse_files():
             print(f"ERROR: Cannot access bucket {GCS_BUCKET_NAME}: {bucket_error}")
             raise
         
-        # Load files in EXACT order they were embedded
-        verse_files = [
-            'processed/ibnkathir-Fatiha-Tawbah_fixed.json',
-            'processed/ibnkathir-Yunus-Ankabut_FINAL_fixed.json',
-            'processed/ibnkathir-Rum-Nas_FINAL_fixed.json',
-            'processed/al-Qurtubi Vol. 1_FINAL_fixed.json',
-            'processed/al-Qurtubi Vol. 2_FINAL_fixed.json',
-            'processed/al-Qurtubi Vol. 3_fixed.json',
-            'processed/al-Qurtubi Vol. 4_FINAL_fixed.json'
+        # Define all source files to load
+        source_files = [
+            # Ibn Kathir - Complete Quran coverage (3 files)
+            ("processed/ibnkathir-Fatiha-Tawbah_fixed.json", "Ibn Kathir"),
+            ("processed/ibnkathir-Yunus-Ankabut_FINAL_fixed.json", "Ibn Kathir"),
+            ("processed/ibnkathir-Rum-Nas_FINAL_fixed.json", "Ibn Kathir"),
+            # al-Qurtubi - Partial coverage (4 files: Surahs 1-4)
+            ("processed/al-Qurtubi Vol. 1_FINAL_fixed.json", "al-Qurtubi"),
+            ("processed/al-Qurtubi Vol. 2_FINAL_fixed.json", "al-Qurtubi"),
+            ("processed/al-Qurtubi Vol. 3_fixed.json", "al-Qurtubi"),
+            ("processed/al-Qurtubi Vol. 4_FINAL_fixed.json", "al-Qurtubi")
         ]
         
-        # Replicates embedding generation logic
-        MAX_CHUNK_SIZE = 15000
-        OVERLAP_SIZE = 1000
-        
         all_verses = []
+        source_counts = {"Ibn Kathir": 0, "al-Qurtubi": 0}
         
-        # Load all verses in order
-        for file_path in verse_files:
+        for file_path, source in source_files:
             try:
                 print(f"INFO: Attempting to load {file_path}")
                 print(f"INFO: Bucket: {GCS_BUCKET_NAME}, Path: {file_path}")
+                
                 blob = bucket.blob(file_path)
                 
                 print(f"INFO: Checking if blob exists...")
                 if not blob.exists():
-                    print(f"ERROR: File not found: gs://{GCS_BUCKET_NAME}/{file_path}")
+                    print(f"ERROR: File not found at gs://{GCS_BUCKET_NAME}/{file_path}")
                     continue
                 
                 print(f"INFO: Downloading {file_path}...")
-                contents = blob.download_as_string().decode('utf-8')
+                contents = blob.download_as_text()
                 print(f"INFO: Downloaded {len(contents)} bytes")
                 
                 print(f"INFO: Parsing JSON...")
-                verses = json.loads(contents)
+                data = json.loads(contents)
+                verses = data.get('verses', [])  # Extract the 'verses' array from wrapper object
                 print(f"INFO: Parsed {len(verses)} verse objects")
                 
-                # Determine source
-                if 'ibnkathir' in file_path.lower():
-                    source = 'Ibn Kathir'
-                elif 'qurtubi' in file_path.lower():
-                    source = 'al-Qurtubi'
-                else:
-                    source = 'Unknown'
-                
-                # Add source to each verse
+                # Add source attribution to each verse
                 for verse in verses:
                     verse['_source'] = source
-                    all_verses.append(verse)
                 
+                all_verses.extend(verses)
+                source_counts[source] += len(verses)
                 print(f"INFO: Loaded {len(verses)} verses from {file_path}")
                 
-            except json.JSONDecodeError as json_err:
-                print(f"ERROR: Invalid JSON in {file_path}: {json_err}")
-                continue
             except Exception as e:
-                print(f"ERROR loading {file_path}: {type(e).__name__} - {e}")
-                import traceback as tb
-                print(f"Traceback: {tb.format_exc()}")
+                print(f"ERROR loading {file_path}: {type(e).__name__} - {str(e)}")
+                import traceback
+                print(f"Traceback: {traceback.format_exc()}")
                 continue
         
         print(f"INFO: Total verses loaded: {len(all_verses)}")
         
-        # Process verses with same logic as embedding generation
-        segment_id = 1
-        total_chunks = 0
-        
-        for verse_obj in all_verses:
-            # Build text exactly as in embed_all_chunks.py
-            text_parts = []
+        # Process verses into chunks
+        for verse in all_verses:
+            # Generate chunk_id matching embedding logic
+            surah = verse.get('surah')
+            verse_num = verse.get('verse_number') or verse.get('verse_numbers')
+            source = verse.get('_source', 'Unknown')
             
-            # Surah and verse info
-            surah = verse_obj.get('surah', '')
-            verse_num = verse_obj.get('verse_number') or verse_obj.get('verse_numbers', '')
-            if verse_num:
-                text_parts.append(f"Surah {surah}, Verse {verse_num}")
-            
-            # Verse text
-            if verse_obj.get('verse_text'):
-                text_parts.append(f"\nVerse Text: {verse_obj['verse_text']}")
-            
-            # Topics and commentary
-            if verse_obj.get('topics'):
-                for topic in verse_obj['topics']:
-                    if topic.get('topic_header'):
-                        text_parts.append(f"\n\n{topic['topic_header']}")
-                    if topic.get('commentary'):
-                        text_parts.append(f"\n{topic['commentary']}")
-            
-            full_text = ''.join(text_parts).strip()
-            
-            if not full_text:
+            if surah is None:
                 continue
             
-            source = verse_obj.get('_source', 'Unknown')
+            # Handle verse numbers
+            if isinstance(verse_num, list) and verse_num:
+                verse_num = verse_num[0]
+            elif verse_num is None:
+                verse_num = 0
             
-            # Apply same splitting logic as embedding generation
-            if len(full_text) <= MAX_CHUNK_SIZE:
-                # Single chunk
-                chunk_id = str(segment_id)
-                TAFSIR_CHUNKS[chunk_id] = full_text
+            chunk_id = f"{surah}:{verse_num}"
+            
+            # Build chunk text from verse structure
+            verse_text = verse.get('verse_text', '')
+            topics = verse.get('topics', [])
+            
+            chunk_parts = []
+            if verse_text:
+                chunk_parts.append(f"Verse {surah}:{verse_num}: {verse_text}")
+            
+            for topic in topics:
+                header = topic.get('topic_header', '')
+                commentary = topic.get('commentary', '')
+                if header:
+                    chunk_parts.append(f"\n{header}")
+                if commentary:
+                    chunk_parts.append(commentary)
+            
+            chunk_text = "\n".join(chunk_parts)
+            
+            if chunk_text.strip():
+                TAFSIR_CHUNKS[chunk_id] = chunk_text
                 CHUNK_SOURCE_MAP[chunk_id] = source
-                segment_id += 1
-                total_chunks += 1
-            else:
-                # Split into multiple segments with overlap
-                start = 0
-                sub_segment = 0
-                
-                while start < len(full_text):
-                    end = start + MAX_CHUNK_SIZE
-                    
-                    # Find sentence boundary
-                    if end < len(full_text):
-                        last_period = full_text.rfind('.', start, end)
-                        last_question = full_text.rfind('?', start, end)
-                        last_exclaim = full_text.rfind('!', start, end)
-                        boundary = max(last_period, last_question, last_exclaim)
-                        
-                        if boundary > start:
-                            end = boundary + 1
-                    
-                    # Extract segment
-                    segment_text = full_text[start:end].strip()
-                    
-                    # Create ID with sub-segment
-                    chunk_id = f"{segment_id}_{sub_segment}"
-                    TAFSIR_CHUNKS[chunk_id] = segment_text
-                    CHUNK_SOURCE_MAP[chunk_id] = source
-                    
-                    # Move to next segment with overlap
-                    start = end - OVERLAP_SIZE if end < len(full_text) else end
-                    sub_segment += 1
-                    total_chunks += 1
-                
-                segment_id += 1
         
-        print(f"INFO: Successfully loaded {total_chunks} chunks from {len(all_verses)} verses")
-        
-        # Count by source
-        ibn_kathir_count = sum(1 for v in all_verses if v.get('_source') == 'Ibn Kathir')
-        qurtubi_count = sum(1 for v in all_verses if v.get('_source') == 'al-Qurtubi')
-        
-        print(f"INFO: Source breakdown - Ibn Kathir: {ibn_kathir_count} verses, al-Qurtubi: {qurtubi_count} verses")
+        print(f"INFO: Successfully loaded {len(TAFSIR_CHUNKS)} chunks from {len(all_verses)} verses")
+        print(f"INFO: Source breakdown - Ibn Kathir: {source_counts['Ibn Kathir']} verses, al-Qurtubi: {source_counts['al-Qurtubi']} verses")
         print(f"INFO: Total chunks in memory: {len(TAFSIR_CHUNKS)}")
         
-        if total_chunks == 0:
+        if len(TAFSIR_CHUNKS) == 0:
             error_msg = f"CRITICAL: No chunks loaded from any source. Attempted to load from gs://{GCS_BUCKET_NAME}/processed/. Check: 1) GCS permissions 2) File paths 3) File contents"
             print(error_msg)
             raise RuntimeError(error_msg)
-        
+            
     except Exception as e:
-        print(f"CRITICAL STARTUP ERROR loading chunks: {type(e).__name__} - {e}")
-        traceback.print_exc()
+        print(f"CRITICAL STARTUP ERROR loading chunks: {type(e).__name__} - {str(e)}")
         raise
 
 def initialize_firebase():
