@@ -35,7 +35,7 @@ CORS(app, resources={r"/*": {
     ]
 }}, supports_credentials=True)
 
-# --- Configuration (UPDATED for new vector index) ---
+# --- Configuration (UPDATED for new sliding window vector index) ---
 # Firebase project (Auth, Firestore, Users, Quran texts)
 FIREBASE_PROJECT = os.environ.get("FIREBASE_PROJECT", "tafsir-simplified-6b262")
 # GCP infrastructure project (Vertex AI, GCS, Cloud Run)
@@ -44,14 +44,15 @@ LOCATION = os.environ.get("GCP_LOCATION", "us-central1")
 GEMINI_MODEL_ID = os.environ.get("GEMINI_MODEL_ID", "gemini-2.0-flash")
 FIREBASE_SECRET_FULL_PATH = os.environ.get("FIREBASE_SECRET_FULL_PATH")
 
-# UPDATED: New vector index configuration (1536 dimensions)
-INDEX_ENDPOINT_ID = os.environ.get("INDEX_ENDPOINT_ID", "1431531154015518720")
-DEPLOYED_INDEX_ID = os.environ.get("DEPLOYED_INDEX_ID", "deployed_tafsir_v1")
-VECTOR_INDEX_ID = os.environ.get("VECTOR_INDEX_ID", "4724823565902282752")
+# UPDATED: New sliding window vector index configuration (1536 dimensions)
+INDEX_ENDPOINT_ID = os.environ.get("INDEX_ENDPOINT_ID", "3478417184655409152")
+DEPLOYED_INDEX_ID = os.environ.get("DEPLOYED_INDEX_ID", "deployed_tafsir_sliding_1760263278167")
+VECTOR_INDEX_ID = os.environ.get("VECTOR_INDEX_ID", "5746296256385253376")
 
 GCS_BUCKET_NAME = os.environ.get("GCS_BUCKET_NAME", "tafsir-simplified-sources")
 
-# UPDATED: Embedding dimension (must match vector index)
+# UPDATED: Embedding configuration to match new index
+EMBEDDING_MODEL = "gemini-embedding-001"
 EMBEDDING_DIMENSION = 1536  # Changed from 1024 to 1536
 
 # Source coverage information
@@ -305,15 +306,19 @@ def handle_errors(f):
             return jsonify({'error': 'Internal server error'}), 500
     return decorated_function
 
-# --- UPDATED: Data Loading with Exact ID Mapping from Embedding Generation ---
+# --- UPDATED: Data Loading with Source-Prefixed IDs for Sliding Window ---
 def load_chunks_from_verse_files():
     """
-    Load verse text with IDs matching the embedding generation logic
+    Load chunks from verse JSON files with sliding window ID format.
+    Creates IDs like: ibn-kathir:1:1, al-qurtubi:2:255
+    Matches the embedding generation script exactly.
+    
     Source Coverage:
-    - Ibn Kathir: Complete Quran (114 Surahs, ~6,300+ verses)
+    - Ibn Kathir: Complete Quran (114 Surahs, ~2,146 verses)
     - al-Qurtubi: Partial coverage (Surahs 1-4, up to Surah 4:22, ~485 verses)
     """
     global TAFSIR_CHUNKS, CHUNK_SOURCE_MAP
+    
     try:
         print(f"INFO: Initializing storage client for project: {GCP_INFRASTRUCTURE_PROJECT}")
         storage_client = storage.Client(project=GCP_INFRASTRUCTURE_PROJECT)
@@ -329,41 +334,37 @@ def load_chunks_from_verse_files():
             print(f"ERROR: Cannot access bucket {GCS_BUCKET_NAME}: {bucket_error}")
             raise
         
-        # Define all source files to load
+        # Source files with their source attribution
         source_files = [
             # Ibn Kathir - Complete Quran coverage (3 files)
-            ("processed/ibnkathir-Fatiha-Tawbah_fixed.json", "Ibn Kathir"),
-            ("processed/ibnkathir-Yunus-Ankabut_FINAL_fixed.json", "Ibn Kathir"),
-            ("processed/ibnkathir-Rum-Nas_FINAL_fixed.json", "Ibn Kathir"),
+            ("processed/ibnkathir-Fatiha-Tawbah_fixed.json", "ibn-kathir"),
+            ("processed/ibnkathir-Yunus-Ankabut_FINAL_fixed.json", "ibn-kathir"),
+            ("processed/ibnkathir-Rum-Nas_FINAL_fixed.json", "ibn-kathir"),
             # al-Qurtubi - Partial coverage (4 files: Surahs 1-4)
-            ("processed/al-Qurtubi Vol. 1_FINAL_fixed.json", "al-Qurtubi"),
-            ("processed/al-Qurtubi Vol. 2_FINAL_fixed.json", "al-Qurtubi"),
-            ("processed/al-Qurtubi Vol. 3_fixed.json", "al-Qurtubi"),
-            ("processed/al-Qurtubi Vol. 4_FINAL_fixed.json", "al-Qurtubi")
+            ("processed/al-Qurtubi Vol. 1_FINAL_fixed.json", "al-qurtubi"),
+            ("processed/al-Qurtubi Vol. 2_FINAL_fixed.json", "al-qurtubi"),
+            ("processed/al-Qurtubi Vol. 3_fixed.json", "al-qurtubi"),
+            ("processed/al-Qurtubi Vol. 4_FINAL_fixed.json", "al-qurtubi")
         ]
         
         all_verses = []
-        source_counts = {"Ibn Kathir": 0, "al-Qurtubi": 0}
+        source_counts = {"ibn-kathir": 0, "al-qurtubi": 0}
         
         for file_path, source in source_files:
             try:
                 print(f"INFO: Attempting to load {file_path}")
-                print(f"INFO: Bucket: {GCS_BUCKET_NAME}, Path: {file_path}")
-                
                 blob = bucket.blob(file_path)
                 
-                print(f"INFO: Checking if blob exists...")
                 if not blob.exists():
                     print(f"ERROR: File not found at gs://{GCS_BUCKET_NAME}/{file_path}")
                     continue
                 
                 print(f"INFO: Downloading {file_path}...")
                 contents = blob.download_as_text()
-                print(f"INFO: Downloaded {len(contents)} bytes")
                 
                 print(f"INFO: Parsing JSON...")
                 data = json.loads(contents)
-                verses = data.get('verses', [])  # Extract the 'verses' array from wrapper object
+                verses = data.get('verses', [])
                 print(f"INFO: Parsed {len(verses)} verse objects")
                 
                 # Add source attribution to each verse
@@ -382,12 +383,11 @@ def load_chunks_from_verse_files():
         
         print(f"INFO: Total verses loaded: {len(all_verses)}")
         
-        # Process verses into chunks
+        # Process verses into chunks with source-prefixed IDs
         for verse in all_verses:
-            # Generate chunk_id matching embedding logic
             surah = verse.get('surah')
             verse_num = verse.get('verse_number') or verse.get('verse_numbers')
-            source = verse.get('_source', 'Unknown')
+            source = verse.get('_source', 'unknown')
             
             if surah is None:
                 continue
@@ -398,42 +398,103 @@ def load_chunks_from_verse_files():
             elif verse_num is None:
                 verse_num = 0
             
-            chunk_id = f"{surah}:{verse_num}"
-            
-            # Build chunk text from verse structure
             verse_text = verse.get('verse_text', '')
             topics = verse.get('topics', [])
             
+            # Build chunk text (same logic as embedding script)
             chunk_parts = []
+            
             if verse_text:
-                chunk_parts.append(f"Verse {surah}:{verse_num}: {verse_text}")
+                chunk_parts.append(verse_text)
             
-            for topic in topics:
-                header = topic.get('topic_header', '')
-                commentary = topic.get('commentary', '')
-                if header:
-                    chunk_parts.append(f"\n{header}")
-                if commentary:
-                    chunk_parts.append(commentary)
+            # Handle Al-Qurtubi structure
+            if verse.get('commentary') and not topics:
+                chunk_parts.append(verse['commentary'])
+                if verse.get('phrase_analysis'):
+                    for phrase in verse['phrase_analysis']:
+                        if isinstance(phrase, str):
+                            chunk_parts.append(phrase)
+                if verse.get('scholar_citations'):
+                    for citation in verse['scholar_citations']:
+                        if isinstance(citation, str):
+                            chunk_parts.append(citation)
             
-            chunk_text = "\n".join(chunk_parts)
+            # Handle Ibn Kathir structure
+            if topics:
+                for topic in topics:
+                    if topic.get('topic_header'):
+                        chunk_parts.append(topic['topic_header'])
+                    if topic.get('commentary'):
+                        chunk_parts.append(topic['commentary'])
+                    if topic.get('phrase_analysis'):
+                        for phrase in topic['phrase_analysis']:
+                            if isinstance(phrase, dict):
+                                if phrase.get('phrase'):
+                                    chunk_parts.append(phrase['phrase'])
+                                if phrase.get('analysis'):
+                                    chunk_parts.append(phrase['analysis'])
             
-            if chunk_text.strip():
-                TAFSIR_CHUNKS[chunk_id] = chunk_text
-                CHUNK_SOURCE_MAP[chunk_id] = source
+            full_text = " ".join(chunk_parts)
+            
+            # CRITICAL: Create chunk ID matching embedding format: source:surah:verse
+            chunk_id = f"{source}:{surah}:{verse_num}"
+            
+            # Store chunk
+            # Note: Vector index may have segment IDs like ibn-kathir:1:1_0
+            # We store base ID here and handle segments in retrieve function
+            if full_text.strip():
+                TAFSIR_CHUNKS[chunk_id] = full_text
+                CHUNK_SOURCE_MAP[chunk_id] = "Ibn Kathir" if source == "ibn-kathir" else "al-Qurtubi"
         
-        print(f"INFO: Successfully loaded {len(TAFSIR_CHUNKS)} chunks from {len(all_verses)} verses")
-        print(f"INFO: Source breakdown - Ibn Kathir: {source_counts['Ibn Kathir']} verses, al-Qurtubi: {source_counts['al-Qurtubi']} verses")
-        print(f"INFO: Total chunks in memory: {len(TAFSIR_CHUNKS)}")
+        print(f"INFO: Successfully loaded {len(TAFSIR_CHUNKS)} chunks")
+        print(f"INFO: Source breakdown - Ibn Kathir: {source_counts['ibn-kathir']} verses, al-Qurtubi: {source_counts['al-qurtubi']} verses")
+        print(f"INFO: Sample chunk IDs: {list(TAFSIR_CHUNKS.keys())[:5]}")
         
         if len(TAFSIR_CHUNKS) == 0:
-            error_msg = f"CRITICAL: No chunks loaded from any source. Attempted to load from gs://{GCS_BUCKET_NAME}/processed/. Check: 1) GCS permissions 2) File paths 3) File contents"
+            error_msg = f"CRITICAL: No chunks loaded from any source."
             print(error_msg)
             raise RuntimeError(error_msg)
             
     except Exception as e:
         print(f"CRITICAL STARTUP ERROR loading chunks: {type(e).__name__} - {str(e)}")
         raise
+
+
+def retrieve_chunks_from_neighbors(neighbors):
+    """
+    Retrieve chunks from TAFSIR_CHUNKS based on neighbor IDs.
+    Handles sliding window segment IDs (e.g., ibn-kathir:1:1_0 -> ibn-kathir:1:1)
+    
+    Returns list of dicts with chunk info.
+    """
+    retrieved = []
+    
+    for neighbor in neighbors:
+        neighbor_id = str(neighbor.id)
+        
+        # Remove segment suffix if present (e.g., ibn-kathir:1:1_0 -> ibn-kathir:1:1)
+        base_id = neighbor_id
+        if '_' in neighbor_id:
+            parts = neighbor_id.rsplit('_', 1)
+            if len(parts) == 2 and parts[1].isdigit():
+                base_id = parts[0]
+        
+        # Lookup chunk
+        chunk_text = TAFSIR_CHUNKS.get(base_id, '')
+        source = CHUNK_SOURCE_MAP.get(base_id, 'Unknown')
+        
+        if chunk_text:
+            retrieved.append({
+                'text': chunk_text,
+                'distance': neighbor.distance,
+                'chunk_id': base_id,
+                'source': source
+            })
+        else:
+            print(f"WARNING: Chunk not found for ID: {neighbor_id} (base: {base_id})")
+    
+    return retrieved
+
 
 def initialize_firebase():
     """Initialize dual database connections"""
@@ -548,10 +609,13 @@ Keep the expansion concise but comprehensive. Return only the expanded query tex
 
 # --- UPDATED: Enhanced Multi-Source RAG Functions with 1536 dimensions ---
 def perform_diversified_rag_search(query, expanded_query, embedding_model, index_endpoint, query_type="default"):
-    """Enhanced RAG with source weighting based on query type - UPDATED for 1536 dimensions"""
+    """Enhanced RAG with source weighting - UPDATED for 1536 dimensions and sliding window IDs"""
     
     # Step 1: Generate query embedding with correct dimension
-    query_embedding = embedding_model.get_embeddings([expanded_query], output_dimensionality=EMBEDDING_DIMENSION)[0].values
+    query_embedding = embedding_model.get_embeddings(
+        [expanded_query], 
+        output_dimensionality=EMBEDDING_DIMENSION
+    )[0].values
     
     # Step 2: Retrieve larger pool of candidates (20 chunks for better diversity)
     neighbors_result = index_endpoint.find_neighbors(
@@ -560,34 +624,22 @@ def perform_diversified_rag_search(query, expanded_query, embedding_model, index
         num_neighbors=20
     )
     
-    # Step 3: Intelligent source diversification with weighting
+    # Step 3: Retrieve chunks using new function that handles segment IDs
+    retrieved_chunks = retrieve_chunks_from_neighbors(neighbors_result[0])
+    
+    # Step 4: Intelligent source diversification with weighting
     source_chunks = {
         'Ibn Kathir': [],
         'al-Qurtubi': []
     }
     
-    # Categorize all retrieved chunks by source using our mapping
-    for neighbor in neighbors_result[0]:
-        chunk_id = neighbor.id
-        chunk_text = TAFSIR_CHUNKS.get(chunk_id, '')
-        distance = neighbor.distance
-        
-        if not chunk_text:
-            continue
-            
-        chunk_data = {
-            'text': chunk_text,
-            'distance': distance,
-            'chunk_id': chunk_id
-        }
-        
-        # Get source from mapping (most reliable)
-        source = CHUNK_SOURCE_MAP.get(chunk_id, 'Ibn Kathir')  # Default to Ibn Kathir
-        
+    # Categorize all retrieved chunks by source
+    for chunk in retrieved_chunks:
+        source = chunk['source']
         if source in source_chunks:
-            source_chunks[source].append(chunk_data)
+            source_chunks[source].append(chunk)
     
-    # Step 4: Weighted selection based on query type
+    # Step 5: Weighted selection based on query type
     weights = SOURCE_WEIGHTS.get(query_type, SOURCE_WEIGHTS["default"])
     selected_chunks = []
     context_by_source = {}
@@ -935,7 +987,7 @@ def tafsir_handler():
         expanded_query = expand_query(rag_query, token)
 
         # Initialize models
-        embedding_model = TextEmbeddingModel.from_pretrained("gemini-embedding-001")
+        embedding_model = TextEmbeddingModel.from_pretrained(EMBEDDING_MODEL)
         endpoint_resource_name = f"projects/{GCP_INFRASTRUCTURE_PROJECT}/locations/{LOCATION}/indexEndpoints/{INDEX_ENDPOINT_ID}"
         index_endpoint = aiplatform.MatchingEngineIndexEndpoint(index_endpoint_name=endpoint_resource_name)
         
@@ -1038,6 +1090,9 @@ def health_check():
         "firebase_project": FIREBASE_PROJECT,
         "infrastructure_project": GCP_INFRASTRUCTURE_PROJECT,
         "vector_index_id": VECTOR_INDEX_ID,
+        "index_endpoint_id": INDEX_ENDPOINT_ID,
+        "deployed_index_id": DEPLOYED_INDEX_ID,
+        "embedding_model": EMBEDDING_MODEL,
         "embedding_dimension": EMBEDDING_DIMENSION,
         "source_coverage": {
             "Ibn Kathir": "Complete Quran (114 Surahs)",
@@ -1068,6 +1123,7 @@ def debug_index():
                 "index_endpoint_id": INDEX_ENDPOINT_ID,
                 "deployed_index_id": DEPLOYED_INDEX_ID,
                 "vector_index_id": VECTOR_INDEX_ID,
+                "embedding_model": EMBEDDING_MODEL,
                 "embedding_dimension": EMBEDDING_DIMENSION
             },
             "chunks_loaded": {
