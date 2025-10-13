@@ -28,6 +28,57 @@ const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
 // ============================================================================
+// PERSONA THEME CONFIGURATION
+// ============================================================================
+
+const getPersonaTheme = (persona) => {
+  const themes = {
+    new_revert: {
+      gradient: 'linear-gradient(135deg, #10B981 0%, #34D399 100%)',
+      icon: '🌱',
+      color: '#10B981'
+    },
+    revert: {
+      gradient: 'linear-gradient(135deg, #059669 0%, #10B981 100%)',
+      icon: '📗',
+      color: '#059669'
+    },
+    seeker: {
+      gradient: 'linear-gradient(135deg, #8B5CF6 0%, #A78BFA 100%)',
+      icon: '🔍',
+      color: '#8B5CF6'
+    },
+    practicing_muslim: {
+      gradient: 'linear-gradient(135deg, #0D9488 0%, #14B8A6 100%)',
+      icon: '🕌',
+      color: '#0D9488'
+    },
+    teacher: {
+      gradient: 'linear-gradient(135deg, #D97706 0%, #F59E0B 100%)',
+      icon: '👨‍🏫',
+      color: '#D97706'
+    },
+    scholar: {
+      gradient: 'linear-gradient(135deg, #1E3A5F 0%, #3B5A7F 100%)',
+      icon: '📚',
+      color: '#1E3A5F'
+    },
+    student: {
+      gradient: 'linear-gradient(135deg, #3B82F6 0%, #60A5FA 100%)',
+      icon: '🎓',
+      color: '#3B82F6'
+    }
+  };
+  
+  return themes[persona] || themes.practicing_muslim;
+};
+
+const getPersonaIcon = (persona) => {
+  const theme = getPersonaTheme(persona);
+  return theme.icon;
+};
+
+// ============================================================================
 // MAIN COMPONENT
 // ============================================================================
 
@@ -76,7 +127,6 @@ export default function HomePage() {
       <div className="container">
         <div className="card">
           <div className="loading-spinner"></div>
-          <h2 style={{ textAlign: 'center', marginTop: '20px' }}>Loading Tafsir Simplified...</h2>
         </div>
       </div>
     );
@@ -120,8 +170,8 @@ function AuthComponent() {
   return (
     <div className="container">
       <div className="card">
-        <h1>Welcome to Tafsir Simplified</h1>
-        <p style={{ fontSize: '1.1rem', color: '#666', marginBottom: '24px' }}>
+        <h1 style={{ textAlign: 'center', marginBottom: '16px' }}>Welcome to Tafsir Simplified</h1>
+        <p style={{ fontSize: '1.1rem', color: '#666', marginBottom: '32px', textAlign: 'center' }}>
           {isSignUp 
             ? 'Create an account to explore classical Islamic tafsir with AI-powered insights.' 
             : 'Sign in to continue your Quranic journey.'}
@@ -133,7 +183,7 @@ function AuthComponent() {
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Email"
             required
-            style={{ marginBottom: '12px' }}
+            style={{ marginBottom: '12px', width: '100%' }}
           />
           <input
             type="password"
@@ -141,9 +191,11 @@ function AuthComponent() {
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Password"
             required
-            style={{ marginBottom: '16px' }}
+            style={{ marginBottom: '16px', width: '100%' }}
           />
-          <button type="submit">{isSignUp ? 'Sign Up' : 'Sign In'}</button>
+          <button type="submit" style={{ width: '100%' }}>
+            {isSignUp ? 'Sign Up' : 'Sign In'}
+          </button>
         </form>
         {error && <p className="error">{error}</p>}
         <button onClick={() => setIsSignUp(!isSignUp)} className="toggle-auth">
@@ -176,7 +228,17 @@ function OnboardingComponent({ user, onProfileComplete }) {
           setPersonas(Object.entries(data.personas));
         }
       } catch (err) {
-        console.log('Could not fetch personas');
+        console.log('Could not fetch personas, using defaults');
+        // Fallback personas
+        setPersonas([
+          ['new_revert', { name: 'New Revert', description: 'warm, encouraging | 200-300 words' }],
+          ['revert', { name: 'Revert Muslim', description: 'supportive | 300-400 words' }],
+          ['practicing_muslim', { name: 'Practicing Muslim', description: 'balanced | 400-500 words' }],
+          ['scholar', { name: 'Scholar', description: 'academic | 800-1000 words' }],
+          ['student', { name: 'Islamic Studies Student', description: 'educational | 600-800 words' }],
+          ['teacher', { name: 'Teacher/Imam', description: 'pedagogical | 400-600 words' }],
+          ['seeker', { name: 'Spiritual Seeker', description: 'warm, reflective | 300-400 words' }]
+        ]);
       }
     };
     fetchPersonas();
@@ -215,32 +277,30 @@ function OnboardingComponent({ user, onProfileComplete }) {
   return (
     <div className="container">
       <div className="card">
-        <h1>Welcome, {user.email}!</h1>
-        <p style={{ fontSize: '1.1rem', marginBottom: '32px' }}>
+        <h1 style={{ textAlign: 'center', marginBottom: '12px' }}>Welcome, {user.email}!</h1>
+        <p style={{ fontSize: '1.1rem', marginBottom: '32px', textAlign: 'center', color: '#666' }}>
           Let&apos;s personalize your Tafsir experience in 4 simple steps.
         </p>
 
         {/* Step 1: Persona Selection */}
         {step === 1 && personas.length > 0 && (
           <div>
-            <h2>Choose Your Learning Profile</h2>
-            <p style={{ marginBottom: '20px', color: '#666' }}>
+            <h2 style={{ textAlign: 'center', color: 'var(--primary-teal)', marginBottom: '24px' }}>
+              Choose Your Learning Profile
+            </h2>
+            <p style={{ marginBottom: '24px', color: '#666', textAlign: 'center' }}>
               Select the profile that best matches your current Islamic knowledge and learning goals.
             </p>
             <div className="level-buttons">
               {personas.map(([key, persona]) => (
                 <button key={key} onClick={() => handleSelect('persona', key)}>
-                  <div style={{ fontSize: '2rem', marginBottom: '8px' }}>
-                    {key === 'new_revert' && '🌱'}
-                    {key === 'revert' && '📗'}
-                    {key === 'practicing_muslim' && '🕌'}
-                    {key === 'scholar' && '📚'}
-                    {key === 'student' && '🎓'}
-                    {key === 'teacher' && '👨‍🏫'}
-                    {key === 'seeker' && '🔍'}
+                  <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>
+                    {getPersonaIcon(key)}
                   </div>
-                  {persona.name}
-                  <div style={{ fontSize: '0.85rem', marginTop: '4px', opacity: 0.7 }}>
+                  <div style={{ fontWeight: '700', fontSize: '1.1rem', marginBottom: '4px' }}>
+                    {persona.name}
+                  </div>
+                  <div style={{ fontSize: '0.85rem', opacity: 0.7, lineHeight: '1.4' }}>
                     {persona.description}
                   </div>
                 </button>
@@ -252,25 +312,27 @@ function OnboardingComponent({ user, onProfileComplete }) {
         {/* Step 2: Knowledge Level */}
         {step === 2 && (
           <div>
-            <h2>What is your knowledge level?</h2>
+            <h2 style={{ textAlign: 'center', color: 'var(--primary-teal)', marginBottom: '24px' }}>
+              What is your knowledge level?
+            </h2>
             <div className="level-buttons">
               <button onClick={() => handleSelect('level', 'beginner')}>
-                <div style={{ fontSize: '2rem', marginBottom: '8px' }}>📚</div>
-                Beginner
+                <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>📚</div>
+                <div style={{ fontWeight: '700', fontSize: '1.1rem' }}>Beginner</div>
                 <div style={{ fontSize: '0.85rem', marginTop: '4px', opacity: 0.7 }}>
                   New to tafsir
                 </div>
               </button>
               <button onClick={() => handleSelect('level', 'intermediate')}>
-                <div style={{ fontSize: '2rem', marginBottom: '8px' }}>🎓</div>
-                Intermediate
+                <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>🎓</div>
+                <div style={{ fontWeight: '700', fontSize: '1.1rem' }}>Intermediate</div>
                 <div style={{ fontSize: '0.85rem', marginTop: '4px', opacity: 0.7 }}>
                   Some background
                 </div>
               </button>
               <button onClick={() => handleSelect('level', 'advanced')}>
-                <div style={{ fontSize: '2rem', marginBottom: '8px' }}>📖</div>
-                Advanced
+                <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>📖</div>
+                <div style={{ fontWeight: '700', fontSize: '1.1rem' }}>Advanced</div>
                 <div style={{ fontSize: '0.85rem', marginTop: '4px', opacity: 0.7 }}>
                   Deep knowledge
                 </div>
@@ -282,25 +344,27 @@ function OnboardingComponent({ user, onProfileComplete }) {
         {/* Step 3: Focus Area */}
         {step === 3 && (
           <div>
-            <h2>What is your primary focus?</h2>
+            <h2 style={{ textAlign: 'center', color: 'var(--primary-teal)', marginBottom: '24px' }}>
+              What is your primary focus?
+            </h2>
             <div className="level-buttons">
               <button onClick={() => handleSelect('focus', 'practical')}>
-                <div style={{ fontSize: '2rem', marginBottom: '8px' }}>🤲</div>
-                Practical Lessons
+                <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>🤲</div>
+                <div style={{ fontWeight: '700', fontSize: '1.1rem' }}>Practical Lessons</div>
                 <div style={{ fontSize: '0.85rem', marginTop: '4px', opacity: 0.7 }}>
                   Daily applications
                 </div>
               </button>
               <button onClick={() => handleSelect('focus', 'linguistic')}>
-                <div style={{ fontSize: '2rem', marginBottom: '8px' }}>✍️</div>
-                Linguistic Details
+                <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>✍️</div>
+                <div style={{ fontWeight: '700', fontSize: '1.1rem' }}>Linguistic Details</div>
                 <div style={{ fontSize: '0.85rem', marginTop: '4px', opacity: 0.7 }}>
                   Arabic insights
                 </div>
               </button>
               <button onClick={() => handleSelect('focus', 'comparative')}>
-                <div style={{ fontSize: '2rem', marginBottom: '8px' }}>📊</div>
-                Comparative Analysis
+                <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>📊</div>
+                <div style={{ fontWeight: '700', fontSize: '1.1rem' }}>Comparative Analysis</div>
                 <div style={{ fontSize: '0.85rem', marginTop: '4px', opacity: 0.7 }}>
                   Multiple views
                 </div>
@@ -312,25 +376,27 @@ function OnboardingComponent({ user, onProfileComplete }) {
         {/* Step 4: Verbosity */}
         {step === 4 && (
           <div>
-            <h2>How detailed would you like the answers?</h2>
+            <h2 style={{ textAlign: 'center', color: 'var(--primary-teal)', marginBottom: '24px' }}>
+              How detailed would you like the answers?
+            </h2>
             <div className="level-buttons">
               <button onClick={() => handleSelect('verbosity', 'short')}>
-                <div style={{ fontSize: '2rem', marginBottom: '8px' }}>⚡</div>
-                Short &amp; Concise
+                <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>⚡</div>
+                <div style={{ fontWeight: '700', fontSize: '1.1rem' }}>Short &amp; Concise</div>
                 <div style={{ fontSize: '0.85rem', marginTop: '4px', opacity: 0.7 }}>
                   Quick summaries
                 </div>
               </button>
               <button onClick={() => handleSelect('verbosity', 'medium')}>
-                <div style={{ fontSize: '2rem', marginBottom: '8px' }}>📝</div>
-                Medium Detail
+                <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>📝</div>
+                <div style={{ fontWeight: '700', fontSize: '1.1rem' }}>Medium Detail</div>
                 <div style={{ fontSize: '0.85rem', marginTop: '4px', opacity: 0.7 }}>
                   Balanced depth
                 </div>
               </button>
               <button onClick={() => handleSelect('verbosity', 'detailed')}>
-                <div style={{ fontSize: '2rem', marginBottom: '8px' }}>📚</div>
-                Very Detailed
+                <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>📚</div>
+                <div style={{ fontWeight: '700', fontSize: '1.1rem' }}>Very Detailed</div>
                 <div style={{ fontSize: '0.85rem', marginTop: '4px', opacity: 0.7 }}>
                   Comprehensive
                 </div>
@@ -365,6 +431,14 @@ function MainApp({ user, userProfile }) {
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [rateLimitWarning, setRateLimitWarning] = useState('');
+
+  // Apply persona theme
+  useEffect(() => {
+    const persona = userProfile?.persona || 'practicing_muslim';
+    const theme = getPersonaTheme(persona);
+    document.documentElement.style.setProperty('--user-gradient', theme.gradient);
+    document.documentElement.style.setProperty('--user-color', theme.color);
+  }, [userProfile]);
 
   // Fetch suggestions on mount
   useEffect(() => {
@@ -460,18 +534,24 @@ function MainApp({ user, userProfile }) {
   // Display persona name if available
   const getProfileDisplay = () => {
     if (userProfile.persona) {
-      return `Persona: ${userProfile.persona.replace('_', ' ')}`;
+      const personaName = userProfile.persona.split('_').map(word => 
+        word.charAt(0).toUpperCase() + word.slice(1)
+      ).join(' ');
+      return personaName;
     }
-    return `${userProfile.level} • ${userProfile.focus} • ${userProfile.verbosity}`;
+    return `${userProfile.level} • ${userProfile.focus}`;
   };
+
+  const personaIcon = getPersonaIcon(userProfile?.persona || 'practicing_muslim');
 
   return (
     <div className="container">
       <div className="card main-app">
         <div className="header">
           <h1>Tafsir Simplified</h1>
-          <div className="user-info">
-            <span>{user.email} • {getProfileDisplay()}</span>
+          <div className="user-info" data-persona-icon={personaIcon}>
+            <span>{user.email}</span>
+            <span className="persona-badge">{getProfileDisplay()}</span>
             <button onClick={() => signOut(auth)} className="logout-button">
               Sign Out
             </button>
@@ -484,7 +564,7 @@ function MainApp({ user, userProfile }) {
             onClick={() => setShowSuggestions(!showSuggestions)}
             className="suggestions-toggle"
           >
-            {showSuggestions ? '🔼 Hide' : '🔽 Show'} Suggestions
+            {showSuggestions ? '🔼 Hide Suggestions' : '🔽 Show Query Suggestions'}
           </button>
           
           {showSuggestions && suggestions.length > 0 && (
@@ -569,7 +649,9 @@ function EnhancedResultsDisplay({ data }) {
   if (verses.length === 0 && tafsir_explanations.length === 0 && lessons_practical_applications.length === 0) {
     return (
       <div className="results-container">
-        <p>No relevant information found in the source text for your query.</p>
+        <p style={{ textAlign: 'center', fontSize: '1.1rem', color: '#666' }}>
+          No relevant information found in the source text for your query.
+        </p>
       </div>
     );
   }
@@ -606,25 +688,11 @@ function EnhancedResultsDisplay({ data }) {
                   <span className="limited-content-badge">Limited Content</span>
                 )}
               </summary>
-<div className="explanation-content markdown-content">
-  <ReactMarkdown
-    components={{
-      // Custom rendering for better styling
-      h1: ({node, ...props}) => <h1 style={{fontSize: '1.5rem', marginTop: '20px', marginBottom: '12px', color: 'var(--primary-color)'}} {...props} />,
-      h2: ({node, ...props}) => <h2 style={{fontSize: '1.3rem', marginTop: '16px', marginBottom: '10px', color: 'var(--primary-color)'}} {...props} />,
-      h3: ({node, ...props}) => <h3 style={{fontSize: '1.1rem', marginTop: '12px', marginBottom: '8px'}} {...props} />,
-      p: ({node, ...props}) => <p style={{marginBottom: '16px', lineHeight: '1.8'}} {...props} />,
-      ul: ({node, ...props}) => <ul style={{marginLeft: '20px', marginBottom: '16px', listStyle: 'none'}} {...props} />,
-      ol: ({node, ...props}) => <ol style={{marginLeft: '20px', marginBottom: '16px'}} {...props} />,
-      li: ({node, ...props}) => <li style={{marginBottom: '8px', paddingLeft: '8px'}} {...props} />,
-      strong: ({node, ...props}) => <strong style={{fontWeight: '600', color: 'var(--primary-color)'}} {...props} />,
-      em: ({node, ...props}) => <em style={{fontStyle: 'italic', color: '#555'}} {...props} />,
-      code: ({node, ...props}) => <code style={{background: 'var(--secondary-color)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.9em'}} {...props} />,
-    }}
-  >
-    {tafsir.explanation}
-  </ReactMarkdown>
-</div>
+              <div className="explanation-content markdown-content">
+                <ReactMarkdown>
+                  {tafsir.explanation}
+                </ReactMarkdown>
+              </div>
             </details>
           ))}
         </div>
