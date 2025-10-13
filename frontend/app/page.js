@@ -9,6 +9,8 @@ import {
   signInWithEmailAndPassword,
   signOut
 } from 'firebase/auth';
+import AnnotationPanel from './components/AnnotationPanel';
+import AnnotationDisplay from './components/AnnotationDisplay';
 
 // Firebase Configuration
 const firebaseConfig = {
@@ -740,6 +742,22 @@ function MainApp({ user, userProfile }) {
           >
             ⭐ Saved Answers
           </a>
+          <a
+            href="/annotations"
+            style={{
+              padding: '10px 20px',
+              background: 'linear-gradient(135deg, var(--cream) 0%, rgba(212, 175, 55, 0.1) 100%)',
+              border: '2px solid var(--border-light)',
+              borderRadius: '12px',
+              color: 'var(--primary-teal)',
+              fontWeight: '600',
+              textDecoration: 'none',
+              transition: 'all 0.3s ease'
+            }}
+            className="nav-link"
+          >
+            📝 My Reflections
+          </a>
         </div>
         
         {/* Query Suggestions */}
@@ -800,7 +818,7 @@ function MainApp({ user, userProfile }) {
         
         {response && (
           <>
-            <EnhancedResultsDisplay data={response} />
+            <EnhancedResultsDisplay data={response} user={user} />
             <div className="export-section">
               <h3>Save & Export</h3>
               <div className="export-controls">
@@ -823,10 +841,15 @@ function MainApp({ user, userProfile }) {
 }
 
 // ============================================================================
-// RESULTS DISPLAY COMPONENT
+// RESULTS DISPLAY COMPONENT WITH ANNOTATIONS
 // ============================================================================
 
-function EnhancedResultsDisplay({ data }) {
+function EnhancedResultsDisplay({ data, user }) {
+  const [annotations, setAnnotations] = useState({});
+  const [annotationPanelOpen, setAnnotationPanelOpen] = useState(false);
+  const [currentVerse, setCurrentVerse] = useState(null);
+  const [editingAnnotation, setEditingAnnotation] = useState(null);
+
   if (!data) return <div className="results-container"><p>No results to display.</p></div>;
 
   const {
@@ -836,6 +859,70 @@ function EnhancedResultsDisplay({ data }) {
     lessons_practical_applications = [],
     summary = ''
   } = data;
+
+  // Fetch annotations for all verses when component mounts
+  useEffect(() => {
+    if (verses.length > 0 && user) {
+      verses.forEach(verse => {
+        fetchVerseAnnotations(verse.surah, verse.verse_number);
+      });
+    }
+  }, [verses, user]);
+
+  const fetchVerseAnnotations = async (surah, verse) => {
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch(`${BACKEND_URL}/annotations/verse/${surah}/${verse}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setAnnotations(prev => ({
+          ...prev,
+          [`${surah}:${verse}`]: data.annotations || []
+        }));
+      }
+    } catch (err) {
+      console.error('Failed to fetch annotations:', err);
+    }
+  };
+
+  const handleAddAnnotation = (verse) => {
+    setCurrentVerse(verse);
+    setEditingAnnotation(null);
+    setAnnotationPanelOpen(true);
+  };
+
+  const handleEditAnnotation = (verse, annotation) => {
+    setCurrentVerse(verse);
+    setEditingAnnotation(annotation);
+    setAnnotationPanelOpen(true);
+  };
+
+  const handleDeleteAnnotation = async (surah, verse, annotationId) => {
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch(`${BACKEND_URL}/annotations/${annotationId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (res.ok) {
+        // Refresh annotations
+        fetchVerseAnnotations(surah, verse);
+      }
+    } catch (err) {
+      console.error('Failed to delete annotation:', err);
+    }
+  };
+
+  const handleAnnotationSaved = () => {
+    // Refresh annotations for current verse
+    if (currentVerse) {
+      fetchVerseAnnotations(currentVerse.surah, currentVerse.verse_number);
+    }
+  };
 
   if (verses.length === 0 && tafsir_explanations.length === 0 && lessons_practical_applications.length === 0) {
     return (
@@ -849,22 +936,72 @@ function EnhancedResultsDisplay({ data }) {
 
   return (
     <div className="results-container">
+      {/* Annotation Panel */}
+      {currentVerse && (
+        <AnnotationPanel
+          isOpen={annotationPanelOpen}
+          onClose={() => setAnnotationPanelOpen(false)}
+          verse={currentVerse}
+          user={user}
+          existingAnnotation={editingAnnotation}
+          onSaved={handleAnnotationSaved}
+        />
+      )}
+
       {verses.length > 0 && (
         <div className="result-section">
           <h2>Relevant Verses</h2>
-          {verses.map((verse, index) => (
-            <div key={index} className="verse-card enhanced">
-              <p className="verse-ref">
-                <strong>Surah {verse.surah}, Verse {verse.verse_number}</strong>
-              </p>
-              {verse.arabic_text && verse.arabic_text !== 'Not available' && (
-                <p className="arabic-text" dir="rtl">{verse.arabic_text}</p>
-              )}
-              <p className="translation">
-                <em>&quot;{verse.text_saheeh_international}&quot;</em>
-              </p>
-            </div>
-          ))}
+          {verses.map((verse, index) => {
+            const verseKey = `${verse.surah}:${verse.verse_number}`;
+            const verseAnnotations = annotations[verseKey] || [];
+
+            return (
+              <div key={index} style={{ marginBottom: '32px' }}>
+                <div className="verse-card enhanced">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                    <p className="verse-ref" style={{ margin: 0 }}>
+                      <strong>Surah {verse.surah}, Verse {verse.verse_number}</strong>
+                    </p>
+                    <button
+                      onClick={() => handleAddAnnotation(verse)}
+                      style={{
+                        background: 'var(--gradient-teal-gold)',
+                        border: 'none',
+                        color: 'white',
+                        padding: '8px 16px',
+                        borderRadius: '20px',
+                        cursor: 'pointer',
+                        fontSize: '0.85rem',
+                        fontWeight: '700',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        transition: 'all 0.3s ease'
+                      }}
+                      className="add-annotation-btn"
+                    >
+                      📝 Add Note
+                    </button>
+                  </div>
+                  {verse.arabic_text && verse.arabic_text !== 'Not available' && (
+                    <p className="arabic-text" dir="rtl">{verse.arabic_text}</p>
+                  )}
+                  <p className="translation">
+                    <em>&quot;{verse.text_saheeh_international}&quot;</em>
+                  </p>
+
+                  {/* Display Annotations */}
+                  {verseAnnotations.length > 0 && (
+                    <AnnotationDisplay
+                      annotations={verseAnnotations}
+                      onEdit={(annotation) => handleEditAnnotation(verse, annotation)}
+                      onDelete={(annotationId) => handleDeleteAnnotation(verse.surah, verse.verse_number, annotationId)}
+                    />
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
