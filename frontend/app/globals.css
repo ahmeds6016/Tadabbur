@@ -256,6 +256,18 @@ a {
 }
 
 /* ============================================================================
+   NAVIGATION LINKS
+   ============================================================================ */
+
+.nav-link:hover {
+  background: var(--gradient-teal-gold) !important;
+  color: white !important;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-medium);
+  border-color: var(--gold) !important;
+}
+
+/* ============================================================================
    SUGGESTIONS SECTION - ENHANCED
    ============================================================================ */
 

@@ -1695,6 +1695,438 @@ def list_personas():
         }
     }), 200
 
+# ============================================================================
+# QUERY HISTORY & SAVED SEARCHES ENDPOINTS
+# ============================================================================
+
+@app.route("/query-history", methods=["GET"])
+@require_auth
+def get_query_history():
+    """Get user's recent query history"""
+    try:
+        uid = request.uid
+        limit = int(request.args.get('limit', 50))
+
+        history_ref = users_db.collection('users').document(uid).collection('query_history')
+        query = history_ref.order_by('timestamp', direction='DESCENDING').limit(limit)
+
+        history = []
+        for doc in query.stream():
+            data = doc.to_dict()
+            history.append({
+                'id': doc.id,
+                'query': data.get('query', ''),
+                'approach': data.get('approach', 'tafsir'),
+                'persona': data.get('persona', ''),
+                'timestamp': data.get('timestamp', ''),
+                'hasResult': data.get('hasResult', False)
+            })
+
+        return jsonify({'history': history, 'count': len(history)}), 200
+
+    except Exception as e:
+        print(f"ERROR in /query-history: {type(e).__name__} - {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/query-history", methods=["POST"])
+@require_auth
+def save_query_to_history():
+    """Save a query to user's history"""
+    try:
+        uid = request.uid
+        data = request.get_json()
+
+        query_text = data.get('query', '')
+        approach = data.get('approach', 'tafsir')
+        persona = data.get('persona', '')
+        has_result = data.get('hasResult', True)
+
+        if not query_text:
+            return jsonify({"error": "Query text is required"}), 400
+
+        history_ref = users_db.collection('users').document(uid).collection('query_history')
+
+        # Add to history
+        doc_ref = history_ref.document()
+        doc_ref.set({
+            'query': query_text,
+            'approach': approach,
+            'persona': persona,
+            'hasResult': has_result,
+            'timestamp': firestore.SERVER_TIMESTAMP
+        })
+
+        return jsonify({'success': True, 'id': doc_ref.id}), 201
+
+    except Exception as e:
+        print(f"ERROR in POST /query-history: {type(e).__name__} - {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/saved-searches", methods=["GET"])
+@require_auth
+def get_saved_searches():
+    """Get user's saved searches/answers"""
+    try:
+        uid = request.uid
+        folder = request.args.get('folder', None)
+
+        saved_ref = users_db.collection('users').document(uid).collection('saved_searches')
+
+        if folder:
+            query = saved_ref.where('folder', '==', folder).order_by('savedAt', direction='DESCENDING')
+        else:
+            query = saved_ref.order_by('savedAt', direction='DESCENDING')
+
+        saved = []
+        for doc in query.stream():
+            data = doc.to_dict()
+            saved.append({
+                'id': doc.id,
+                'query': data.get('query', ''),
+                'approach': data.get('approach', 'tafsir'),
+                'folder': data.get('folder', 'Uncategorized'),
+                'title': data.get('title', data.get('query', '')[:50]),
+                'savedAt': data.get('savedAt', ''),
+                'responseSnippet': data.get('responseSnippet', '')
+            })
+
+        return jsonify({'saved': saved, 'count': len(saved)}), 200
+
+    except Exception as e:
+        print(f"ERROR in /saved-searches: {type(e).__name__} - {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/saved-searches", methods=["POST"])
+@require_auth
+def save_search():
+    """Save a search/answer for later"""
+    try:
+        uid = request.uid
+        data = request.get_json()
+
+        query_text = data.get('query', '')
+        approach = data.get('approach', 'tafsir')
+        folder = data.get('folder', 'Uncategorized')
+        title = data.get('title', query_text[:50])
+        response_snippet = data.get('responseSnippet', '')
+        full_response = data.get('fullResponse', None)  # Optional: store full response
+
+        if not query_text:
+            return jsonify({"error": "Query text is required"}), 400
+
+        saved_ref = users_db.collection('users').document(uid).collection('saved_searches')
+
+        doc_ref = saved_ref.document()
+        save_data = {
+            'query': query_text,
+            'approach': approach,
+            'folder': folder,
+            'title': title,
+            'responseSnippet': response_snippet,
+            'savedAt': firestore.SERVER_TIMESTAMP
+        }
+
+        if full_response:
+            save_data['fullResponse'] = full_response
+
+        doc_ref.set(save_data)
+
+        return jsonify({'success': True, 'id': doc_ref.id}), 201
+
+    except Exception as e:
+        print(f"ERROR in POST /saved-searches: {type(e).__name__} - {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/saved-searches/<search_id>", methods=["DELETE"])
+@require_auth
+def delete_saved_search(search_id):
+    """Delete a saved search"""
+    try:
+        uid = request.uid
+
+        doc_ref = users_db.collection('users').document(uid).collection('saved_searches').document(search_id)
+        doc_ref.delete()
+
+        return jsonify({'success': True}), 200
+
+    except Exception as e:
+        print(f"ERROR in DELETE /saved-searches: {type(e).__name__} - {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/saved-searches/folders", methods=["GET"])
+@require_auth
+def get_folders():
+    """Get list of all folders with counts"""
+    try:
+        uid = request.uid
+
+        saved_ref = users_db.collection('users').document(uid).collection('saved_searches')
+
+        # Get all saved searches and group by folder
+        folders = {}
+        for doc in saved_ref.stream():
+            data = doc.to_dict()
+            folder = data.get('folder', 'Uncategorized')
+            folders[folder] = folders.get(folder, 0) + 1
+
+        folder_list = [{'name': name, 'count': count} for name, count in folders.items()]
+        folder_list.sort(key=lambda x: x['name'])
+
+        return jsonify({'folders': folder_list, 'totalFolders': len(folder_list)}), 200
+
+    except Exception as e:
+        print(f"ERROR in /saved-searches/folders: {type(e).__name__} - {e}")
+        return jsonify({"error": str(e)}), 500
+
+# ============================================================================
+# VERSE-LEVEL ANNOTATIONS ENDPOINTS
+# ============================================================================
+
+@app.route("/annotations/verse/<int:surah>/<int:verse>", methods=["GET"])
+@require_auth
+def get_verse_annotations(surah, verse):
+    """Get all annotations for a specific verse"""
+    try:
+        uid = request.uid
+
+        annotations_ref = users_db.collection('users').document(uid).collection('annotations')
+        query = annotations_ref.where('surah', '==', surah).where('verse', '==', verse).order_by('createdAt', direction='DESCENDING')
+
+        annotations = []
+        for doc in query.stream():
+            data = doc.to_dict()
+            annotations.append({
+                'id': doc.id,
+                'surah': data.get('surah'),
+                'verse': data.get('verse'),
+                'type': data.get('type', 'personal_insight'),
+                'content': data.get('content', ''),
+                'tags': data.get('tags', []),
+                'linkedVerses': data.get('linkedVerses', []),
+                'createdAt': data.get('createdAt'),
+                'updatedAt': data.get('updatedAt'),
+                'isPrivate': data.get('isPrivate', True)
+            })
+
+        return jsonify({'annotations': annotations, 'count': len(annotations)}), 200
+
+    except Exception as e:
+        print(f"ERROR in /annotations/verse: {type(e).__name__} - {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/annotations/user", methods=["GET"])
+@require_auth
+def get_user_annotations():
+    """Get all annotations for user with optional filters"""
+    try:
+        uid = request.uid
+        tag = request.args.get('tag')
+        annotation_type = request.args.get('type')
+        limit = int(request.args.get('limit', 100))
+
+        annotations_ref = users_db.collection('users').document(uid).collection('annotations')
+        query = annotations_ref.order_by('createdAt', direction='DESCENDING').limit(limit)
+
+        annotations = []
+        for doc in query.stream():
+            data = doc.to_dict()
+
+            # Apply filters
+            if tag and tag not in data.get('tags', []):
+                continue
+            if annotation_type and data.get('type') != annotation_type:
+                continue
+
+            annotations.append({
+                'id': doc.id,
+                'surah': data.get('surah'),
+                'verse': data.get('verse'),
+                'verseRef': f"{data.get('surah')}:{data.get('verse')}",
+                'type': data.get('type', 'personal_insight'),
+                'content': data.get('content', ''),
+                'tags': data.get('tags', []),
+                'linkedVerses': data.get('linkedVerses', []),
+                'createdAt': data.get('createdAt'),
+                'updatedAt': data.get('updatedAt')
+            })
+
+        return jsonify({'annotations': annotations, 'count': len(annotations)}), 200
+
+    except Exception as e:
+        print(f"ERROR in /annotations/user: {type(e).__name__} - {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/annotations", methods=["POST"])
+@require_auth
+def create_annotation():
+    """Create a new annotation"""
+    try:
+        uid = request.uid
+        data = request.get_json()
+
+        surah = data.get('surah')
+        verse = data.get('verse')
+        annotation_type = data.get('type', 'personal_insight')
+        content = data.get('content', '')
+        tags = data.get('tags', [])
+        linked_verses = data.get('linkedVerses', [])
+
+        if not surah or not verse:
+            return jsonify({"error": "Surah and verse are required"}), 400
+
+        if not content:
+            return jsonify({"error": "Content is required"}), 400
+
+        # Validate verse reference
+        is_valid, msg = validate_verse_reference(surah, verse)
+        if not is_valid:
+            return jsonify({"error": msg}), 400
+
+        annotations_ref = users_db.collection('users').document(uid).collection('annotations')
+        doc_ref = annotations_ref.document()
+
+        annotation_data = {
+            'surah': surah,
+            'verse': verse,
+            'type': annotation_type,
+            'content': content,
+            'tags': tags,
+            'linkedVerses': linked_verses,
+            'isPrivate': data.get('isPrivate', True),
+            'createdAt': firestore.SERVER_TIMESTAMP,
+            'updatedAt': firestore.SERVER_TIMESTAMP
+        }
+
+        doc_ref.set(annotation_data)
+
+        return jsonify({
+            'success': True,
+            'id': doc_ref.id,
+            'annotation': annotation_data
+        }), 201
+
+    except Exception as e:
+        print(f"ERROR in POST /annotations: {type(e).__name__} - {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/annotations/<annotation_id>", methods=["PUT"])
+@require_auth
+def update_annotation(annotation_id):
+    """Update an existing annotation"""
+    try:
+        uid = request.uid
+        data = request.get_json()
+
+        doc_ref = users_db.collection('users').document(uid).collection('annotations').document(annotation_id)
+
+        # Check if annotation exists
+        doc = doc_ref.get()
+        if not doc.exists:
+            return jsonify({"error": "Annotation not found"}), 404
+
+        # Update fields
+        update_data = {'updatedAt': firestore.SERVER_TIMESTAMP}
+
+        if 'content' in data:
+            update_data['content'] = data['content']
+        if 'tags' in data:
+            update_data['tags'] = data['tags']
+        if 'linkedVerses' in data:
+            update_data['linkedVerses'] = data['linkedVerses']
+        if 'type' in data:
+            update_data['type'] = data['type']
+
+        doc_ref.update(update_data)
+
+        return jsonify({'success': True, 'id': annotation_id}), 200
+
+    except Exception as e:
+        print(f"ERROR in PUT /annotations: {type(e).__name__} - {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/annotations/<annotation_id>", methods=["DELETE"])
+@require_auth
+def delete_annotation(annotation_id):
+    """Delete an annotation"""
+    try:
+        uid = request.uid
+
+        doc_ref = users_db.collection('users').document(uid).collection('annotations').document(annotation_id)
+        doc_ref.delete()
+
+        return jsonify({'success': True}), 200
+
+    except Exception as e:
+        print(f"ERROR in DELETE /annotations: {type(e).__name__} - {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/annotations/search", methods=["GET"])
+@require_auth
+def search_annotations():
+    """Search annotations by text content"""
+    try:
+        uid = request.uid
+        query_text = request.args.get('q', '').lower()
+        tag = request.args.get('tag')
+
+        if not query_text and not tag:
+            return jsonify({"error": "Query text or tag required"}), 400
+
+        annotations_ref = users_db.collection('users').document(uid).collection('annotations')
+
+        results = []
+        for doc in annotations_ref.stream():
+            data = doc.to_dict()
+            content = data.get('content', '').lower()
+
+            # Text search
+            if query_text and query_text in content:
+                match = True
+            elif tag and tag in data.get('tags', []):
+                match = True
+            else:
+                match = False
+
+            if match:
+                results.append({
+                    'id': doc.id,
+                    'surah': data.get('surah'),
+                    'verse': data.get('verse'),
+                    'verseRef': f"{data.get('surah')}:{data.get('verse')}",
+                    'type': data.get('type'),
+                    'content': data.get('content'),
+                    'tags': data.get('tags', []),
+                    'createdAt': data.get('createdAt')
+                })
+
+        return jsonify({'results': results, 'count': len(results)}), 200
+
+    except Exception as e:
+        print(f"ERROR in /annotations/search: {type(e).__name__} - {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/annotations/tags", methods=["GET"])
+@require_auth
+def get_all_tags():
+    """Get all unique tags used by user"""
+    try:
+        uid = request.uid
+
+        annotations_ref = users_db.collection('users').document(uid).collection('annotations')
+
+        tags = set()
+        for doc in annotations_ref.stream():
+            data = doc.to_dict()
+            tags.update(data.get('tags', []))
+
+        tag_list = sorted(list(tags))
+
+        return jsonify({'tags': tag_list, 'count': len(tag_list)}), 200
+
+    except Exception as e:
+        print(f"ERROR in /annotations/tags: {type(e).__name__} - {e}")
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/verse/<int:surah>/<int:verse>", methods=["GET"])
 def get_specific_verse(surah, verse):
     """Direct endpoint for verse lookup"""

@@ -566,12 +566,72 @@ function MainApp({ user, userProfile }) {
       }
       
       if (!res.ok) throw new Error(data.error || 'Unknown error fetching Tafsir.');
-      
+
       setResponse(data);
+
+      // Save to query history
+      await saveQueryToHistory(query, approach, userProfile?.persona || '', true);
     } catch (err) {
       setError(err.message);
+      // Save failed query to history too
+      await saveQueryToHistory(query, approach, userProfile?.persona || '', false);
     } finally {
       setIsTafsirLoading(false);
+    }
+  };
+
+  const saveQueryToHistory = async (queryText, queryApproach, persona, hasResult) => {
+    try {
+      const token = await user.getIdToken();
+      await fetch(`${BACKEND_URL}/query-history`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          query: queryText,
+          approach: queryApproach,
+          persona: persona,
+          hasResult: hasResult
+        })
+      });
+    } catch (err) {
+      console.error('Failed to save query to history:', err);
+    }
+  };
+
+  const handleSaveSearch = async () => {
+    if (!response || !query) return;
+
+    // Extract snippet from response
+    const snippet = response.summary ||
+      (response.tafsir_explanations && response.tafsir_explanations[0]?.explanation?.substring(0, 200)) ||
+      'Tafsir result';
+
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch(`${BACKEND_URL}/saved-searches`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          query: query,
+          approach: approach,
+          folder: 'Uncategorized',
+          title: query,
+          responseSnippet: snippet,
+          fullResponse: response
+        })
+      });
+
+      if (res.ok) {
+        alert('Answer saved! View it in your Saved Searches.');
+      }
+    } catch (err) {
+      console.error('Failed to save search:', err);
     }
   };
 
@@ -639,6 +699,48 @@ function MainApp({ user, userProfile }) {
             </button>
           </div>
         </div>
+
+        {/* Navigation Links */}
+        <div style={{
+          display: 'flex',
+          gap: '12px',
+          marginBottom: '24px',
+          flexWrap: 'wrap',
+          justifyContent: 'center'
+        }}>
+          <a
+            href="/history"
+            style={{
+              padding: '10px 20px',
+              background: 'linear-gradient(135deg, var(--cream) 0%, rgba(212, 175, 55, 0.1) 100%)',
+              border: '2px solid var(--border-light)',
+              borderRadius: '12px',
+              color: 'var(--primary-teal)',
+              fontWeight: '600',
+              textDecoration: 'none',
+              transition: 'all 0.3s ease'
+            }}
+            className="nav-link"
+          >
+            🕒 Query History
+          </a>
+          <a
+            href="/saved"
+            style={{
+              padding: '10px 20px',
+              background: 'linear-gradient(135deg, var(--cream) 0%, rgba(212, 175, 55, 0.1) 100%)',
+              border: '2px solid var(--border-light)',
+              borderRadius: '12px',
+              color: 'var(--primary-teal)',
+              fontWeight: '600',
+              textDecoration: 'none',
+              transition: 'all 0.3s ease'
+            }}
+            className="nav-link"
+          >
+            ⭐ Saved Answers
+          </a>
+        </div>
         
         {/* Query Suggestions */}
         <div className="suggestions-section">
@@ -700,8 +802,11 @@ function MainApp({ user, userProfile }) {
           <>
             <EnhancedResultsDisplay data={response} />
             <div className="export-section">
-              <h3>Export Response</h3>
+              <h3>Save & Export</h3>
               <div className="export-controls">
+                <button onClick={handleSaveSearch} className="export-btn">
+                  ⭐ Save this Answer
+                </button>
                 <button onClick={() => handleExport('markdown')} className="export-btn">
                   📄 Export as Markdown
                 </button>
