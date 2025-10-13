@@ -893,3 +893,123 @@ summary:focus-visible {
     page-break-inside: avoid;
   }
 }
+/* ============================================================================
+   MARKDOWN CONTENT STYLING
+   ============================================================================ */
+
+.markdown-content {
+  font-size: 1rem;
+  line-height: 1.8;
+}
+
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3 {
+  font-weight: 700;
+  margin-top: 24px;
+  margin-bottom: 12px;
+  color: var(--primary-color);
+}
+
+.markdown-content h1 {
+  font-size: 1.5rem;
+  border-bottom: 2px solid var(--border-color);
+  padding-bottom: 8px;
+}
+
+.markdown-content h2 {
+  font-size: 1.3rem;
+}
+
+.markdown-content h3 {
+  font-size: 1.1rem;
+}
+
+.markdown-content p {
+  margin-bottom: 16px;
+  line-height: 1.8;
+}
+
+.markdown-content ul,
+.markdown-content ol {
+  margin-left: 24px;
+  margin-bottom: 16px;
+}
+
+.markdown-content ul {
+  list-style: none;
+}
+
+.markdown-content ul li::before {
+  content: "•";
+  color: var(--primary-color);
+  font-weight: bold;
+  display: inline-block;
+  width: 1em;
+  margin-left: -1em;
+  font-size: 1.2em;
+}
+
+.markdown-content ol {
+  list-style: decimal;
+}
+
+.markdown-content li {
+  margin-bottom: 8px;
+  padding-left: 8px;
+}
+
+.markdown-content strong {
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+.markdown-content em {
+  font-style: italic;
+  color: #555;
+}
+
+.markdown-content code {
+  background: var(--secondary-color);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.9em;
+  font-family: var(--font-geist-mono), monospace;
+}
+
+.markdown-content blockquote {
+  border-left: 4px solid var(--primary-color);
+  padding-left: 16px;
+  margin: 20px 0;
+  font-style: italic;
+  color: #666;
+  background: var(--secondary-color);
+  padding: 16px;
+  border-radius: 8px;
+}
+
+.markdown-content hr {
+  border: none;
+  border-top: 2px solid var(--border-color);
+  margin: 24px 0;
+}
+
+/* Emoji support */
+.markdown-content img.emoji {
+  height: 1.2em;
+  width: 1.2em;
+  margin: 0 0.05em 0 0.1em;
+  vertical-align: -0.1em;
+  display: inline;
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+  .markdown-content em {
+    color: #aaa;
+  }
+  
+  .markdown-content blockquote {
+    color: #aaa;
+  }
+}
