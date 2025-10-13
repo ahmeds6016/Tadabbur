@@ -582,7 +582,8 @@ function MainApp({ user, userProfile }) {
           )}
         </div>
 
-        <form onSubmit={handleGetTafsir} className="form tafsir-form">
+        {/* THIS IS THE CORRECTED FORM ELEMENT */}
+        <form onSubmit={handleGetTafsir} className="form tafsir-form flex items-center">
           <select value={approach} onChange={(e) => setApproach(e.target.value)}>
             <option value="tafsir">📖 Tafsir-Based Study</option>
             <option value="thematic">🔍 Thematic Study</option>
