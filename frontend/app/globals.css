@@ -390,7 +390,7 @@ a {
   box-shadow: var(--shadow-medium);
   position: relative;
   flex-wrap: wrap;
-  align-items: stretch; /* FIXED: All items same height */
+  align-items: center;
 }
 
 /* Ornamental search icon - ENHANCED */
@@ -437,6 +437,7 @@ a {
   border-radius: 16px;
   font-size: 1.05rem;
   font-weight: 600;
+  line-height: 1.5;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   background: white;
   color: var(--foreground);
@@ -445,9 +446,7 @@ a {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Cpath fill='%230D9488' d='M5 7l5 5 5-5z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 12px center;
-  height: auto; /* Allow natural height */
-  display: flex;
-  align-items: center;
+  vertical-align: middle;
 }
 
 /* NEW: Hover state for select */
@@ -473,12 +472,11 @@ a {
   border-radius: 16px;
   font-size: 1.05rem;
   font-weight: 500;
+  line-height: 1.5;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   background: white;
   color: var(--foreground);
-  height: auto; /* Match select height */
-  display: flex;
-  align-items: center;
+  vertical-align: middle;
 }
 
 .tafsir-form input:focus {
@@ -511,6 +509,7 @@ a {
   padding: 18px 36px;
   font-size: 1.05rem;
   font-weight: 700;
+  line-height: 1.5;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
@@ -519,10 +518,8 @@ a {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   box-shadow: var(--shadow-soft);
-  height: auto; /* Match select/input height */
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  vertical-align: middle;
+  white-space: nowrap;
 }
 
 .tafsir-form button::before {
