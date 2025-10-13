@@ -1,6 +1,7 @@
 /* ============================================================================
    TAFSIR SIMPLIFIED - ISLAMIC DESIGN SYSTEM
    Premium Islamic aesthetic with modern UX
+   UPDATED: Fixed search bar alignment + UI enhancements
    ============================================================================ */
 
 :root {
@@ -255,7 +256,7 @@ a {
 }
 
 /* ============================================================================
-   SUGGESTIONS SECTION
+   SUGGESTIONS SECTION - ENHANCED
    ============================================================================ */
 
 .suggestions-section {
@@ -266,7 +267,7 @@ a {
   background: linear-gradient(135deg, var(--cream) 0%, rgba(212, 175, 55, 0.05) 100%);
   border: 2px solid var(--border-light);
   border-radius: 16px;
-  padding: 16px 24px;
+  padding: 18px 28px;
   cursor: pointer;
   font-size: 1rem;
   font-weight: 700;
@@ -277,6 +278,10 @@ a {
   width: 100%;
   text-align: left;
   box-shadow: var(--shadow-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
 }
 
 .suggestions-toggle:hover {
@@ -366,7 +371,7 @@ a {
 }
 
 /* ============================================================================
-   FORMS - ENHANCED SEARCH INTERFACE
+   FORMS - ENHANCED SEARCH INTERFACE (FIXED)
    ============================================================================ */
 
 .form {
@@ -377,7 +382,7 @@ a {
   display: flex;
   gap: 16px;
   margin-bottom: 40px;
-  padding: 32px;
+  padding: 40px 32px 32px 32px; /* FIXED: More top padding for icon */
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(250, 246, 240, 0.9) 100%);
   backdrop-filter: blur(10px);
   border-radius: 20px;
@@ -385,25 +390,81 @@ a {
   box-shadow: var(--shadow-medium);
   position: relative;
   flex-wrap: wrap;
-  align-items: stretch;
+  align-items: center; /* FIXED: Changed from stretch to center */
 }
 
-/* Ornamental search icon */
+/* Ornamental search icon - ENHANCED */
 .tafsir-form::before {
   content: '🔍';
   position: absolute;
-  top: -16px;
+  top: -20px; /* FIXED: Better positioning */
   left: 50%;
   transform: translateX(-50%);
   font-size: 2rem;
   background: var(--gradient-teal-gold);
-  padding: 8px 16px;
+  padding: 12px 20px; /* FIXED: Better padding */
   border-radius: 20px;
+  box-shadow: var(--shadow-soft);
+  z-index: 10; /* NEW: Ensure it's above other elements */
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* NEW: Smooth animation */
+}
+
+/* NEW: Interactive search icon */
+.tafsir-form:hover::before {
+  transform: translateX(-50%) scale(1.1) rotate(15deg);
+}
+
+.tafsir-form:focus-within::before {
+  transform: translateX(-50%) scale(1.15);
+  box-shadow: var(--shadow-medium);
+}
+
+/* NEW: Form submit animation */
+@keyframes formSubmit {
+  0% { transform: scale(1); }
+  50% { transform: scale(0.98); }
+  100% { transform: scale(1); }
+}
+
+.tafsir-form.submitting {
+  animation: formSubmit 0.3s ease;
+}
+
+/* SELECT DROPDOWN - ENHANCED */
+.tafsir-form select {
+  padding: 18px 44px 18px 24px; /* NEW: Space for custom arrow */
+  border: 2px solid var(--border-medium);
+  border-radius: 16px;
+  font-size: 1.05rem;
+  font-weight: 600; /* ENHANCED: From 500 to 600 */
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: white;
+  color: var(--foreground);
+  cursor: pointer; /* NEW */
+  appearance: none; /* NEW: Remove default dropdown arrow */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Cpath fill='%230D9488' d='M5 7l5 5 5-5z'/%3E%3C/svg%3E"); /* NEW: Custom arrow */
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+
+/* NEW: Hover state for select */
+.tafsir-form select:hover {
+  border-color: var(--primary-teal);
+  transform: translateY(-1px);
   box-shadow: var(--shadow-soft);
 }
 
-.tafsir-form select,
+.tafsir-form select:focus {
+  outline: none;
+  border-color: var(--primary-teal);
+  box-shadow: 0 0 0 4px rgba(13, 148, 136, 0.1), var(--shadow-soft);
+  transform: translateY(-2px);
+}
+
+/* INPUT FIELD - FIXED & ENHANCED */
 .tafsir-form input {
+  flex: 1 1 300px; /* FIXED: Better flexibility */
+  min-width: 250px; /* FIXED: Reduced from 320px */
   padding: 18px 24px;
   border: 2px solid var(--border-medium);
   border-radius: 16px;
@@ -414,12 +475,6 @@ a {
   color: var(--foreground);
 }
 
-.tafsir-form input {
-  flex: 1;
-  min-width: 320px;
-}
-
-.tafsir-form select:focus,
 .tafsir-form input:focus {
   outline: none;
   border-color: var(--primary-teal);
@@ -428,10 +483,20 @@ a {
 }
 
 .tafsir-form input::placeholder {
-  color: rgba(44, 62, 80, 0.5);
+  color: rgba(44, 62, 80, 0.6); /* ENHANCED: Better contrast */
   font-style: italic;
+  font-weight: 400; /* NEW: Explicit weight */
 }
 
+/* ENHANCED: Better focus visibility for accessibility */
+.tafsir-form select:focus-visible,
+.tafsir-form input:focus-visible {
+  outline: 3px solid var(--primary-teal); /* ENHANCED: from 2px */
+  outline-offset: 3px;
+  box-shadow: 0 0 0 6px rgba(13, 148, 136, 0.15), var(--shadow-soft);
+}
+
+/* BUTTON - ENHANCED */
 .tafsir-form button {
   background: var(--gradient-teal-gold);
   color: white;
@@ -473,10 +538,12 @@ a {
   box-shadow: var(--shadow-strong);
 }
 
+/* ENHANCED: Better loading state */
 .tafsir-form button:disabled {
-  opacity: 0.6;
+  opacity: 0.7; /* ENHANCED: from 0.6 */
   cursor: not-allowed;
   transform: none;
+  animation: pulse 1.5s ease-in-out infinite; /* NEW */
 }
 
 /* ============================================================================
@@ -1247,7 +1314,7 @@ button:hover:not(:disabled) {
 }
 
 /* ============================================================================
-   RESPONSIVE DESIGN
+   RESPONSIVE DESIGN - ENHANCED
    ============================================================================ */
 
 @media (max-width: 768px) {
@@ -1279,10 +1346,11 @@ button:hover:not(:disabled) {
     font-size: 0.9rem;
   }
   
+  /* ENHANCED: Better mobile form styling */
   .tafsir-form {
     flex-direction: column;
     gap: 12px;
-    padding: 24px 16px;
+    padding: 36px 20px 24px 20px; /* Better mobile spacing */
   }
   
   .tafsir-form::before {
@@ -1292,6 +1360,16 @@ button:hover:not(:disabled) {
   
   .tafsir-form input {
     min-width: auto;
+    font-size: 16px; /* Prevents iOS zoom on focus */
+  }
+  
+  .tafsir-form select {
+    font-size: 16px; /* Prevents iOS zoom on focus */
+    min-width: auto;
+  }
+  
+  .tafsir-form button {
+    width: 100%; /* Full width button on mobile */
   }
   
   .suggestions-grid {
