@@ -1,6 +1,7 @@
 import { Geist, Geist_Mono, Amiri } from "next/font/google";
 import "./globals.css";
 
+
 // Modern sans-serif font
 const geistSans = Geist({
   variable: "--font-geist-sans",
