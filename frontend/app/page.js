@@ -231,13 +231,13 @@ function OnboardingComponent({ user, onProfileComplete }) {
         console.log('Could not fetch personas, using defaults');
         // Fallback personas
         setPersonas([
-          ['new_revert', { name: 'New Revert', description: 'warm, encouraging | 200-300 words' }],
-          ['revert', { name: 'Revert Muslim', description: 'supportive | 300-400 words' }],
-          ['practicing_muslim', { name: 'Practicing Muslim', description: 'balanced | 400-500 words' }],
-          ['scholar', { name: 'Scholar', description: 'academic | 800-1000 words' }],
-          ['student', { name: 'Islamic Studies Student', description: 'educational | 600-800 words' }],
-          ['teacher', { name: 'Teacher/Imam', description: 'pedagogical | 400-600 words' }],
-          ['seeker', { name: 'Spiritual Seeker', description: 'warm, reflective | 300-400 words' }]
+          ['new_revert', { name: 'New Revert', description: 'warm, encouraging | Format: bullets_emojis' }],
+          ['revert', { name: 'Revert Muslim', description: 'supportive | Format: bullets_emojis' }],
+          ['practicing_muslim', { name: 'Practicing Muslim', description: 'balanced | Format: balanced' }],
+          ['scholar', { name: 'Scholar', description: 'academic | Format: academic_prose' }],
+          ['student', { name: 'Islamic Studies Student', description: 'educational | Format: academic_prose' }],
+          ['teacher', { name: 'Teacher/Imam', description: 'pedagogical | Format: balanced' }],
+          ['seeker', { name: 'Spiritual Seeker', description: 'warm, reflective | Format: bullets_emojis' }]
         ]);
       }
     };
@@ -419,7 +419,7 @@ function OnboardingComponent({ user, onProfileComplete }) {
 }
 
 // ============================================================================
-// MAIN APPLICATION COMPONENT
+// MAIN APPLICATION COMPONENT - ENHANCED
 // ============================================================================
 
 function MainApp({ user, userProfile }) {
@@ -459,6 +459,11 @@ function MainApp({ user, userProfile }) {
   const handleGetTafsir = async (e) => {
     e.preventDefault();
     if (!query) return;
+    
+    // NEW: Add submitting animation class
+    const formElement = e.target;
+    formElement.classList.add('submitting');
+    setTimeout(() => formElement.classList.remove('submitting'), 300);
     
     setIsTafsirLoading(true);
     setResponse(null);
@@ -582,19 +587,40 @@ function MainApp({ user, userProfile }) {
           )}
         </div>
 
-        {/* THIS IS THE CORRECTED FORM ELEMENT */}
-        <form onSubmit={handleGetTafsir} className="form tafsir-form flex items-center">
+        {/* FIXED: Search Form - Removed conflicting Tailwind classes */}
+        <form onSubmit={handleGetTafsir} className="tafsir-form">
           <select value={approach} onChange={(e) => setApproach(e.target.value)}>
             <option value="tafsir">📖 Tafsir-Based Study</option>
             <option value="thematic">🔍 Thematic Study</option>
             <option value="historical">📜 Historical Context</option>
           </select>
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Enter Surah:Verse (e.g., 2:255) or topic (e.g., charity, prayer)..."
-          />
+          
+          {/* NEW: Wrapper for input with optional character counter */}
+          <div style={{ position: 'relative', flex: '1 1 300px', minWidth: '250px' }}>
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Enter Surah:Verse (e.g., 2:255) or topic (e.g., charity, prayer)..."
+              maxLength={200}
+              style={{ width: '100%' }}
+            />
+            {query.length > 0 && (
+              <span style={{
+                position: 'absolute',
+                right: '12px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                fontSize: '0.75rem',
+                color: query.length > 180 ? 'var(--warning-color)' : 'rgba(0,0,0,0.3)',
+                fontWeight: 600,
+                pointerEvents: 'none'
+              }}>
+                {query.length}/200
+              </span>
+            )}
+          </div>
+          
           <button type="submit" disabled={isTafsirLoading}>
             {isTafsirLoading ? 'Loading...' : 'Get Tafsir'}
           </button>
