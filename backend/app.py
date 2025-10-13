@@ -78,13 +78,12 @@ ANALYTICS = defaultdict(int)  # Usage analytics
 # NEW: PERSONA SYSTEM FOR ADAPTIVE RESPONSES
 # ============================================================================
 
-# Comprehensive persona system (7 personas)
+# Comprehensive persona system (7 personas) - UPDATED: removed response_length
 PERSONAS = {
     "new_revert": {
         "name": "New Revert",
         "tone": "warm, encouraging, patient",
         "vocabulary": "simple, everyday",
-        "response_length": "200-300 words",
         "include_hadith": False,
         "scholarly_debates": False,
         "format_style": "bullets_emojis"  # Bullets + emojis
@@ -93,7 +92,6 @@ PERSONAS = {
         "name": "Revert Muslim (1-5 years)",
         "tone": "supportive, informative",
         "vocabulary": "moderate",
-        "response_length": "300-400 words",
         "include_hadith": True,
         "scholarly_debates": False,
         "format_style": "bullets_emojis"
@@ -102,7 +100,6 @@ PERSONAS = {
         "name": "Spiritual Seeker",
         "tone": "warm, reflective",
         "vocabulary": "accessible",
-        "response_length": "300-400 words",
         "include_hadith": True,
         "scholarly_debates": False,
         "format_style": "bullets_emojis"
@@ -111,7 +108,6 @@ PERSONAS = {
         "name": "Practicing Muslim",
         "tone": "respectful, balanced",
         "vocabulary": "moderate",
-        "response_length": "400-500 words",
         "include_hadith": True,
         "scholarly_debates": True,
         "format_style": "balanced"  # Mix of paragraphs + bullets
@@ -120,7 +116,6 @@ PERSONAS = {
         "name": "Teacher/Imam/Educator",
         "tone": "pedagogical, clear",
         "vocabulary": "accessible",
-        "response_length": "400-600 words",
         "include_hadith": True,
         "scholarly_debates": True,
         "format_style": "balanced"
@@ -129,7 +124,6 @@ PERSONAS = {
         "name": "Scholar/Advanced Student",
         "tone": "academic, precise",
         "vocabulary": "advanced, technical",
-        "response_length": "800-1000 words",
         "include_hadith": True,
         "scholarly_debates": True,
         "format_style": "academic_prose"  # Dense prose, no bullets
@@ -138,7 +132,6 @@ PERSONAS = {
         "name": "Islamic Studies Student",
         "tone": "educational, comprehensive",
         "vocabulary": "academic",
-        "response_length": "600-800 words",
         "include_hadith": True,
         "scholarly_debates": True,
         "format_style": "academic_prose"
@@ -535,6 +528,38 @@ def handle_errors(f):
             traceback.print_exc()
             return jsonify({'error': 'Internal server error'}), 500
     return decorated_function
+
+# ============================================================================
+# NEW: PROFILE HELPER FUNCTION (Suggestion 2)
+# ============================================================================
+
+def determine_knowledge_level(persona: str, provided_level: Optional[str]) -> Tuple[str, bool]:
+    """
+    Smart logic for knowledge_level based on persona.
+    
+    Returns: (knowledge_level, is_deterministic)
+    - is_deterministic=True means level was auto-set by persona
+    - is_deterministic=False means level came from user input
+    """
+    # Deterministic personas - auto-set knowledge_level
+    deterministic = {
+        "scholar": "advanced",
+        "student": "advanced",
+        "new_revert": "beginner"
+    }
+    
+    if persona in deterministic:
+        return deterministic[persona], True
+    
+    # Variable personas - require provided_level
+    if not provided_level:
+        return None, False
+    
+    # Validate provided level
+    if provided_level not in ["beginner", "intermediate", "advanced"]:
+        return None, False
+    
+    return provided_level, False
 
 # --- REPLACED: Enhanced Data Loading with Dual Storage ---
 def load_chunks_from_verse_files_enhanced():
@@ -1083,17 +1108,19 @@ def build_structured_context(context_by_source, arabic_text=None, cross_refs=Non
     return "\n\n" + "\n\n".join(context_sections)
 
 # ============================================================================
-# UPDATED: PERSONA-ADAPTIVE CLARITY-ENHANCED PROMPT
+# UPDATED: PERSONA-ADAPTIVE CLARITY-ENHANCED PROMPT WITH NEW PROFILE DATA
 # ============================================================================
 
 def build_enhanced_prompt(query, context_by_source, user_profile, arabic_text=None, cross_refs=None, query_type="default", verse_data=None):
     """
     ENHANCED VERSION: Gemini as Scholarly Editor with Persona-Adaptive Formatting
+    UPDATED: Now includes learning_goal, knowledge_level, and refined formatting rules
 
     Gives Gemini explicit instructions to:
     1. Fix grammar/clarity while preserving accuracy
     2. Adapt content FORMAT to user persona (bullets for beginners, prose for scholars)
     3. Use verse translations from backend (not generate them)
+    4. Adapt depth and focus based on learning_goal and knowledge_level
     """
     structured_context = build_structured_context(context_by_source, arabic_text, cross_refs)
 
@@ -1104,6 +1131,20 @@ def build_enhanced_prompt(query, context_by_source, user_profile, arabic_text=No
 
     persona = PERSONAS[persona_name]
     format_style = persona.get('format_style', 'balanced')
+    
+    # NEW: Get knowledge_level from profile (Suggestion 1)
+    knowledge_level = user_profile.get('knowledge_level', 'intermediate')
+    
+    # NEW: Get learning_goal and create goal_instruction
+    learning_goal = user_profile.get('learning_goal', 'balanced')
+    
+    goal_instructions = {
+        'application': "Focus on practical applications and how to apply these teachings in daily life. Emphasize actionable takeaways and real-world relevance.",
+        'understanding': "Focus on deep comprehension and scholarly context. Emphasize theological depth, historical background, and scholarly interpretation.",
+        'balanced': "Balance practical applications with scholarly understanding. Provide both actionable insights and theological depth."
+    }
+    
+    goal_instruction = goal_instructions.get(learning_goal, goal_instructions['balanced'])
 
     # Add verse information if available
     verse_info = ""
@@ -1124,14 +1165,20 @@ You do NOT need to provide verse translations - focus on explaining the TAFSIR (
     prompt = f"""You are a SCHOLARLY EDITOR for an Islamic learning platform, transforming classical tafsir into clear, polished explanations for modern readers.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-USER PROFILE: {persona['name']}
+USER PROFILE: {persona['name']} ({knowledge_level.title()} Level)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 • Tone: {persona['tone']}
 • Vocabulary: {persona['vocabulary']}
-• Response length: {persona['response_length']}
-• Include hadith: {'Yes' if persona['include_hadith'] else 'No'}
-• Scholarly debates: {'Yes' if persona['scholarly_debates'] else 'No'}
+• Knowledge Level: {knowledge_level}
+• Learning Goal: {learning_goal}
+• Include hadith: {'Yes' if persona['include_hadith'] else 'No - avoid hadith references'}
+• Scholarly debates: {'Yes' if persona['scholarly_debates'] else 'No - avoid scholarly disagreements'}
 • Format style: {format_style}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+LEARNING GOAL INSTRUCTION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+{goal_instruction}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 USER QUERY
@@ -1168,7 +1215,7 @@ YOUR ROLE AS SCHOLARLY EDITOR
    • Organize information logically
 
 3. **Clarify Terminology**
-   • Define Islamic terms appropriately for the user's level
+   • Define Islamic terms appropriately for the user's level ({persona['vocabulary']})
    • Use consistent transliteration
    • Add brief explanations where needed
    • Make implicit references explicit
@@ -1176,7 +1223,12 @@ YOUR ROLE AS SCHOLARLY EDITOR
 4. **Adapt to User Profile**
    • Match vocabulary to user's level ({persona['vocabulary']})
    • Use appropriate tone ({persona['tone']})
-   • Adjust depth to target length ({persona['response_length']})
+   • Follow the learning goal: {learning_goal}
+   • Adjust depth to knowledge level: {knowledge_level}
+
+5. **Content Guidelines Based on Profile**
+   • Hadith references: {'INCLUDE hadith citations when relevant' if persona['include_hadith'] else 'AVOID hadith references - omit or minimize them'}
+   • Scholarly debates: {'INCLUDE different scholarly opinions when relevant' if persona['scholarly_debates'] else 'AVOID scholarly disagreements - present unified explanations'}
 
 ❌ PRESERVE ACCURACY (Never Compromise):
 1. **Never Alter Scholarly Content**
@@ -1204,12 +1256,12 @@ CRITICAL: Return valid JSON, but ADAPT THE CONTENT FORMAT based on user persona:
 📱 FOR BEGINNER PERSONAS (new_revert, revert, seeker) - Format: {format_style}
    Use VISUAL, SCANNABLE format with:
    • Short bullet points (use • character for bullets)
-   • Clear section headers with emojis (🌟 Key Point:, 📖 What This Means:)
+   • Clear section headers with MINIMAL emoji use (ONE emoji in main headers ONLY, ZERO in body text)
    • Short sentences (10-15 words max)
-   • Encouraging language with emojis where appropriate (💡, ✅, 💝)
+   • Encouraging language (avoid excessive emoji decoration)
    • Visual breaks between concepts
 
-   Example for beginner:
+   Example for beginner (UPDATED - minimal emojis):
    "🌟 **Key Point: Allah Never Sleeps**
 
    This verse (Ayat al-Kursi) teaches us that:
@@ -1217,16 +1269,17 @@ CRITICAL: Return valid JSON, but ADAPT THE CONTENT FORMAT based on user persona:
    • He never gets tired or needs rest
    • He protects us 24/7
 
-   📖 **What This Means for You:**
-   When you feel alone or scared, remember Allah is always there watching over you!
+   **What This Means for You:**
+   When you feel alone or scared, remember Allah is always there watching over you.
 
-   💡 **Quick Tip:**
-   Many Muslims say this verse before sleeping for protection. You can too! 💝"
+   **Quick Tip:**
+   Many Muslims say this verse before sleeping for protection. You can too!"
 
 📚 FOR INTERMEDIATE PERSONAS (practicing_muslim, teacher) - Format: {format_style}
    Use BALANCED format with:
    • Mix of short paragraphs (3-5 sentences) and bullet points
    • Clear subheadings (use **Bold** for headers)
+   • NO emojis
    • Some detail but not overwhelming
    • Practical focus
 
@@ -1241,20 +1294,29 @@ CRITICAL: Return valid JSON, but ADAPT THE CONTENT FORMAT based on user persona:
    • Effortless preservation - Maintaining the universe requires no effort from Allah
 
    **Practical Application:**
-   The Prophet ﷺ taught that reciting this verse provides spiritual protection..."
+   The Prophet ﷺ taught that reciting this verse provides spiritual protection. Many Muslims incorporate it into their daily dhikr, especially before sleep."
 
 🎓 FOR ADVANCED/SCHOLAR PERSONAS (scholar, student) - Format: {format_style}
-   Use ACADEMIC PROSE format with:
-   • Dense, flowing paragraphs
-   • Technical terminology
+   Use SHORT PARAGRAPH format with:
+   • Short, focused paragraphs (2-4 sentences each)
+   • **Bolded sub-headers** before each paragraph for scannability
+   • Technical terminology appropriate for advanced students
    • Scholarly citations integrated naturally
    • Debates and nuances discussed
    • NO bullet points or emojis
 
-   Example for scholar:
-   "Ayat al-Kursi (2:255) represents a comprehensive theological statement regarding divine attributes. Classical exegetes have identified this verse as containing the most concentrated exposition of tawhid in the Quran. Ibn Kathir (d. 774 AH) notes in his tafsir that the verse systematically presents both positive attributes (al-Hayy, al-Qayyum) and negative attributes (no slumber, no fatigue) to establish Allah's absolute transcendence.
+   Example for scholar (UPDATED - short paragraphs with sub-headers):
+   "**Theological Significance**
+   Ayat al-Kursi (2:255) represents a comprehensive theological statement regarding divine attributes. Classical exegetes have identified this verse as containing the most concentrated exposition of tawhid in the Quran.
 
-   The controversy regarding the nature of the Kursi has been extensively discussed by medieval scholars. Al-Qurtubi presents three interpretive schools..."
+   **Ibn Kathir's Interpretation**
+   Ibn Kathir (d. 774 AH) notes in his tafsir that the verse systematically presents both positive attributes (al-Hayy, al-Qayyum) and negative attributes (no slumber, no fatigue) to establish Allah's absolute transcendence. He emphasizes the pedagogical structure of moving from Allah's essence to His knowledge to His power.
+
+   **Al-Qurtubi's Jurisprudential Perspective**
+   Al-Qurtubi approaches the verse differently, extracting legal implications from each phrase. He discusses the controversy regarding the nature of the Kursi, presenting three interpretive schools: those who equate it with knowledge, those who see it as a physical entity beneath the Throne, and those who consider it metaphorical.
+
+   **Scholarly Debates**
+   The controversy regarding the nature of the Kursi has been extensively discussed by medieval scholars. The Ash'ari school tends toward metaphorical interpretation, while the Hanbali school maintains a more literal reading while affirming tanzih (transcendence)."
 
 JSON Structure (verse text ALREADY provided by backend - you focus on tafsir):
 
@@ -1271,11 +1333,11 @@ JSON Structure (verse text ALREADY provided by backend - you focus on tafsir):
     "tafsir_explanations": [
         {{
             "source": "al-Qurtubi",
-            "explanation": "FORMAT BASED ON PERSONA: Bullets + emojis for beginners ({format_style}), balanced for intermediate, dense prose for scholars. Fix all grammar, improve clarity, preserve accuracy. If verse beyond Surah 4:22, state: 'Al-Qurtubi's tafsir is not available for this verse.'"
+            "explanation": "FORMAT BASED ON PERSONA: Bullets + MINIMAL emojis for beginners ({format_style}), balanced with NO emojis for intermediate, short paragraphs with sub-headers for scholars. Fix all grammar, improve clarity, preserve accuracy. If verse beyond Surah 4:22, state: 'Al-Qurtubi's tafsir is not available for this verse.'"
         }},
         {{
             "source": "Ibn Kathir",
-            "explanation": "FORMAT BASED ON PERSONA: Bullets + emojis for beginners ({format_style}), balanced for intermediate, dense prose for scholars. Fix all grammar, improve clarity, preserve accuracy."
+            "explanation": "FORMAT BASED ON PERSONA: Bullets + MINIMAL emojis for beginners ({format_style}), balanced with NO emojis for intermediate, short paragraphs with sub-headers for scholars. Fix all grammar, improve clarity, preserve accuracy."
         }}
     ],
 
@@ -1296,9 +1358,9 @@ JSON Structure (verse text ALREADY provided by backend - you focus on tafsir):
 }}
 
 FORMATTING DECISION:
-• If persona = new_revert, revert, or seeker → Use bullets (•), emojis (🌟, 💡, ✅, 💝), short sentences
-• If persona = practicing_muslim or teacher → Use balanced: **bold headers**, short paragraphs + some bullets
-• If persona = scholar or student → Use dense academic prose, NO bullets, NO emojis
+• If persona = new_revert, revert, or seeker → Use bullets (•), ONE emoji in main headers ONLY, short sentences
+• If persona = practicing_muslim or teacher → Use balanced: **bold headers**, short paragraphs + some bullets, NO emojis
+• If persona = scholar or student → Use short paragraphs (2-4 sentences) with **bolded sub-headers**, NO bullets, NO emojis
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 SOURCE COVERAGE (Important Context)
@@ -1312,7 +1374,7 @@ If query is about verses beyond Surah 4:22, explain that al-Qurtubi's commentary
 CRITICAL REMINDERS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-1. **ADAPT FORMAT TO PERSONA** - Beginners get bullets + emojis, scholars get dense prose
+1. **ADAPT FORMAT TO PERSONA** - Beginners get bullets + MINIMAL emojis, scholars get short paragraphs with sub-headers
 2. **You are an EDITOR, not an author** - Polish what's there, don't create new interpretations
 3. **PRESERVE ACCURACY** - Never change meanings, attributions, or theological positions
 4. **ENHANCE CLARITY** - Fix grammar, improve structure, make readable
@@ -1320,9 +1382,11 @@ CRITICAL REMINDERS
 6. **VERSES FROM BACKEND** - Don't try to provide translations, they're already in verse_data
 7. **BE HELPFUL** - Make the response answer the user's query directly and clearly
 8. **NEVER FABRICATE** - If insufficient source material, acknowledge limitations
+9. **FOLLOW CONTENT GUIDELINES** - {'Include hadith' if persona['include_hadith'] else 'Avoid hadith'}, {'include scholarly debates' if persona['scholarly_debates'] else 'avoid scholarly disagreements'}
+10. **MATCH LEARNING GOAL** - {goal_instruction}
 
-Current persona: **{persona_name}**
-Apply formatting rules for: {'BEGINNER (bullets + emojis)' if format_style == 'bullets_emojis' else 'INTERMEDIATE (balanced)' if format_style == 'balanced' else 'SCHOLAR (dense prose)'}
+Current persona: **{persona_name}** ({knowledge_level} level)
+Apply formatting rules for: {'BEGINNER (bullets + MINIMAL emojis)' if format_style == 'bullets_emojis' else 'INTERMEDIATE (balanced, NO emojis)' if format_style == 'balanced' else 'SCHOLAR (short paragraphs with sub-headers, NO bullets)'}
 
 Begin your persona-adapted, clarity-enhanced response now.
 """
@@ -1466,48 +1530,126 @@ def get_profile():
         print(f"ERROR in /get_profile: {type(e).__name__} - {e}")
         return jsonify({"error": str(e)}), 500
 
+# ============================================================================
+# UPDATED: /set_profile ENDPOINT WITH SMART LOGIC (Suggestions 2 & 3)
+# ============================================================================
+
 @app.route("/set_profile", methods=["POST"])
 @firebase_auth_required
 def set_profile():
-    """Set or update user's learning profile"""
+    """
+    Set or update user's learning profile with smart knowledge_level handling.
+    
+    NEW LOGIC:
+    - Deterministic personas (scholar, student, new_revert) auto-set knowledge_level
+    - Variable personas require knowledge_level from client
+    - learning_goal is required for all personas
+    """
     uid = request.user["uid"]
     data = request.get_json()
 
     # Support both old and new profile systems
-    level = data.get("level")
-    focus = data.get("focus", "practical")
-    verbosity = data.get("verbosity", "medium")
-    persona = data.get("persona")  # NEW: Support persona system
-
-    # Validate profile data
-    if level and level not in ["casual", "beginner", "intermediate", "advanced"]:
-        return jsonify({"error": "Invalid level"}), 400
-    if focus not in ["practical", "linguistic", "comparative", "thematic"]:
-        return jsonify({"error": "Invalid focus"}), 400
-    if verbosity not in ["short", "medium", "detailed"]:
-        return jsonify({"error": "Invalid verbosity"}), 400
-    if persona and persona not in PERSONAS:
-        return jsonify({"error": "Invalid persona", "available": list(PERSONAS.keys())}), 400
+    level = data.get("level")  # OLD SYSTEM
+    focus = data.get("focus", "practical")  # OLD SYSTEM
+    verbosity = data.get("verbosity", "medium")  # OLD SYSTEM
+    
+    # NEW SYSTEM
+    persona = data.get("persona")
+    provided_knowledge_level = data.get("knowledge_level")
+    learning_goal = data.get("learning_goal")
 
     try:
         profile_data = {}
 
-        # Old system
+        # OLD SYSTEM (backwards compatibility)
         if level:
+            if level not in ["casual", "beginner", "intermediate", "advanced"]:
+                return jsonify({"error": "Invalid level"}), 400
+            if focus not in ["practical", "linguistic", "comparative", "thematic"]:
+                return jsonify({"error": "Invalid focus"}), 400
+            if verbosity not in ["short", "medium", "detailed"]:
+                return jsonify({"error": "Invalid verbosity"}), 400
+            
             profile_data["level"] = level
             profile_data["focus"] = focus
             profile_data["verbosity"] = verbosity
 
-        # NEW: Persona system
+        # NEW SYSTEM (persona-based)
         if persona:
+            # Validate persona
+            if persona not in PERSONAS:
+                return jsonify({
+                    "error": "Invalid persona",
+                    "available_personas": list(PERSONAS.keys()),
+                    "description": "Choose from: new_revert, revert, seeker, practicing_muslim, teacher, scholar, student"
+                }), 400
+            
+            # Validate learning_goal
+            if not learning_goal:
+                return jsonify({
+                    "error": "learning_goal is required",
+                    "valid_options": ["application", "understanding", "balanced"],
+                    "descriptions": {
+                        "application": "Focus on practical everyday use and actionable insights",
+                        "understanding": "Focus on deep scholarly comprehension and theological depth",
+                        "balanced": "Mix of both practical and scholarly approaches"
+                    }
+                }), 400
+            
+            if learning_goal not in ["application", "understanding", "balanced"]:
+                return jsonify({
+                    "error": "Invalid learning_goal",
+                    "valid_options": ["application", "understanding", "balanced"],
+                    "descriptions": {
+                        "application": "Focus on practical everyday use and actionable insights",
+                        "understanding": "Focus on deep scholarly comprehension and theological depth",
+                        "balanced": "Mix of both practical and scholarly approaches"
+                    }
+                }), 400
+            
+            # Smart knowledge_level determination using helper function
+            knowledge_level, is_deterministic = determine_knowledge_level(persona, provided_knowledge_level)
+            
+            if knowledge_level is None:
+                # Variable persona without valid knowledge_level
+                return jsonify({
+                    "error": "knowledge_level is required for this persona",
+                    "persona": persona,
+                    "valid_options": ["beginner", "intermediate", "advanced"],
+                    "descriptions": {
+                        "beginner": "New to Islamic studies, need foundational explanations",
+                        "intermediate": "Have basic Islamic knowledge, want deeper understanding",
+                        "advanced": "Strong Islamic background, ready for scholarly depth"
+                    },
+                    "note": f"The persona '{persona}' allows flexible knowledge levels. Please specify your level."
+                }), 400
+            
+            # All validations passed - save profile
             profile_data["persona"] = persona
+            profile_data["knowledge_level"] = knowledge_level
+            profile_data["learning_goal"] = learning_goal
+            
+            # Log whether level was auto-set or user-provided
+            if is_deterministic:
+                print(f"INFO: Auto-set knowledge_level='{knowledge_level}' for persona='{persona}'")
+            else:
+                print(f"INFO: User-provided knowledge_level='{knowledge_level}' for persona='{persona}'")
 
+        # Save to Firestore
         users_db.collection("users").document(uid).set(profile_data, merge=True)
-        return jsonify({
+        
+        response_data = {
             "status": "success",
             "uid": uid,
             "profile": profile_data
-        }), 200
+        }
+        
+        # Add helpful message if knowledge_level was auto-set
+        if persona and is_deterministic:
+            response_data["note"] = f"Knowledge level automatically set to '{knowledge_level}' based on persona '{persona}'"
+        
+        return jsonify(response_data), 200
+        
     except Exception as e:
         print(f"ERROR in /set_profile: {type(e).__name__} - {e}")
         return jsonify({"error": str(e)}), 500
@@ -1515,20 +1657,42 @@ def set_profile():
 # NEW: Persona endpoints
 @app.route("/personas", methods=["GET"])
 def list_personas():
-    """List available user personas"""
+    """List available user personas with detailed information"""
     persona_info = {}
 
     for name, config in PERSONAS.items():
+        # Determine if this persona has deterministic knowledge_level
+        deterministic_level = None
+        if name in ["scholar", "student"]:
+            deterministic_level = "advanced"
+        elif name == "new_revert":
+            deterministic_level = "beginner"
+        
         persona_info[name] = {
             'name': config['name'],
-            'description': f"{config['tone']} | {config['response_length']}",
+            'description': f"{config['tone']} | Format: {config['format_style']}",
             'tone': config['tone'],
-            'response_length': config['response_length']
+            'vocabulary': config['vocabulary'],
+            'format_style': config['format_style'],
+            'include_hadith': config['include_hadith'],
+            'scholarly_debates': config['scholarly_debates'],
+            'knowledge_level': deterministic_level if deterministic_level else "variable (user chooses)",
+            'requires_knowledge_level_input': deterministic_level is None
         }
 
     return jsonify({
         'personas': persona_info,
-        'count': len(persona_info)
+        'count': len(persona_info),
+        'knowledge_levels': {
+            'beginner': 'New to Islamic studies, need foundational explanations',
+            'intermediate': 'Have basic Islamic knowledge, want deeper understanding',
+            'advanced': 'Strong Islamic background, ready for scholarly depth'
+        },
+        'learning_goals': {
+            'application': 'Focus on practical everyday use and actionable insights',
+            'understanding': 'Focus on deep scholarly comprehension and theological depth',
+            'balanced': 'Mix of both practical and scholarly approaches'
+        }
     }), 200
 
 @app.route("/verse/<int:surah>/<int:verse>", methods=["GET"])
