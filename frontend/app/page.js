@@ -680,8 +680,8 @@ function MainApp({ user, userProfile }) {
             maxLength={200}
           />
 
-          <button type="submit" disabled={isTafsirLoading}>
-            {isTafsirLoading ? 'Loading...' : 'Get Tafsir'}
+          <button type="submit" disabled={isTafsirLoading} className="search-button">
+            {isTafsirLoading ? '⏳' : '🔍'}
           </button>
         </form>
         
