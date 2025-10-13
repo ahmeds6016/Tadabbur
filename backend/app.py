@@ -79,21 +79,20 @@ ANALYTICS = defaultdict(int)  # Usage analytics
 # ============================================================================
 
 # Comprehensive persona system (7 personas)
+# ============================================================================
 PERSONAS = {
     "new_revert": {
         "name": "New Revert",
         "tone": "warm, encouraging, patient",
         "vocabulary": "simple, everyday",
-        "response_length": "200-300 words",
         "include_hadith": False,
         "scholarly_debates": False,
-        "format_style": "bullets_emojis"  # Bullets + emojis
+        "format_style": "bullets_emojis"
     },
     "revert": {
         "name": "Revert Muslim (1-5 years)",
         "tone": "supportive, informative",
         "vocabulary": "moderate",
-        "response_length": "300-400 words",
         "include_hadith": True,
         "scholarly_debates": False,
         "format_style": "bullets_emojis"
@@ -102,7 +101,6 @@ PERSONAS = {
         "name": "Spiritual Seeker",
         "tone": "warm, reflective",
         "vocabulary": "accessible",
-        "response_length": "300-400 words",
         "include_hadith": True,
         "scholarly_debates": False,
         "format_style": "bullets_emojis"
@@ -111,16 +109,14 @@ PERSONAS = {
         "name": "Practicing Muslim",
         "tone": "respectful, balanced",
         "vocabulary": "moderate",
-        "response_length": "400-500 words",
         "include_hadith": True,
         "scholarly_debates": True,
-        "format_style": "balanced"  # Mix of paragraphs + bullets
+        "format_style": "balanced"
     },
     "teacher": {
         "name": "Teacher/Imam/Educator",
         "tone": "pedagogical, clear",
         "vocabulary": "accessible",
-        "response_length": "400-600 words",
         "include_hadith": True,
         "scholarly_debates": True,
         "format_style": "balanced"
@@ -129,16 +125,14 @@ PERSONAS = {
         "name": "Scholar/Advanced Student",
         "tone": "academic, precise",
         "vocabulary": "advanced, technical",
-        "response_length": "800-1000 words",
         "include_hadith": True,
         "scholarly_debates": True,
-        "format_style": "academic_prose"  # Dense prose, no bullets
+        "format_style": "academic_prose"
     },
     "student": {
         "name": "Islamic Studies Student",
         "tone": "educational, comprehensive",
         "vocabulary": "academic",
-        "response_length": "600-800 words",
         "include_hadith": True,
         "scholarly_debates": True,
         "format_style": "academic_prose"
@@ -1083,252 +1077,138 @@ def build_structured_context(context_by_source, arabic_text=None, cross_refs=Non
     return "\n\n" + "\n\n".join(context_sections)
 
 # ============================================================================
-# UPDATED: PERSONA-ADAPTIVE CLARITY-ENHANCED PROMPT
+# FINAL V4: PRESCRIPTIVE PROMPT WITH ALL FEATURES
 # ============================================================================
 
 def build_enhanced_prompt(query, context_by_source, user_profile, arabic_text=None, cross_refs=None, query_type="default", verse_data=None):
     """
-    ENHANCED VERSION: Gemini as Scholarly Editor with Persona-Adaptive Formatting
-
-    Gives Gemini explicit instructions to:
-    1. Fix grammar/clarity while preserving accuracy
-    2. Adapt content FORMAT to user persona (bullets for beginners, prose for scholars)
-    3. Use verse translations from backend (not generate them)
+    FINAL V4: Merges the prescriptive, example-heavy style of V1 with all the new
+    features (learning_goal, refined formatting, etc.).
     """
     structured_context = build_structured_context(context_by_source, arabic_text, cross_refs)
 
-    # Get persona configuration
+    # --- Get Persona & Goal Configuration ---
     persona_name = user_profile.get('persona', 'practicing_muslim')
     if persona_name not in PERSONAS:
-        persona_name = 'practicing_muslim'  # Fallback to default
-
+        persona_name = 'practicing_muslim'
     persona = PERSONAS[persona_name]
     format_style = persona.get('format_style', 'balanced')
 
-    # Add verse information if available
+    learning_goal = user_profile.get('learning_goal', 'balanced')
+    goal_instruction = ""
+    if learning_goal == 'application':
+        goal_instruction = "The user's primary goal is Action & Application. Frame the response to prioritize actionable lessons and how the verse applies to daily life."
+    elif learning_goal == 'understanding':
+        goal_instruction = "The user's primary goal is Knowledge & Understanding. Frame the response to prioritize a deep understanding of the historical context, theology, and linguistic details."
+    else: # Balanced
+        goal_instruction = "The user's goal is a Balanced Overview. Provide a comprehensive mix of deep understanding and practical lessons."
+    
+    # --- Verse Information ---
     verse_info = ""
     if verse_data:
         verse_info = f"""
 --- VERSE DETAILS (PROVIDED BY BACKEND) ---
 Surah: {verse_data['surah_number']} ({verse_data['surah_name']})
 Verse: {verse_data['verse_number']}
-Arabic: {verse_data['arabic']}
 English Translation (Saheeh International): {verse_data['english']}
-Transliteration: {verse_data['transliteration']}
-
-IMPORTANT: These verse texts are already provided by our backend.
-You do NOT need to provide verse translations - focus on explaining the TAFSIR (commentary).
 """
 
-    # Build the clarity-enhanced, persona-adaptive prompt
-    prompt = f"""You are a SCHOLARLY EDITOR for an Islamic learning platform, transforming classical tafsir into clear, polished explanations for modern readers.
+    # --- Build the Final Prompt ---
+    prompt = f"""You are a SCHOLARLY EDITOR for an Islamic learning platform. Your task is to transform classical tafsir into clear, polished, and appropriately formatted explanations.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-USER PROFILE: {persona['name']}
+USER PROFILE & GOAL
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-• Tone: {persona['tone']}
-• Vocabulary: {persona['vocabulary']}
-• Response length: {persona['response_length']}
-• Include hadith: {'Yes' if persona['include_hadith'] else 'No'}
-• Scholarly debates: {'Yes' if persona['scholarly_debates'] else 'No'}
-• Format style: {format_style}
+• Persona: {persona['name']}
+• Learning Goal: {learning_goal.title()}
+• Tone & Vocabulary: Use a {persona['tone']} tone with {persona['vocabulary']} vocabulary.
+• Include Hadith Evidence: {'Yes' if persona.get('include_hadith', True) else 'No'}
+• Discuss Scholarly Debates: {'Yes' if persona.get('scholarly_debates', True) else 'No'}
+• Format Style to Apply: {format_style}
+
+PRIMARY CONTENT INSTRUCTION: {goal_instruction}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-USER QUERY
+SOURCE MATERIAL & QUERY
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-"{query}"
-
-Query Type: {query_type}
+Query: "{query}"
 {verse_info}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-SOURCE MATERIAL (Classical Tafsir - May Have Issues)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Source Material:
 {structured_context}
 
-⚠️ NOTE: This source material comes from JSON-structured classical tafsir texts.
-It may contain grammar errors, typos, run-on sentences, missing punctuation, and awkward phrasing from translation/OCR.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+YOUR ROLE & CORE DUTIES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1.  **Frame the Content:** Prioritize information based on the user's Learning Goal.
+2.  **Adjust Content Depth:** Adhere to the 'Include Hadith Evidence' and 'Discuss Scholarly Debates' flags to filter the level of detail.
+3.  **Enhance Clarity & Accuracy:** Fix all grammar and polish the text, but NEVER alter the scholarly meaning or attributions.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-YOUR ROLE AS SCHOLARLY EDITOR
+MANDATORY RESPONSE FORMAT (Return Valid JSON)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-✅ ENHANCE CLARITY (Your Primary Job):
-1. **Fix Grammar & Structure**
-   • Correct grammatical errors
-   • Fix run-on sentences and fragments
-   • Add proper punctuation and capitalization
-   • Improve sentence flow and transitions
+CRITICAL: You must return valid JSON. Within the 'explanation' fields of the JSON, you MUST ADAPT THE CONTENT'S FORMAT based on the `Format Style to Apply`. Follow the instructions and examples below precisely.
 
-2. **Improve Readability**
-   • Break complex sentences into simpler ones
-   • Use clear paragraph structure
-   • Add helpful transitions between ideas
-   • Make connections between concepts explicit
-   • Organize information logically
+---
+#### 📱 **IF `Format Style` is 'bullets_emojis':**
+---
+Use a visual, scannable format with:
+•   Short bullet points (`•`) and clear, **bolded headers**.
+•   **Sparingly**, you may add a single, relevant emoji to a main header (e.g., 🌟 **Key Lessons**) to add warmth.
+•   **Do not** use emojis within the text itself.
 
-3. **Clarify Terminology**
-   • Define Islamic terms appropriately for the user's level
-   • Use consistent transliteration
-   • Add brief explanations where needed
-   • Make implicit references explicit
+**Example for 'bullets_emojis' style:**
+"🌟 **A Key Theme: Allah's Perfect Attributes**
 
-4. **Adapt to User Profile**
-   • Match vocabulary to user's level ({persona['vocabulary']})
-   • Use appropriate tone ({persona['tone']})
-   • Adjust depth to target length ({persona['response_length']})
+This verse explains a core concept about Allah:
+•   He is Al-Hayy, the Ever-Living.
+•   He is Al-Qayyum, the Self-Sustaining Who sustains all others.
 
-❌ PRESERVE ACCURACY (Never Compromise):
-1. **Never Alter Scholarly Content**
-   • Do NOT change the meaning of tafsir
-   • Do NOT add interpretations not in source
-   • Do NOT omit important scholarly details
-   • Do NOT change theological positions
+**What This Means for You**
 
-2. **Keep Attributions Exact**
-   • Scholar names MUST remain exact (Ibn Kathir, al-Qurtubi)
-   • Hadith narrators MUST be preserved exactly
-   • Do NOT reassign opinions to different scholars
+When you feel alone or scared, you can find comfort in knowing that Allah is always aware and in complete control, watching over you."
 
-3. **Sacred Text Unchanged**
-   • Verse translations are provided by backend - DO NOT generate them
-   • Arabic Quranic text stays EXACTLY as provided
-   • Do NOT paraphrase verse translations
+---
+#### 📚 **IF `Format Style` is 'balanced':**
+---
+Use a mix of short paragraphs and bullet points with:
+•   A mix of short, focused paragraphs (2-4 sentences).
+•   Bullet points (`•`) for lists.
+•   **Bolded headers** for all sections to ensure scannability.
+•   Do **not** use any emojis.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-RESPONSE FORMAT - PERSONA-ADAPTIVE CONTENT STRUCTURE
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+**Example for 'balanced' style:**
+"**The Concept of Divine Sovereignty**
 
-CRITICAL: Return valid JSON, but ADAPT THE CONTENT FORMAT based on user persona:
+This verse is considered one of the greatest in the Quran because it powerfully describes Allah's attributes of absolute power and perfect knowledge. The primary theme is His complete dominion over all of creation.
 
-📱 FOR BEGINNER PERSONAS (new_revert, revert, seeker) - Format: {format_style}
-   Use VISUAL, SCANNABLE format with:
-   • Short bullet points (use • character for bullets)
-   • Clear section headers with emojis (🌟 Key Point:, 📖 What This Means:)
-   • Short sentences (10-15 words max)
-   • Encouraging language with emojis where appropriate (💡, ✅, 💝)
-   • Visual breaks between concepts
+**Key Attributes Mentioned:**
+•   **Al-Hayy (The Ever-Living):** His life is perfect and eternal, without beginning or end.
+•   **Al-Qayyum (The Self-Sustaining):** He depends on nothing and no one, while all of creation depends entirely on Him."
 
-   Example for beginner:
-   "🌟 **Key Point: Allah Never Sleeps**
+---
+#### 🎓 **IF `Format Style` is 'academic_prose':**
+---
+Use a structured, academic format with:
+•   **Short, focused paragraphs (2-4 sentences max)**. Do not use long, dense walls of text.
+•   A concise, **bolded sub-header** on its own line above each new thematic paragraph to improve scannability.
+•   Bullet points (`•`) can be used to enumerate scholarly points or list evidence.
+•   Do **not** use any emojis.
 
-   This verse (Ayat al-Kursi) teaches us that:
-   • Allah is always awake and aware
-   • He never gets tired or needs rest
-   • He protects us 24/7
+**Example for 'academic_prose' style:**
+"**Theological Exposition of Divine Attributes**
 
-   📖 **What This Means for You:**
-   When you feel alone or scared, remember Allah is always there watching over you!
+Ayat al-Kursi (2:255) represents a comprehensive theological statement regarding divine attributes. Classical exegetes have identified this verse as one of the most concentrated expositions of *tawhid* in the Quran.
 
-   💡 **Quick Tip:**
-   Many Muslims say this verse before sleeping for protection. You can too! 💝"
+**Affirmation and Negation**
 
-📚 FOR INTERMEDIATE PERSONAS (practicing_muslim, teacher) - Format: {format_style}
-   Use BALANCED format with:
-   • Mix of short paragraphs (3-5 sentences) and bullet points
-   • Clear subheadings (use **Bold** for headers)
-   • Some detail but not overwhelming
-   • Practical focus
+Ibn Kathir notes that the verse systematically presents both affirmative attributes (e.g., Al-Hayy, Al-Qayyum) and negative attributes (e.g., `la ta'khudhuhu sinatun wala nawm` - "no slumber or sleep overtakes Him") to establish Allah's absolute transcendence and perfection."
 
-   Example for intermediate:
-   "**Overview of Ayat al-Kursi**
-
-   This verse is considered one of the greatest in the Quran. It describes Allah's attributes of absolute power and perfect knowledge.
-
-   **Key Themes:**
-   • Divine sovereignty - Allah's throne extends over all creation
-   • Perfect attributes - Al-Hayy (Ever-Living) and Al-Qayyum (Self-Sustaining)
-   • Effortless preservation - Maintaining the universe requires no effort from Allah
-
-   **Practical Application:**
-   The Prophet ﷺ taught that reciting this verse provides spiritual protection..."
-
-🎓 FOR ADVANCED/SCHOLAR PERSONAS (scholar, student) - Format: {format_style}
-   Use ACADEMIC PROSE format with:
-   • Dense, flowing paragraphs
-   • Technical terminology
-   • Scholarly citations integrated naturally
-   • Debates and nuances discussed
-   • NO bullet points or emojis
-
-   Example for scholar:
-   "Ayat al-Kursi (2:255) represents a comprehensive theological statement regarding divine attributes. Classical exegetes have identified this verse as containing the most concentrated exposition of tawhid in the Quran. Ibn Kathir (d. 774 AH) notes in his tafsir that the verse systematically presents both positive attributes (al-Hayy, al-Qayyum) and negative attributes (no slumber, no fatigue) to establish Allah's absolute transcendence.
-
-   The controversy regarding the nature of the Kursi has been extensively discussed by medieval scholars. Al-Qurtubi presents three interpretive schools..."
-
-JSON Structure (verse text ALREADY provided by backend - you focus on tafsir):
-
-{{
-    "verses": [
-        {{
-            "surah": "Surah name (from verse_data)",
-            "verse_number": "verse number (from verse_data)",
-            "text_saheeh_international": "English translation (from verse_data)",
-            "arabic_text": "Arabic text (from verse_data)"
-        }}
-    ],
-
-    "tafsir_explanations": [
-        {{
-            "source": "al-Qurtubi",
-            "explanation": "FORMAT BASED ON PERSONA: Bullets + emojis for beginners ({format_style}), balanced for intermediate, dense prose for scholars. Fix all grammar, improve clarity, preserve accuracy. If verse beyond Surah 4:22, state: 'Al-Qurtubi's tafsir is not available for this verse.'"
-        }},
-        {{
-            "source": "Ibn Kathir",
-            "explanation": "FORMAT BASED ON PERSONA: Bullets + emojis for beginners ({format_style}), balanced for intermediate, dense prose for scholars. Fix all grammar, improve clarity, preserve accuracy."
-        }}
-    ],
-
-    "cross_references": [
-        {{
-            "verse": "Related verse reference (e.g., '2:256')",
-            "relevance": "Brief, clear explanation"
-        }}
-    ],
-
-    "lessons_practical_applications": [
-        {{"point": "Clear, actionable takeaway 1"}},
-        {{"point": "Clear, actionable takeaway 2"}},
-        {{"point": "Clear, actionable takeaway 3"}}
-    ],
-
-    "summary": "2-3 sentences directly answering the query"
-}}
-
-FORMATTING DECISION:
-• If persona = new_revert, revert, or seeker → Use bullets (•), emojis (🌟, 💡, ✅, 💝), short sentences
-• If persona = practicing_muslim or teacher → Use balanced: **bold headers**, short paragraphs + some bullets
-• If persona = scholar or student → Use dense academic prose, NO bullets, NO emojis
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-SOURCE COVERAGE (Important Context)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-• **Ibn Kathir**: Complete Quran (all 114 Surahs)
-• **al-Qurtubi**: Surahs 1-4 only (up to Surah 4:22)
-
-If query is about verses beyond Surah 4:22, explain that al-Qurtubi's commentary is not available.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-CRITICAL REMINDERS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-1. **ADAPT FORMAT TO PERSONA** - Beginners get bullets + emojis, scholars get dense prose
-2. **You are an EDITOR, not an author** - Polish what's there, don't create new interpretations
-3. **PRESERVE ACCURACY** - Never change meanings, attributions, or theological positions
-4. **ENHANCE CLARITY** - Fix grammar, improve structure, make readable
-5. **CITE ACCURATELY** - Keep all scholar names exactly as provided (Ibn Kathir, al-Qurtubi)
-6. **VERSES FROM BACKEND** - Don't try to provide translations, they're already in verse_data
-7. **BE HELPFUL** - Make the response answer the user's query directly and clearly
-8. **NEVER FABRICATE** - If insufficient source material, acknowledge limitations
-
-Current persona: **{persona_name}**
-Apply formatting rules for: {'BEGINNER (bullets + emojis)' if format_style == 'bullets_emojis' else 'INTERMEDIATE (balanced)' if format_style == 'balanced' else 'SCHOLAR (dense prose)'}
-
-Begin your persona-adapted, clarity-enhanced response now.
+---
+Begin your structured, clarity-enhanced response now, following all instructions precisely.
 """
-
+    
     return prompt
-
 # ============================================================================
 # END OF UPDATED PROMPT FUNCTION
 # ============================================================================
@@ -1469,40 +1349,52 @@ def get_profile():
 @app.route("/set_profile", methods=["POST"])
 @firebase_auth_required
 def set_profile():
-    """Set or update user's learning profile"""
+    """
+    Set or update user's learning profile with nuanced onboarding logic.
+    """
     uid = request.user["uid"]
     data = request.get_json()
 
-    # Support both old and new profile systems
-    level = data.get("level")
-    focus = data.get("focus", "practical")
-    verbosity = data.get("verbosity", "medium")
-    persona = data.get("persona")  # NEW: Support persona system
+    persona = data.get("persona")
+    knowledge_level = data.get("knowledge_level")
+    learning_goal = data.get("learning_goal")
 
-    # Validate profile data
-    if level and level not in ["casual", "beginner", "intermediate", "advanced"]:
-        return jsonify({"error": "Invalid level"}), 400
-    if focus not in ["practical", "linguistic", "comparative", "thematic"]:
-        return jsonify({"error": "Invalid focus"}), 400
-    if verbosity not in ["short", "medium", "detailed"]:
-        return jsonify({"error": "Invalid verbosity"}), 400
-    if persona and persona not in PERSONAS:
-        return jsonify({"error": "Invalid persona", "available": list(PERSONAS.keys())}), 400
+    # --- Validation ---
+    if not persona or persona not in PERSONAS:
+        return jsonify({"error": "A valid persona is required", "available": list(PERSONAS.keys())}), 400
+    
+    # Define valid options
+    valid_knowledge_levels = ["beginner", "intermediate", "advanced"]
+    valid_learning_goals = ["application", "understanding", "balanced"]
 
+    # --- Nuanced Onboarding Logic ---
+    # For deterministic personas, we override the knowledge level.
+    deterministic_personas = {
+        "scholar": "advanced",
+        "student": "advanced",
+        "new_revert": "beginner"
+    }
+
+    if persona in deterministic_personas:
+        knowledge_level = deterministic_personas[persona]
+        print(f"INFO: Auto-assigning knowledge_level '{knowledge_level}' for deterministic persona '{persona}'.")
+    else:
+        # For variable personas, the knowledge_level from the client is required.
+        if not knowledge_level or knowledge_level not in valid_knowledge_levels:
+            return jsonify({"error": f"knowledge_level is required for the '{persona}' persona and must be one of {valid_knowledge_levels}"}), 400
+
+    if not learning_goal or learning_goal not in valid_learning_goals:
+         return jsonify({"error": f"learning_goal is required and must be one of {valid_learning_goals}"}), 400
+    
     try:
-        profile_data = {}
-
-        # Old system
-        if level:
-            profile_data["level"] = level
-            profile_data["focus"] = focus
-            profile_data["verbosity"] = verbosity
-
-        # NEW: Persona system
-        if persona:
-            profile_data["persona"] = persona
-
+        profile_data = {
+            "persona": persona,
+            "knowledge_level": knowledge_level,
+            "learning_goal": learning_goal
+        }
+        
         users_db.collection("users").document(uid).set(profile_data, merge=True)
+        
         return jsonify({
             "status": "success",
             "uid": uid,
@@ -1510,7 +1402,7 @@ def set_profile():
         }), 200
     except Exception as e:
         print(f"ERROR in /set_profile: {type(e).__name__} - {e}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "An internal error occurred while saving the profile."}), 500
 
 # NEW: Persona endpoints
 @app.route("/personas", methods=["GET"])
