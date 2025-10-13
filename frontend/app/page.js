@@ -664,40 +664,22 @@ function MainApp({ user, userProfile }) {
           )}
         </div>
 
-        {/* FIXED: Search Form - Removed conflicting Tailwind classes */}
+        {/* Search Form - Fixed alignment */}
         <form onSubmit={handleGetTafsir} className="tafsir-form">
           <select value={approach} onChange={(e) => setApproach(e.target.value)}>
             <option value="tafsir">📖 Tafsir-Based Study</option>
             <option value="thematic">🔍 Thematic Study</option>
             <option value="historical">📜 Historical Context</option>
           </select>
-          
-          {/* NEW: Wrapper for input with optional character counter */}
-          <div style={{ position: 'relative', flex: '1 1 300px', minWidth: '250px' }}>
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Enter Surah:Verse (e.g., 2:255) or topic (e.g., charity, prayer)..."
-              maxLength={200}
-              style={{ width: '100%' }}
-            />
-            {query.length > 0 && (
-              <span style={{
-                position: 'absolute',
-                right: '12px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                fontSize: '0.75rem',
-                color: query.length > 180 ? 'var(--warning-color)' : 'rgba(0,0,0,0.3)',
-                fontWeight: 600,
-                pointerEvents: 'none'
-              }}>
-                {query.length}/200
-              </span>
-            )}
-          </div>
-          
+
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Enter Surah:Verse (e.g., 2:255) or topic (e.g., charity, prayer)..."
+            maxLength={200}
+          />
+
           <button type="submit" disabled={isTafsirLoading}>
             {isTafsirLoading ? 'Loading...' : 'Get Tafsir'}
           </button>

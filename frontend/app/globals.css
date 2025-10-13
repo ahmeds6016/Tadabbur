@@ -382,7 +382,7 @@ a {
   display: flex;
   gap: 16px;
   margin-bottom: 40px;
-  padding: 40px 32px 32px 32px; /* FIXED: More top padding for icon */
+  padding: 40px 32px 32px 32px;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(250, 246, 240, 0.9) 100%);
   backdrop-filter: blur(10px);
   border-radius: 20px;
@@ -390,7 +390,7 @@ a {
   box-shadow: var(--shadow-medium);
   position: relative;
   flex-wrap: wrap;
-  align-items: center; /* FIXED: Changed from stretch to center */
+  align-items: stretch; /* FIXED: All items same height */
 }
 
 /* Ornamental search icon - ENHANCED */
@@ -432,19 +432,22 @@ a {
 
 /* SELECT DROPDOWN - ENHANCED */
 .tafsir-form select {
-  padding: 18px 44px 18px 24px; /* NEW: Space for custom arrow */
+  padding: 18px 44px 18px 24px;
   border: 2px solid var(--border-medium);
   border-radius: 16px;
   font-size: 1.05rem;
-  font-weight: 600; /* ENHANCED: From 500 to 600 */
+  font-weight: 600;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   background: white;
   color: var(--foreground);
-  cursor: pointer; /* NEW */
-  appearance: none; /* NEW: Remove default dropdown arrow */
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Cpath fill='%230D9488' d='M5 7l5 5 5-5z'/%3E%3C/svg%3E"); /* NEW: Custom arrow */
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Cpath fill='%230D9488' d='M5 7l5 5 5-5z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 12px center;
+  height: auto; /* Allow natural height */
+  display: flex;
+  align-items: center;
 }
 
 /* NEW: Hover state for select */
@@ -463,8 +466,8 @@ a {
 
 /* INPUT FIELD - FIXED & ENHANCED */
 .tafsir-form input {
-  flex: 1 1 300px; /* FIXED: Better flexibility */
-  min-width: 250px; /* FIXED: Reduced from 320px */
+  flex: 1 1 300px;
+  min-width: 250px;
   padding: 18px 24px;
   border: 2px solid var(--border-medium);
   border-radius: 16px;
@@ -473,6 +476,9 @@ a {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   background: white;
   color: var(--foreground);
+  height: auto; /* Match select height */
+  display: flex;
+  align-items: center;
 }
 
 .tafsir-form input:focus {
@@ -513,6 +519,10 @@ a {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   box-shadow: var(--shadow-soft);
+  height: auto; /* Match select/input height */
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .tafsir-form button::before {
