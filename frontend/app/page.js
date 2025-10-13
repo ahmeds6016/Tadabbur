@@ -209,14 +209,24 @@ function AuthComponent() {
 }
 
 // ============================================================================
-// ONBOARDING COMPONENT WITH ENHANCED PERSONA SYSTEM
+// FIXED ONBOARDING COMPONENT - Matches New Backend Profile System
+// Replace your existing OnboardingComponent in page.js
 // ============================================================================
 
 function OnboardingComponent({ user, onProfileComplete }) {
   const [step, setStep] = useState(1);
-  const [profile, setProfile] = useState({ level: '', focus: '', verbosity: '', persona: '' });
+  const [profile, setProfile] = useState({ 
+    persona: '', 
+    knowledge_level: '', 
+    learning_goal: '',
+    // Keep old fields for backwards compatibility
+    level: '', 
+    focus: '', 
+    verbosity: '' 
+  });
   const [error, setError] = useState('');
   const [personas, setPersonas] = useState([]);
+  const [isDeterministicPersona, setIsDeterministicPersona] = useState(false);
 
   // Fetch available personas on mount
   useEffect(() => {
@@ -229,15 +239,42 @@ function OnboardingComponent({ user, onProfileComplete }) {
         }
       } catch (err) {
         console.log('Could not fetch personas, using defaults');
-        // Fallback personas
         setPersonas([
-          ['new_revert', { name: 'New Revert', description: 'warm, encouraging | Format: bullets_emojis' }],
-          ['revert', { name: 'Revert Muslim', description: 'supportive | Format: bullets_emojis' }],
-          ['practicing_muslim', { name: 'Practicing Muslim', description: 'balanced | Format: balanced' }],
-          ['scholar', { name: 'Scholar', description: 'academic | Format: academic_prose' }],
-          ['student', { name: 'Islamic Studies Student', description: 'educational | Format: academic_prose' }],
-          ['teacher', { name: 'Teacher/Imam', description: 'pedagogical | Format: balanced' }],
-          ['seeker', { name: 'Spiritual Seeker', description: 'warm, reflective | Format: bullets_emojis' }]
+          ['new_revert', { 
+            name: 'New Revert', 
+            description: 'warm, encouraging | Format: bullets_emojis',
+            requires_knowledge_level_input: false 
+          }],
+          ['revert', { 
+            name: 'Revert Muslim', 
+            description: 'supportive | Format: bullets_emojis',
+            requires_knowledge_level_input: true 
+          }],
+          ['practicing_muslim', { 
+            name: 'Practicing Muslim', 
+            description: 'balanced | Format: balanced',
+            requires_knowledge_level_input: true 
+          }],
+          ['scholar', { 
+            name: 'Scholar', 
+            description: 'academic | Format: academic_prose',
+            requires_knowledge_level_input: false 
+          }],
+          ['student', { 
+            name: 'Islamic Studies Student', 
+            description: 'educational | Format: academic_prose',
+            requires_knowledge_level_input: false 
+          }],
+          ['teacher', { 
+            name: 'Teacher/Imam', 
+            description: 'pedagogical | Format: balanced',
+            requires_knowledge_level_input: true 
+          }],
+          ['seeker', { 
+            name: 'Spiritual Seeker', 
+            description: 'warm, reflective | Format: bullets_emojis',
+            requires_knowledge_level_input: true 
+          }]
         ]);
       }
     };
@@ -248,28 +285,71 @@ function OnboardingComponent({ user, onProfileComplete }) {
     setError('');
     try {
       const token = await user.getIdToken();
+      
+      // Build the profile payload for the NEW backend API
+      const payload = {
+        persona: profile.persona,
+        learning_goal: profile.learning_goal
+      };
+      
+      // Only send knowledge_level for variable personas
+      if (!isDeterministicPersona) {
+        payload.knowledge_level = profile.knowledge_level;
+      }
+      
+      console.log('Sending profile:', payload);
+      
       const response = await fetch(`${BACKEND_URL}/set_profile`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify(profile)
+        body: JSON.stringify(payload)
       });
-      if (!response.ok) throw new Error('Failed to save profile.');
-      onProfileComplete(profile);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to save profile.');
+      }
+      
+      const result = await response.json();
+      console.log('Profile saved:', result);
+      onProfileComplete(result.profile);
     } catch (err) {
+      console.error('Profile error:', err);
       setError(err.message);
     }
-  }, [user, profile, onProfileComplete]);
+  }, [user, profile, onProfileComplete, isDeterministicPersona]);
 
-  const handleSelect = (key, value) => {
-    setProfile((prev) => ({ ...prev, [key]: value }));
-    setStep((prev) => prev + 1);
+  const handlePersonaSelect = (personaKey, personaData) => {
+    setProfile((prev) => ({ ...prev, persona: personaKey }));
+    
+    // Check if this is a deterministic persona (auto-sets knowledge_level)
+    const deterministic = ['scholar', 'student', 'new_revert'];
+    setIsDeterministicPersona(deterministic.includes(personaKey));
+    
+    // Auto-advance to next step
+    if (deterministic.includes(personaKey)) {
+      // Skip knowledge_level step for deterministic personas
+      setStep(3); // Go straight to learning_goal
+    } else {
+      setStep(2); // Go to knowledge_level selection
+    }
+  };
+
+  const handleKnowledgeLevelSelect = (level) => {
+    setProfile((prev) => ({ ...prev, knowledge_level: level }));
+    setStep(3); // Move to learning_goal
+  };
+
+  const handleLearningGoalSelect = (goal) => {
+    setProfile((prev) => ({ ...prev, learning_goal: goal }));
+    setStep(4); // Trigger profile save
   };
 
   useEffect(() => {
-    if (step === 5) {
+    if (step === 4) {
       handleSetProfile();
     }
   }, [step, handleSetProfile]);
@@ -279,21 +359,21 @@ function OnboardingComponent({ user, onProfileComplete }) {
       <div className="card">
         <h1 style={{ textAlign: 'center', marginBottom: '12px' }}>Welcome, {user.email}!</h1>
         <p style={{ fontSize: '1.1rem', marginBottom: '32px', textAlign: 'center', color: '#666' }}>
-          Let&apos;s personalize your Tafsir experience in 4 simple steps.
+          Let&apos;s personalize your Tafsir experience in 3 simple steps.
         </p>
 
         {/* Step 1: Persona Selection */}
         {step === 1 && personas.length > 0 && (
           <div>
             <h2 style={{ textAlign: 'center', color: 'var(--primary-teal)', marginBottom: '24px' }}>
-              Choose Your Learning Profile
+              1. Choose Your Learning Profile
             </h2>
             <p style={{ marginBottom: '24px', color: '#666', textAlign: 'center' }}>
-              Select the profile that best matches your current Islamic knowledge and learning goals.
+              Select the profile that best matches your Islamic knowledge journey.
             </p>
             <div className="level-buttons">
               {personas.map(([key, persona]) => (
-                <button key={key} onClick={() => handleSelect('persona', key)}>
+                <button key={key} onClick={() => handlePersonaSelect(key, persona)}>
                   <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>
                     {getPersonaIcon(key)}
                   </div>
@@ -309,103 +389,100 @@ function OnboardingComponent({ user, onProfileComplete }) {
           </div>
         )}
 
-        {/* Step 2: Knowledge Level */}
-        {step === 2 && (
+        {/* Step 2: Knowledge Level (Only for Variable Personas) */}
+        {step === 2 && !isDeterministicPersona && (
           <div>
             <h2 style={{ textAlign: 'center', color: 'var(--primary-teal)', marginBottom: '24px' }}>
-              What is your knowledge level?
+              2. What is your knowledge level?
             </h2>
+            <p style={{ marginBottom: '24px', color: '#666', textAlign: 'center' }}>
+              This helps us tailor the depth and complexity of explanations.
+            </p>
             <div className="level-buttons">
-              <button onClick={() => handleSelect('level', 'beginner')}>
+              <button onClick={() => handleKnowledgeLevelSelect('beginner')}>
                 <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>📚</div>
                 <div style={{ fontWeight: '700', fontSize: '1.1rem' }}>Beginner</div>
                 <div style={{ fontSize: '0.85rem', marginTop: '4px', opacity: 0.7 }}>
-                  New to tafsir
+                  New to Islamic studies
                 </div>
               </button>
-              <button onClick={() => handleSelect('level', 'intermediate')}>
+              <button onClick={() => handleKnowledgeLevelSelect('intermediate')}>
                 <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>🎓</div>
                 <div style={{ fontWeight: '700', fontSize: '1.1rem' }}>Intermediate</div>
                 <div style={{ fontSize: '0.85rem', marginTop: '4px', opacity: 0.7 }}>
-                  Some background
+                  Some Islamic background
                 </div>
               </button>
-              <button onClick={() => handleSelect('level', 'advanced')}>
+              <button onClick={() => handleKnowledgeLevelSelect('advanced')}>
                 <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>📖</div>
                 <div style={{ fontWeight: '700', fontSize: '1.1rem' }}>Advanced</div>
                 <div style={{ fontSize: '0.85rem', marginTop: '4px', opacity: 0.7 }}>
-                  Deep knowledge
+                  Strong Islamic knowledge
                 </div>
               </button>
             </div>
           </div>
         )}
 
-        {/* Step 3: Focus Area */}
+        {/* Step 3: Learning Goal */}
         {step === 3 && (
           <div>
             <h2 style={{ textAlign: 'center', color: 'var(--primary-teal)', marginBottom: '24px' }}>
-              What is your primary focus?
+              {isDeterministicPersona ? '2' : '3'}. What is your learning goal?
             </h2>
+            <p style={{ marginBottom: '24px', color: '#666', textAlign: 'center' }}>
+              Choose what matters most to you when studying Quran.
+            </p>
             <div className="level-buttons">
-              <button onClick={() => handleSelect('focus', 'practical')}>
+              <button onClick={() => handleLearningGoalSelect('application')}>
                 <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>🤲</div>
-                <div style={{ fontWeight: '700', fontSize: '1.1rem' }}>Practical Lessons</div>
+                <div style={{ fontWeight: '700', fontSize: '1.1rem' }}>Practical Application</div>
                 <div style={{ fontSize: '0.85rem', marginTop: '4px', opacity: 0.7 }}>
-                  Daily applications
+                  Focus on how to apply teachings in daily life
                 </div>
               </button>
-              <button onClick={() => handleSelect('focus', 'linguistic')}>
-                <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>✍️</div>
-                <div style={{ fontWeight: '700', fontSize: '1.1rem' }}>Linguistic Details</div>
+              <button onClick={() => handleLearningGoalSelect('understanding')}>
+                <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>📖</div>
+                <div style={{ fontWeight: '700', fontSize: '1.1rem' }}>Deep Understanding</div>
                 <div style={{ fontSize: '0.85rem', marginTop: '4px', opacity: 0.7 }}>
-                  Arabic insights
+                  Focus on scholarly depth and theological context
                 </div>
               </button>
-              <button onClick={() => handleSelect('focus', 'comparative')}>
-                <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>📊</div>
-                <div style={{ fontWeight: '700', fontSize: '1.1rem' }}>Comparative Analysis</div>
+              <button onClick={() => handleLearningGoalSelect('balanced')}>
+                <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>⚖️</div>
+                <div style={{ fontWeight: '700', fontSize: '1.1rem' }}>Balanced Approach</div>
                 <div style={{ fontSize: '0.85rem', marginTop: '4px', opacity: 0.7 }}>
-                  Multiple views
-                </div>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Step 4: Verbosity */}
-        {step === 4 && (
-          <div>
-            <h2 style={{ textAlign: 'center', color: 'var(--primary-teal)', marginBottom: '24px' }}>
-              How detailed would you like the answers?
-            </h2>
-            <div className="level-buttons">
-              <button onClick={() => handleSelect('verbosity', 'short')}>
-                <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>⚡</div>
-                <div style={{ fontWeight: '700', fontSize: '1.1rem' }}>Short &amp; Concise</div>
-                <div style={{ fontSize: '0.85rem', marginTop: '4px', opacity: 0.7 }}>
-                  Quick summaries
-                </div>
-              </button>
-              <button onClick={() => handleSelect('verbosity', 'medium')}>
-                <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>📝</div>
-                <div style={{ fontWeight: '700', fontSize: '1.1rem' }}>Medium Detail</div>
-                <div style={{ fontSize: '0.85rem', marginTop: '4px', opacity: 0.7 }}>
-                  Balanced depth
-                </div>
-              </button>
-              <button onClick={() => handleSelect('verbosity', 'detailed')}>
-                <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>📚</div>
-                <div style={{ fontWeight: '700', fontSize: '1.1rem' }}>Very Detailed</div>
-                <div style={{ fontSize: '0.85rem', marginTop: '4px', opacity: 0.7 }}>
-                  Comprehensive
+                  Mix of practical insights and scholarly depth
                 </div>
               </button>
             </div>
           </div>
         )}
 
-        {error && <p className="error">{error}</p>}
+        {/* Step 4: Saving (shown automatically) */}
+        {step === 4 && !error && (
+          <div style={{ textAlign: 'center', padding: '40px' }}>
+            <div className="loading-spinner"></div>
+            <p style={{ marginTop: '20px', color: '#666' }}>Saving your profile...</p>
+          </div>
+        )}
+
+        {error && (
+          <div className="error" style={{ marginTop: '24px' }}>
+            <p><strong>Error:</strong> {error}</p>
+            <button 
+              onClick={() => {
+                setError('');
+                setStep(1);
+                setProfile({ persona: '', knowledge_level: '', learning_goal: '', level: '', focus: '', verbosity: '' });
+              }}
+              style={{ marginTop: '16px', width: '100%' }}
+            >
+              Start Over
+            </button>
+          </div>
+        )}
+        
         <button 
           onClick={() => signOut(auth)} 
           className="logout-button"
