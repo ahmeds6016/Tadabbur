@@ -1,5 +1,5 @@
 'use client';
-
+import ReactMarkdown from 'react-markdown';
 import { useState, useEffect, useCallback } from 'react';
 import { initializeApp, getApps } from 'firebase/app';
 import {
@@ -606,9 +606,25 @@ function EnhancedResultsDisplay({ data }) {
                   <span className="limited-content-badge">Limited Content</span>
                 )}
               </summary>
-              <div className="explanation-content">
-                <p>{tafsir.explanation}</p>
-              </div>
+<div className="explanation-content markdown-content">
+  <ReactMarkdown
+    components={{
+      // Custom rendering for better styling
+      h1: ({node, ...props}) => <h1 style={{fontSize: '1.5rem', marginTop: '20px', marginBottom: '12px', color: 'var(--primary-color)'}} {...props} />,
+      h2: ({node, ...props}) => <h2 style={{fontSize: '1.3rem', marginTop: '16px', marginBottom: '10px', color: 'var(--primary-color)'}} {...props} />,
+      h3: ({node, ...props}) => <h3 style={{fontSize: '1.1rem', marginTop: '12px', marginBottom: '8px'}} {...props} />,
+      p: ({node, ...props}) => <p style={{marginBottom: '16px', lineHeight: '1.8'}} {...props} />,
+      ul: ({node, ...props}) => <ul style={{marginLeft: '20px', marginBottom: '16px', listStyle: 'none'}} {...props} />,
+      ol: ({node, ...props}) => <ol style={{marginLeft: '20px', marginBottom: '16px'}} {...props} />,
+      li: ({node, ...props}) => <li style={{marginBottom: '8px', paddingLeft: '8px'}} {...props} />,
+      strong: ({node, ...props}) => <strong style={{fontWeight: '600', color: 'var(--primary-color)'}} {...props} />,
+      em: ({node, ...props}) => <em style={{fontStyle: 'italic', color: '#555'}} {...props} />,
+      code: ({node, ...props}) => <code style={{background: 'var(--secondary-color)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.9em'}} {...props} />,
+    }}
+  >
+    {tafsir.explanation}
+  </ReactMarkdown>
+</div>
             </details>
           ))}
         </div>
