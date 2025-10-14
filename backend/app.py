@@ -463,9 +463,9 @@ def get_arabic_text_from_verse_data(verse_data):
     return None
 
 # --- Utility Functions ---
-def get_cache_key(query, user_profile):
-    """Generate cache key for response"""
-    cache_data = f"{query}_{json.dumps(user_profile, sort_keys=True)}"
+def get_cache_key(query, user_profile, approach="tafsir"):
+    """Generate cache key for response (includes approach for distinct caching)"""
+    cache_data = f"{query}_{approach}_{json.dumps(user_profile, sort_keys=True)}"
     return hashlib.md5(cache_data.encode()).hexdigest()
 
 def is_rate_limited(user_id, limit=50, window_hours=1):
@@ -1052,19 +1052,54 @@ def truncate_context_if_needed(context: str, max_tokens: int = 800000) -> str:
     return context[:truncated_length] + "\n\n[Note: Context truncated due to length. Results may be incomplete.]"
 
 # --- Query Expansion ---
-def expand_query(query: str, token: str) -> str:
-    """Expand user query to better match tafsir content using LLM"""
+def expand_query(query: str, token: str, approach: str = "tafsir") -> str:
+    """
+    Expand user query to better match tafsir content using LLM.
+    Now approach-aware: different expansions for tafsir/thematic/historical approaches.
+    """
     try:
         VERTEX_ENDPOINT = f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/{GCP_INFRASTRUCTURE_PROJECT}/locations/{LOCATION}/publishers/google/models/{GEMINI_MODEL_ID}:generateContent"
+
+        # Approach-specific expansion instructions
+        approach_guidance = {
+            'tafsir': """
+Focus on CLASSICAL COMMENTARY terms that help find verse-by-verse interpretations:
+- Arabic linguistic terms (grammar, rhetoric, word roots)
+- Classical scholar names and methodologies
+- Verse-specific interpretations and rulings
+- Detailed word meanings and phrase analysis
+""",
+            'thematic': """
+Focus on THEMATIC CONNECTIONS that help find verses across different surahs:
+- Broader Quranic themes and concepts
+- Related topics that appear in multiple surahs
+- Patterns and recurring principles
+- Multi-verse connections and comparisons
+- Holistic conceptual terms
+""",
+            'historical': """
+Focus on HISTORICAL CONTEXT that helps find revelation circumstances:
+- Asbab al-nuzul (circumstances of revelation)
+- Historical events, battles, and incidents
+- Chronological and sequential context
+- Names of people, places, and tribes
+- Pre-Islamic and early Islamic history
+"""
+        }
+
+        guidance = approach_guidance.get(approach, approach_guidance['tafsir'])
 
         expansion_prompt = f"""
 You are helping expand a query to search Islamic tafsir (Quranic commentary) texts from classical sources:
 - Tafsir Ibn Kathir (complete Quran coverage)
 - Tafsir al-Qurtubi (Surahs 1-4, up to verse 4:22)
 
+Approach: {approach.upper()}
 Original query: "{query}"
 
-Expand this query by adding relevant Islamic terms, Arabic concepts, Quranic themes, and related theological concepts that would help find relevant tafsir passages. Consider:
+{guidance}
+
+Expand this query by adding relevant Islamic terms, Arabic concepts, and theological concepts that would help find relevant tafsir passages for the {approach} approach. Consider:
 - Related Arabic terminology
 - Connected Quranic verses or themes
 - Islamic jurisprudence concepts (especially for al-Qurtubi on early Surahs)
@@ -2834,10 +2869,10 @@ def tafsir_handler_enhanced():
             # Get user profile
             user_profile = get_user_profile(user_id)
 
-            # Check cache
-            cache_key = get_cache_key(query, user_profile)
+            # Check cache (approach-aware)
+            cache_key = get_cache_key(query, user_profile, approach)
             if cache_key in RESPONSE_CACHE:
-                print(f"💾 Cache hit")
+                print(f"💾 Cache hit (approach: {approach})")
                 return jsonify(RESPONSE_CACHE[cache_key]), 200
 
             # Prepare query
@@ -2866,8 +2901,8 @@ def tafsir_handler_enhanced():
             credentials.refresh(auth_req)
             token = credentials.token
 
-            # Query expansion
-            expanded_query = expand_query(rag_query, token)
+            # Query expansion (approach-aware)
+            expanded_query = expand_query(rag_query, token, approach)
 
             # Initialize models
             embedding_model = TextEmbeddingModel.from_pretrained(EMBEDDING_MODEL)
