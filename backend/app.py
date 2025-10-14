@@ -1704,7 +1704,7 @@ def list_personas():
 def get_query_history():
     """Get user's recent query history"""
     try:
-        uid = request.uid
+        uid = request.user['uid']
         limit = int(request.args.get('limit', 50))
 
         history_ref = users_db.collection('users').document(uid).collection('query_history')
@@ -1733,7 +1733,7 @@ def get_query_history():
 def save_query_to_history():
     """Save a query to user's history"""
     try:
-        uid = request.uid
+        uid = request.user['uid']
         data = request.get_json()
 
         query_text = data.get('query', '')
@@ -1767,7 +1767,7 @@ def save_query_to_history():
 def get_saved_searches():
     """Get user's saved searches/answers"""
     try:
-        uid = request.uid
+        uid = request.user['uid']
         folder = request.args.get('folder', None)
 
         saved_ref = users_db.collection('users').document(uid).collection('saved_searches')
@@ -1801,7 +1801,7 @@ def get_saved_searches():
 def save_search():
     """Save a search/answer for later"""
     try:
-        uid = request.uid
+        uid = request.user['uid']
         data = request.get_json()
 
         query_text = data.get('query', '')
@@ -1842,7 +1842,7 @@ def save_search():
 def delete_saved_search(search_id):
     """Delete a saved search"""
     try:
-        uid = request.uid
+        uid = request.user['uid']
 
         doc_ref = users_db.collection('users').document(uid).collection('saved_searches').document(search_id)
         doc_ref.delete()
@@ -1858,7 +1858,7 @@ def delete_saved_search(search_id):
 def get_folders():
     """Get list of all folders with counts"""
     try:
-        uid = request.uid
+        uid = request.user['uid']
 
         saved_ref = users_db.collection('users').document(uid).collection('saved_searches')
 
@@ -1887,7 +1887,7 @@ def get_folders():
 def get_verse_annotations(surah, verse):
     """Get all annotations for a specific verse"""
     try:
-        uid = request.uid
+        uid = request.user['uid']
 
         annotations_ref = users_db.collection('users').document(uid).collection('annotations')
         query = annotations_ref.where('surah', '==', surah).where('verse', '==', verse).order_by('createdAt', direction='DESCENDING')
@@ -1919,7 +1919,7 @@ def get_verse_annotations(surah, verse):
 def get_user_annotations():
     """Get all annotations for user with optional filters"""
     try:
-        uid = request.uid
+        uid = request.user['uid']
         tag = request.args.get('tag')
         annotation_type = request.args.get('type')
         limit = int(request.args.get('limit', 100))
@@ -1961,7 +1961,7 @@ def get_user_annotations():
 def create_annotation():
     """Create a new annotation"""
     try:
-        uid = request.uid
+        uid = request.user['uid']
         data = request.get_json()
 
         surah = data.get('surah')
@@ -2014,7 +2014,7 @@ def create_annotation():
 def update_annotation(annotation_id):
     """Update an existing annotation"""
     try:
-        uid = request.uid
+        uid = request.user['uid']
         data = request.get_json()
 
         doc_ref = users_db.collection('users').document(uid).collection('annotations').document(annotation_id)
@@ -2049,7 +2049,7 @@ def update_annotation(annotation_id):
 def delete_annotation(annotation_id):
     """Delete an annotation"""
     try:
-        uid = request.uid
+        uid = request.user['uid']
 
         doc_ref = users_db.collection('users').document(uid).collection('annotations').document(annotation_id)
         doc_ref.delete()
@@ -2065,7 +2065,7 @@ def delete_annotation(annotation_id):
 def search_annotations():
     """Search annotations by text content"""
     try:
-        uid = request.uid
+        uid = request.user['uid']
         query_text = request.args.get('q', '').lower()
         tag = request.args.get('tag')
 
@@ -2110,7 +2110,7 @@ def search_annotations():
 def get_all_tags():
     """Get all unique tags used by user"""
     try:
-        uid = request.uid
+        uid = request.user['uid']
 
         annotations_ref = users_db.collection('users').document(uid).collection('annotations')
 
