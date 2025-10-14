@@ -60,7 +60,7 @@ gcloud run deploy ${SERVICE_NAME} \
   --set-env-vars "DEPLOYED_INDEX_ID=deployed_tafsir_sliding_1760263278167" \
   --set-env-vars "VECTOR_INDEX_ID=5746296256385253376" \
   --set-env-vars "GCS_BUCKET_NAME=tafsir-simplified-sources" \
-  --set-env-vars "FIREBASE_SECRET_FULL_PATH=projects/612616741510/secrets/firebase-admin-key/versions/latest"
+  --set-env-vars "FIREBASE_SECRET_FULL_PATH=projects/612616741510/secrets/firebase-sa-key/versions/latest"
 
 echo -e "${GREEN}✓ Deployed successfully!${NC}"
 
