@@ -850,6 +850,26 @@ function EnhancedResultsDisplay({ data, user }) {
   const [currentVerse, setCurrentVerse] = useState(null);
   const [editingAnnotation, setEditingAnnotation] = useState(null);
 
+  const fetchVerseAnnotations = useCallback(async (surah, verse) => {
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch(`${BACKEND_URL}/annotations/verse/${surah}/${verse}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setAnnotations(prev => ({
+          ...prev,
+          [`${surah}:${verse}`]: data.annotations || []
+        }));
+      }
+    } catch (err) {
+      console.error('Failed to fetch annotations:', err);
+    }
+  }, [user]);
+
+  // Extract data properties
   if (!data) return <div className="results-container"><p>No results to display.</p></div>;
 
   const {
@@ -867,26 +887,7 @@ function EnhancedResultsDisplay({ data, user }) {
         fetchVerseAnnotations(verse.surah, verse.verse_number);
       });
     }
-  }, [verses, user]);
-
-  const fetchVerseAnnotations = async (surah, verse) => {
-    try {
-      const token = await user.getIdToken();
-      const res = await fetch(`${BACKEND_URL}/annotations/verse/${surah}/${verse}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setAnnotations(prev => ({
-          ...prev,
-          [`${surah}:${verse}`]: data.annotations || []
-        }));
-      }
-    } catch (err) {
-      console.error('Failed to fetch annotations:', err);
-    }
-  };
+  }, [verses, user, fetchVerseAnnotations]);
 
   const handleAddAnnotation = (verse) => {
     setCurrentVerse(verse);
