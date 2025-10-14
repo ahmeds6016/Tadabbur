@@ -1713,12 +1713,18 @@ def get_query_history():
         history = []
         for doc in query.stream():
             data = doc.to_dict()
+            # Convert Firestore timestamp to serializable format
+            timestamp = data.get('timestamp', '')
+            if timestamp and hasattr(timestamp, 'timestamp'):
+                # Convert to seconds since epoch for JavaScript
+                timestamp = {'seconds': int(timestamp.timestamp())}
+
             history.append({
                 'id': doc.id,
                 'query': data.get('query', ''),
                 'approach': data.get('approach', 'tafsir'),
                 'persona': data.get('persona', ''),
-                'timestamp': data.get('timestamp', ''),
+                'timestamp': timestamp,
                 'hasResult': data.get('hasResult', False)
             })
 
@@ -1780,13 +1786,19 @@ def get_saved_searches():
         saved = []
         for doc in query.stream():
             data = doc.to_dict()
+            # Convert Firestore timestamp to serializable format
+            savedAt = data.get('savedAt', '')
+            if savedAt and hasattr(savedAt, 'timestamp'):
+                # Convert to seconds since epoch for JavaScript
+                savedAt = {'seconds': int(savedAt.timestamp())}
+
             saved.append({
                 'id': doc.id,
                 'query': data.get('query', ''),
                 'approach': data.get('approach', 'tafsir'),
                 'folder': data.get('folder', 'Uncategorized'),
                 'title': data.get('title', data.get('query', '')[:50]),
-                'savedAt': data.get('savedAt', ''),
+                'savedAt': savedAt,
                 'responseSnippet': data.get('responseSnippet', ''),
                 'fullResponse': data.get('fullResponse')  # Include full response for "View Full Answer"
             })
