@@ -1101,8 +1101,11 @@ Keep the expansion concise but comprehensive. Return only the expanded query tex
         return query
 
 # --- UPDATED: Enhanced Multi-Source RAG Functions with 1536 dimensions ---
-def perform_diversified_rag_search(query, expanded_query, embedding_model, index_endpoint, query_type="default"):
-    """Enhanced RAG with source weighting - UPDATED for 1536 dimensions and sliding window IDs"""
+def perform_diversified_rag_search(query, expanded_query, embedding_model, index_endpoint, query_type="default", approach="tafsir"):
+    """
+    Enhanced RAG with source weighting - UPDATED for 1536 dimensions and sliding window IDs
+    NEW: Approach-based customization for tafsir/thematic/historical
+    """
 
     # Step 1: Generate query embedding with correct dimension
     query_embedding = embedding_model.get_embeddings(
@@ -1110,11 +1113,18 @@ def perform_diversified_rag_search(query, expanded_query, embedding_model, index
         output_dimensionality=EMBEDDING_DIMENSION
     )[0].values
 
-    # Step 2: Retrieve larger pool of candidates (20 chunks for better diversity)
+    # Step 2: Retrieve candidates (more for thematic, focused for tafsir)
+    if approach == 'thematic':
+        num_neighbors = 30  # Broader search for thematic connections
+    elif approach == 'historical':
+        num_neighbors = 25  # Medium for historical context
+    else:  # tafsir
+        num_neighbors = 20  # Focused classical commentary
+
     neighbors_result = index_endpoint.find_neighbors(
         deployed_index_id=DEPLOYED_INDEX_ID,
         queries=[query_embedding],
-        num_neighbors=20
+        num_neighbors=num_neighbors
     )
 
     # Step 3: Retrieve chunks using new function that handles segment IDs
@@ -1132,10 +1142,19 @@ def perform_diversified_rag_search(query, expanded_query, embedding_model, index
         if source in source_chunks:
             source_chunks[source].append(chunk)
 
-    # Step 5: Weighted selection based on query type
-    # CLASSIFY FOR RAG
-    rag_query_type = "default" # Placeholder for old logic, now handled by main handler
+    # Step 5: Weighted selection based on query type AND approach
+    rag_query_type = "default"
     weights = SOURCE_WEIGHTS.get(rag_query_type, SOURCE_WEIGHTS["default"])
+
+    # Adjust weights based on approach
+    if approach == 'historical':
+        # Historical: prioritize al-Qurtubi (known for historical context)
+        weights = {'Ibn Kathir': 0.4, 'al-Qurtubi': 0.6}
+    elif approach == 'thematic':
+        # Thematic: balance both sources equally
+        weights = {'Ibn Kathir': 0.5, 'al-Qurtubi': 0.5}
+    # tafsir approach uses default weights
+
     selected_chunks = []
     context_by_source = {}
 
@@ -1146,7 +1165,14 @@ def perform_diversified_rag_search(query, expanded_query, embedding_model, index
 
             # Apply weighting
             weight = weights.get(source_name, 0.5)
-            num_chunks = max(2, int(weight * 10))
+
+            # Adjust chunk count based on approach
+            if approach == 'thematic':
+                num_chunks = max(3, int(weight * 15))  # More chunks for thematic
+            elif approach == 'historical':
+                num_chunks = max(3, int(weight * 12))  # Medium for historical
+            else:  # tafsir
+                num_chunks = max(2, int(weight * 10))  # Focused for tafsir
 
             top_chunks = sorted_chunks[:num_chunks]
             selected_chunks.extend(top_chunks)
@@ -1185,16 +1211,18 @@ def build_structured_context(context_by_source, arabic_text=None, cross_refs=Non
 # UPDATED: PERSONA-ADAPTIVE CLARITY-ENHANCED PROMPT WITH NEW PROFILE DATA
 # ============================================================================
 
-def build_enhanced_prompt(query, context_by_source, user_profile, arabic_text=None, cross_refs=None, query_type="default", verse_data=None):
+def build_enhanced_prompt(query, context_by_source, user_profile, arabic_text=None, cross_refs=None, query_type="default", verse_data=None, approach="tafsir"):
     """
     ENHANCED VERSION: Gemini as Scholarly Editor with Persona-Adaptive Formatting
     UPDATED: Now includes learning_goal, knowledge_level, and refined formatting rules
+    NEW: Approach-based instructions (tafsir/thematic/historical)
 
     Gives Gemini explicit instructions to:
     1. Fix grammar/clarity while preserving accuracy
     2. Adapt content FORMAT to user persona (bullets for beginners, prose for scholars)
     3. Use verse translations from backend (not generate them)
     4. Adapt depth and focus based on learning_goal and knowledge_level
+    5. Emphasize different aspects based on approach (tafsir/thematic/historical)
     """
     structured_context = build_structured_context(context_by_source, arabic_text, cross_refs)
 
@@ -1205,20 +1233,54 @@ def build_enhanced_prompt(query, context_by_source, user_profile, arabic_text=No
 
     persona = PERSONAS[persona_name]
     format_style = persona.get('format_style', 'balanced')
-    
+
     # NEW: Get knowledge_level from profile (Suggestion 1)
     knowledge_level = user_profile.get('knowledge_level', 'intermediate')
-    
+
     # NEW: Get learning_goal and create goal_instruction
     learning_goal = user_profile.get('learning_goal', 'balanced')
-    
+
     goal_instructions = {
         'application': "Focus on practical applications and how to apply these teachings in daily life. Emphasize actionable takeaways and real-world relevance.",
         'understanding': "Focus on deep comprehension and scholarly context. Emphasize theological depth, historical background, and scholarly interpretation.",
         'balanced': "Balance practical applications with scholarly understanding. Provide both actionable insights and theological depth."
     }
-    
+
     goal_instruction = goal_instructions.get(learning_goal, goal_instructions['balanced'])
+
+    # NEW: Approach-specific instructions
+    approach_instructions = {
+        'tafsir': """
+📖 TAFSIR-BASED APPROACH:
+Focus on CLASSICAL COMMENTARY and verse-by-verse analysis.
+- Emphasize what classical scholars (Ibn Kathir, al-Qurtubi) said about specific verses
+- Provide linguistic analysis and word meanings where relevant
+- Deep dive into the interpretation of individual verses or small verse sets
+- Prioritize scholarly precision and detailed explanation
+        """,
+        'thematic': """
+🔍 THEMATIC APPROACH:
+Focus on MULTI-VERSE CONNECTIONS and overarching themes.
+- Identify verses across different surahs that relate to the same theme
+- Group related verses by sub-themes or aspects
+- Extract common patterns, principles, and lessons that emerge across verses
+- Show how the concept develops throughout the Quran
+- Present a holistic view of how the Quran addresses this topic
+- Structure your response around theme clusters rather than verse-by-verse
+        """,
+        'historical': """
+📜 HISTORICAL CONTEXT APPROACH:
+Focus on REVELATION CIRCUMSTANCES and historical background.
+- Emphasize asbab al-nuzul (circumstances of revelation)
+- Provide chronological context and timeline
+- Explain the historical situation when verses were revealed
+- Connect verses to specific events, battles, or incidents
+- Show how historical context illuminates the meaning
+- Present information in a way that helps understand the sequence and progression
+        """
+    }
+
+    approach_instruction = approach_instructions.get(approach, approach_instructions['tafsir'])
 
     # Add verse information if available
     verse_info = ""
@@ -1255,11 +1317,17 @@ LEARNING GOAL INSTRUCTION
 {goal_instruction}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+APPROACH-SPECIFIC INSTRUCTIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+{approach_instruction}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 USER QUERY
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 "{query}"
 
 Query Type: {query_type}
+Approach: {approach.upper()}
 {verse_info}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -2392,8 +2460,14 @@ def get_verse_metadata_endpoint(surah, verse):
 @handle_errors
 def tafsir_handler_enhanced():
     """
-    HYBRID tafsir endpoint with 3-tier intelligent routing:
+    HYBRID tafsir endpoint with 3-tier intelligent routing + approach-based customization:
 
+    APPROACHES:
+    - tafsir: Classical commentary focus (default)
+    - thematic: Multi-verse connections on a theme
+    - historical: Timeline and revelation context focus
+
+    ROUTES:
     1. METADATA QUERIES (e.g., "hadith in 2:255")
        - Direct lookup (~50ms)
        - AI formats response with persona (1 LLM call)
@@ -2417,10 +2491,15 @@ def tafsir_handler_enhanced():
     try:
         data = request.get_json()
         query = data.get('query', '').strip()
+        approach = data.get('approach', 'tafsir').strip()  # NEW: Get approach parameter
         user_id = request.user.get('uid')
 
         if not query:
             return jsonify({'error': 'Query is required'}), 400
+
+        # Validate approach
+        if approach not in ['tafsir', 'thematic', 'historical']:
+            approach = 'tafsir'  # Default fallback
 
         # Rate limiting
         if is_rate_limited(user_id):
@@ -2431,6 +2510,7 @@ def tafsir_handler_enhanced():
 
         print(f"\n{'='*70}")
         print(f"📥 QUERY: {query}")
+        print(f"🎯 APPROACH: {approach.upper()}")
         print(f"{'='*70}")
 
         # ENHANCED CLASSIFICATION
@@ -2561,7 +2641,7 @@ def tafsir_handler_enhanced():
                 # Build prompt for AI formatting (skip RAG, use direct context)
                 arabic_text = get_arabic_text_from_verse_data(verse_data) if verse_data else None
                 prompt = build_enhanced_prompt(query, context_by_source, user_profile,
-                                             arabic_text, None, 'metadata', verse_data)
+                                             arabic_text, None, 'metadata', verse_data, approach)
 
                 # Get auth token
                 credentials, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
@@ -2693,7 +2773,7 @@ def tafsir_handler_enhanced():
                     cross_refs = verse_metadata_list[0]['metadata'].get('cross_references', []) if verse_metadata_list else []
 
                     prompt = build_enhanced_prompt(query, context_by_source, user_profile,
-                                                 arabic_text, cross_refs, 'direct_verse', verse_data)
+                                                 arabic_text, cross_refs, 'direct_verse', verse_data, approach)
 
                     # Get auth token
                     credentials, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
@@ -2794,16 +2874,16 @@ def tafsir_handler_enhanced():
             endpoint_resource_name = f"projects/{GCP_INFRASTRUCTURE_PROJECT}/locations/{LOCATION}/indexEndpoints/{INDEX_ENDPOINT_ID}"
             index_endpoint = aiplatform.MatchingEngineIndexEndpoint(index_endpoint_name=endpoint_resource_name)
 
-            # Perform search
+            # Perform search (approach-aware)
             selected_chunks, context_by_source = perform_diversified_rag_search(
-                rag_query, expanded_query, embedding_model, index_endpoint, rag_query_type
+                rag_query, expanded_query, embedding_model, index_endpoint, rag_query_type, approach
             )
 
-            print(f"   Retrieved {len(selected_chunks)} chunks")
+            print(f"   Retrieved {len(selected_chunks)} chunks (approach: {approach})")
 
-            # Build prompt
+            # Build prompt (approach-aware)
             prompt = build_enhanced_prompt(rag_query, context_by_source, user_profile,
-                                         arabic_text, cross_refs, rag_query_type, verse_data)
+                                         arabic_text, cross_refs, rag_query_type, verse_data, approach)
 
             # Truncate prompt if needed to fit token limits
             prompt = truncate_context_if_needed(prompt, max_tokens=800000)
