@@ -1700,7 +1700,7 @@ def list_personas():
 # ============================================================================
 
 @app.route("/query-history", methods=["GET"])
-@require_auth
+@firebase_auth_required
 def get_query_history():
     """Get user's recent query history"""
     try:
@@ -1729,7 +1729,7 @@ def get_query_history():
         return jsonify({"error": str(e)}), 500
 
 @app.route("/query-history", methods=["POST"])
-@require_auth
+@firebase_auth_required
 def save_query_to_history():
     """Save a query to user's history"""
     try:
@@ -1763,7 +1763,7 @@ def save_query_to_history():
         return jsonify({"error": str(e)}), 500
 
 @app.route("/saved-searches", methods=["GET"])
-@require_auth
+@firebase_auth_required
 def get_saved_searches():
     """Get user's saved searches/answers"""
     try:
@@ -1797,7 +1797,7 @@ def get_saved_searches():
         return jsonify({"error": str(e)}), 500
 
 @app.route("/saved-searches", methods=["POST"])
-@require_auth
+@firebase_auth_required
 def save_search():
     """Save a search/answer for later"""
     try:
@@ -1838,7 +1838,7 @@ def save_search():
         return jsonify({"error": str(e)}), 500
 
 @app.route("/saved-searches/<search_id>", methods=["DELETE"])
-@require_auth
+@firebase_auth_required
 def delete_saved_search(search_id):
     """Delete a saved search"""
     try:
@@ -1854,7 +1854,7 @@ def delete_saved_search(search_id):
         return jsonify({"error": str(e)}), 500
 
 @app.route("/saved-searches/folders", methods=["GET"])
-@require_auth
+@firebase_auth_required
 def get_folders():
     """Get list of all folders with counts"""
     try:
@@ -1883,7 +1883,7 @@ def get_folders():
 # ============================================================================
 
 @app.route("/annotations/verse/<int:surah>/<int:verse>", methods=["GET"])
-@require_auth
+@firebase_auth_required
 def get_verse_annotations(surah, verse):
     """Get all annotations for a specific verse"""
     try:
@@ -1915,7 +1915,7 @@ def get_verse_annotations(surah, verse):
         return jsonify({"error": str(e)}), 500
 
 @app.route("/annotations/user", methods=["GET"])
-@require_auth
+@firebase_auth_required
 def get_user_annotations():
     """Get all annotations for user with optional filters"""
     try:
@@ -1957,7 +1957,7 @@ def get_user_annotations():
         return jsonify({"error": str(e)}), 500
 
 @app.route("/annotations", methods=["POST"])
-@require_auth
+@firebase_auth_required
 def create_annotation():
     """Create a new annotation"""
     try:
@@ -2010,7 +2010,7 @@ def create_annotation():
         return jsonify({"error": str(e)}), 500
 
 @app.route("/annotations/<annotation_id>", methods=["PUT"])
-@require_auth
+@firebase_auth_required
 def update_annotation(annotation_id):
     """Update an existing annotation"""
     try:
@@ -2045,7 +2045,7 @@ def update_annotation(annotation_id):
         return jsonify({"error": str(e)}), 500
 
 @app.route("/annotations/<annotation_id>", methods=["DELETE"])
-@require_auth
+@firebase_auth_required
 def delete_annotation(annotation_id):
     """Delete an annotation"""
     try:
@@ -2061,7 +2061,7 @@ def delete_annotation(annotation_id):
         return jsonify({"error": str(e)}), 500
 
 @app.route("/annotations/search", methods=["GET"])
-@require_auth
+@firebase_auth_required
 def search_annotations():
     """Search annotations by text content"""
     try:
@@ -2106,7 +2106,7 @@ def search_annotations():
         return jsonify({"error": str(e)}), 500
 
 @app.route("/annotations/tags", methods=["GET"])
-@require_auth
+@firebase_auth_required
 def get_all_tags():
     """Get all unique tags used by user"""
     try:
