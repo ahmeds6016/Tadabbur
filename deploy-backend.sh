@@ -36,7 +36,8 @@ echo -e "${GREEN}✓ Project set${NC}"
 
 # Step 3: Build Docker image
 echo -e "\n${YELLOW}[3/5] Building Docker image from backend/...${NC}"
-cd backend
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "${SCRIPT_DIR}/backend"
 gcloud builds submit --tag ${IMAGE_NAME} .
 echo -e "${GREEN}✓ Image built: ${IMAGE_NAME}${NC}"
 
