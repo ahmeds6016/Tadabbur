@@ -468,6 +468,65 @@ def get_cache_key(query, user_profile, approach="tafsir"):
     cache_data = f"{query}_{approach}_{json.dumps(user_profile, sort_keys=True)}"
     return hashlib.md5(cache_data.encode()).hexdigest()
 
+def detect_query_intent(query: str) -> dict:
+    """
+    Detect the nature of the query to suggest optimal approach.
+
+    Returns: {
+        'suggested_approach': 'tafsir'|'thematic'|'historical'|None,
+        'confidence': 'high'|'medium'|'low',
+        'reason': 'explanation string'
+    }
+    """
+    query_lower = query.lower()
+
+    # Historical intent patterns
+    historical_patterns = [
+        r'\b(why.*reveal|when.*reveal|asbab|circumstances.*revelation)\b',
+        r'\b(battle|event|story of|time of|during|incident)\b',
+        r'\b(historical|history|context of revelation)\b'
+    ]
+
+    # Thematic intent patterns
+    thematic_patterns = [
+        r'\b(across.*surah|what.*quran.*say about|theme|concept)\b',
+        r'\b(all.*verse|different.*surah|throughout|verses about)\b',
+        r'\b(holistic|comprehensive|overview)\b',
+        r'\b(quran.*teach|islam.*say|islamic.*view)\b'
+    ]
+
+    # Check for historical keywords (highest priority)
+    if any(re.search(pattern, query_lower) for pattern in historical_patterns):
+        return {
+            'suggested_approach': 'historical',
+            'confidence': 'high',
+            'reason': 'Your query asks about revelation context or historical events'
+        }
+
+    # Check for thematic keywords
+    if any(re.search(pattern, query_lower) for pattern in thematic_patterns):
+        return {
+            'suggested_approach': 'thematic',
+            'confidence': 'high',
+            'reason': 'Your query asks about a concept across multiple verses or surahs'
+        }
+
+    # Check for verse reference (tafsir suitable)
+    verse_ref = extract_verse_reference_enhanced(query)
+    if verse_ref:
+        return {
+            'suggested_approach': 'tafsir',
+            'confidence': 'medium',
+            'reason': 'Your query references a specific verse'
+        }
+
+    # Default: unclear intent, no suggestion
+    return {
+        'suggested_approach': None,
+        'confidence': 'low',
+        'reason': None
+    }
+
 def is_rate_limited(user_id, limit=50, window_hours=1):
     """Check if user is rate limited"""
     now = datetime.now()
@@ -1063,11 +1122,14 @@ def expand_query(query: str, token: str, approach: str = "tafsir") -> str:
         # Approach-specific expansion instructions
         approach_guidance = {
             'tafsir': """
-Focus on CLASSICAL COMMENTARY terms that help find verse-by-verse interpretations:
-- Arabic linguistic terms (grammar, rhetoric, word roots)
-- Classical scholar names and methodologies
-- Verse-specific interpretations and rulings
-- Detailed word meanings and phrase analysis
+Focus on CLASSICAL COMMENTARY while keeping the core concept:
+- ALWAYS keep the main concept/term from the original query
+- Add related Arabic terms (e.g., "patience" → add "sabr", "sabirun")
+- Add relevant Quranic terminology that appears in verses
+- Keep expansion broad enough to find foundational verses
+- Avoid overly specific classical terms that might miss main verses
+Example: "patience" → "patience sabr steadfastness endurance trials perseverance"
+NOT: "patience grammatical analysis Ibn Kathir methodology" (too restrictive)
 """,
             'thematic': """
 Focus on THEMATIC CONNECTIONS that help find verses across different surahs:
@@ -2976,6 +3038,16 @@ def tafsir_handler_enhanced():
                     if not is_valid:
                         print(f"⚠️  Validation failed: {validation_msg}")
                         return jsonify({"error": "Response quality not met"}), 500
+
+                    # Add approach suggestion if user might benefit from different approach
+                    intent = detect_query_intent(query)
+                    if intent['suggested_approach'] and intent['suggested_approach'] != approach and intent['confidence'] == 'high':
+                        final_json['approach_suggestion'] = {
+                            'suggested': intent['suggested_approach'],
+                            'reason': intent['reason'],
+                            'current': approach
+                        }
+                        print(f"💡 Suggesting {intent['suggested_approach']} approach (current: {approach})")
 
                     # Cache
                     RESPONSE_CACHE[cache_key] = final_json

@@ -815,9 +815,69 @@ function MainApp({ user, userProfile }) {
         {isTafsirLoading && (
           <div className="loading-spinner"></div>
         )}
-        
+
         {response && (
           <>
+            {/* Approach Suggestion Banner */}
+            {response.approach_suggestion && (
+              <div style={{
+                padding: '16px 20px',
+                background: 'linear-gradient(135deg, #fff3cd 0%, #fffaeb 100%)',
+                border: '2px solid #ffc107',
+                borderRadius: '12px',
+                marginBottom: '24px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '16px',
+                boxShadow: '0 2px 8px rgba(255, 193, 7, 0.15)'
+              }}>
+                <span style={{ fontSize: '1.5rem', flexShrink: 0 }}>💡</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: '700', color: '#856404', marginBottom: '4px' }}>
+                    Suggestion
+                  </div>
+                  <div style={{ color: '#856404', fontSize: '0.95rem', lineHeight: '1.5' }}>
+                    {response.approach_suggestion.reason}. Try the{' '}
+                    <strong>
+                      {response.approach_suggestion.suggested === 'tafsir' ? '📖 Tafsir-Based' :
+                       response.approach_suggestion.suggested === 'thematic' ? '🔍 Thematic' :
+                       '📜 Historical Context'}
+                    </strong> approach instead.
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setApproach(response.approach_suggestion.suggested);
+                    handleGetTafsir({ preventDefault: () => {}, target: document.querySelector('form') });
+                  }}
+                  style={{
+                    padding: '10px 20px',
+                    background: 'linear-gradient(135deg, #ffc107 0%, #ffb300 100%)',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontWeight: '700',
+                    color: '#fff',
+                    fontSize: '0.9rem',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
+                    boxShadow: '0 2px 6px rgba(255, 193, 7, 0.3)',
+                    transition: 'all 0.3s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.transform = 'translateY(-2px)';
+                    e.target.style.boxShadow = '0 4px 12px rgba(255, 193, 7, 0.4)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.transform = 'translateY(0)';
+                    e.target.style.boxShadow = '0 2px 6px rgba(255, 193, 7, 0.3)';
+                  }}
+                >
+                  Try It
+                </button>
+              </div>
+            )}
+
             <EnhancedResultsDisplay data={response} user={user} />
             <div className="export-section">
               <h3>Save & Export</h3>
