@@ -977,6 +977,80 @@ def firebase_auth_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+# --- JSON Extraction Helper ---
+def extract_json_from_response(text: str) -> Optional[dict]:
+    """
+    Robust JSON extraction from Gemini responses.
+    Handles:
+    - Direct JSON
+    - JSON wrapped in markdown code blocks
+    - JSON embedded in text
+    """
+    if not text or not text.strip():
+        return None
+
+    text = text.strip()
+
+    # Try 1: Direct JSON parse
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+
+    # Try 2: Extract from markdown code blocks
+    import re
+    # Pattern for ```json ... ``` or ``` ... ```
+    json_pattern = r'```(?:json)?\s*(.*?)\s*```'
+    matches = re.findall(json_pattern, text, re.DOTALL)
+    for match in matches:
+        try:
+            return json.loads(match.strip())
+        except json.JSONDecodeError:
+            continue
+
+    # Try 3: Find JSON object anywhere in text
+    # Look for first { to last }
+    try:
+        start_idx = text.find('{')
+        end_idx = text.rfind('}')
+        if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+            json_str = text[start_idx:end_idx+1]
+            return json.loads(json_str)
+    except json.JSONDecodeError:
+        pass
+
+    return None
+
+# --- Token Counting Helper ---
+def count_tokens_approximate(text: str) -> int:
+    """
+    Rough token count estimation.
+    Rule of thumb: ~4 characters = 1 token
+    """
+    if not text:
+        return 0
+    return len(text) // 4
+
+def truncate_context_if_needed(context: str, max_tokens: int = 800000) -> str:
+    """
+    Truncate context to fit within Gemini token limits.
+    Gemini 2.0 Flash: 1M input + 8K output
+    We use 800K to leave room for prompt and output
+    """
+    current_tokens = count_tokens_approximate(context)
+
+    if current_tokens <= max_tokens:
+        return context
+
+    print(f"⚠️ Context too large ({current_tokens} tokens), truncating to {max_tokens} tokens")
+
+    # Calculate truncation ratio
+    truncation_ratio = max_tokens / current_tokens
+    truncated_length = int(len(context) * truncation_ratio)
+
+    # Truncate and add notice
+    return context[:truncated_length] + "\n\n[Note: Context truncated due to length. Results may be incomplete.]"
+
 # --- Query Expansion ---
 def expand_query(query: str, token: str) -> str:
     """Expand user query to better match tafsir content using LLM"""
@@ -2519,7 +2593,17 @@ def tafsir_handler_enhanced():
                 raw_response = response.json()
                 if "candidates" in raw_response and raw_response["candidates"]:
                     generated_text = raw_response["candidates"][0]["content"]["parts"][0]["text"]
-                    final_json = json.loads(generated_text)
+                    final_json = extract_json_from_response(generated_text)
+
+                    if not final_json:
+                        print(f"❌ Failed to extract JSON from Gemini response (Route 1)")
+                        print(f"Response preview: {generated_text[:500]}...")
+                        return jsonify({
+                            "error": "AI returned malformed response",
+                            "details": "The AI response could not be parsed as JSON. Try rephrasing your query or making it more specific.",
+                            "error_type": "json_parse_error"
+                        }), 500
+
                     final_json["query_type"] = "direct_metadata"
                     final_json["verse_reference"] = f"{surah}:{verse}"
 
@@ -2641,7 +2725,16 @@ def tafsir_handler_enhanced():
                     raw_response = response.json()
                     if "candidates" in raw_response and raw_response["candidates"]:
                         generated_text = raw_response["candidates"][0]["content"]["parts"][0]["text"]
-                        final_json = json.loads(generated_text)
+                        final_json = extract_json_from_response(generated_text)
+
+                        if not final_json:
+                            print(f"❌ Failed to extract JSON from Gemini response")
+                            print(f"Response preview: {generated_text[:500]}...")
+                            return jsonify({
+                                "error": "AI returned malformed response",
+                                "details": "The AI response could not be parsed as JSON. Try rephrasing your query or making it more specific.",
+                                "error_type": "json_parse_error"
+                            }), 500
                         final_json["query_type"] = "direct_verse"
                         final_json["verse_reference"] = f"{surah}:{verse}"
 
@@ -2712,6 +2805,9 @@ def tafsir_handler_enhanced():
             prompt = build_enhanced_prompt(rag_query, context_by_source, user_profile,
                                          arabic_text, cross_refs, rag_query_type, verse_data)
 
+            # Truncate prompt if needed to fit token limits
+            prompt = truncate_context_if_needed(prompt, max_tokens=800000)
+
             # Generate response
             VERTEX_ENDPOINT = f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/{GCP_INFRASTRUCTURE_PROJECT}/locations/{LOCATION}/publishers/google/models/{GEMINI_MODEL_ID}:generateContent"
 
@@ -2737,7 +2833,16 @@ def tafsir_handler_enhanced():
             if "candidates" in raw_response and raw_response["candidates"]:
                 try:
                     generated_text = raw_response["candidates"][0]["content"]["parts"][0]["text"]
-                    final_json = json.loads(generated_text)
+                    final_json = extract_json_from_response(generated_text)
+
+                    if not final_json:
+                        print(f"❌ Failed to extract JSON from Gemini response (Route 3)")
+                        print(f"Response preview: {generated_text[:500]}...")
+                        return jsonify({
+                            "error": "AI returned malformed response",
+                            "details": "The AI response could not be parsed as JSON. Try rephrasing your query or making it more specific.",
+                            "error_type": "json_parse_error"
+                        }), 500
 
                     # Enhance with verse data
                     if verse_data:
@@ -2768,8 +2873,15 @@ def tafsir_handler_enhanced():
                     return jsonify(final_json), 200
 
                 except (KeyError, IndexError, json.JSONDecodeError) as e:
-                    print(f"ERROR parsing response: {e}")
-                    return jsonify({"error": "Failed to parse AI response"}), 500
+                    print(f"❌ Response structure error: {type(e).__name__} - {e}")
+                    if 'generated_text' in locals():
+                        print(f"Response preview: {generated_text[:500]}...")
+                    return jsonify({
+                        "error": "AI returned unexpected response format",
+                        "details": "The response structure didn't match our expected format. This may be due to query complexity.",
+                        "suggestion": "Try simplifying your query or breaking it into smaller parts.",
+                        "error_type": "structure_error"
+                    }), 500
             else:
                 return jsonify({"error": "AI returned empty response"}), 500
 
