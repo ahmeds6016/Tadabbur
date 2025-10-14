@@ -102,11 +102,31 @@ export default function SavedSearchesPage() {
   const formatTimestamp = (timestamp) => {
     if (!timestamp) return 'Unknown date';
     try {
-      const date = new Date(timestamp.seconds * 1000);
+      let date;
+      // Handle Firestore timestamp format {seconds: number, nanoseconds: number}
+      if (timestamp.seconds) {
+        date = new Date(timestamp.seconds * 1000);
+      }
+      // Handle alternate format {_seconds: number}
+      else if (timestamp._seconds) {
+        date = new Date(timestamp._seconds * 1000);
+      }
+      // Fallback: try to parse as ISO string or number
+      else {
+        date = new Date(timestamp);
+      }
+
+      // Validate the date is valid
+      if (isNaN(date.getTime())) {
+        return 'Unknown date';
+      }
+
       return date.toLocaleDateString('en-US', {
         month: 'short',
         day: 'numeric',
-        year: 'numeric'
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
       });
     } catch {
       return 'Unknown date';
@@ -259,16 +279,80 @@ export default function SavedSearchesPage() {
                       Hide Full Answer ▲
                     </button>
                     {/* Display full response if available */}
-                    {item.fullResponse && (
+                    {item.fullResponse ? (
                       <div style={{ padding: '16px', background: 'var(--cream)', borderRadius: '12px' }}>
                         <div className="markdown-content">
-                          {item.fullResponse.tafsir_explanations?.map((tafsir, idx) => (
-                            <div key={idx} style={{ marginBottom: '16px' }}>
-                              <strong>{tafsir.source}</strong>
-                              <ReactMarkdown>{tafsir.explanation}</ReactMarkdown>
+                          {/* Verses */}
+                          {item.fullResponse.verses && item.fullResponse.verses.length > 0 && (
+                            <div style={{ marginBottom: '24px' }}>
+                              <h3 style={{ color: 'var(--primary-teal)', marginBottom: '12px' }}>Relevant Verses</h3>
+                              {item.fullResponse.verses.map((verse, idx) => (
+                                <div key={idx} style={{ marginBottom: '16px', padding: '12px', background: 'white', borderRadius: '8px' }}>
+                                  <p style={{ fontWeight: '700', color: 'var(--gold)' }}>
+                                    Surah {verse.surah}, Verse {verse.verse_number}
+                                  </p>
+                                  {verse.arabic_text && verse.arabic_text !== 'Not available' && (
+                                    <p style={{ fontSize: '1.3rem', margin: '8px 0', direction: 'rtl', fontFamily: 'Traditional Arabic, serif' }}>
+                                      {verse.arabic_text}
+                                    </p>
+                                  )}
+                                  <p style={{ fontStyle: 'italic', color: '#555' }}>
+                                    "{verse.text_saheeh_international}"
+                                  </p>
+                                </div>
+                              ))}
                             </div>
-                          ))}
+                          )}
+
+                          {/* Tafsir Explanations */}
+                          {item.fullResponse.tafsir_explanations && item.fullResponse.tafsir_explanations.length > 0 && (
+                            <div style={{ marginBottom: '24px' }}>
+                              <h3 style={{ color: 'var(--primary-teal)', marginBottom: '12px' }}>Tafsir Explanations</h3>
+                              {item.fullResponse.tafsir_explanations.map((tafsir, idx) => (
+                                <div key={idx} style={{ marginBottom: '16px', padding: '12px', background: 'white', borderRadius: '8px' }}>
+                                  <h4 style={{ color: 'var(--gold)', marginBottom: '8px' }}>{tafsir.source}</h4>
+                                  <ReactMarkdown>{tafsir.explanation}</ReactMarkdown>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Cross References */}
+                          {item.fullResponse.cross_references && item.fullResponse.cross_references.length > 0 && (
+                            <div style={{ marginBottom: '24px' }}>
+                              <h3 style={{ color: 'var(--primary-teal)', marginBottom: '12px' }}>Related Verses</h3>
+                              {item.fullResponse.cross_references.map((ref, idx) => (
+                                <div key={idx} style={{ padding: '8px 12px', background: 'white', borderRadius: '8px', marginBottom: '8px' }}>
+                                  <strong>{ref.verse}</strong>: {ref.relevance}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Lessons & Applications */}
+                          {item.fullResponse.lessons_practical_applications && item.fullResponse.lessons_practical_applications.length > 0 && (
+                            <div style={{ marginBottom: '24px' }}>
+                              <h3 style={{ color: 'var(--primary-teal)', marginBottom: '12px' }}>Lessons & Practical Applications</h3>
+                              <ul style={{ paddingLeft: '20px' }}>
+                                {item.fullResponse.lessons_practical_applications.map((lesson, idx) => (
+                                  <li key={idx} style={{ marginBottom: '8px', color: '#555' }}>{lesson.point}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          {/* Summary */}
+                          {item.fullResponse.summary && (
+                            <div style={{ padding: '12px', background: 'white', borderRadius: '8px' }}>
+                              <h3 style={{ color: 'var(--primary-teal)', marginBottom: '8px' }}>Summary</h3>
+                              <p>{item.fullResponse.summary}</p>
+                            </div>
+                          )}
                         </div>
+                      </div>
+                    ) : (
+                      <div style={{ padding: '16px', background: '#fff3cd', borderRadius: '12px', color: '#856404' }}>
+                        ⚠️ Full response data not available for this saved answer. Only the snippet was saved.
                       </div>
                     )}
                   </div>

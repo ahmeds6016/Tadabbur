@@ -1787,7 +1787,8 @@ def get_saved_searches():
                 'folder': data.get('folder', 'Uncategorized'),
                 'title': data.get('title', data.get('query', '')[:50]),
                 'savedAt': data.get('savedAt', ''),
-                'responseSnippet': data.get('responseSnippet', '')
+                'responseSnippet': data.get('responseSnippet', ''),
+                'fullResponse': data.get('fullResponse')  # Include full response for "View Full Answer"
             })
 
         return jsonify({'saved': saved, 'count': len(saved)}), 200

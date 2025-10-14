@@ -54,7 +54,25 @@ export default function QueryHistoryPage() {
   const formatTimestamp = (timestamp) => {
     if (!timestamp) return 'Unknown date';
     try {
-      const date = new Date(timestamp.seconds * 1000);
+      let date;
+      // Handle Firestore timestamp format {seconds: number, nanoseconds: number}
+      if (timestamp.seconds) {
+        date = new Date(timestamp.seconds * 1000);
+      }
+      // Handle alternate format {_seconds: number}
+      else if (timestamp._seconds) {
+        date = new Date(timestamp._seconds * 1000);
+      }
+      // Fallback: try to parse as ISO string or number
+      else {
+        date = new Date(timestamp);
+      }
+
+      // Validate the date is valid
+      if (isNaN(date.getTime())) {
+        return 'Unknown date';
+      }
+
       return date.toLocaleDateString('en-US', {
         month: 'short',
         day: 'numeric',
