@@ -1005,6 +1005,58 @@ def load_chunks_from_verse_files_enhanced():
         raise
 
 
+# --- Response Filtering Functions ---
+def filter_unavailable_sources(response_json):
+    """
+    Remove tafsir sources from response where content is unavailable.
+    Checks for patterns like 'not available', 'is not available for',
+    'does not cover', 'only covers Surahs 1-4', etc.
+
+    Returns: Modified response_json with unavailable sources removed
+    """
+    if not response_json or 'tafsir_explanations' not in response_json:
+        return response_json
+
+    unavailability_patterns = [
+        r'not available',
+        r'is not available',
+        r'commentary.*not available',
+        r'tafsir.*not available',
+        r'does not cover',
+        r'only covers surahs? 1-4',
+        r'covers only surahs? 1-4',
+        r'commentary covers only',
+        r'limited to surahs? 1-4',
+        r'unavailable'
+    ]
+
+    original_explanations = response_json.get('tafsir_explanations', [])
+    filtered_explanations = []
+
+    for explanation in original_explanations:
+        explanation_text = explanation.get('explanation', '').lower()
+
+        # Check if explanation indicates unavailability
+        is_unavailable = any(
+            re.search(pattern, explanation_text, re.IGNORECASE)
+            for pattern in unavailability_patterns
+        )
+
+        # Only include if content is actually available
+        if not is_unavailable and explanation_text.strip():
+            filtered_explanations.append(explanation)
+
+    # Update response with filtered explanations
+    if filtered_explanations:
+        response_json['tafsir_explanations'] = filtered_explanations
+    else:
+        # If no sources available, keep original to show user there's no content
+        # (This shouldn't happen often but handles edge case)
+        pass
+
+    return response_json
+
+
 # --- NEW: Direct Metadata Retrieval Functions ---
 def get_verse_metadata_direct(surah: int, verse: int, source_pref: Optional[str] = None) -> List[Dict]:
     """
@@ -2993,6 +3045,9 @@ def tafsir_handler_enhanced():
                     final_json["query_type"] = "direct_metadata"
                     final_json["verse_reference"] = f"{surah}:{verse}"
 
+                    # Filter out unavailable sources before returning
+                    final_json = filter_unavailable_sources(final_json)
+
                     print(f"✅ Metadata formatted by AI from {len(verse_metadata_list)} source(s)")
                     return jsonify(final_json), 200
                 else:
@@ -3123,6 +3178,9 @@ def tafsir_handler_enhanced():
                             }), 500
                         final_json["query_type"] = "direct_verse"
                         final_json["verse_reference"] = f"{surah}:{verse}"
+
+                        # Filter out unavailable sources before returning
+                        final_json = filter_unavailable_sources(final_json)
 
                         print(f"✅ Direct verse formatted by AI from {len(verse_metadata_list)} source(s)")
                         return jsonify(final_json), 200
@@ -3257,6 +3315,9 @@ def tafsir_handler_enhanced():
                             'current': approach
                         }
                         print(f"💡 Suggesting {intent['suggested_approach']} approach (current: {approach})")
+
+                    # Filter out unavailable sources before caching and returning
+                    final_json = filter_unavailable_sources(final_json)
 
                     # Cache
                     RESPONSE_CACHE[cache_key] = final_json
