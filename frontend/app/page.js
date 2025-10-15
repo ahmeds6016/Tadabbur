@@ -987,6 +987,284 @@ function MainApp({ user, userProfile }) {
 }
 
 // ============================================================================
+// INLINE ANNOTATION FORM COMPONENT
+// ============================================================================
+
+function InlineAnnotationForm({ verse, user, onSaved, onCancel }) {
+  const [content, setContent] = useState('');
+  const [type, setType] = useState('personal_insight');
+  const [tags, setTags] = useState([]);
+  const [tagInput, setTagInput] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const ANNOTATION_TYPES = [
+    { value: 'personal_insight', label: '💡 Insight', icon: '💡' },
+    { value: 'question', label: '❓ Question', icon: '❓' },
+    { value: 'application', label: '✅ Application', icon: '✅' },
+    { value: 'memory', label: '💭 Memory', icon: '💭' },
+    { value: 'connection', label: '🔗 Connection', icon: '🔗' }
+  ];
+
+  const handleSave = async () => {
+    if (!content.trim()) {
+      setError('Please enter some content');
+      return;
+    }
+
+    setIsSaving(true);
+    setError('');
+
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch(`${BACKEND_URL}/annotations`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          surah: verse.surah,
+          verse: verse.verse_number,
+          content,
+          type,
+          tags
+        })
+      });
+
+      if (res.ok) {
+        onSaved();
+      } else {
+        const errorData = await res.json();
+        setError(errorData.error || 'Failed to save');
+      }
+    } catch (err) {
+      setError('Network error. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleAddTag = () => {
+    const trimmed = tagInput.trim().toLowerCase();
+    if (trimmed && !tags.includes(trimmed)) {
+      setTags([...tags, trimmed]);
+      setTagInput('');
+    }
+  };
+
+  const handleRemoveTag = (tagToRemove) => {
+    setTags(tags.filter(t => t !== tagToRemove));
+  };
+
+  return (
+    <div style={{
+      marginTop: '16px',
+      padding: '20px',
+      background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)',
+      border: '2px solid var(--gold)',
+      borderRadius: '12px',
+      animation: 'slideDown 0.3s ease'
+    }}>
+      {/* Type Selector */}
+      <div style={{ marginBottom: '16px' }}>
+        <label style={{ display: 'block', fontWeight: '700', marginBottom: '8px', color: 'var(--primary-teal)', fontSize: '0.9rem' }}>
+          Type
+        </label>
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+          {ANNOTATION_TYPES.map(({ value, icon, label }) => (
+            <button
+              key={value}
+              onClick={() => setType(value)}
+              style={{
+                padding: '8px 12px',
+                background: type === value ? 'var(--primary-teal)' : 'white',
+                color: type === value ? 'white' : 'var(--foreground)',
+                border: '2px solid var(--border-light)',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '0.8rem',
+                fontWeight: '600',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+            >
+              <span>{icon}</span>
+              <span>{label.split(' ')[1]}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Content Textarea */}
+      <div style={{ marginBottom: '16px' }}>
+        <label style={{ display: 'block', fontWeight: '700', marginBottom: '8px', color: 'var(--primary-teal)', fontSize: '0.9rem' }}>
+          Your Reflection
+        </label>
+        <textarea
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          placeholder="Write your thoughts, insights, or questions..."
+          style={{
+            width: '100%',
+            minHeight: '100px',
+            padding: '12px',
+            border: '2px solid var(--border-medium)',
+            borderRadius: '8px',
+            fontSize: '0.95rem',
+            fontFamily: 'inherit',
+            resize: 'vertical',
+            background: 'white'
+          }}
+          autoFocus
+        />
+      </div>
+
+      {/* Tags */}
+      <div style={{ marginBottom: '16px' }}>
+        <label style={{ display: 'block', fontWeight: '700', marginBottom: '8px', color: 'var(--primary-teal)', fontSize: '0.9rem' }}>
+          Tags (optional)
+        </label>
+        <div style={{ display: 'flex', gap: '6px', marginBottom: '8px', flexWrap: 'wrap' }}>
+          {tags.map(tag => (
+            <span
+              key={tag}
+              style={{
+                background: 'var(--primary-teal)',
+                color: 'white',
+                padding: '4px 10px',
+                borderRadius: '12px',
+                fontSize: '0.8rem',
+                fontWeight: '600',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+            >
+              {tag}
+              <button
+                onClick={() => handleRemoveTag(tag)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'white',
+                  cursor: 'pointer',
+                  fontSize: '0.9rem',
+                  padding: 0,
+                  width: '14px',
+                  height: '14px'
+                }}
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+        <div style={{ display: 'flex', gap: '6px' }}>
+          <input
+            type="text"
+            value={tagInput}
+            onChange={(e) => setTagInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
+            placeholder="Add tag..."
+            style={{
+              flex: 1,
+              padding: '8px 12px',
+              border: '2px solid var(--border-medium)',
+              borderRadius: '8px',
+              fontSize: '0.9rem',
+              background: 'white'
+            }}
+          />
+          <button
+            onClick={handleAddTag}
+            style={{
+              padding: '8px 16px',
+              background: 'var(--primary-teal)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '0.9rem',
+              fontWeight: '600'
+            }}
+          >
+            Add
+          </button>
+        </div>
+      </div>
+
+      {error && (
+        <div style={{
+          padding: '10px',
+          background: 'rgba(220, 38, 38, 0.1)',
+          border: '2px solid var(--error-color)',
+          borderRadius: '8px',
+          color: 'var(--error-color)',
+          marginBottom: '12px',
+          fontSize: '0.9rem',
+          fontWeight: '600'
+        }}>
+          {error}
+        </div>
+      )}
+
+      {/* Action Buttons */}
+      <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+        <button
+          onClick={onCancel}
+          style={{
+            padding: '10px 20px',
+            background: 'white',
+            border: '2px solid var(--border-medium)',
+            color: 'var(--foreground)',
+            borderRadius: '8px',
+            fontSize: '0.95rem',
+            fontWeight: '700',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleSave}
+          disabled={isSaving || !content.trim()}
+          style={{
+            padding: '10px 24px',
+            background: isSaving || !content.trim() ? '#ccc' : 'var(--gradient-teal-gold)',
+            border: 'none',
+            color: 'white',
+            borderRadius: '8px',
+            fontSize: '0.95rem',
+            fontWeight: '700',
+            cursor: isSaving || !content.trim() ? 'not-allowed' : 'pointer',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          {isSaving ? '💾 Saving...' : '💾 Save Reflection'}
+        </button>
+      </div>
+
+      <style jsx>{`
+        @keyframes slideDown {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+// ============================================================================
 // RESULTS DISPLAY COMPONENT WITH ANNOTATIONS
 // ============================================================================
 
@@ -995,6 +1273,7 @@ function EnhancedResultsDisplay({ data, user }) {
   const [annotationPanelOpen, setAnnotationPanelOpen] = useState(false);
   const [currentVerse, setCurrentVerse] = useState(null);
   const [editingAnnotation, setEditingAnnotation] = useState(null);
+  const [inlineAnnotationVerse, setInlineAnnotationVerse] = useState(null);
 
   const fetchVerseAnnotations = useCallback(async (surah, verse) => {
     try {
@@ -1036,9 +1315,15 @@ function EnhancedResultsDisplay({ data, user }) {
   }, [verses, user, fetchVerseAnnotations]);
 
   const handleAddAnnotation = (verse) => {
-    setCurrentVerse(verse);
-    setEditingAnnotation(null);
-    setAnnotationPanelOpen(true);
+    const verseKey = `${verse.surah}:${verse.verse_number}`;
+    // Toggle inline annotation form
+    if (inlineAnnotationVerse === verseKey) {
+      setInlineAnnotationVerse(null);
+    } else {
+      setInlineAnnotationVerse(verseKey);
+      setCurrentVerse(verse);
+      setEditingAnnotation(null);
+    }
   };
 
   const handleEditAnnotation = (verse, annotation) => {
@@ -1068,6 +1353,7 @@ function EnhancedResultsDisplay({ data, user }) {
     // Refresh annotations for current verse
     if (currentVerse) {
       fetchVerseAnnotations(currentVerse.surah, currentVerse.verse_number);
+      setInlineAnnotationVerse(null); // Close inline form after saving
     }
   };
 
@@ -1107,7 +1393,7 @@ function EnhancedResultsDisplay({ data, user }) {
                 <div className="verse-card enhanced">
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
                     <p className="verse-ref" style={{ margin: 0 }}>
-                      <strong>Surah {verse.surah}, Verse {verse.verse_number}</strong>
+                      <strong>{verse.surah_name ? `${verse.surah_name} ` : `Surah ${verse.surah}, `}Verse {verse.verse_number}</strong>
                     </p>
                     <button
                       onClick={() => handleAddAnnotation(verse)}
@@ -1136,6 +1422,16 @@ function EnhancedResultsDisplay({ data, user }) {
                   <p className="translation">
                     <em>&quot;{verse.text_saheeh_international}&quot;</em>
                   </p>
+
+                  {/* Inline Annotation Form */}
+                  {inlineAnnotationVerse === verseKey && (
+                    <InlineAnnotationForm
+                      verse={verse}
+                      user={user}
+                      onSaved={handleAnnotationSaved}
+                      onCancel={() => setInlineAnnotationVerse(null)}
+                    />
+                  )}
 
                   {/* Display Annotations */}
                   {verseAnnotations.length > 0 && (

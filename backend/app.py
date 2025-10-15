@@ -1144,7 +1144,8 @@ def build_direct_verse_response(verse_data: Dict, verse_metadata_list: List[Dict
         "query_type": "direct_verse",
         "verse_reference": f"{verse_data['surah_number']}:{verse_data['verse_number']}",
         "verses": [{
-            "surah": verse_data['surah_name'],
+            "surah": verse_data['surah_number'],  # Use surah_number for annotations
+            "surah_name": verse_data['surah_name'],
             "verse_number": str(verse_data['verse_number']),
             "text_saheeh_international": verse_data['english'],
             "arabic_text": verse_data['arabic']
@@ -3291,7 +3292,8 @@ def tafsir_handler_enhanced():
                     # Enhance with verse data
                     if verse_data:
                         final_json["verses"] = [{
-                            "surah": verse_data['surah_name'],
+                            "surah": verse_data['surah_number'],  # Use surah_number for annotations
+                            "surah_name": verse_data['surah_name'],
                             "verse_number": str(verse_data['verse_number']),
                             "text_saheeh_international": verse_data['english'],
                             "arabic_text": verse_data['arabic']

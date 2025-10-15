@@ -192,7 +192,7 @@ export default function AnnotationPanel({
               📝 {existingAnnotation ? 'Edit' : 'Add'} Annotation
             </h2>
             <p style={{ margin: '4px 0 0 0', fontSize: '0.9rem', opacity: 0.9 }}>
-              {verse.surah}:{verse.verse_number}
+              {verse.surah_name ? `${verse.surah_name} (${verse.surah}:${verse.verse_number})` : `${verse.surah}:${verse.verse_number}`}
             </p>
           </div>
           <button
