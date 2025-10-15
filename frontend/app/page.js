@@ -1295,15 +1295,13 @@ function EnhancedResultsDisplay({ data, user }) {
   }, [user]);
 
   // Extract data properties
-  if (!data) return <div className="results-container"><p>No results to display.</p></div>;
-
   const {
     verses = [],
     tafsir_explanations = [],
     cross_references = [],
     lessons_practical_applications = [],
     summary = ''
-  } = data;
+  } = data || {};
 
   // Fetch annotations for all verses when component mounts
   useEffect(() => {
@@ -1313,6 +1311,9 @@ function EnhancedResultsDisplay({ data, user }) {
       });
     }
   }, [verses, user, fetchVerseAnnotations]);
+
+  // Early return after all hooks
+  if (!data) return <div className="results-container"><p>No results to display.</p></div>;
 
   const handleAddAnnotation = (verse) => {
     const verseKey = `${verse.surah}:${verse.verse_number}`;
