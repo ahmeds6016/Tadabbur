@@ -2515,8 +2515,7 @@ def create_annotation():
 
         return jsonify({
             'success': True,
-            'id': doc_ref.id,
-            'annotation': annotation_data
+            'id': doc_ref.id
         }), 201
 
     except Exception as e:
