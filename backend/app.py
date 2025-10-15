@@ -1074,10 +1074,16 @@ def filter_unavailable_sources(response_json):
     Checks for patterns like 'not available', 'is not available for',
     'does not cover', 'only covers Surahs 1-4', etc.
 
+    ALSO removes any sources that aren't al-Qurtubi or Ibn Kathir
+    (e.g., "General Scholarly Analysis" sometimes added by Gemini).
+
     Returns: Modified response_json with unavailable sources removed
     """
     if not response_json or 'tafsir_explanations' not in response_json:
         return response_json
+
+    # ONLY these two classical sources are allowed
+    approved_sources = ['al-qurtubi', 'ibn kathir']
 
     unavailability_patterns = [
         r'not available',
@@ -1089,14 +1095,22 @@ def filter_unavailable_sources(response_json):
         r'covers only surahs? 1-4',
         r'commentary covers only',
         r'limited to surahs? 1-4',
-        r'unavailable'
+        r'unavailable',
+        r'provided source material.*does not contain'
     ]
 
     original_explanations = response_json.get('tafsir_explanations', [])
     filtered_explanations = []
 
     for explanation in original_explanations:
+        source_name = explanation.get('source', '').lower()
         explanation_text = explanation.get('explanation', '').lower()
+
+        # Check if source is from approved list (al-Qurtubi or Ibn Kathir ONLY)
+        is_approved_source = any(
+            approved in source_name
+            for approved in approved_sources
+        )
 
         # Check if explanation indicates unavailability
         is_unavailable = any(
@@ -1104,17 +1118,19 @@ def filter_unavailable_sources(response_json):
             for pattern in unavailability_patterns
         )
 
-        # Only include if content is actually available
-        if not is_unavailable and explanation_text.strip():
+        # Only include if:
+        # 1. Source is from approved list (al-Qurtubi or Ibn Kathir)
+        # 2. Content is actually available (not "not available" message)
+        # 3. Explanation has actual content
+        if is_approved_source and not is_unavailable and explanation_text.strip():
             filtered_explanations.append(explanation)
 
     # Update response with filtered explanations
     if filtered_explanations:
         response_json['tafsir_explanations'] = filtered_explanations
     else:
-        # If no sources available, keep original to show user there's no content
-        # (This shouldn't happen often but handles edge case)
-        pass
+        # If no sources available, set to empty list
+        response_json['tafsir_explanations'] = []
 
     return response_json
 
@@ -1870,6 +1886,13 @@ CRITICAL: Return valid JSON, but ADAPT THE CONTENT FORMAT based on user persona:
    The controversy regarding the nature of the Kursi has been extensively discussed by medieval scholars. The Ash'ari school tends toward metaphorical interpretation, while the Hanbali school maintains a more literal reading while affirming tanzih (transcendence)."
 
 JSON Structure (verse text ALREADY provided by backend - you focus on tafsir):
+
+CRITICAL: The tafsir_explanations array MUST contain EXACTLY TWO sources and NO MORE:
+1. al-Qurtubi
+2. Ibn Kathir
+
+DO NOT add any additional sources like "General Scholarly Analysis", "Additional Commentary", or any other source names.
+ONLY use the source material provided above. DO NOT generate additional explanations from your own knowledge.
 
 {{
     "verses": [
