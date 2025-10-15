@@ -829,7 +829,7 @@ function MainApp({ user, userProfile }) {
         
         {/* Query Suggestions - Always Visible */}
         {suggestions.length > 0 && (
-          <div className="suggestions-section" style={{ marginBottom: '24px' }}>
+          <div className="suggestions-section" style={{ marginBottom: '24px', display: 'block', opacity: 1, visibility: 'visible' }}>
             <h3 style={{
               textAlign: 'center',
               color: 'var(--primary-teal)',
@@ -839,7 +839,7 @@ function MainApp({ user, userProfile }) {
             }}>
               🌟 Explore These Questions
             </h3>
-            <div className="suggestions-grid">
+            <div className="suggestions-grid" style={{ display: 'grid', opacity: 1, visibility: 'visible' }}>
               {suggestions.slice(0, 12).map((suggestion, index) => {
                 const displayText = typeof suggestion === 'string' ? suggestion : suggestion.query;
                 const approach = typeof suggestion === 'object' ? suggestion.approach : null;
