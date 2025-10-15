@@ -1,0 +1,178 @@
+{
+  "arabicGreetings": [
+    {
+      "id": 1,
+      "arabic": "السَّلَامُ عَلَيْكُمْ",
+      "transliteration": "As-salamu alaykum",
+      "meaning": "Peace be upon you"
+    },
+    {
+      "id": 2,
+      "arabic": "السَّلَامُ عَلَيْكُمْ وَرَحْمَةُ اللهِ",
+      "transliteration": "As-salamu alaykum wa rahmatullah",
+      "meaning": "Peace and mercy of Allah upon you"
+    },
+    {
+      "id": 3,
+      "arabic": "مَرْحَبًا",
+      "transliteration": "Marhaban",
+      "meaning": "Welcome"
+    },
+    {
+      "id": 4,
+      "arabic": "أَهْلًا وَسَهْلًا",
+      "transliteration": "Ahlan wa sahlan",
+      "meaning": "Welcome warmly"
+    },
+    {
+      "id": 5,
+      "arabic": "بِسْمِ اللهِ الرَّحْمٰنِ الرَّحِيمِ",
+      "transliteration": "Bismillah ar-Rahman ar-Rahim",
+      "meaning": "In the name of Allah, the Most Merciful"
+    }
+  ],
+  "onboardingMessages": [
+    {
+      "id": 1,
+      "greetingId": 1,
+      "title": "Gentle Welcome",
+      "message": "It's a blessing to have you here.\n\nEvery heart meets the Qur'an in its own way — through seeking, returning, reflecting, or teaching. However your path began, Tafsir Simplified is here to walk beside you, gently guiding you toward understanding and connection.",
+      "callToAction": "Choose the path that feels like yours:"
+    },
+    {
+      "id": 2,
+      "greetingId": 2,
+      "title": "Journey-Focused",
+      "message": "Every journey with the Qur'an begins in a different place — some with questions, some with longing, others with years of study. Wherever you are, Tafsir Simplified will walk beside you, at your pace, with the tone and guidance that best fit your path.",
+      "callToAction": "Take a moment to choose the journey that feels closest to your heart:"
+    },
+    {
+      "id": 3,
+      "greetingId": 3,
+      "title": "Warmth & Invitation",
+      "message": "We're truly glad you're here.\n\nEvery journey with the Qur'an is unique — some are just beginning, others are deepening, and some are guiding others along the way. Tafsir Simplified will walk with you at your own pace, helping you connect with the meanings of the Qur'an in the way that speaks most to you.",
+      "callToAction": "Choose the path that reflects your journey:"
+    },
+    {
+      "id": 4,
+      "greetingId": 4,
+      "title": "Sacred Connection",
+      "message": "Your presence here is a gift.\n\nThe Qur'an speaks to each heart differently — sometimes with gentle whispers, sometimes with profound clarity, and sometimes with transformative power. Let us help you discover the voice that resonates with your soul.",
+      "callToAction": "Select the path that honors where you are today:"
+    },
+    {
+      "id": 5,
+      "greetingId": 5,
+      "title": "Personal & Intimate",
+      "message": "Thank you for trusting us with your journey.\n\nWhether you're taking your first steps with the Qur'an, returning after time away, or deepening decades of study — this is your space. We've designed Tafsir Simplified to meet you exactly where you are, with the kindness and depth you need.",
+      "callToAction": "Tell us about your journey:"
+    },
+    {
+      "id": 6,
+      "greetingId": 1,
+      "title": "Hopeful & Encouraging",
+      "message": "We're honored you chose to begin here.\n\nThe Qur'an is a living guide — it meets you in joy and in hardship, in questions and in certainty. Tafsir Simplified is here to help those sacred words come alive for you, in whatever way your heart needs most.",
+      "callToAction": "Choose the companion for your journey:"
+    },
+    {
+      "id": 7,
+      "greetingId": 2,
+      "title": "Reflective & Poetic",
+      "message": "Every soul arrives here for a reason.\n\nSome come searching. Others come remembering. Some arrive with notebooks, others with tears. The Qur'an has room for all of it — for every question, every longing, every revelation. Let us help you hear what it's saying to you.",
+      "callToAction": "Where does your heart stand today?"
+    },
+    {
+      "id": 8,
+      "greetingId": 3,
+      "title": "Dignified & Respectful",
+      "message": "Your journey with the Qur'an is sacred — and so is this moment.\n\nWhether you're discovering these verses for the first time or returning to them after years of study, know that you belong here. Tafsir Simplified exists to serve your understanding, honor your pace, and meet you with the depth or simplicity you need.",
+      "callToAction": "How would you describe your relationship with the Qur'an today?"
+    },
+    {
+      "id": 9,
+      "greetingId": 4,
+      "title": "Conversational & Warm",
+      "message": "We're so glad you're here.\n\nThe Qur'an has a way of meeting people right where they are — whether that's curiosity, devotion, study, or teaching. Our goal is simple: help you connect with its meanings in a way that feels personal, meaningful, and true to your journey.",
+      "callToAction": "Let's start by understanding where you are:"
+    },
+    {
+      "id": 10,
+      "greetingId": 5,
+      "title": "Minimalist & Reverent",
+      "message": "Thank you for being here.\n\nThe Qur'an is a gift — one that reveals itself differently to each person. Whether you're beginning your journey, continuing it, or teaching others, Tafsir Simplified will walk with you, offering the guidance you need at the depth that serves you best.",
+      "callToAction": "Where are you in your journey?"
+    },
+    {
+      "id": 11,
+      "greetingId": 1,
+      "title": "The Journey Begins",
+      "message": "Each heart travels its own path toward the words of Allah.\n\nWhether you're just starting or deepening your study, we'll help you learn with sincerity and peace.",
+      "callToAction": "Choose the path that feels right for you:"
+    },
+    {
+      "id": 12,
+      "greetingId": 2,
+      "title": "The Tranquil Companion",
+      "message": "The Qur'an calls to every soul in its own way.\n\nWe're here to help you listen deeply, reflect sincerely, and grow gently.",
+      "callToAction": "Select your learning companion:"
+    },
+    {
+      "id": 13,
+      "greetingId": 3,
+      "title": "The Calm Scholar",
+      "message": "Knowledge is light, and every light begins with intention.\n\nLet's shape your learning experience around your goals — with balance, clarity, and purpose.",
+      "callToAction": "Where would you like to begin?"
+    },
+    {
+      "id": 14,
+      "greetingId": 5,
+      "title": "The Devotional Tone",
+      "message": "Every moment spent seeking understanding is an act of worship.\n\nWe're honored to be part of your journey toward the Qur'an's light.",
+      "callToAction": "Choose the path that draws you closer:"
+    }
+  ],
+  "personaDescriptions": {
+    "new_revert": {
+      "icon": "🌱",
+      "name": "New Revert",
+      "description": "Starting fresh with an open heart",
+      "longDescription": "Gentle guidance with warmth, patience, and encouragement for those beginning their Islamic journey"
+    },
+    "revert": {
+      "icon": "📗",
+      "name": "Revert Muslim",
+      "description": "Growing with gentle, steady support",
+      "longDescription": "Supportive insights to deepen understanding for those building their foundation in Islam"
+    },
+    "practicing_muslim": {
+      "icon": "🕌",
+      "name": "Practicing Muslim",
+      "description": "Seeking balanced, daily guidance",
+      "longDescription": "Balanced reflections for steady spiritual growth and daily connection"
+    },
+    "seeker": {
+      "icon": "🔍",
+      "name": "Spiritual Seeker",
+      "description": "Exploring meanings that resonate",
+      "longDescription": "Thoughtful and reflective interpretations to explore spiritual meaning"
+    },
+    "student": {
+      "icon": "🎓",
+      "name": "Islamic Studies Student",
+      "description": "Learning through structured study",
+      "longDescription": "Comprehensive tafsir grounded in authentic sources for academic learning"
+    },
+    "scholar": {
+      "icon": "📚",
+      "name": "Scholar",
+      "description": "Engaging with depth and precision",
+      "longDescription": "Detailed analysis with scholarly precision and classical commentary"
+    },
+    "teacher": {
+      "icon": "👨‍🏫",
+      "name": "Teacher / Imam",
+      "description": "Preparing to guide and inspire",
+      "longDescription": "Clear explanations and teaching-oriented insights for educators and spiritual guides"
+    }
+  }
+}

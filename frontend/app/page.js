@@ -11,6 +11,7 @@ import {
 } from 'firebase/auth';
 import AnnotationPanel from './components/AnnotationPanel';
 import AnnotationDisplay from './components/AnnotationDisplay';
+import onboardingConfig from '../config/onboarding-messages.json';
 
 // Firebase Configuration
 const firebaseConfig = {
@@ -217,18 +218,35 @@ function AuthComponent() {
 
 function OnboardingComponent({ user, onProfileComplete }) {
   const [step, setStep] = useState(1);
-  const [profile, setProfile] = useState({ 
-    persona: '', 
-    knowledge_level: '', 
+  const [profile, setProfile] = useState({
+    persona: '',
+    knowledge_level: '',
     learning_goal: '',
     // Keep old fields for backwards compatibility
-    level: '', 
-    focus: '', 
-    verbosity: '' 
+    level: '',
+    focus: '',
+    verbosity: ''
   });
   const [error, setError] = useState('');
   const [personas, setPersonas] = useState([]);
   const [isDeterministicPersona, setIsDeterministicPersona] = useState(false);
+  const [onboardingMessage, setOnboardingMessage] = useState(null);
+  const [arabicGreeting, setArabicGreeting] = useState(null);
+
+  // Select random onboarding message on mount
+  useEffect(() => {
+    const messages = onboardingConfig.onboardingMessages;
+    const greetings = onboardingConfig.arabicGreetings;
+
+    // Select random message
+    const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+
+    // Find corresponding greeting
+    const greeting = greetings.find(g => g.id === randomMessage.greetingId);
+
+    setOnboardingMessage(randomMessage);
+    setArabicGreeting(greeting);
+  }, []);
 
   // Fetch available personas on mount
   useEffect(() => {
@@ -356,37 +374,82 @@ function OnboardingComponent({ user, onProfileComplete }) {
     }
   }, [step, handleSetProfile]);
 
+  // Show loading state while message loads
+  if (!onboardingMessage || !arabicGreeting) {
+    return (
+      <div className="container">
+        <div className="card">
+          <div className="loading-spinner"></div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container">
       <div className="card">
-        <h1 style={{ textAlign: 'center', marginBottom: '12px' }}>Welcome, {user.email}!</h1>
-        <p style={{ fontSize: '1.1rem', marginBottom: '32px', textAlign: 'center', color: '#666' }}>
-          Let&apos;s personalize your Tafsir experience in 3 simple steps.
-        </p>
+        {/* Arabic Greeting */}
+        <div style={{
+          textAlign: 'center',
+          marginBottom: '20px',
+          padding: '16px',
+          background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
+          borderRadius: '12px',
+          border: '2px solid var(--primary-teal)'
+        }}>
+          <h1 style={{
+            fontFamily: 'Traditional Arabic, Scheherazade, serif',
+            fontSize: '2.5rem',
+            margin: '0 0 8px 0',
+            color: 'var(--primary-teal)',
+            direction: 'rtl'
+          }}>
+            {arabicGreeting.arabic}
+          </h1>
+          <p style={{ margin: '4px 0', fontSize: '0.95rem', color: '#666', fontStyle: 'italic' }}>
+            {arabicGreeting.meaning}
+          </p>
+        </div>
+
+        {/* Personalized Welcome Message */}
+        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+          <p style={{
+            fontSize: '1.15rem',
+            lineHeight: '1.7',
+            color: '#555',
+            whiteSpace: 'pre-line',
+            marginBottom: '16px'
+          }}>
+            {onboardingMessage.message}
+          </p>
+          <p style={{ fontSize: '1.05rem', fontWeight: '600', color: 'var(--primary-teal)' }}>
+            {onboardingMessage.callToAction}
+          </p>
+        </div>
 
         {/* Step 1: Persona Selection */}
         {step === 1 && personas.length > 0 && (
           <div>
-            <h2 style={{ textAlign: 'center', color: 'var(--primary-teal)', marginBottom: '24px' }}>
-              1. Choose Your Learning Profile
-            </h2>
-            <p style={{ marginBottom: '24px', color: '#666', textAlign: 'center' }}>
-              Select the profile that best matches your Islamic knowledge journey.
-            </p>
             <div className="level-buttons">
-              {personas.map(([key, persona]) => (
-                <button key={key} onClick={() => handlePersonaSelect(key, persona)}>
-                  <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>
-                    {getPersonaIcon(key)}
-                  </div>
-                  <div style={{ fontWeight: '700', fontSize: '1.1rem', marginBottom: '4px' }}>
-                    {persona.name}
-                  </div>
-                  <div style={{ fontSize: '0.85rem', opacity: 0.7, lineHeight: '1.4' }}>
-                    {persona.description}
-                  </div>
-                </button>
-              ))}
+              {personas.map(([key, persona]) => {
+                // Get description from config if available, otherwise use API description
+                const personaConfig = onboardingConfig.personaDescriptions[key];
+                const displayDescription = personaConfig ? personaConfig.description : persona.description;
+
+                return (
+                  <button key={key} onClick={() => handlePersonaSelect(key, persona)}>
+                    <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>
+                      {getPersonaIcon(key)}
+                    </div>
+                    <div style={{ fontWeight: '700', fontSize: '1.1rem', marginBottom: '4px' }}>
+                      {personaConfig ? personaConfig.name : persona.name}
+                    </div>
+                    <div style={{ fontSize: '0.85rem', opacity: 0.7, lineHeight: '1.4' }}>
+                      {displayDescription}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
