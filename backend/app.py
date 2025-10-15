@@ -352,7 +352,9 @@ def normalize_query_text(query: str) -> str:
 def extract_verse_reference_enhanced(query: str) -> Optional[Tuple[int, int]]:
     """
     Extract verse reference using multiple strategies.
-    Returns (surah, verse) or None.
+    Returns (surah, start_verse) for single verses or verse ranges.
+    NOTE: For ranges like 3:190-191, returns (3, 190) - the first verse.
+    Use extract_verse_range() to get full range details.
     """
     query_normalized = normalize_query_text(query)
 
@@ -361,11 +363,11 @@ def extract_verse_reference_enhanced(query: str) -> Optional[Tuple[int, int]]:
         if name in query_normalized:
             return ref
 
-    # Strategy 2: Numeric patterns
+    # Strategy 2: Numeric patterns (including ranges)
     patterns = [
-        r'\b(\d{1,3}):(\d{1,3})\b',  # 2:255
-        r'\b(\d{1,3})\s*:\s*(\d{1,3})\b',  # 2 : 255
-        r'surah\s+(\d{1,3})\s+(?:verse|ayah|ayat)\s+(\d{1,3})',  # surah 2 verse 255
+        r'\b(\d{1,3}):(\d{1,3})(?:-\d{1,3})?\b',  # 2:255 or 2:255-256 (capture first verse)
+        r'\b(\d{1,3})\s*:\s*(\d{1,3})(?:\s*-\s*\d{1,3})?\b',  # 2 : 255 or 2 : 255 - 256
+        r'surah\s+(\d{1,3})\s+(?:verse|ayah|ayat|verses)\s+(\d{1,3})',  # surah 2 verse 255
     ]
 
     for pattern in patterns:
@@ -390,6 +392,41 @@ def extract_verse_reference_enhanced(query: str) -> Optional[Tuple[int, int]]:
                 is_valid, _ = validate_verse_reference(surah_num, verse_num)
                 if is_valid:
                     return (surah_num, verse_num)
+
+    return None
+
+def extract_verse_range(query: str) -> Optional[Tuple[int, int, int]]:
+    """
+    Extract verse RANGE from query.
+    Returns (surah, start_verse, end_verse) or None.
+    Examples: "3:190-191" -> (3, 190, 191), "2:255" -> (2, 255, 255)
+    """
+    query_normalized = normalize_query_text(query)
+
+    # Pattern for ranges: 3:190-191
+    range_pattern = r'\b(\d{1,3}):(\d{1,3})-(\d{1,3})\b'
+    match = re.search(range_pattern, query_normalized)
+
+    if match:
+        try:
+            surah = int(match.group(1))
+            start_verse = int(match.group(2))
+            end_verse = int(match.group(3))
+
+            # Validate both verses
+            is_valid_start, _ = validate_verse_reference(surah, start_verse)
+            is_valid_end, _ = validate_verse_reference(surah, end_verse)
+
+            if is_valid_start and is_valid_end and start_verse <= end_verse:
+                return (surah, start_verse, end_verse)
+        except (ValueError, IndexError):
+            pass
+
+    # If no range found, check for single verse and return as range
+    verse_ref = extract_verse_reference_enhanced(query)
+    if verse_ref:
+        surah, verse = verse_ref
+        return (surah, verse, verse)
 
     return None
 
@@ -1137,14 +1174,16 @@ def filter_unavailable_sources(response_json):
 
 
 # --- NEW: Direct Metadata Retrieval Functions ---
-def get_verse_metadata_direct(surah: int, verse: int, source_pref: Optional[str] = None) -> List[Dict]:
+def get_verse_metadata_direct(surah: int, verse: int, source_pref: Optional[str] = None, end_verse: Optional[int] = None) -> List[Dict]:
     """
     Direct lookup of verse metadata (no vector search).
+    Supports verse ranges when end_verse is provided.
 
     Args:
         surah: Surah number
-        verse: Verse number
+        verse: Starting verse number
         source_pref: 'ibn-kathir', 'al-qurtubi', or None (both)
+        end_verse: Optional ending verse number for ranges
 
     Returns:
         List of metadata dicts from matching sources
@@ -1152,15 +1191,29 @@ def get_verse_metadata_direct(surah: int, verse: int, source_pref: Optional[str]
     results = []
     sources_to_check = [source_pref] if source_pref else ['ibn-kathir', 'al-qurtubi']
 
-    for source in sources_to_check:
-        chunk_id = f"{source}:{surah}:{verse}"
-        metadata = VERSE_METADATA.get(chunk_id)
+    # Determine verse range
+    start_verse = verse
+    last_verse = end_verse if end_verse else verse
 
-        if metadata:
+    for source in sources_to_check:
+        # Collect metadata for all verses in range
+        range_metadata = []
+        for v in range(start_verse, last_verse + 1):
+            chunk_id = f"{source}:{surah}:{v}"
+            metadata = VERSE_METADATA.get(chunk_id)
+
+            if metadata:
+                range_metadata.append({
+                    'verse_number': v,
+                    'metadata': metadata
+                })
+
+        if range_metadata:
             results.append({
-                'chunk_id': chunk_id,
+                'chunk_id': f"{source}:{surah}:{start_verse}-{last_verse}" if end_verse else f"{source}:{surah}:{verse}",
                 'source': "Ibn Kathir" if source == "ibn-kathir" else "al-Qurtubi",
-                'metadata': metadata
+                'verses': range_metadata,
+                'metadata': range_metadata[0]['metadata'] if len(range_metadata) == 1 else None  # For backwards compatibility
             })
 
     return results
@@ -3161,68 +3214,90 @@ def tafsir_handler_enhanced():
         if query_type == 'direct_verse' and verse_ref:
             print("🚀 ROUTE 2: Direct Verse Query → AI Formatting")
 
-            surah, verse = verse_ref
+            # Check if query contains a verse range
+            verse_range = extract_verse_range(query)
+            if verse_range:
+                surah, start_verse, end_verse = verse_range
+                print(f"   Detected verse range: {surah}:{start_verse}-{end_verse}")
+            else:
+                surah, verse = verse_ref
+                start_verse = verse
+                end_verse = verse
 
-            # Get verse text from Firestore
-            verse_data = get_verse_from_firestore(surah, verse)
+            # Get verse text from Firestore (for now, just get first verse)
+            verse_data = get_verse_from_firestore(surah, start_verse)
             if not verse_data:
                 print(f"⚠️  Verse not found in Firestore, trying semantic search")
                 query_type = 'semantic'  # Fallback
             else:
-                # Get metadata via direct lookup
-                verse_metadata_list = get_verse_metadata_direct(surah, verse)
+                # Get metadata via direct lookup (with range support)
+                verse_metadata_list = get_verse_metadata_direct(surah, start_verse, end_verse=end_verse if start_verse != end_verse else None)
 
                 if not verse_metadata_list:
-                    print(f"⚠️  No tafsir found, trying semantic search")
+                    print(f"⚠️  No tafsir found for {surah}:{start_verse}" + (f"-{end_verse}" if start_verse != end_verse else ""))
+                    print(f"⚠️  Trying semantic search as fallback")
                     query_type = 'semantic'  # Fallback
                 else:
-                    # Build context from direct lookup
+                    # Build context from direct lookup (handles both single verses and ranges)
                     context_by_source = {}
 
                     for item in verse_metadata_list:
                         source_name = item['source']
-                        metadata = item['metadata']
 
-                        # Extract comprehensive tafsir
+                        # Handle verse ranges (new structure) or single verse (backwards compatible)
+                        verses_data = item.get('verses', [])
+                        if not verses_data and item.get('metadata'):
+                            # Backwards compatibility: single verse
+                            verses_data = [{'verse_number': start_verse, 'metadata': item['metadata']}]
+
+                        # Extract comprehensive tafsir from all verses in range
                         context_parts = []
 
-                        # Topics (Ibn Kathir style)
-                        if metadata.get('topics'):
-                            for topic in metadata['topics']:
-                                if isinstance(topic, dict):
-                                    if topic.get('topic_header'):
-                                        context_parts.append(f"**{topic['topic_header']}**")
-                                    if topic.get('commentary'):
-                                        context_parts.append(topic['commentary'])
+                        for verse_info in verses_data:
+                            metadata = verse_info['metadata']
+                            verse_num = verse_info.get('verse_number', start_verse)
 
-                                    # Add phrase analysis from topics
-                                    if topic.get('phrase_analysis'):
-                                        for phrase in topic['phrase_analysis']:
-                                            if isinstance(phrase, dict):
-                                                if phrase.get('phrase'):
-                                                    context_parts.append(f"Phrase: {phrase['phrase']}")
-                                                if phrase.get('analysis'):
-                                                    context_parts.append(f"Analysis: {phrase['analysis']}")
+                            # Add verse marker for ranges
+                            if len(verses_data) > 1:
+                                context_parts.append(f"\n**Verse {verse_num}:**\n")
 
-                                    # Add hadith from topics
-                                    if topic.get('hadith_references'):
-                                        context_parts.append(f"Hadith: {topic['hadith_references']}")
+                            # Topics (Ibn Kathir style)
+                            if metadata.get('topics'):
+                                for topic in metadata['topics']:
+                                    if isinstance(topic, dict):
+                                        if topic.get('topic_header'):
+                                            context_parts.append(f"**{topic['topic_header']}**")
+                                        if topic.get('commentary'):
+                                            context_parts.append(topic['commentary'])
 
-                        # Commentary (al-Qurtubi style)
-                        elif metadata.get('commentary'):
-                            context_parts.append(metadata['commentary'])
+                                        # Add phrase analysis from topics
+                                        if topic.get('phrase_analysis'):
+                                            for phrase in topic['phrase_analysis']:
+                                                if isinstance(phrase, dict):
+                                                    if phrase.get('phrase'):
+                                                        context_parts.append(f"Phrase: {phrase['phrase']}")
+                                                    if phrase.get('analysis'):
+                                                        context_parts.append(f"Analysis: {phrase['analysis']}")
 
-                            # Add phrase analysis
-                            if metadata.get('phrase_analysis'):
-                                for phrase in metadata['phrase_analysis']:
-                                    if isinstance(phrase, str):
-                                        context_parts.append(phrase)
+                                        # Add hadith from topics
+                                        if topic.get('hadith_references'):
+                                            context_parts.append(f"Hadith: {topic['hadith_references']}")
 
-                            # Add scholar citations
-                            if metadata.get('scholar_citations'):
-                                for citation in metadata['scholar_citations']:
-                                    if isinstance(citation, str):
-                                        context_parts.append(citation)
+                            # Commentary (al-Qurtubi style)
+                            elif metadata.get('commentary'):
+                                context_parts.append(metadata['commentary'])
+
+                                # Add phrase analysis
+                                if metadata.get('phrase_analysis'):
+                                    for phrase in metadata['phrase_analysis']:
+                                        if isinstance(phrase, str):
+                                            context_parts.append(phrase)
+
+                                # Add scholar citations
+                                if metadata.get('scholar_citations'):
+                                    for citation in metadata['scholar_citations']:
+                                        if isinstance(citation, str):
+                                            context_parts.append(citation)
 
                         context_by_source[source_name] = ["\n\n".join(context_parts)] if context_parts else []
 
@@ -3231,7 +3306,15 @@ def tafsir_handler_enhanced():
 
                     # Build prompt for AI formatting (skip RAG, use direct context)
                     arabic_text = get_arabic_text_from_verse_data(verse_data)
-                    cross_refs = verse_metadata_list[0]['metadata'].get('cross_references', []) if verse_metadata_list else []
+
+                    # Get cross refs from first verse's metadata
+                    cross_refs = []
+                    if verse_metadata_list:
+                        first_item = verse_metadata_list[0]
+                        if first_item.get('verses'):
+                            cross_refs = first_item['verses'][0]['metadata'].get('cross_references', [])
+                        elif first_item.get('metadata'):
+                            cross_refs = first_item['metadata'].get('cross_references', [])
 
                     prompt = build_enhanced_prompt(query, context_by_source, user_profile,
                                                  arabic_text, cross_refs, 'direct_verse', verse_data, approach)
