@@ -637,8 +637,14 @@ function MainApp({ user, userProfile }) {
     }
   };
 
-  const handleSuggestionClick = (suggestion) => {
-    setQuery(suggestion);
+  const handleSuggestionClick = (suggestionObj) => {
+    // Handle both old format (string) and new format (object with query and approach)
+    if (typeof suggestionObj === 'string') {
+      setQuery(suggestionObj);
+    } else {
+      setQuery(suggestionObj.query);
+      setApproach(suggestionObj.approach);
+    }
     setShowSuggestions(false);
   };
 
@@ -771,15 +777,22 @@ function MainApp({ user, userProfile }) {
           
           {showSuggestions && suggestions.length > 0 && (
             <div className="suggestions-grid">
-              {suggestions.slice(0, 12).map((suggestion, index) => (
-                <button
-                  key={index}
-                  onClick={() => handleSuggestionClick(suggestion)}
-                  className="suggestion-chip"
-                >
-                  <span>{suggestion}</span>
-                </button>
-              ))}
+              {suggestions.slice(0, 12).map((suggestion, index) => {
+                const displayText = typeof suggestion === 'string' ? suggestion : suggestion.query;
+                const approach = typeof suggestion === 'object' ? suggestion.approach : null;
+                const approachIcon = approach === 'tafsir' ? '📖' : approach === 'thematic' ? '🔍' : approach === 'historical' ? '📜' : '';
+
+                return (
+                  <button
+                    key={index}
+                    onClick={() => handleSuggestionClick(suggestion)}
+                    className="suggestion-chip"
+                    title={approach ? `${approachIcon} ${approach.charAt(0).toUpperCase() + approach.slice(1)} approach` : ''}
+                  >
+                    <span>{approachIcon && <span style={{marginRight: '4px'}}>{approachIcon}</span>}{displayText}</span>
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>

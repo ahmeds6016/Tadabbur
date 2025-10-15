@@ -183,11 +183,70 @@ QURAN_METADATA = {
 SURAHS_BY_NAME = {info["name"].lower(): num for num, info in QURAN_METADATA.items()}
 
 # Popular query suggestions
-QUERY_SUGGESTIONS = [
-    "2:255", "Ayat al-Kursi", "1:1", "Fatiha", "charity", "prayer", "jihad",
-    "taqwa", "patience", "forgiveness", "Day of Judgment", "paradise",
-    "mercy of Allah", "guidance", "faith", "gratitude", "justice"
-]
+# Comprehensive query suggestions bank (48 total: 16 verses, 16 themes, 16 historical)
+QUERY_SUGGESTIONS_BANK = {
+    "verse": [
+        "2:255 Ayat al-Kursi",
+        "36:1-12 Ya-Sin opening",
+        "55:13 Which favors will you deny?",
+        "18:65-82 The story of Khidr",
+        "24:35 Light upon light",
+        "17:23-24 Be humble to parents",
+        "93:1-11 By the morning brightness",
+        "3:190-191 Signs in creation",
+        "67:1-2 The Dominion",
+        "21:30 Everything from water",
+        "50:16 Closer than the jugular vein",
+        "89:27-30 O tranquil soul",
+        "39:53 Never despair of Allah's mercy",
+        "13:28 Hearts find rest in remembrance",
+        "2:286 Allah burdens not a soul",
+        "16:97 Whoever does righteousness"
+    ],
+    "thematic": [
+        "What does the Qur'an say about gratitude?",
+        "How does Islam view patience in hardship?",
+        "What is the purpose of this life?",
+        "How should we treat our neighbors?",
+        "What does tawakkul (reliance on Allah) truly mean?",
+        "How can I strengthen my relationship with Allah?",
+        "What does the Qur'an say about forgiveness?",
+        "How do I find peace in times of anxiety?",
+        "What is the role of charity in Islam?",
+        "How should Muslims respond to injustice?",
+        "What does it mean to have good character?",
+        "How do I balance dunya and akhirah?",
+        "What is the wisdom behind trials and tests?",
+        "How does Islam honor women?",
+        "What does the Qur'an say about hope?",
+        "How do I purify my heart from envy and pride?"
+    ],
+    "historical": [
+        "When did the prohibition of alcohol become complete?",
+        "What was the context of the Battle of Badr revelation?",
+        "Why was Surah Al-Kawthar revealed?",
+        "When did the five daily prayers become obligatory?",
+        "What was happening when Surah Al-Fil was revealed?",
+        "How did the hijab commandment come about?",
+        "What led to the revelation of Ayat al-Tayammum?",
+        "When did fasting in Ramadan become mandatory?",
+        "What was the asbab al-nuzul of Surah Al-Lahab?",
+        "How did the community change from Makkah to Madinah?",
+        "What events surrounded the revelation of Surah Al-Anfal?",
+        "When did zakah become a pillar of Islam?",
+        "What was the context of the Treaty of Hudaybiyyah verses?",
+        "How did the Qur'an respond to the Battle of Uhud?",
+        "What was revealed during the Year of Grief?",
+        "When did the Night Journey (Isra wal Mi'raj) occur?"
+    ]
+}
+
+# Legacy format for backwards compatibility
+QUERY_SUGGESTIONS = (
+    QUERY_SUGGESTIONS_BANK["verse"] +
+    QUERY_SUGGESTIONS_BANK["thematic"] +
+    QUERY_SUGGESTIONS_BANK["historical"]
+)
 
 # Verse cross-references database (simplified)
 VERSE_CROSS_REFS = {
@@ -1952,11 +2011,25 @@ def format_for_export(response_data, format_type='markdown'):
 
 @app.route("/suggestions", methods=["GET"])
 def get_suggestions():
-    """Get query suggestions"""
+    """Get randomized query suggestions (12 total: 4 from each category)"""
+    import random
+
+    # Randomly select 4 from each category
+    verse_suggestions = random.sample(QUERY_SUGGESTIONS_BANK["verse"], min(4, len(QUERY_SUGGESTIONS_BANK["verse"])))
+    thematic_suggestions = random.sample(QUERY_SUGGESTIONS_BANK["thematic"], min(4, len(QUERY_SUGGESTIONS_BANK["thematic"])))
+    historical_suggestions = random.sample(QUERY_SUGGESTIONS_BANK["historical"], min(4, len(QUERY_SUGGESTIONS_BANK["historical"])))
+
+    # Combine and shuffle for variety
+    all_suggestions = (
+        [{"query": s, "approach": "tafsir"} for s in verse_suggestions] +
+        [{"query": s, "approach": "thematic"} for s in thematic_suggestions] +
+        [{"query": s, "approach": "historical"} for s in historical_suggestions]
+    )
+    random.shuffle(all_suggestions)
+
     return jsonify({
-        "suggestions": QUERY_SUGGESTIONS,
-        "popular_topics": ["2:255", "charity", "prayer", "forgiveness", "patience"],
-        "verse_examples": ["1:1", "2:255", "112:1-4", "113:1", "114:1"]
+        "suggestions": all_suggestions,
+        "total_bank_size": len(QUERY_SUGGESTIONS)
     }), 200
 
 @app.route("/analytics", methods=["GET"])
