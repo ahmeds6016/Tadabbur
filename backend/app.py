@@ -480,47 +480,199 @@ def detect_query_intent(query: str) -> dict:
     """
     query_lower = query.lower()
 
-    # Historical intent patterns
+    # ========================================================================
+    # HISTORICAL INTENT PATTERNS - Comprehensive detection for revelation
+    # context, timeline, events, and progressive revelation
+    # ========================================================================
     historical_patterns = [
-        r'\b(why.*reveal|when.*reveal|asbab|circumstances.*revelation)\b',
-        r'\b(battle|event|story of|time of|during|incident)\b',
-        r'\b(historical|history|context of revelation)\b'
+        # Revelation context (Why/When/Where/How was it revealed?)
+        r'\b(why.*reveal|when.*reveal|where.*reveal|how.*reveal|who.*reveal)\b',
+        r'\b(asbab|sabab.*nuzul|circumstances.*revelation|context.*revelation)\b',
+        r'\b(occasion.*revelation|reason.*reveal|cause.*reveal)\b',
+        r'\bسبب النزول\b',  # Arabic: reason for revelation
+
+        # Historical events, battles, and incidents
+        r'\b(battle|war|expedition|raid|ghazwa|sariyya|campaign|conflict)\b',
+        r'\b(battle of|war of|expedition to|raid on)\b',
+        r'\b(badr|uhud|khandaq|trench|tabuk|hunayn|khaybar)\b',
+        r'\b(event|incident|occurrence|happening|situation|episode)\b',
+        r'\b(story of|tale of|account of|narrative|biography)\b',
+        r'\b(at the time|during|in the period|in the era|in the days)\b',
+
+        # Timeline, progression, and change over time
+        r'\b(becoming|became|turned into|transformed|evolved|converted)\b',
+        r'\b(when did.*command|when was.*ordain|when did.*prescrib)\b',
+        r'\b(when did.*prohibit|when did.*ban|when did.*forbid)\b',
+        r'\b(gradual|progressive|stages|phases|steps|step by step|evolution)\b',
+        r'\b(first.*then|initially|originally|at first|in the beginning)\b',
+        r'\b(later|eventually|finally|ultimately|in the end)\b',
+        r'\b(before.*after|prior to|following|subsequent|preceding)\b',
+        r'\b(changed from|change.*over time|transition|shift|development)\b',
+        r'\b(three stages|four stages|progressive revelation|gradual revelation)\b',
+
+        # Commandment and prohibition timing
+        r'\b(when.*(mandatory|obligatory|ordained|prescribed|required|compulsory))\b',
+        r'\b(when.*(fard|wajib|sunnah|mustahabb|mandub))\b',
+        r'\b(when.*(forbidden|prohibited|haram|banned|impermissible|unlawful))\b',
+        r'\b(when.*(makruh|disliked|discouraged))\b',
+        r'\b((mandatory|obligatory|ordained|prescribed|required).*when)\b',
+        r'\b((forbidden|prohibited|haram|banned).*when)\b',
+        r'\b(made (mandatory|compulsory|obligatory|forbidden|prohibited))\b',
+
+        # Historical context and background
+        r'\b(historical|history|historically|historic)\b',
+        r'\b(context|background|setting|circumstances|situation|conditions)\b',
+        r'\b(chronology|timeline|sequence|order of events|succession)\b',
+        r'\b(makki|madani|meccan|medinan|makkah|madinah)\b',
+        r'\b(early islam|pre-islamic|jahiliyyah|jahiliyya|ignorance)\b',
+
+        # Specific historical periods and migrations
+        r'\b(hijra|hijrah|migration|emigration|exodus)\b',
+        r'\b(before hijra|after hijra|pre-hijra|post-hijra)\b',
+        r'\b(year of.*elephant|year of.*grief|year of.*delegation)\b',
+
+        # People and companions (historical figures)
+        r'\b(companion|sahabi|sahabah|sahaba)\b',
+        r'\b(prophet.*life|prophetic.*biography|seerah|sirah|sira)\b',
+        r'\b(abu bakr|umar|uthman|ali|khadijah|aisha)\b',
+        r'\b(muhajirun|ansar|emigrants|helpers)\b',
+
+        # Specific commandments with timeline implications
+        r'\b((prayer|salah|salat|namaz).*(ordained|commanded|prescribed))\b',
+        r'\b((fasting|sawm|siyam).*(ordained|commanded|prescribed))\b',
+        r'\b((hijab|veil|covering).*(ordained|commanded|prescribed))\b',
+        r'\b((alcohol|wine|khamr).*(forbidden|prohibited|banned))\b',
+        r'\b((usury|riba|interest).*(forbidden|prohibited|banned))\b'
     ]
 
-    # Thematic intent patterns
+    # ========================================================================
+    # THEMATIC INTENT PATTERNS - Comprehensive detection for cross-verse
+    # concepts, holistic understanding, and topic exploration
+    # ========================================================================
     thematic_patterns = [
-        r'\b(across.*surah|what.*quran.*say about|theme|concept)\b',
-        r'\b(all.*verse|different.*surah|throughout|verses about)\b',
-        r'\b(holistic|comprehensive|overview)\b',
-        r'\b(quran.*teach|islam.*say|islamic.*view)\b'
+        # Cross-reference and multi-verse indicators
+        r'\b(across.*surah|across.*chapter|across.*quran)\b',
+        r'\b(throughout.*quran|throughout.*book|throughout.*scripture)\b',
+        r'\b(all.*verse|all.*ayah|all.*ayat|every.*verse)\b',
+        r'\b(different.*surah|multiple.*surah|various.*chapter|several.*surah)\b',
+        r'\b(verses about|ayat about|ayahs about|passages about)\b',
+        r'\b(everywhere.*quran|wherever.*quran|anywhere.*quran)\b',
+
+        # Conceptual inquiry (What does Quran/Islam say?)
+        r'\b(what.*quran.*(say|teach|mention|state|describe|explain))\b',
+        r'\b(what.*islam.*(say|teach|mention|state|describe|explain))\b',
+        r'\b(what.*allah.*(say|command|decree|ordain))\b',
+        r'\b(how.*quran.*(describe|view|portray|depict|present))\b',
+        r'\b(how.*islam.*(view|regard|consider|treat))\b',
+        r'\b(does.*quran.*(mention|talk about|discuss|address))\b',
+        r'\b(does.*islam.*(allow|permit|forbid|prohibit))\b',
+
+        # Teaching and guidance
+        r'\b(quran.*teach|islam.*teach|islamic.*teaching|quranic.*teaching)\b',
+        r'\b(quran.*guidance|islamic.*guidance|divine.*guidance)\b',
+        r'\b(quran.*perspective|islamic.*perspective|quranic.*view)\b',
+        r'\b(according to.*(quran|islam|sharia|shariah))\b',
+        r'\b(in.*(quran|islam|islamic.*view))\b',
+
+        # Thematic analysis terms
+        r'\b(theme|concept|topic|subject|idea|notion)\b',
+        r'\b(holistic|comprehensive|complete|full|entire|total)\b',
+        r'\b(overview|summary|general.*understanding|overall|broad)\b',
+        r'\b(all instances|all mentions|all references|all occurrences)\b',
+        r'\b(collect|compilation|collection|gathering)\b',
+
+        # Pattern and relationship seeking
+        r'\b(pattern|recurring|repeated|repetition|recurrence)\b',
+        r'\b(common|consistent|constant|uniform)\b',
+        r'\b(connection|relationship|link|correlation|association)\b',
+        r'\b(compare|comparison|contrast|difference|similarity)\b',
+        r'\b(related.*verse|connected.*verse|similar.*verse|parallel)\b',
+
+        # Conceptual development
+        r'\b(evolution.*concept|development.*idea|progression.*theme)\b',
+        r'\b(concept of|idea of|notion of|principle of)\b',
+        r'\b(understanding|comprehension|grasp|meaning)\b',
+
+        # Significance and importance
+        r'\b(significance|importance|value|worth|merit)\b',
+        r'\b(role|function|purpose|objective|goal)\b',
+        r'\b(principle|guideline|rule|law|regulation)\b',
+
+        # Virtues and qualities (thematic topics)
+        r'\b(virtue|quality|attribute|characteristic|trait)\b',
+        r'\b(concept of.*(justice|mercy|patience|charity|compassion))\b',
+        r'\b(concept of.*(prayer|fasting|pilgrimage|zakat|hajj))\b',
+        r'\b(concept of.*(faith|belief|iman|taqwa|piety))\b',
+
+        # Islamic concepts and topics
+        r'\b(islam.*say about|quran.*mention.*about|verses.*(discuss|address))\b',
+        r'\b(islamic.*(view|stance|position|ruling) on)\b',
+        r'\b(quranic.*(concept|teaching|principle|view))\b',
+
+        # Broad exploratory questions
+        r'\b(explain|elaborate|clarify|elucidate)\b',
+        r'\b(tell me about|inform me about|educate me about)\b',
+        r'\b(learn about|study|understand|explore)\b',
+
+        # Multiple aspects and dimensions
+        r'\b(aspect|dimension|facet|angle|perspective)\b',
+        r'\b(different.*view|various.*aspect|multiple.*dimension)\b'
     ]
 
-    # Check for historical keywords (highest priority)
+    # ========================================================================
+    # TAFSIR/VERSE-SPECIFIC PATTERNS - For detailed classical commentary
+    # ========================================================================
+    tafsir_patterns = [
+        # Specific verse analysis
+        r'\b(explain|meaning|tafsir|commentary|interpretation) (of|for).*\d+:\d+\b',
+        r'\b(what does|what is).*(verse|ayah|ayat).*mean\b',
+        r'\b(deeper|detailed|thorough|in-depth).*(meaning|understanding|analysis)\b',
+
+        # Classical commentary focus
+        r'\b(ibn kathir|qurtubi|tabari|jalalayn|al-jalalayn)\b',
+        r'\b(classical.*scholar|traditional.*scholar|early.*scholar)\b',
+        r'\b(arabic.*meaning|linguistic|grammar|etymology)\b',
+        r'\b(word by word|phrase by phrase|detailed.*explanation)\b',
+
+        # Specific surah/verse focus (not asking "what does Quran say" but focused analysis)
+        r'\b(surah|sura).*(verse|ayah).*(mean|explain|teach|say)\b',
+        r'\b(verse|ayah).*(about|regarding|concerning).*(specific|particular)\b'
+    ]
+
+    # Priority 1: Check for historical keywords (timeline, revelation context, events)
     if any(re.search(pattern, query_lower) for pattern in historical_patterns):
         return {
             'suggested_approach': 'historical',
             'confidence': 'high',
-            'reason': 'Your query asks about revelation context or historical events'
+            'reason': 'Your query asks about revelation context, timeline, or historical events'
         }
 
-    # Check for thematic keywords
+    # Priority 2: Check for thematic keywords (cross-verse concepts, holistic understanding)
     if any(re.search(pattern, query_lower) for pattern in thematic_patterns):
         return {
             'suggested_approach': 'thematic',
             'confidence': 'high',
-            'reason': 'Your query asks about a concept across multiple verses or surahs'
+            'reason': 'Your query explores a concept across multiple verses or surahs'
         }
 
-    # Check for verse reference (tafsir suitable)
+    # Priority 3: Check for tafsir-specific patterns (detailed commentary, classical scholars)
+    if any(re.search(pattern, query_lower) for pattern in tafsir_patterns):
+        return {
+            'suggested_approach': 'tafsir',
+            'confidence': 'high',
+            'reason': 'Your query seeks detailed classical commentary or verse-specific analysis'
+        }
+
+    # Priority 4: Check for verse reference (tafsir suitable)
     verse_ref = extract_verse_reference_enhanced(query)
     if verse_ref:
         return {
             'suggested_approach': 'tafsir',
             'confidence': 'medium',
-            'reason': 'Your query references a specific verse'
+            'reason': 'Your query references a specific verse - classical commentary may help'
         }
 
-    # Default: unclear intent, no suggestion
+    # Default: unclear intent, no suggestion (user's chosen approach is fine)
     return {
         'suggested_approach': None,
         'confidence': 'low',
