@@ -571,7 +571,6 @@ function MainApp({ user, userProfile }) {
   const [error, setError] = useState('');
   const [isTafsirLoading, setIsTafsirLoading] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
   const [rateLimitWarning, setRateLimitWarning] = useState('');
 
   // Apply persona theme
@@ -708,7 +707,6 @@ function MainApp({ user, userProfile }) {
       setQuery(suggestionObj.query);
       setApproach(suggestionObj.approach);
     }
-    setShowSuggestions(false);
   };
 
   const handleExport = async (format) => {
@@ -829,16 +827,18 @@ function MainApp({ user, userProfile }) {
           </a>
         </div>
         
-        {/* Query Suggestions */}
-        <div className="suggestions-section">
-          <button 
-            onClick={() => setShowSuggestions(!showSuggestions)}
-            className="suggestions-toggle"
-          >
-            {showSuggestions ? '🔼 Hide Suggestions' : '🔽 Show Query Suggestions'}
-          </button>
-          
-          {showSuggestions && suggestions.length > 0 && (
+        {/* Query Suggestions - Always Visible */}
+        {suggestions.length > 0 && (
+          <div className="suggestions-section" style={{ marginBottom: '24px' }}>
+            <h3 style={{
+              textAlign: 'center',
+              color: 'var(--primary-teal)',
+              marginBottom: '16px',
+              fontSize: '1.1rem',
+              fontWeight: '600'
+            }}>
+              🌟 Explore These Questions
+            </h3>
             <div className="suggestions-grid">
               {suggestions.slice(0, 12).map((suggestion, index) => {
                 const displayText = typeof suggestion === 'string' ? suggestion : suggestion.query;
@@ -857,8 +857,8 @@ function MainApp({ user, userProfile }) {
                 );
               })}
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Search Form - Fixed alignment */}
         <form onSubmit={handleGetTafsir} className="tafsir-form">

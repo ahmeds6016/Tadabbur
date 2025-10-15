@@ -184,24 +184,27 @@ SURAHS_BY_NAME = {info["name"].lower(): num for num, info in QURAN_METADATA.item
 
 # Popular query suggestions
 # Comprehensive query suggestions bank (48 total: 16 verses, 16 themes, 16 historical)
+# Balanced to include Al-Qurtubi's range (Surahs 1-4) and beyond
 QUERY_SUGGESTIONS_BANK = {
     "verse": [
-        "2:255 Ayat al-Kursi",
-        "36:1-12 Ya-Sin opening",
-        "55:13 Which favors will you deny?",
-        "18:65-82 The story of Khidr",
-        "24:35 Light upon light",
-        "17:23-24 Be humble to parents",
-        "93:1-11 By the morning brightness",
-        "3:190-191 Signs in creation",
-        "67:1-2 The Dominion",
-        "21:30 Everything from water",
-        "50:16 Closer than the jugular vein",
-        "89:27-30 O tranquil soul",
-        "39:53 Never despair of Allah's mercy",
-        "13:28 Hearts find rest in remembrance",
-        "2:286 Allah burdens not a soul",
-        "16:97 Whoever does righteousness"
+        # Al-Qurtubi range (Surahs 1-4) - 8 verses
+        "1:1-7 Al-Fatiha - The Opening",
+        "2:1-5 The believers who have faith in the unseen",
+        "2:21-22 O mankind, worship your Lord",
+        "2:255 Ayat al-Kursi - The Throne Verse",
+        "2:286 Allah does not burden a soul",
+        "3:26-27 Allah gives dominion to whom He wills",
+        "3:190-191 Signs in the creation",
+        "4:1 O mankind, fear your Lord",
+        # Beyond Al-Qurtubi (Surahs 5+) - 8 verses
+        "13:28 Hearts find rest in remembrance of Allah",
+        "16:97 Whoever does righteousness will have a good life",
+        "17:23-24 Be humble and merciful to your parents",
+        "18:65-82 The story of Khidr and Musa",
+        "24:35 Allah is the Light of the heavens",
+        "36:1-12 Ya-Sin - The heart of the Qur'an",
+        "50:16 We are closer than the jugular vein",
+        "93:1-11 By the morning brightness - Hope after hardship"
     ],
     "thematic": [
         "What does the Qur'an say about gratitude?",
