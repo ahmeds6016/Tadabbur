@@ -417,15 +417,60 @@ def classify_query_enhanced(query: str) -> Dict[str, Any]:
 
 
 # --- Query Normalization Functions ---
-def validate_verse_reference(surah, verse):
-    """Validate that surah and verse numbers are within valid ranges"""
-    if surah not in QURAN_METADATA:
-        return False, f"Invalid Surah: {surah}. The Quran has 114 Surahs."
+def surah_name_to_number(surah_input):
+    """
+    Convert surah name or number to integer surah number.
+    Returns (surah_number, error_message) tuple.
+    """
+    # If already a number, validate and return
+    if isinstance(surah_input, int):
+        if surah_input in QURAN_METADATA:
+            return surah_input, None
+        else:
+            return None, f"Invalid Surah number: {surah_input}. The Quran has 114 Surahs."
 
-    max_verses = QURAN_METADATA[surah]["verses"]
+    # Try to convert string to int
+    if isinstance(surah_input, str):
+        # Try direct number conversion
+        try:
+            surah_num = int(surah_input)
+            if surah_num in QURAN_METADATA:
+                return surah_num, None
+            else:
+                return None, f"Invalid Surah number: {surah_num}. The Quran has 114 Surahs."
+        except ValueError:
+            # Not a number, search by name
+            surah_input_lower = surah_input.lower().strip()
+            for num, data in QURAN_METADATA.items():
+                if data["name"].lower() == surah_input_lower:
+                    return num, None
+            return None, f"Invalid Surah name: '{surah_input}'. Could not find matching surah."
+
+    return None, f"Invalid Surah input type: {type(surah_input)}. Expected string or integer."
+
+
+def validate_verse_reference(surah, verse):
+    """
+    Validate that surah and verse numbers are within valid ranges.
+    Surah can be either a number or surah name.
+    """
+    # Convert surah name to number if needed
+    surah_num, error = surah_name_to_number(surah)
+    if error:
+        return False, error
+
+    # Convert verse to int if string
+    if isinstance(verse, str):
+        try:
+            verse = int(verse)
+        except ValueError:
+            return False, f"Invalid verse number: '{verse}'. Expected integer."
+
+    # Validate verse range
+    max_verses = QURAN_METADATA[surah_num]["verses"]
     if not (1 <= verse <= max_verses):
-        surah_name = QURAN_METADATA[surah]["name"]
-        return False, f"Invalid verse: {verse}. Surah {surah} ('{surah_name}') only has {max_verses} verses."
+        surah_name = QURAN_METADATA[surah_num]["name"]
+        return False, f"Invalid verse: {verse}. Surah {surah_num} ('{surah_name}') only has {max_verses} verses."
 
     return True, "Valid reference"
 
@@ -2381,8 +2426,20 @@ def create_annotation():
         if not content:
             return jsonify({"error": "Content is required"}), 400
 
+        # Convert surah name to number if needed
+        surah_num, error = surah_name_to_number(surah)
+        if error:
+            return jsonify({"error": error}), 400
+
+        # Convert verse to int if string
+        if isinstance(verse, str):
+            try:
+                verse = int(verse)
+            except ValueError:
+                return jsonify({"error": f"Invalid verse number: '{verse}'"}), 400
+
         # Validate verse reference
-        is_valid, msg = validate_verse_reference(surah, verse)
+        is_valid, msg = validate_verse_reference(surah_num, verse)
         if not is_valid:
             return jsonify({"error": msg}), 400
 
@@ -2390,8 +2447,8 @@ def create_annotation():
         doc_ref = annotations_ref.document()
 
         annotation_data = {
-            'surah': surah,
-            'verse': verse,
+            'surah': surah_num,  # Store as integer
+            'verse': verse,      # Store as integer
             'type': annotation_type,
             'content': content,
             'tags': tags,

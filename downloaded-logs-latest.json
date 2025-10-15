@@ -1,0 +1,200 @@
+2025-10-15 01:26:37 INFO: Quran texts database connected: tafsir-db
+2025-10-15 01:26:37 INFO: Users database verified - found 1 collections
+2025-10-15 01:26:37 INFO: Quran database verified - found 1 collections
+2025-10-15 01:26:37 INFO: Initializing enhanced dual-storage system
+2025-10-15 01:26:37 INFO: Loaded 674 verses from processed/ibnkathir-Fatiha-Tawbah_fixed.json
+2025-10-15 01:26:37 INFO: Loaded 755 verses from processed/ibnkathir-Yunus-Ankabut_FINAL_fixed.json
+2025-10-15 01:26:37 INFO: Loaded 717 verses from processed/ibnkathir-Rum-Nas_FINAL_fixed.json
+2025-10-15 01:26:37 INFO: Loaded 136 verses from processed/al-Qurtubi Vol. 1_FINAL_fixed.json
+2025-10-15 01:26:37 INFO: Loaded 116 verses from processed/al-Qurtubi Vol. 2_FINAL_fixed.json
+2025-10-15 01:26:37 INFO: Loaded 115 verses from processed/al-Qurtubi Vol. 3_fixed.json
+2025-10-15 01:26:37 INFO: Loaded 118 verses from processed/al-Qurtubi Vol. 4_FINAL_fixed.json
+2025-10-15 01:26:37 INFO: Total verses loaded: 2631
+2025-10-15 01:26:37 INFO: Dual storage complete:
+2025-10-15 01:26:37   - Flat chunks: 2584
+2025-10-15 01:26:37   - Structured metadata: 2584
+2025-10-15 01:26:37   - Ibn Kathir: 2146 verses
+2025-10-15 01:26:37   - al-Qurtubi: 485 verses
+2025-10-15 01:26:37 ======================================================================
+2025-10-15 01:26:37 📥 QUERY: lust
+2025-10-15 01:26:37 ======================================================================
+2025-10-15 01:26:37 🎯 Type: semantic (confidence: 100%)
+2025-10-15 01:26:37 🚀 ROUTE 3: Semantic Search (Full RAG)
+2025-10-15 01:26:37 INFO: Query expanded from 'lust' to 'lust OR "shahwa" OR "hawa" OR "zina" OR "fitna" OR "nafs al-ammarah" OR "temptation" OR "desire" OR "sexual desire" OR "adultery" OR "fornication" OR "evil inclination" OR (Quran AND (women OR marriage OR divorce OR family OR inheritance OR "hudud" OR "nikah" OR "talaq" OR "mahr" OR "sexual relations" OR "relations with women")) OR (Ibn Kathir AND (stories AND prophets AND "story of Yusuf" OR "story of Lot")) OR (Qurtubi AND ("verse 4:22" OR "Surah An-Nisa" OR "inheritance laws" OR "marriage prohibitions"))'
+2025-10-15 01:26:37    Retrieved 10 chunks
+2025-10-15 01:26:37 ✅ Semantic response generated
+2025-10-15 01:26:40 [2025-10-15 01:26:40 +0000] [1] [INFO] Shutting down: Master
+2025-10-15 01:27:27 OPTIONS 200 https://tafsir-backend-612616741510.us-central1.run.app/get_profile
+2025-10-15 01:27:27 GET 200 https://tafsir-backend-612616741510.us-central1.run.app/get_profile
+2025-10-15 01:27:27 GET 200 https://tafsir-backend-612616741510.us-central1.run.app/suggestions
+2025-10-15 01:27:36 OPTIONS 200 https://tafsir-backend-612616741510.us-central1.run.app/tafsir
+2025-10-15 01:27:36 POST 200 https://tafsir-backend-612616741510.us-central1.run.app/tafsir
+2025-10-15 01:27:38 E0000 00:00:1760491658.244202      15 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-10-15 01:27:38 E0000 00:00:1760491658.310426      15 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-10-15 01:27:38 E0000 00:00:1760491658.390969      15 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-10-15 01:27:38 E0000 00:00:1760491658.392214      15 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-10-15 01:27:38 E0000 00:00:1760491658.393772      15 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-10-15 01:27:46 OPTIONS 200 https://tafsir-backend-612616741510.us-central1.run.app/query-history
+2025-10-15 01:27:46 POST 201 https://tafsir-backend-612616741510.us-central1.run.app/query-history
+2025-10-15 01:28:05 OPTIONS 200 https://tafsir-backend-612616741510.us-central1.run.app/tafsir
+2025-10-15 01:28:05 POST 200 https://tafsir-backend-612616741510.us-central1.run.app/tafsir
+2025-10-15 01:28:05 OPTIONS 200 https://tafsir-backend-612616741510.us-central1.run.app/query-history
+2025-10-15 01:28:05 POST 201 https://tafsir-backend-612616741510.us-central1.run.app/query-history
+2025-10-15 01:28:29 OPTIONS 200 https://tafsir-backend-612616741510.us-central1.run.app/tafsir
+2025-10-15 01:28:29 POST 200 https://tafsir-backend-612616741510.us-central1.run.app/tafsir
+2025-10-15 01:28:31 E0000 00:00:1760491711.917606      15 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-10-15 01:28:31 E0000 00:00:1760491711.986217      15 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-10-15 01:28:32 E0000 00:00:1760491712.113770      15 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-10-15 01:28:32 E0000 00:00:1760491712.114864      15 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-10-15 01:28:32 E0000 00:00:1760491712.115507      15 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-10-15 01:28:41 OPTIONS 200 https://tafsir-backend-612616741510.us-central1.run.app/query-history
+2025-10-15 01:28:41 OPTIONS 404 https://tafsir-backend-612616741510.us-central1.run.app/annotations/verse/Sad/71-76
+2025-10-15 01:28:41 POST 201 https://tafsir-backend-612616741510.us-central1.run.app/query-history
+2025-10-15 01:29:27 OPTIONS 200 https://tafsir-backend-612616741510.us-central1.run.app/tafsir
+2025-10-15 01:29:27 POST 200 https://tafsir-backend-612616741510.us-central1.run.app/tafsir
+2025-10-15 01:29:28 E0000 00:00:1760491768.989171      15 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-10-15 01:29:29 E0000 00:00:1760491769.052779      15 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-10-15 01:29:29 E0000 00:00:1760491769.121617      15 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-10-15 01:29:29 E0000 00:00:1760491769.122549      15 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-10-15 01:29:29 E0000 00:00:1760491769.123182      15 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-10-15 01:29:36 OPTIONS 200 https://tafsir-backend-612616741510.us-central1.run.app/query-history
+2025-10-15 01:29:36 POST 201 https://tafsir-backend-612616741510.us-central1.run.app/query-history
+2025-10-15 01:30:36 OPTIONS 200 https://tafsir-backend-612616741510.us-central1.run.app/tafsir
+2025-10-15 01:30:36 POST 200 https://tafsir-backend-612616741510.us-central1.run.app/tafsir
+2025-10-15 01:30:38 INFO: Firebase Admin SDK initialized for project 'tafsir-simplified-6b262'
+2025-10-15 01:30:38 INFO: User profiles database connected: (default)
+2025-10-15 01:30:38 INFO: Quran texts database connected: tafsir-db
+2025-10-15 01:30:38 INFO: Users database verified - found 1 collections
+2025-10-15 01:30:38 INFO: Quran database verified - found 1 collections
+2025-10-15 01:30:38 INFO: Initializing enhanced dual-storage system
+2025-10-15 01:30:38 INFO: Loaded 674 verses from processed/ibnkathir-Fatiha-Tawbah_fixed.json
+2025-10-15 01:30:38 INFO: Loaded 755 verses from processed/ibnkathir-Yunus-Ankabut_FINAL_fixed.json
+2025-10-15 01:30:38 INFO: Loaded 717 verses from processed/ibnkathir-Rum-Nas_FINAL_fixed.json
+2025-10-15 01:30:38 INFO: Loaded 136 verses from processed/al-Qurtubi Vol. 1_FINAL_fixed.json
+2025-10-15 01:30:38 INFO: Loaded 116 verses from processed/al-Qurtubi Vol. 2_FINAL_fixed.json
+2025-10-15 01:30:38 INFO: Loaded 115 verses from processed/al-Qurtubi Vol. 3_fixed.json
+2025-10-15 01:30:38 INFO: Loaded 118 verses from processed/al-Qurtubi Vol. 4_FINAL_fixed.json
+2025-10-15 01:30:38 INFO: Total verses loaded: 2631
+2025-10-15 01:30:38 INFO: Dual storage complete:
+2025-10-15 01:30:38   - Flat chunks: 2584
+2025-10-15 01:30:38   - Structured metadata: 2584
+2025-10-15 01:30:38   - Ibn Kathir: 2146 verses
+2025-10-15 01:30:38   - al-Qurtubi: 485 verses
+2025-10-15 01:30:38 ======================================================================
+2025-10-15 01:30:38 📥 QUERY: anger
+2025-10-15 01:30:38 ======================================================================
+2025-10-15 01:30:38 🎯 Type: semantic (confidence: 100%)
+2025-10-15 01:30:38 🚀 ROUTE 3: Semantic Search (Full RAG)
+2025-10-15 01:30:38 INFO: Query expanded from 'anger' to 'anger OR "ghadab" OR "غضب" OR "sakhat" OR "سخط" OR "la'na" OR "لعنة" OR "curse" OR "shaytan" OR "devil" OR "nafs" OR "ego" OR "fitna" OR "temptation" OR "waswasa" OR "whispering" OR "jahannam" OR "hellfire" OR "iblis" OR "arrogance" OR "kibr" OR "كبر" OR "hasad" OR "envy" OR "حسد" OR "fasiq" OR "transgressor" OR "ظالم" OR "zalim" OR "oppressor" OR "disobedience" OR "kufr" OR "disbelief" OR "hypocrisy" OR "nifaq" OR "منافق" OR "munafiq" OR "punishment" OR "عذاب" OR'
+2025-10-15 01:30:38    Retrieved 10 chunks
+2025-10-15 01:30:38 ✅ Semantic response generated
+2025-10-15 01:30:38 ======================================================================
+2025-10-15 01:30:38 📥 QUERY: patience
+2025-10-15 01:30:38 ======================================================================
+2025-10-15 01:30:38 🎯 Type: semantic (confidence: 100%)
+2025-10-15 01:30:38 🚀 ROUTE 3: Semantic Search (Full RAG)
+2025-10-15 01:30:38 INFO: Query expanded from 'patience' to 'patience OR "sabr" OR "ṣabr" OR "al-sabr" OR "isti'ana bis-sabr" OR "isti'anah bi-s-sabr" OR "al-isti'anah bi-s-sabr" OR "trials" OR "tribulations" OR "afflictions" OR "bala'" OR "ibtila'" OR "jihad al-nafs" OR "jihad an-nafs" OR "self-discipline" OR "perseverance" OR "steadfastness" OR "endurance" OR "jannah" OR "reward" OR "akhirah" OR "akhirat" OR "Paradise" OR "jaza'" OR "shukr" OR "gratitude" OR "yaqin" OR "certainty" OR "iman" OR "faith" OR "tawakkul" OR "trust in Allah" OR "musibah" OR "calam'
+2025-10-15 01:30:38    Retrieved 8 chunks
+2025-10-15 01:30:38 ❌ Failed to extract JSON from Gemini response (Route 3)
+2025-10-15 01:30:38 Response preview: {
+2025-10-15 01:30:38     "verses": [],
+2025-10-15 01:30:38     "tafsir_explanations": [
+2025-10-15 01:30:38         {
+2025-10-15 01:30:38             "source": "al-Qurtubi",
+2025-10-15 01:30:38             "explanation": "Al-Qurtubi defines patience (ṣabr) as restraint, endurance, and confinement. He notes that Allah commands steadfastness in obedience and restraint from disobedience. He cites that one first refrains (ṣabara) from disobedience, then becomes steadfast (ṣābara) in obedience.
+2025-10-15 01:30:38             Al-Qurtubi highlights the immense reward for patience, noting that Allah describes Himself ...
+2025-10-15 01:30:38 ======================================================================
+2025-10-15 01:30:38 📥 QUERY: patience
+2025-10-15 01:30:38 ======================================================================
+2025-10-15 01:30:38 🎯 Type: semantic (confidence: 100%)
+2025-10-15 01:30:38 🚀 ROUTE 3: Semantic Search (Full RAG)
+2025-10-15 01:30:38 INFO: Query expanded from 'patience' to '"patience" OR "sabr" OR "ṣabr" OR "isti'anah" OR "isti'aanah" OR "perseverance" OR "endurance" OR "steadfastness" OR "jihad al-nafs" OR "struggle against the self" OR "trials" OR "tribulations" OR "bala'" OR "fitna" OR "musibah" OR "al-Baqarah 155" OR "al-Baqarah 156" OR "al-Baqarah 157" OR "al-Asr" OR "al-Anfal 46" OR "al-Imran 200" OR "reward for patience" OR "jannah" AND "patience" OR "divine assistance" AND "patience" OR "reliance on Allah" AND "patience" OR "tawakkul" AND "patience" OR'
+2025-10-15 01:30:38    Retrieved 8 chunks
+2025-10-15 01:30:38 ✅ Semantic response generated
+2025-10-15 01:30:38 ======================================================================
+2025-10-15 01:30:38 📥 QUERY: 3:14
+2025-10-15 01:30:38 ======================================================================
+2025-10-15 01:30:38 🎯 Type: direct_verse (confidence: 95%)
+2025-10-15 01:30:38    Verse: 3:14
+2025-10-15 01:30:38 🚀 ROUTE 2: Direct Verse Query → AI Formatting
+2025-10-15 01:30:38 ✅ Direct verse formatted by AI from 2 source(s)
+2025-10-15 01:30:38 ======================================================================
+2025-10-15 01:30:38 📥 QUERY: lust
+2025-10-15 01:30:38 ======================================================================
+2025-10-15 01:30:38 🎯 Type: semantic (confidence: 100%)
+2025-10-15 01:30:38 🚀 ROUTE 3: Semantic Search (Full RAG)
+2025-10-15 01:30:38 INFO: Query expanded from 'lust' to 'lust OR "shahwa" OR شهوة OR "hawa al-nafs" OR هوى النفس OR "fitna" OR فتنة OR "zina" OR زنا OR "desire" OR "carnal desire" OR "sexual desire" OR "temptation" OR "adultery" OR "fornication" OR "evil inclination" OR "following desires" OR "Surah Yusuf" OR "story of Yusuf" OR "Temptation of Yusuf" OR "Zulaykha" OR "women's guile" OR "nafs al-ammarah" OR "commanding soul" OR "trials and tribulations" OR "iblis" OR "shaytan" OR "lower self" OR "purification of the soul" OR "Tazkiyat al-Nafs" OR "guarding chastity" OR "iffah" OR عفة OR "avoiding temptation" OR "lowering gaze" OR "'
+2025-10-15 01:30:38    Retrieved 8 chunks
+2025-10-15 01:30:38 ✅ Semantic response generated
+2025-10-15 01:30:38 ======================================================================
+2025-10-15 01:30:38 📥 QUERY: anger
+2025-10-15 01:30:38 ======================================================================
+2025-10-15 01:30:38 🎯 Type: semantic (confidence: 100%)
+2025-10-15 01:30:38 🚀 ROUTE 3: Semantic Search (Full RAG)
+2025-10-15 01:30:38 💾 Cache hit
+2025-10-15 01:30:38 ======================================================================
+2025-10-15 01:30:38 📥 QUERY: prideful
+2025-10-15 01:30:38 ======================================================================
+2025-10-15 01:30:38 🎯 Type: semantic (confidence: 100%)
+2025-10-15 01:30:38 🚀 ROUTE 3: Semantic Search (Full RAG)
+2025-10-15 01:30:38 INFO: Query expanded from 'prideful' to '"prideful" OR "arrogant" OR "haughty" OR "conceited" OR "boastful" OR "kibr" OR "istikbar" OR "ujb" OR "ghurur" OR "takabbur" OR "mutakabbir" OR "Jahannam" OR "Hellfire" OR "Shaytan" OR "Iblis" OR "Pharaoh" OR "Qarun" OR "rejection of truth" OR "denial of Allah" OR "disbelief" OR "kufr" OR "transgression" OR "oppression" OR "zulm" OR "ingratitude" OR "kufraan" OR "punishment" OR "adhab" OR "humility" OR "tawadu" OR "submission to Allah" OR "islam" OR "righteousness" OR "taqwa" OR "Paradise" OR "Jannah"'
+2025-10-15 01:30:38    Retrieved 6 chunks
+2025-10-15 01:30:38 ✅ Semantic response generated
+2025-10-15 01:30:38 ======================================================================
+2025-10-15 01:30:38 📥 QUERY: forgiveness
+2025-10-15 01:30:38 ======================================================================
+2025-10-15 01:30:38 🎯 Type: semantic (confidence: 100%)
+2025-10-15 01:30:38 🚀 ROUTE 3: Semantic Search (Full RAG)
+2025-10-15 01:30:38 INFO: Query expanded from 'forgiveness' to 'forgiveness OR 'al-Ghaffar' OR 'al-Ghafur' OR 'al-Afuww' OR 'maghfirah' OR 'istighfar' OR 'tawbah' OR repentance OR 'atonement' OR 'expiation' OR 'kaffara' OR 'hasanat' OR 'sayyi'at' OR sins OR 'ithm' OR 'dhanb' OR 'khata' OR 'kufr' OR 'shirk' OR 'nifaq' OR 'jihad al-nafs' OR 'Tawba (Surah 9)' OR 'Surah al-Baqarah verse 286' OR 'Surah Aal-Imran verse 135' OR 'Surah An-Nisa verse 17' OR 'Surah Az-Zumar verse 53' OR 'divine mercy' OR 'rahma' OR 'pun'
+2025-10-15 01:30:38    Retrieved 10 chunks
+2025-10-15 01:30:38 ✅ Semantic response generated
+2025-10-15 01:30:38 ======================================================================
+2025-10-15 01:30:38 📥 QUERY: humbleness
+2025-10-15 01:30:38 ======================================================================
+2025-10-15 01:30:38 🎯 Type: semantic (confidence: 100%)
+2025-10-15 01:30:38 🚀 ROUTE 3: Semantic Search (Full RAG)
+2025-10-15 01:30:38 E0000 00:00:1760491838.003385      15 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-10-15 01:30:38 E0000 00:00:1760491838.066346      15 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-10-15 01:30:38 E0000 00:00:1760491838.143252      15 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-10-15 01:30:38 E0000 00:00:1760491838.143843      15 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-10-15 01:30:38 E0000 00:00:1760491838.144518      15 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-10-15 01:30:45 OPTIONS 200 https://tafsir-backend-612616741510.us-central1.run.app/query-history
+2025-10-15 01:30:45 OPTIONS 404 https://tafsir-backend-612616741510.us-central1.run.app/annotations/verse/Al-Baqarah/46
+2025-10-15 01:30:45 OPTIONS 404 https://tafsir-backend-612616741510.us-central1.run.app/annotations/verse/Al-Baqarah/45
+2025-10-15 01:30:45 POST 201 https://tafsir-backend-612616741510.us-central1.run.app/query-history
+2025-10-15 01:32:16 OPTIONS 200 https://tafsir-backend-612616741510.us-central1.run.app/tafsir
+2025-10-15 01:32:16 POST 200 https://tafsir-backend-612616741510.us-central1.run.app/tafsir
+2025-10-15 01:32:25 OPTIONS 200 https://tafsir-backend-612616741510.us-central1.run.app/query-history
+2025-10-15 01:32:25 OPTIONS 404 https://tafsir-backend-612616741510.us-central1.run.app/annotations/verse/3%20(Aal-E-Imran)/14
+2025-10-15 01:32:25 POST 201 https://tafsir-backend-612616741510.us-central1.run.app/query-history
+2025-10-15 01:32:57 OPTIONS 200 https://tafsir-backend-612616741510.us-central1.run.app/saved-searches
+2025-10-15 01:32:57 POST 201 https://tafsir-backend-612616741510.us-central1.run.app/saved-searches
+2025-10-15 01:33:46 OPTIONS 200 https://tafsir-backend-612616741510.us-central1.run.app/tafsir
+2025-10-15 01:33:46 POST 200 https://tafsir-backend-612616741510.us-central1.run.app/tafsir
+2025-10-15 01:33:52 OPTIONS 200 https://tafsir-backend-612616741510.us-central1.run.app/query-history
+2025-10-15 01:33:52 OPTIONS 404 https://tafsir-backend-612616741510.us-central1.run.app/annotations/verse/Ibrahim/13
+2025-10-15 01:33:52 POST 201 https://tafsir-backend-612616741510.us-central1.run.app/query-history
+2025-10-15 01:35:52 OPTIONS 200 https://tafsir-backend-612616741510.us-central1.run.app/get_profile
+2025-10-15 01:35:52 GET 200 https://tafsir-backend-612616741510.us-central1.run.app/get_profile
+2025-10-15 01:35:52 GET 200 https://tafsir-backend-612616741510.us-central1.run.app/suggestions
+2025-10-15 01:35:56 OPTIONS 200 https://tafsir-backend-612616741510.us-central1.run.app/tafsir
+2025-10-15 01:35:56 POST 200 https://tafsir-backend-612616741510.us-central1.run.app/tafsir
+2025-10-15 01:36:03 OPTIONS 200 https://tafsir-backend-612616741510.us-central1.run.app/query-history
+2025-10-15 01:36:03 POST 201 https://tafsir-backend-612616741510.us-central1.run.app/query-history
+2025-10-15 01:36:03 OPTIONS 404 https://tafsir-backend-612616741510.us-central1.run.app/annotations/verse/Al-Baqarah/33
+2025-10-15 01:36:40 OPTIONS 200 https://tafsir-backend-612616741510.us-central1.run.app/tafsir
+2025-10-15 01:36:40 POST 200 https://tafsir-backend-612616741510.us-central1.run.app/tafsir
+2025-10-15 01:36:47 OPTIONS 200 https://tafsir-backend-612616741510.us-central1.run.app/query-history
+2025-10-15 01:36:47 OPTIONS 404 https://tafsir-backend-612616741510.us-central1.run.app/annotations/verse/2%20(Al-Baqarah)/34
+2025-10-15 01:36:48 POST 201 https://tafsir-backend-612616741510.us-central1.run.app/query-history
+2025-10-15 01:37:16 OPTIONS 200 https://tafsir-backend-612616741510.us-central1.run.app/saved-searches
+2025-10-15 01:37:16 POST 201 https://tafsir-backend-612616741510.us-central1.run.app/saved-searches
+2025-10-15 01:50:36 OPTIONS 200 https://tafsir-backend-612616741510.us-central1.run.app/tafsir
+2025-10-15 01:50:36 POST 200 https://tafsir-backend-612616741510.us-central1.run.app/tafsir
+2025-10-15 01:50:38 E0000 00:00:1760493038.455718      15 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-10-15 01:50:38 E0000 00:00:1760493038.516111      15 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-10-15 01:50:38 E0000 00:00:1760493038.595505      15 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-10-15 01:50:38 E0000 00:00:1760493038.596542      15 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-10-15 01:50:38 E0000 00:00:1760493038.598427      15 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-10-15 01:50:44 OPTIONS 200 https://tafsir-backend-612616741510.us-central1.run.app/query-history
+2025-10-15 01:50:44 POST 201 https://tafsir-backend-612616741510.us-central1.run.app/query-history
