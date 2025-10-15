@@ -3435,41 +3435,78 @@ def tafsir_handler_enhanced():
             # Truncate prompt if needed to fit token limits
             prompt = truncate_context_if_needed(prompt, max_tokens=800000)
 
-            # Generate response
+            # Generate response with retry logic for malformed JSON
             VERTEX_ENDPOINT = f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/{GCP_INFRASTRUCTURE_PROJECT}/locations/{LOCATION}/publishers/google/models/{GEMINI_MODEL_ID}:generateContent"
 
-            body = {
-                "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-                "generation_config": {
-                    "response_mime_type": "application/json",
-                    "temperature": 0.2,
-                    "maxOutputTokens": 8192
-                },
-            }
+            max_retries = 3
+            final_json = None
+            generated_text = None
 
-            response = requests.post(
-                VERTEX_ENDPOINT,
-                headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
-                json=body,
-                timeout=120
-            )
-            response.raise_for_status()
+            for attempt in range(max_retries):
+                # Lower temperature on retries to increase JSON reliability
+                temperature = 0.2 if attempt == 0 else 0.1
 
-            # Parse response
-            raw_response = response.json()
-            if "candidates" in raw_response and raw_response["candidates"]:
+                body = {
+                    "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+                    "generation_config": {
+                        "response_mime_type": "application/json",
+                        "temperature": temperature,
+                        "maxOutputTokens": 8192
+                    },
+                }
+
                 try:
-                    generated_text = raw_response["candidates"][0]["content"]["parts"][0]["text"]
-                    final_json = extract_json_from_response(generated_text)
+                    response = requests.post(
+                        VERTEX_ENDPOINT,
+                        headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+                        json=body,
+                        timeout=120
+                    )
+                    response.raise_for_status()
 
-                    if not final_json:
-                        print(f"❌ Failed to extract JSON from Gemini response (Route 3)")
-                        print(f"Response preview: {generated_text[:500]}...")
-                        return jsonify({
-                            "error": "AI returned malformed response",
-                            "details": "The AI response could not be parsed as JSON. Try rephrasing your query or making it more specific.",
-                            "error_type": "json_parse_error"
-                        }), 500
+                    # Parse response
+                    raw_response = response.json()
+                    if "candidates" in raw_response and raw_response["candidates"]:
+                        generated_text = raw_response["candidates"][0]["content"]["parts"][0]["text"]
+                        final_json = extract_json_from_response(generated_text)
+
+                        if final_json:
+                            if attempt > 0:
+                                print(f"✅ JSON parsing succeeded on retry {attempt + 1}")
+                            break  # Success!
+                        else:
+                            print(f"⚠️  Attempt {attempt + 1}/{max_retries}: Failed to parse JSON")
+                            if attempt < max_retries - 1:
+                                print(f"   Retrying with lower temperature ({temperature})...")
+                                time.sleep(0.5)  # Brief pause before retry
+                    else:
+                        print(f"⚠️  Attempt {attempt + 1}/{max_retries}: Empty response from Gemini")
+                        if attempt < max_retries - 1:
+                            time.sleep(0.5)
+
+                except requests.exceptions.Timeout:
+                    print(f"⚠️  Attempt {attempt + 1}/{max_retries}: Timeout")
+                    if attempt < max_retries - 1:
+                        time.sleep(1)
+                except Exception as e:
+                    print(f"⚠️  Attempt {attempt + 1}/{max_retries}: Error - {e}")
+                    if attempt < max_retries - 1:
+                        time.sleep(0.5)
+
+            # Check if we got valid JSON after retries
+            if not final_json:
+                print(f"❌ Failed to extract JSON after {max_retries} attempts (Route 3)")
+                if generated_text:
+                    print(f"Last response preview: {generated_text[:500]}...")
+                return jsonify({
+                    "error": "AI returned malformed response",
+                    "details": f"The AI response could not be parsed as JSON after {max_retries} attempts. This may be due to query complexity or temporary service issues.",
+                    "suggestion": "Try rephrasing your query, making it more specific, or try again in a moment.",
+                    "error_type": "json_parse_error"
+                }), 500
+
+            # Continue with valid JSON
+            try:
 
                     # Enhance with verse data
                     if verse_data:
