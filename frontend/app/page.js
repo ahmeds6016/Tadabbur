@@ -818,6 +818,66 @@ function MainApp({ user, userProfile }) {
 
         {response && (
           <>
+            {/* Save & Export Section - Moved to top for better accessibility */}
+            <div className="export-section" style={{
+              marginBottom: '24px',
+              padding: '16px 20px',
+              background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
+              border: '2px solid #0ea5e9',
+              borderRadius: '12px',
+              boxShadow: '0 2px 8px rgba(14, 165, 233, 0.15)'
+            }}>
+              <h3 style={{ marginTop: 0, marginBottom: '12px', color: '#0369a1' }}>Save & Export</h3>
+              <div className="export-controls" style={{
+                display: 'flex',
+                gap: '12px',
+                flexWrap: 'wrap'
+              }}>
+                <button onClick={handleSaveSearch} className="export-btn" style={{
+                  padding: '10px 20px',
+                  background: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: '700',
+                  color: '#fff',
+                  fontSize: '0.9rem',
+                  boxShadow: '0 2px 6px rgba(14, 165, 233, 0.3)',
+                  transition: 'all 0.3s ease'
+                }}>
+                  ⭐ Save this Answer
+                </button>
+                <button onClick={() => handleExport('markdown')} className="export-btn" style={{
+                  padding: '10px 20px',
+                  background: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: '700',
+                  color: '#fff',
+                  fontSize: '0.9rem',
+                  boxShadow: '0 2px 6px rgba(14, 165, 233, 0.3)',
+                  transition: 'all 0.3s ease'
+                }}>
+                  📄 Export as Markdown
+                </button>
+                <button onClick={() => handleExport('json')} className="export-btn" style={{
+                  padding: '10px 20px',
+                  background: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: '700',
+                  color: '#fff',
+                  fontSize: '0.9rem',
+                  boxShadow: '0 2px 6px rgba(14, 165, 233, 0.3)',
+                  transition: 'all 0.3s ease'
+                }}>
+                  📋 Export as JSON
+                </button>
+              </div>
+            </div>
+
             {/* Approach Suggestion Banner */}
             {response.approach_suggestion && (
               <div style={{
@@ -846,9 +906,49 @@ function MainApp({ user, userProfile }) {
                   </div>
                 </div>
                 <button
-                  onClick={() => {
+                  onClick={async () => {
+                    // Set the approach first
                     setApproach(response.approach_suggestion.suggested);
-                    handleGetTafsir({ preventDefault: () => {}, target: document.querySelector('form') });
+
+                    // Wait for state update, then trigger search
+                    setTimeout(async () => {
+                      setIsTafsirLoading(true);
+                      setResponse(null);
+                      setError('');
+                      setRateLimitWarning('');
+
+                      try {
+                        const token = await user.getIdToken();
+                        const res = await fetch(`${BACKEND_URL}/tafsir`, {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            Authorization: `Bearer ${token}`
+                          },
+                          body: JSON.stringify({
+                            approach: response.approach_suggestion.suggested,
+                            query
+                          })
+                        });
+
+                        const data = await res.json();
+
+                        if (res.status === 429) {
+                          setRateLimitWarning('You have reached your query limit. Please try again later.');
+                          return;
+                        }
+
+                        if (!res.ok) throw new Error(data.error || 'Unknown error fetching Tafsir.');
+
+                        setResponse(data);
+                        await saveQueryToHistory(query, response.approach_suggestion.suggested, userProfile?.persona || '', true);
+                      } catch (err) {
+                        setError(err.message);
+                        await saveQueryToHistory(query, response.approach_suggestion.suggested, userProfile?.persona || '', false);
+                      } finally {
+                        setIsTafsirLoading(false);
+                      }
+                    }, 0);
                   }}
                   style={{
                     padding: '10px 20px',
@@ -879,20 +979,6 @@ function MainApp({ user, userProfile }) {
             )}
 
             <EnhancedResultsDisplay data={response} user={user} />
-            <div className="export-section">
-              <h3>Save & Export</h3>
-              <div className="export-controls">
-                <button onClick={handleSaveSearch} className="export-btn">
-                  ⭐ Save this Answer
-                </button>
-                <button onClick={() => handleExport('markdown')} className="export-btn">
-                  📄 Export as Markdown
-                </button>
-                <button onClick={() => handleExport('json')} className="export-btn">
-                  📋 Export as JSON
-                </button>
-              </div>
-            </div>
           </>
         )}
       </div>
