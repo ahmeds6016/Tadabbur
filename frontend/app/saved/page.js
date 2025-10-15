@@ -297,7 +297,7 @@ export default function SavedSearchesPage() {
                                     </p>
                                   )}
                                   <p style={{ fontStyle: 'italic', color: '#555' }}>
-                                    "{verse.text_saheeh_international}"
+                                    &ldquo;{verse.text_saheeh_international}&rdquo;
                                   </p>
                                 </div>
                               ))}
