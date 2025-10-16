@@ -11,13 +11,19 @@ This audit identified **83 total issues** across the backend and frontend codeba
 - **Backend:** 47 issues (6 Critical, 5 High, 21 Medium, 15 Low)
 - **Frontend:** 36 issues (2 Critical, 9 High, 18 Medium, 7 Low)
 
-### Most Critical Issues Requiring Immediate Attention:
-1. ✅ **FIXED:** UnboundLocalError in Route 2 (verse variable undefined for verse ranges)
-2. **Backend:** Unvalidated nested dictionary access causing KeyError → 500 errors
-3. **Backend:** Thread-unsafe cache management (race conditions)
-4. **Backend:** Missing input validation on type conversions
-5. **Frontend:** Hardcoded API keys and backend URLs (security + maintainability)
-6. **Frontend:** No error boundaries (entire app crashes on component errors)
+### Most Critical Issues - Status Update:
+1. ✅ **FIXED (commit d1a613c)** - IndentationError preventing backend from starting
+2. ✅ **FIXED (commit d3b3c78)** - UnboundLocalError in Route 2 (verse variable undefined for verse ranges)
+3. ✅ **FIXED (commit d3b3c78)** - Unvalidated nested dictionary access causing KeyError → 500 errors
+4. ✅ **FIXED (commit d3b3c78)** - Thread-unsafe cache management (race conditions)
+5. ✅ **FIXED (commit d3b3c78)** - Missing input validation on type conversions
+6. ✅ **FIXED (commit 1d7ab58)** - No distance threshold filtering (sending irrelevant chunks to AI)
+7. ✅ **FIXED (commit 60f49fd)** - Static source weighting (not adapting to content availability)
+8. ✅ **FIXED (commit 67a599c)** - Multi-verse metadata only stored under first verse
+9. **Frontend:** Hardcoded API keys and backend URLs (security + maintainability)
+10. **Frontend:** No error boundaries (entire app crashes on component errors)
+
+**⚠️ DEPLOYMENT STATUS:** Backend fixes committed but NOT yet deployed to production
 
 ---
 
@@ -237,47 +243,53 @@ export const app = initializeApp(firebaseConfig);
 
 ### IMMEDIATE (Fix Today)
 
-1. ✅ **DONE** - Fix UnboundLocalError in Route 2
-2. **Backend** - Add safe nested dictionary access for Gemini API responses
-3. **Backend** - Add thread-safe cache management
-4. **Backend** - Validate integer conversions from user input
-5. **Frontend** - Move Firebase config to environment variables
-6. **Frontend** - Move backend URL to environment variable
-7. **Frontend** - Add error boundaries to all pages
+1. ✅ **DONE (commit d1a613c)** - Fix IndentationError in Route 3
+2. ✅ **DONE (commit d3b3c78)** - Fix UnboundLocalError in Route 2
+3. ✅ **DONE (commit d3b3c78)** - Add safe nested dictionary access for Gemini API responses
+4. ✅ **DONE (commit d3b3c78)** - Add thread-safe cache management
+5. ✅ **DONE (commit d3b3c78)** - Validate integer conversions from user input
+6. ✅ **DONE (commit 1d7ab58)** - Add distance threshold filtering (0.6)
+7. ✅ **DONE (commit 60f49fd)** - Implement fully dynamic source weighting
+8. ✅ **DONE (commit 67a599c)** - Fix multi-verse metadata storage
+9. **Frontend** - Move Firebase config to environment variables
+10. **Frontend** - Move backend URL to environment variable
+11. **Frontend** - Add error boundaries to all pages
+
+**⚠️ DEPLOYMENT REQUIRED:** Run `./deploy-backend.sh` to deploy commits to production
 
 ### SHORT-TERM (This Week)
 
-8. **Backend** - Add comprehensive API error handling
-9. **Backend** - Validate verse range bounds
-10. **Backend** - Protect debug endpoint with authentication
-11. **Backend** - Fix Firestore None checks
-12. **Frontend** - Replace alert/confirm with modal components
-13. **Frontend** - Add request timeouts and cancellation
-14. **Frontend** - Implement retry logic for failed requests
-15. **Backend** - Standardize error response format
+12. **Backend** - Add comprehensive API error handling
+13. ✅ **VERIFIED** - Verse range bounds already validated (line 450)
+14. **Backend** - Protect debug endpoint with authentication
+15. **Backend** - Fix Firestore None checks
+16. **Frontend** - Replace alert/confirm with modal components
+17. **Frontend** - Add request timeouts and cancellation
+18. **Frontend** - Implement retry logic for failed requests
+19. **Backend** - Standardize error response format
 
 ### MEDIUM-TERM (This Month)
 
-16. **Backend** - Add proper logging system (replace print statements)
-17. **Backend** - Implement rate limiting per operation type
-18. **Backend** - Add request ID tracking
-19. **Frontend** - Migrate to centralized API client or delete unused firebaseApi.js
-20. **Frontend** - Add pagination for large lists
-21. **Frontend** - Implement data caching with React Query/SWR
-22. **Frontend** - Split large page.js into smaller components
-23. **Backend** - Add verse content length validation
-24. **Backend** - Cache embedding model instance
+20. **Backend** - Add proper logging system (replace print statements)
+21. **Backend** - Implement rate limiting per operation type
+22. **Backend** - Add request ID tracking
+23. **Frontend** - Migrate to centralized API client or delete unused firebaseApi.js
+24. **Frontend** - Add pagination for large lists
+25. **Frontend** - Implement data caching with React Query/SWR
+26. **Frontend** - Split large page.js into smaller components
+27. **Backend** - Add verse content length validation
+28. **Backend** - Cache embedding model instance
 
 ### LONG-TERM (Next Quarter)
 
-25. **Backend** - Migrate to proper logging framework
-26. **Backend** - Add metrics/monitoring integration
-27. **Backend** - Implement circuit breaker pattern
-28. **Backend** - Add comprehensive test coverage
-29. **Frontend** - Migrate to TypeScript
-30. **Frontend** - Add comprehensive keyboard navigation
-31. **Frontend** - Implement skeleton loaders
-32. **Frontend** - Add undo functionality
+29. **Backend** - Migrate to proper logging framework
+30. **Backend** - Add metrics/monitoring integration
+31. **Backend** - Implement circuit breaker pattern
+32. **Backend** - Add comprehensive test coverage
+33. **Frontend** - Migrate to TypeScript
+34. **Frontend** - Add comprehensive keyboard navigation
+35. **Frontend** - Implement skeleton loaders
+36. **Frontend** - Add undo functionality
 
 ---
 
@@ -319,22 +331,31 @@ export const app = initializeApp(firebaseConfig);
 
 ## Estimated Impact of Fixes
 
-### Immediate Fixes (1-7)
-- **Reduces 500 errors by:** ~70%
-- **Improves security:** High
-- **Development time:** 4-6 hours
+### ✅ COMPLETED - Immediate Backend Fixes (1-8)
+- **Reduces 500 errors by:** ~85% (estimated)
+- **Reduces "material does not contain" false negatives by:** ~70% (estimated)
+- **Improves query reliability:** Significant (distance filtering + dynamic weighting)
+- **Fixes multi-verse queries:** Now works for all verses in range
+- **Development time:** 6 hours (COMPLETED)
+- **Status:** ✅ Committed (5 commits: d1a613c, d3b3c78, 1d7ab58, 60f49fd, 67a599c)
+- **⚠️ NOT YET DEPLOYED - Run ./deploy-backend.sh**
 
-### Short-term Fixes (8-15)
-- **Reduces 500 errors by:** ~85%
+### Remaining Immediate Frontend Fixes (9-11)
+- **Improves security:** Critical (removes hardcoded API keys)
+- **Prevents app crashes:** High (error boundaries)
+- **Development time:** 2-3 hours
+
+### Short-term Fixes (12-19)
+- **Reduces remaining 500 errors by:** ~95% (cumulative)
 - **Improves UX:** Significant
 - **Development time:** 2-3 days
 
-### Medium-term Fixes (16-24)
+### Medium-term Fixes (20-28)
 - **Code quality improvement:** High
 - **Maintainability:** Significant
 - **Development time:** 1-2 weeks
 
-### Long-term Fixes (25-32)
+### Long-term Fixes (29-36)
 - **Future-proofing:** High
 - **Developer experience:** Excellent
 - **Development time:** 4-6 weeks
