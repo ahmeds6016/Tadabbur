@@ -21,6 +21,7 @@ import firebase_admin
 from firebase_admin import credentials, auth, firestore
 from google.cloud import secretmanager
 from google.cloud import firestore as gcp_firestore
+from google.cloud.firestore import FieldFilter  # For new query syntax
 
 # Imports for RAG and Query Expansion
 import vertexai
@@ -2524,7 +2525,8 @@ def get_saved_searches():
         saved_ref = users_db.collection('users').document(uid).collection('saved_searches')
 
         if folder:
-            query = saved_ref.where('folder', '==', folder).order_by('savedAt', direction='DESCENDING')
+            # Updated to use FieldFilter (new Firestore syntax)
+            query = saved_ref.where(filter=FieldFilter('folder', '==', folder)).order_by('savedAt', direction='DESCENDING')
         else:
             query = saved_ref.order_by('savedAt', direction='DESCENDING')
 
@@ -2648,7 +2650,10 @@ def get_verse_annotations(surah, verse):
         uid = request.user['uid']
 
         annotations_ref = users_db.collection('users').document(uid).collection('annotations')
-        query = annotations_ref.where('surah', '==', surah).where('verse', '==', verse).order_by('createdAt', direction='DESCENDING')
+        # Updated to use FieldFilter (new Firestore syntax) - requires composite index
+        query = annotations_ref.where(filter=FieldFilter('surah', '==', surah)) \
+                              .where(filter=FieldFilter('verse', '==', verse)) \
+                              .order_by('createdAt', direction='DESCENDING')
 
         annotations = []
         for doc in query.stream():
@@ -3122,6 +3127,16 @@ def tafsir_handler_enhanced():
         # Analytics
         ANALYTICS[query] += 1
 
+        # Get user profile for caching
+        user_profile = get_user_profile(user_id)
+
+        # Check cache BEFORE any processing (applies to ALL routes)
+        cache_key = get_cache_key(query, user_profile, approach)
+        with cache_lock:
+            if cache_key in RESPONSE_CACHE:
+                print(f"💾 Cache hit for query (approach: {approach})")
+                return jsonify(RESPONSE_CACHE[cache_key]), 200
+
         print(f"\n{'='*70}")
         print(f"📥 QUERY: {query}")
         print(f"🎯 APPROACH: {approach.upper()}")
@@ -3279,7 +3294,7 @@ def tafsir_handler_enhanced():
                     VERTEX_ENDPOINT,
                     headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
                     json=body,
-                    timeout=120
+                    timeout=30  # Reduced from 120s - fail fast for better UX
                 )
                 response.raise_for_status()
 
@@ -3304,8 +3319,17 @@ def tafsir_handler_enhanced():
                     final_json["query_type"] = "direct_metadata"
                     final_json["verse_reference"] = f"{surah}:{verse}"
 
-                    # Filter out unavailable sources before returning
+                    # Filter out unavailable sources before caching and returning
                     final_json = filter_unavailable_sources(final_json)
+
+                    # Cache the response (Route 1)
+                    with cache_lock:
+                        RESPONSE_CACHE[cache_key] = final_json
+                        if len(RESPONSE_CACHE) > 1000:
+                            # Prune oldest 20% of cache
+                            keys_to_remove = list(RESPONSE_CACHE.keys())[:200]
+                            for key in keys_to_remove:
+                                RESPONSE_CACHE.pop(key, None)
 
                     print(f"✅ Metadata formatted by AI from {len(verse_metadata_list)} source(s)")
                     return jsonify(final_json), 200
@@ -3449,7 +3473,7 @@ def tafsir_handler_enhanced():
                         VERTEX_ENDPOINT,
                         headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
                         json=body,
-                        timeout=120
+                        timeout=30  # Reduced from 120s - fail fast for better UX
                     )
                     response.raise_for_status()
 
@@ -3473,8 +3497,17 @@ def tafsir_handler_enhanced():
                         final_json["query_type"] = "direct_verse"
                         final_json["verse_reference"] = f"{surah}:{verse}"
 
-                        # Filter out unavailable sources before returning
+                        # Filter out unavailable sources before caching and returning
                         final_json = filter_unavailable_sources(final_json)
+
+                        # Cache the response (Route 2)
+                        with cache_lock:
+                            RESPONSE_CACHE[cache_key] = final_json
+                            if len(RESPONSE_CACHE) > 1000:
+                                # Prune oldest 20% of cache
+                                keys_to_remove = list(RESPONSE_CACHE.keys())[:200]
+                                for key in keys_to_remove:
+                                    RESPONSE_CACHE.pop(key, None)
 
                         print(f"✅ Direct verse formatted by AI from {len(verse_metadata_list)} source(s)")
                         return jsonify(final_json), 200
@@ -3490,14 +3523,8 @@ def tafsir_handler_enhanced():
         if query_type == 'semantic':
             print("🚀 ROUTE 3: Semantic Search (Full RAG)")
 
-            # Get user profile
-            user_profile = get_user_profile(user_id)
-
-            # Check cache (approach-aware)
-            cache_key = get_cache_key(query, user_profile, approach)
-            if cache_key in RESPONSE_CACHE:
-                print(f"💾 Cache hit (approach: {approach})")
-                return jsonify(RESPONSE_CACHE[cache_key]), 200
+            # NOTE: user_profile and cache_key already set at top of function
+            # No need to check cache again - already checked above
 
             # Prepare query
             # CRITICAL FIX: Don't duplicate verse info in rag_query - causes expansion to truncate verse numbers
@@ -3574,7 +3601,7 @@ def tafsir_handler_enhanced():
                         VERTEX_ENDPOINT,
                         headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
                         json=body,
-                        timeout=120
+                        timeout=30  # Reduced from 120s - fail fast for better UX
                     )
                     response.raise_for_status()
 
