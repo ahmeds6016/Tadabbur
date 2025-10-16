@@ -1007,11 +1007,16 @@ def load_chunks_from_verse_files_enhanced():
                 continue
 
             # Handle verse numbers (single or list)
+            verse_numbers_list = []
             if isinstance(verse_num, list) and verse_num:
-                # For multi-verse entries, store under first verse
-                verse_num = verse_num[0]
+                # CRITICAL FIX: Store under ALL verses in the range, not just first
+                verse_numbers_list = verse_num
+                verse_num = verse_num[0]  # Use first for chunk_id
             elif verse_num is None:
                 verse_num = 0
+                verse_numbers_list = [0]
+            else:
+                verse_numbers_list = [verse_num]
 
             verse_text = verse.get('verse_text', '')
             topics = verse.get('topics', [])
@@ -1103,7 +1108,8 @@ def load_chunks_from_verse_files_enhanced():
                             if topic.get('legal_rulings'):
                                 all_legal_rulings.extend(topic['legal_rulings'])
 
-                VERSE_METADATA[chunk_id] = {
+                # CRITICAL FIX: Store metadata under ALL verses in the range
+                metadata_entry = {
                     'surah': surah,
                     'verse_number': verse_num,
                     'source': source,
@@ -1120,6 +1126,15 @@ def load_chunks_from_verse_files_enhanced():
                     'legal_rulings': all_legal_rulings,
                     'verse_numbers': verse.get('verse_numbers'),
                 }
+
+                # Store under the primary chunk_id (for backward compatibility)
+                VERSE_METADATA[chunk_id] = metadata_entry
+
+                # ALSO store under each individual verse in the range
+                for individual_verse in verse_numbers_list:
+                    individual_chunk_id = f"{source}:{surah}:{individual_verse}"
+                    if individual_chunk_id != chunk_id:  # Avoid duplicate
+                        VERSE_METADATA[individual_chunk_id] = metadata_entry.copy()
 
         print(f"INFO: Dual storage complete:")
         print(f"  - Flat chunks: {len(TAFSIR_CHUNKS)}")
