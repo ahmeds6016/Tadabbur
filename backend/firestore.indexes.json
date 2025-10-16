@@ -1,0 +1,37 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "annotations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "surah",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "verse",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "saved_searches",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "folder",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "savedAt",
+          "order": "DESCENDING"
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

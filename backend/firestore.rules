@@ -1,0 +1,26 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users can only access their own user document and subcollections
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Quran verses are read-only for authenticated users
+    match /quran/{document=**} {
+      allow read: if request.auth != null;
+      allow write: if false; // Admin only via server
+    }
+
+    // Tafsir content is read-only for authenticated users
+    match /tafsir/{document=**} {
+      allow read: if request.auth != null;
+      allow write: if false; // Admin only via server
+    }
+
+    // Default deny all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
