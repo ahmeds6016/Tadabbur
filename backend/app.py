@@ -1350,16 +1350,27 @@ def build_direct_verse_response(verse_data: Dict, verse_metadata_list: List[Dict
     return response
 
 
-def retrieve_chunks_from_neighbors(neighbors):
+def retrieve_chunks_from_neighbors(neighbors, distance_threshold=0.6):
     """
-    Retrieve chunks from TAFSIR_CHUNKS based on neighbor IDs.
+    Retrieve chunks from TAFSIR_CHUNKS based on neighbor IDs with relevance filtering.
     Handles sliding window segment IDs (e.g., ibn-kathir:1:1_0 -> ibn-kathir:1:1)
+
+    Args:
+        neighbors: List of neighbor results from vector index
+        distance_threshold: Max distance to consider (0.0-1.0, lower = more similar)
+                          Default 0.6 = moderately relevant
 
     Returns list of dicts with chunk info.
     """
     retrieved = []
+    filtered_count = 0
 
     for neighbor in neighbors:
+        # CRITICAL FIX: Filter by semantic distance BEFORE adding to results
+        if neighbor.distance > distance_threshold:
+            filtered_count += 1
+            continue  # Skip irrelevant chunks
+
         neighbor_id = str(neighbor.id)
 
         # Remove segment suffix if present (e.g., ibn-kathir:1:1_0 -> ibn-kathir:1:1)
@@ -1382,6 +1393,15 @@ def retrieve_chunks_from_neighbors(neighbors):
             })
         else:
             print(f"WARNING: Chunk not found for ID: {neighbor_id} (base: {base_id})")
+
+    # Log filtering stats for debugging
+    total = len(neighbors)
+    kept = len(retrieved)
+    if total > 0:
+        print(f"   Vector search: {total} neighbors → {kept} relevant (filtered {filtered_count}, threshold={distance_threshold})")
+        if kept == 0:
+            closest_dist = min(n.distance for n in neighbors) if neighbors else 1.0
+            print(f"   ⚠️  No chunks below threshold! Closest match: distance={closest_dist:.3f}")
 
     return retrieved
 
@@ -1660,12 +1680,15 @@ def perform_diversified_rag_search(query, expanded_query, embedding_model, index
     weights = SOURCE_WEIGHTS.get(rag_query_type, SOURCE_WEIGHTS["default"])
 
     # Adjust weights based on approach
+    # CRITICAL FIX: Al-Qurtubi only covers Surahs 1-4 (3.5% of Quran)
+    # Most historical events are in later Meccan/Medinan surahs
+    # Prioritize Ibn Kathir (100% coverage) for historical queries
     if approach == 'historical':
-        # Historical: prioritize al-Qurtubi (known for historical context)
-        weights = {'Ibn Kathir': 0.4, 'al-Qurtubi': 0.6}
+        # Historical: prioritize Ibn Kathir (complete coverage)
+        weights = {'Ibn Kathir': 0.75, 'al-Qurtubi': 0.25}
     elif approach == 'thematic':
-        # Thematic: balance both sources equally
-        weights = {'Ibn Kathir': 0.5, 'al-Qurtubi': 0.5}
+        # Thematic: balance both sources
+        weights = {'Ibn Kathir': 0.6, 'al-Qurtubi': 0.4}
     # tafsir approach uses default weights
 
     selected_chunks = []
