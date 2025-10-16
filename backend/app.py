@@ -4,6 +4,7 @@ import re
 import traceback
 import time
 import hashlib
+import threading
 from functools import wraps
 from collections import defaultdict
 from datetime import datetime, timedelta
@@ -64,6 +65,30 @@ EMBEDDING_DIMENSION = 1536  # Changed from 1024 to 1536
 if not FIREBASE_SECRET_FULL_PATH or not INDEX_ENDPOINT_ID or not DEPLOYED_INDEX_ID or not GCS_BUCKET_NAME:
     raise ValueError("CRITICAL STARTUP ERROR: Missing required RAG environment variables")
 
+# --- Helper Functions ---
+def safe_get_nested(data: Dict[str, Any], *keys: str, default: Any = None) -> Any:
+    """
+    Safely access nested dictionary keys without raising KeyError.
+
+    Usage:
+        safe_get_nested(response, "candidates", 0, "content", "parts", 0, "text")
+    """
+    current = data
+    for key in keys:
+        if isinstance(current, dict):
+            current = current.get(key)
+        elif isinstance(current, (list, tuple)) and isinstance(key, int):
+            try:
+                current = current[key]
+            except (IndexError, TypeError):
+                return default
+        else:
+            return default
+
+        if current is None:
+            return default
+    return current
+
 # Global variables - UPDATED for dual database setup
 users_db = None      # Firebase Admin SDK -> (default) database for users/auth
 quran_db = None      # Google Cloud client -> tafsir-db database for Quran texts
@@ -73,6 +98,11 @@ VERSE_METADATA = {}  # NEW: Stores structured metadata for direct queries
 RESPONSE_CACHE = {}  # In-memory cache
 USER_RATE_LIMITS = defaultdict(list)  # Rate limiting
 ANALYTICS = defaultdict(int)  # Usage analytics
+
+# Thread safety locks
+cache_lock = threading.Lock()
+rate_limit_lock = threading.Lock()
+analytics_lock = threading.Lock()
 
 # ============================================================================
 # NEW: PERSONA SYSTEM FOR ADAPTIVE RESPONSES
@@ -1567,8 +1597,12 @@ Keep the expansion concise but comprehensive. Return only the expanded query tex
 
         if response.status_code == 200:
             result = response.json()
-            if "candidates" in result and result["candidates"]:
-                expanded = result["candidates"][0]["content"]["parts"][0]["text"].strip()
+
+            # Safely extract expanded query from nested response
+            expanded = safe_get_nested(result, "candidates", 0, "content", "parts", 0, "text")
+
+            if expanded:
+                expanded = expanded.strip()
                 print(f"INFO: Query expanded from '{query}' to '{expanded}'")
                 return expanded
 
@@ -3182,8 +3216,11 @@ def tafsir_handler_enhanced():
 
                 # Parse response
                 raw_response = response.json()
-                if "candidates" in raw_response and raw_response["candidates"]:
-                    generated_text = raw_response["candidates"][0]["content"]["parts"][0]["text"]
+
+                # Safely extract generated text from nested response
+                generated_text = safe_get_nested(raw_response, "candidates", 0, "content", "parts", 0, "text")
+
+                if generated_text:
                     final_json = extract_json_from_response(generated_text)
 
                     if not final_json:
@@ -3205,6 +3242,7 @@ def tafsir_handler_enhanced():
                     return jsonify(final_json), 200
                 else:
                     # Fallback to structured response
+                    print(f"⚠️  Gemini response structure unexpected, using fallback")
                     response = format_metadata_response(verse_ref, metadata_type or 'all', verse_metadata_list)
                     return jsonify(response), 200
 
@@ -3218,6 +3256,7 @@ def tafsir_handler_enhanced():
             verse_range = extract_verse_range(query)
             if verse_range:
                 surah, start_verse, end_verse = verse_range
+                verse = start_verse  # For verse_reference formatting
                 print(f"   Detected verse range: {surah}:{start_verse}-{end_verse}")
             else:
                 surah, verse = verse_ref
@@ -3347,8 +3386,11 @@ def tafsir_handler_enhanced():
 
                     # Parse response
                     raw_response = response.json()
-                    if "candidates" in raw_response and raw_response["candidates"]:
-                        generated_text = raw_response["candidates"][0]["content"]["parts"][0]["text"]
+
+                    # Safely extract generated text from nested response
+                    generated_text = safe_get_nested(raw_response, "candidates", 0, "content", "parts", 0, "text")
+
+                    if generated_text:
                         final_json = extract_json_from_response(generated_text)
 
                         if not final_json:
@@ -3369,6 +3411,7 @@ def tafsir_handler_enhanced():
                         return jsonify(final_json), 200
                     else:
                         # Fallback to structured response
+                        print(f"⚠️  Gemini response structure unexpected, using fallback")
                         response = build_direct_verse_response(verse_data, verse_metadata_list)
                         return jsonify(response), 200
 
@@ -3466,8 +3509,11 @@ def tafsir_handler_enhanced():
 
                     # Parse response
                     raw_response = response.json()
-                    if "candidates" in raw_response and raw_response["candidates"]:
-                        generated_text = raw_response["candidates"][0]["content"]["parts"][0]["text"]
+
+                    # Safely extract generated text from nested response
+                    generated_text = safe_get_nested(raw_response, "candidates", 0, "content", "parts", 0, "text")
+
+                    if generated_text:
                         final_json = extract_json_from_response(generated_text)
 
                         if final_json:
@@ -3480,7 +3526,7 @@ def tafsir_handler_enhanced():
                                 print(f"   Retrying with lower temperature ({temperature})...")
                                 time.sleep(0.5)  # Brief pause before retry
                     else:
-                        print(f"⚠️  Attempt {attempt + 1}/{max_retries}: Empty response from Gemini")
+                        print(f"⚠️  Attempt {attempt + 1}/{max_retries}: Empty or malformed response from Gemini")
                         if attempt < max_retries - 1:
                             time.sleep(0.5)
 
@@ -3539,12 +3585,13 @@ def tafsir_handler_enhanced():
                 # Filter out unavailable sources before caching and returning
                 final_json = filter_unavailable_sources(final_json)
 
-                # Cache
-                RESPONSE_CACHE[cache_key] = final_json
-                if len(RESPONSE_CACHE) > 1000:
-                    keys_to_remove = list(RESPONSE_CACHE.keys())[:200]
-                    for key in keys_to_remove:
-                        del RESPONSE_CACHE[key]
+                # Cache with thread safety
+                with cache_lock:
+                    RESPONSE_CACHE[cache_key] = final_json
+                    if len(RESPONSE_CACHE) > 1000:
+                        keys_to_remove = list(RESPONSE_CACHE.keys())[:200]
+                        for key in keys_to_remove:
+                            RESPONSE_CACHE.pop(key, None)  # Use pop to avoid KeyError
 
                 print(f"✅ Semantic response generated")
                 return jsonify(final_json), 200
