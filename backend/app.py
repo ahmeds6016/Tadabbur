@@ -43,7 +43,7 @@ FIREBASE_PROJECT = os.environ.get("FIREBASE_PROJECT", "tafsir-simplified-6b262")
 # GCP infrastructure project (Vertex AI, GCS, Cloud Run)
 GCP_INFRASTRUCTURE_PROJECT = os.environ.get("GCP_INFRASTRUCTURE_PROJECT", "tafsir-simplified")
 LOCATION = os.environ.get("GCP_LOCATION", "us-central1")
-GEMINI_MODEL_ID = os.environ.get("GEMINI_MODEL_ID", "gemini-2.0-flash")
+GEMINI_MODEL_ID = os.environ.get("GEMINI_MODEL_ID", "gemini-2.5-flash")  # Upgraded: 65K output tokens (vs 8K in 2.0) - eliminates truncation-based malformed JSON
 FIREBASE_SECRET_FULL_PATH = os.environ.get("FIREBASE_SECRET_FULL_PATH")
 
 # UPDATED: New sliding window vector index configuration (1536 dimensions)
@@ -3551,20 +3551,20 @@ def tafsir_handler_enhanced():
             # Generate response with retry logic for malformed JSON
             VERTEX_ENDPOINT = f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/{GCP_INFRASTRUCTURE_PROJECT}/locations/{LOCATION}/publishers/google/models/{GEMINI_MODEL_ID}:generateContent"
 
-            max_retries = 3
+            max_retries = 5  # INCREASED from 3 to 5 for better reliability
             final_json = None
             generated_text = None
 
             for attempt in range(max_retries):
-                # Lower temperature on retries to increase JSON reliability
-                temperature = 0.2 if attempt == 0 else 0.1
+                # Progressive temperature reduction on retries (0.3 → 0.1, never 0.0 to avoid robotic responses)
+                temperature = max(0.1, 0.3 - (attempt * 0.05))
 
                 body = {
                     "contents": [{"role": "user", "parts": [{"text": prompt}]}],
                     "generation_config": {
                         "response_mime_type": "application/json",
                         "temperature": temperature,
-                        "maxOutputTokens": 8192
+                        "maxOutputTokens": 65536  # Gemini 2.5 Flash supports up to 65K output tokens (vs 8K in 2.0)
                     },
                 }
 
