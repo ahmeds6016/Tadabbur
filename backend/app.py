@@ -3507,61 +3507,58 @@ def tafsir_handler_enhanced():
 
             # Continue with valid JSON
             try:
+                # Enhance with verse data
+                if verse_data:
+                    final_json["verses"] = [{
+                        "surah": verse_data['surah_number'],  # Use surah_number for annotations
+                        "surah_name": verse_data['surah_name'],
+                        "verse_number": str(verse_data['verse_number']),
+                        "text_saheeh_international": verse_data['english'],
+                        "arabic_text": verse_data['arabic']
+                    }]
+                    final_json["query_type"] = "semantic_with_verse"
+                else:
+                    final_json["query_type"] = "thematic"
 
-                    # Enhance with verse data
-                    if verse_data:
-                        final_json["verses"] = [{
-                            "surah": verse_data['surah_number'],  # Use surah_number for annotations
-                            "surah_name": verse_data['surah_name'],
-                            "verse_number": str(verse_data['verse_number']),
-                            "text_saheeh_international": verse_data['english'],
-                            "arabic_text": verse_data['arabic']
-                        }]
-                        final_json["query_type"] = "semantic_with_verse"
-                    else:
-                        final_json["query_type"] = "thematic"
+                # Validate
+                is_valid, validation_msg = validate_response(final_json)
+                if not is_valid:
+                    print(f"⚠️  Validation failed: {validation_msg}")
+                    return jsonify({"error": "Response quality not met"}), 500
 
-                    # Validate
-                    is_valid, validation_msg = validate_response(final_json)
-                    if not is_valid:
-                        print(f"⚠️  Validation failed: {validation_msg}")
-                        return jsonify({"error": "Response quality not met"}), 500
+                # Add approach suggestion if user might benefit from different approach
+                intent = detect_query_intent(query)
+                if intent['suggested_approach'] and intent['suggested_approach'] != approach and intent['confidence'] == 'high':
+                    final_json['approach_suggestion'] = {
+                        'suggested': intent['suggested_approach'],
+                        'reason': intent['reason'],
+                        'current': approach
+                    }
+                    print(f"💡 Suggesting {intent['suggested_approach']} approach (current: {approach})")
 
-                    # Add approach suggestion if user might benefit from different approach
-                    intent = detect_query_intent(query)
-                    if intent['suggested_approach'] and intent['suggested_approach'] != approach and intent['confidence'] == 'high':
-                        final_json['approach_suggestion'] = {
-                            'suggested': intent['suggested_approach'],
-                            'reason': intent['reason'],
-                            'current': approach
-                        }
-                        print(f"💡 Suggesting {intent['suggested_approach']} approach (current: {approach})")
+                # Filter out unavailable sources before caching and returning
+                final_json = filter_unavailable_sources(final_json)
 
-                    # Filter out unavailable sources before caching and returning
-                    final_json = filter_unavailable_sources(final_json)
+                # Cache
+                RESPONSE_CACHE[cache_key] = final_json
+                if len(RESPONSE_CACHE) > 1000:
+                    keys_to_remove = list(RESPONSE_CACHE.keys())[:200]
+                    for key in keys_to_remove:
+                        del RESPONSE_CACHE[key]
 
-                    # Cache
-                    RESPONSE_CACHE[cache_key] = final_json
-                    if len(RESPONSE_CACHE) > 1000:
-                        keys_to_remove = list(RESPONSE_CACHE.keys())[:200]
-                        for key in keys_to_remove:
-                            del RESPONSE_CACHE[key]
+                print(f"✅ Semantic response generated")
+                return jsonify(final_json), 200
 
-                    print(f"✅ Semantic response generated")
-                    return jsonify(final_json), 200
-
-                except (KeyError, IndexError, json.JSONDecodeError) as e:
-                    print(f"❌ Response structure error: {type(e).__name__} - {e}")
-                    if 'generated_text' in locals():
-                        print(f"Response preview: {generated_text[:500]}...")
-                    return jsonify({
-                        "error": "AI returned unexpected response format",
-                        "details": "The response structure didn't match our expected format. This may be due to query complexity.",
-                        "suggestion": "Try simplifying your query or breaking it into smaller parts.",
-                        "error_type": "structure_error"
-                    }), 500
-            else:
-                return jsonify({"error": "AI returned empty response"}), 500
+            except (KeyError, IndexError, json.JSONDecodeError) as e:
+                print(f"❌ Response structure error: {type(e).__name__} - {e}")
+                if 'generated_text' in locals():
+                    print(f"Response preview: {generated_text[:500]}...")
+                return jsonify({
+                    "error": "AI returned unexpected response format",
+                    "details": "The response structure didn't match our expected format. This may be due to query complexity.",
+                    "suggestion": "Try simplifying your query or breaking it into smaller parts.",
+                    "error_type": "structure_error"
+                }), 500
 
     except requests.exceptions.Timeout:
         return jsonify({"error": "AI service timed out"}), 504
