@@ -1608,6 +1608,11 @@ Original query: "{query}"
 
 {guidance}
 
+CRITICAL RULES:
+1. If the query contains verse references (e.g., "3:26-27", "18:65-70"), PRESERVE THEM EXACTLY - do not truncate or modify verse numbers
+2. If the query contains Surah names or numbers, PRESERVE THEM EXACTLY
+3. Only ADD supplementary terms - never remove or modify existing parts of the query
+
 Expand this query by adding relevant Islamic terms, Arabic concepts, and theological concepts that would help find relevant tafsir passages for the {approach} approach. Consider:
 - Related Arabic terminology
 - Connected Quranic verses or themes
@@ -3494,20 +3499,22 @@ def tafsir_handler_enhanced():
                 return jsonify(RESPONSE_CACHE[cache_key]), 200
 
             # Prepare query
+            # CRITICAL FIX: Don't duplicate verse info in rag_query - causes expansion to truncate verse numbers
+            # The original query already contains verse references, adding "Surah X verse Y" prefix creates confusion
             if verse_ref:
                 surah_num, verse_num = verse_ref
                 verse_data = get_verse_from_firestore(surah_num, verse_num)
                 if verse_data:
                     arabic_text = get_arabic_text_from_verse_data(verse_data)
-                    rag_query = f"Surah {surah_num} verse {verse_num} {query}"
                 else:
-                    rag_query = query
                     verse_data = None
                     arabic_text = None
             else:
-                rag_query = query
                 verse_data = None
                 arabic_text = None
+
+            # Use original query for RAG - it preserves verse ranges correctly
+            rag_query = query
 
             # Classify for RAG
             rag_query_type = "default" # Simplified; classification is now primary
