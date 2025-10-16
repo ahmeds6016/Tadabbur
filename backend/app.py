@@ -1806,11 +1806,24 @@ def perform_diversified_rag_search(query, expanded_query, embedding_model, index
     else:  # tafsir
         num_neighbors = 20  # Focused classical commentary
 
-    neighbors_result = index_endpoint.find_neighbors(
-        deployed_index_id=DEPLOYED_INDEX_ID,
-        queries=[query_embedding],
-        num_neighbors=num_neighbors
-    )
+    # Add debug logging for vector search
+    print(f"🔍 Vector Search Debug:")
+    print(f"   Index Endpoint: {INDEX_ENDPOINT_ID}")
+    print(f"   Deployed Index: {DEPLOYED_INDEX_ID}")
+    print(f"   Embedding dimension: {len(query_embedding)}")
+    print(f"   Num neighbors requested: {num_neighbors}")
+
+    try:
+        neighbors_result = index_endpoint.find_neighbors(
+            deployed_index_id=DEPLOYED_INDEX_ID,
+            queries=[query_embedding],
+            num_neighbors=num_neighbors
+        )
+        print(f"   ✅ Vector search returned: {len(neighbors_result[0]) if neighbors_result else 0} neighbors")
+    except Exception as e:
+        print(f"   ❌ Vector search failed: {e}")
+        # Return empty list to trigger fallback
+        neighbors_result = [[]]
 
     # Step 3: Retrieve chunks using new function that handles segment IDs
     retrieved_chunks = retrieve_chunks_from_neighbors(neighbors_result[0])
@@ -4043,6 +4056,109 @@ def debug_index():
             "status": "error",
             "error": str(e),
             "traceback": traceback.format_exc()
+        }), 500
+
+@app.route("/debug/vector-diagnosis", methods=["GET"])
+def diagnose_vector_index():
+    """Emergency diagnostic endpoint to check why vector search is failing"""
+    try:
+        diagnosis = {
+            "timestamp": datetime.now().isoformat(),
+            "config": {
+                "INDEX_ENDPOINT_ID": INDEX_ENDPOINT_ID,
+                "DEPLOYED_INDEX_ID": DEPLOYED_INDEX_ID,
+                "EMBEDDING_DIMENSION": EMBEDDING_DIMENSION,
+                "EMBEDDING_MODEL": EMBEDDING_MODEL,
+                "GCP_PROJECT": GCP_INFRASTRUCTURE_PROJECT
+            },
+            "tests": {}
+        }
+
+        # Test 1: Check embedding generation
+        try:
+            from vertexai.language_models import TextEmbeddingModel
+            model = TextEmbeddingModel.from_pretrained(EMBEDDING_MODEL)
+            test_emb = model.get_embeddings(["test"])
+            actual_dim = len(test_emb[0].values)
+
+            diagnosis["tests"]["embedding"] = {
+                "success": True,
+                "expected_dim": EMBEDDING_DIMENSION,
+                "actual_dim": actual_dim,
+                "match": actual_dim == EMBEDDING_DIMENSION
+            }
+        except Exception as e:
+            diagnosis["tests"]["embedding"] = {
+                "success": False,
+                "error": str(e)
+            }
+
+        # Test 2: Check index connectivity and search
+        try:
+            endpoint_name = f"projects/{GCP_INFRASTRUCTURE_PROJECT}/locations/{LOCATION}/indexEndpoints/{INDEX_ENDPOINT_ID}"
+            index_endpoint = aiplatform.MatchingEngineIndexEndpoint(index_endpoint_name=endpoint_name)
+
+            # Test 3: Perform test search
+            test_embedding = model.get_embeddings(["Allah"])[0].values
+            result = index_endpoint.find_neighbors(
+                deployed_index_id=DEPLOYED_INDEX_ID,
+                queries=[test_embedding],
+                num_neighbors=5
+            )
+
+            num_found = len(result[0]) if result and result[0] else 0
+
+            diagnosis["tests"]["vector_search"] = {
+                "success": True,
+                "neighbors_found": num_found,
+                "index_populated": num_found > 0,
+                "endpoint_name": endpoint_name
+            }
+
+            if num_found == 0:
+                diagnosis["critical_issue"] = "INDEX_EMPTY_OR_MISCONFIGURED"
+
+        except Exception as e:
+            diagnosis["tests"]["vector_search"] = {
+                "success": False,
+                "error": str(e)[:500]  # Truncate long errors
+            }
+            diagnosis["critical_issue"] = "INDEX_CONNECTION_FAILED"
+
+        # Test 4: Check local chunks
+        diagnosis["tests"]["local_chunks"] = {
+            "total_loaded": len(TAFSIR_CHUNKS),
+            "sources": {
+                "Ibn Kathir": sum(1 for v in CHUNK_SOURCE_MAP.values() if v == "Ibn Kathir"),
+                "al-Qurtubi": sum(1 for v in CHUNK_SOURCE_MAP.values() if v == "al-Qurtubi")
+            },
+            "metadata_loaded": len(VERSE_METADATA)
+        }
+
+        # Determine root cause
+        if diagnosis["tests"].get("embedding", {}).get("match") == False:
+            diagnosis["root_cause"] = "EMBEDDING_DIMENSION_MISMATCH"
+            diagnosis["fix"] = "Index expects different embedding dimension than model produces"
+            diagnosis["action_required"] = "Rebuild index with correct embedding dimension or use matching model"
+        elif diagnosis.get("critical_issue") == "INDEX_EMPTY_OR_MISCONFIGURED":
+            diagnosis["root_cause"] = "INDEX_NOT_POPULATED"
+            diagnosis["fix"] = "Vector index has no data or wrong IDs configured"
+            diagnosis["action_required"] = "Check if index is populated or verify INDEX_ENDPOINT_ID and DEPLOYED_INDEX_ID"
+        elif diagnosis.get("critical_issue") == "INDEX_CONNECTION_FAILED":
+            diagnosis["root_cause"] = "WRONG_INDEX_IDS"
+            diagnosis["fix"] = "Cannot connect to index endpoint"
+            diagnosis["action_required"] = "Verify INDEX_ENDPOINT_ID exists in project"
+        else:
+            diagnosis["root_cause"] = "SYSTEM_OPERATIONAL"
+            diagnosis["fix"] = "No issues detected"
+
+        return jsonify(diagnosis), 200
+
+    except Exception as e:
+        return jsonify({
+            "error": str(e),
+            "type": type(e).__name__,
+            "critical": True
         }), 500
 
 # --- Main ---
