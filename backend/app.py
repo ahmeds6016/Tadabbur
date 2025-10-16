@@ -1537,11 +1537,12 @@ def count_tokens_approximate(text: str) -> int:
         return 0
     return len(text) // 4
 
-def truncate_context_if_needed(context: str, max_tokens: int = 800000) -> str:
+def truncate_context_if_needed(context: str, max_tokens: int = 50000) -> str:
     """
     Truncate context to fit within Gemini token limits.
-    Gemini 2.0 Flash: 1M input + 8K output
-    We use 800K to leave room for prompt and output
+    Gemini 2.5 Flash: 1M input + 65K output
+    Conservative limit of 50K tokens (typical queries: 6K-25K, max realistic: 40K)
+    Ensures fast processing and lower costs while handling all realistic query scenarios
     """
     current_tokens = count_tokens_approximate(context)
 
@@ -3545,8 +3546,8 @@ def tafsir_handler_enhanced():
             prompt = build_enhanced_prompt(rag_query, context_by_source, user_profile,
                                          arabic_text, cross_refs, rag_query_type, verse_data, approach)
 
-            # Truncate prompt if needed to fit token limits
-            prompt = truncate_context_if_needed(prompt, max_tokens=800000)
+            # Truncate prompt if needed to fit token limits (50K max - typical: 6K-25K)
+            prompt = truncate_context_if_needed(prompt, max_tokens=50000)
 
             # Generate response with retry logic for malformed JSON
             VERTEX_ENDPOINT = f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/{GCP_INFRASTRUCTURE_PROJECT}/locations/{LOCATION}/publishers/google/models/{GEMINI_MODEL_ID}:generateContent"
