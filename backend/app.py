@@ -1675,21 +1675,46 @@ def perform_diversified_rag_search(query, expanded_query, embedding_model, index
         if source in source_chunks:
             source_chunks[source].append(chunk)
 
-    # Step 5: Weighted selection based on query type AND approach
-    rag_query_type = "default"
-    weights = SOURCE_WEIGHTS.get(rag_query_type, SOURCE_WEIGHTS["default"])
+    # Step 5: DYNAMIC weighted selection based on retrieved chunks
+    # Let the vector search results determine optimal weights
+    # (smarter than guessing based on keywords)
 
-    # Adjust weights based on approach
-    # CRITICAL FIX: Al-Qurtubi only covers Surahs 1-4 (3.5% of Quran)
-    # Most historical events are in later Meccan/Medinan surahs
-    # Prioritize Ibn Kathir (100% coverage) for historical queries
-    if approach == 'historical':
-        # Historical: prioritize Ibn Kathir (complete coverage)
-        weights = {'Ibn Kathir': 0.75, 'al-Qurtubi': 0.25}
-    elif approach == 'thematic':
-        # Thematic: balance both sources
-        weights = {'Ibn Kathir': 0.6, 'al-Qurtubi': 0.4}
-    # tafsir approach uses default weights
+    # Separate chunks by source
+    ibn_kathir_retrieved = [c for c in retrieved_chunks if c['source'] == 'Ibn Kathir']
+    qurtubi_retrieved = [c for c in retrieved_chunks if c['source'] == 'al-Qurtubi']
+
+    # Calculate dynamic weights based on what was actually found
+    if len(qurtubi_retrieved) == 0:
+        # al-Qurtubi has NO relevant chunks (content not in Surahs 1-4)
+        weights = {'Ibn Kathir': 1.0, 'al-Qurtubi': 0.0}
+        print(f"   📊 Dynamic weights: al-Qurtubi has no chunks → Ibn Kathir 100%")
+
+    elif len(ibn_kathir_retrieved) == 0:
+        # Ibn Kathir has NO relevant chunks (unlikely, but handle it)
+        weights = {'Ibn Kathir': 0.0, 'al-Qurtubi': 1.0}
+        print(f"   📊 Dynamic weights: Ibn Kathir has no chunks → al-Qurtubi 100%")
+
+    else:
+        # BOTH sources have chunks - compare semantic match quality
+        avg_dist_ik = sum(c['distance'] for c in ibn_kathir_retrieved) / len(ibn_kathir_retrieved)
+        avg_dist_q = sum(c['distance'] for c in qurtubi_retrieved) / len(qurtubi_retrieved)
+
+        distance_diff = abs(avg_dist_ik - avg_dist_q)
+
+        if distance_diff < 0.1:
+            # Distances similar → Use 50/50 balanced mix
+            weights = {'Ibn Kathir': 0.5, 'al-Qurtubi': 0.5}
+            print(f"   📊 Dynamic weights: Similar quality (IK:{avg_dist_ik:.2f}, Q:{avg_dist_q:.2f}) → 50%/50%")
+
+        elif avg_dist_ik < avg_dist_q:
+            # Ibn Kathir has better matches → Favor it 70/30
+            weights = {'Ibn Kathir': 0.7, 'al-Qurtubi': 0.3}
+            print(f"   📊 Dynamic weights: IK better (IK:{avg_dist_ik:.2f} < Q:{avg_dist_q:.2f}) → 70%/30%")
+
+        else:
+            # al-Qurtubi has better matches → Favor it 30/70
+            weights = {'Ibn Kathir': 0.3, 'al-Qurtubi': 0.7}
+            print(f"   📊 Dynamic weights: Q better (Q:{avg_dist_q:.2f} < IK:{avg_dist_ik:.2f}) → 30%/70%")
 
     selected_chunks = []
     context_by_source = {}
