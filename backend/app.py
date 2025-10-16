@@ -1484,14 +1484,85 @@ def firebase_auth_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+# --- Comprehensive Error Handler Decorator ---
+def handle_errors(f):
+    """
+    Comprehensive error handling wrapper for API endpoints.
+    Catches and properly formats various types of errors.
+    """
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except auth.InvalidIdTokenError as e:
+            return jsonify({
+                "error": "Authentication failed",
+                "type": "auth_error",
+                "details": str(e)
+            }), 401
+        except auth.ExpiredIdTokenError as e:
+            return jsonify({
+                "error": "Authentication token expired",
+                "type": "token_expired",
+                "details": "Please sign in again"
+            }), 401
+        except gcp_firestore.DocumentNotFoundError as e:
+            return jsonify({
+                "error": "Resource not found",
+                "type": "not_found",
+                "details": str(e)
+            }), 404
+        except requests.Timeout as e:
+            return jsonify({
+                "error": "Service timeout",
+                "type": "timeout",
+                "details": "The AI service is taking longer than expected. Please try again.",
+                "retry": True
+            }), 503
+        except requests.HTTPError as e:
+            error_code = e.response.status_code if hasattr(e, 'response') else 500
+            return jsonify({
+                "error": "External service error",
+                "type": "http_error",
+                "details": str(e),
+                "status_code": error_code
+            }), 502
+        except json.JSONDecodeError as e:
+            return jsonify({
+                "error": "Invalid response format",
+                "type": "parse_error",
+                "details": "The AI response could not be parsed. Please try rephrasing your query."
+            }), 500
+        except ValueError as e:
+            return jsonify({
+                "error": "Invalid input",
+                "type": "validation_error",
+                "details": str(e)
+            }), 400
+        except Exception as e:
+            # Log the full error for debugging
+            print(f"❌ Unhandled error in {f.__name__}: {type(e).__name__} - {e}")
+            traceback.print_exc()
+
+            # Return generic error to client
+            return jsonify({
+                "error": "An unexpected error occurred",
+                "type": "internal_error",
+                "details": "The request could not be completed. Please try again later."
+            }), 500
+
+    return wrapper
+
 # --- JSON Extraction Helper ---
 def extract_json_from_response(text: str) -> Optional[dict]:
     """
-    Robust JSON extraction from Gemini responses.
+    Enhanced robust JSON extraction from Gemini responses.
     Handles:
     - Direct JSON
     - JSON wrapped in markdown code blocks
     - JSON embedded in text
+    - Malformed JSON with common issues
+    - Truncated responses
     """
     if not text or not text.strip():
         return None
@@ -1511,22 +1582,81 @@ def extract_json_from_response(text: str) -> Optional[dict]:
     matches = re.findall(json_pattern, text, re.DOTALL)
     for match in matches:
         try:
-            return json.loads(match.strip())
+            # Clean common JSON issues
+            cleaned = match.strip()
+            # Remove trailing commas before closing braces/brackets
+            cleaned = re.sub(r',\s*}', '}', cleaned)
+            cleaned = re.sub(r',\s*]', ']', cleaned)
+            return json.loads(cleaned)
         except json.JSONDecodeError:
             continue
 
-    # Try 3: Find JSON object anywhere in text
-    # Look for first { to last }
+    # Try 3: Find JSON object using improved brace matching
+    try:
+        # Look for opening brace and find matching closing brace
+        start_idx = text.find('{')
+        if start_idx != -1:
+            brace_count = 0
+            end_idx = start_idx
+            in_string = False
+            escape_next = False
+
+            for i in range(start_idx, len(text)):
+                char = text[i]
+
+                if escape_next:
+                    escape_next = False
+                    continue
+
+                if char == '\\':
+                    escape_next = True
+                    continue
+
+                if char == '"' and not escape_next:
+                    in_string = not in_string
+                    continue
+
+                if not in_string:
+                    if char == '{':
+                        brace_count += 1
+                    elif char == '}':
+                        brace_count -= 1
+                        if brace_count == 0:
+                            end_idx = i
+                            break
+
+            json_str = text[start_idx:end_idx+1]
+            # Clean common issues
+            json_str = re.sub(r',\s*}', '}', json_str)
+            json_str = re.sub(r',\s*]', ']', json_str)
+            return json.loads(json_str)
+    except (json.JSONDecodeError, ValueError):
+        pass
+
+    # Try 4: Last resort - find first { to last }
     try:
         start_idx = text.find('{')
         end_idx = text.rfind('}')
         if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
             json_str = text[start_idx:end_idx+1]
+            # Clean common issues
+            json_str = re.sub(r',\s*}', '}', json_str)
+            json_str = re.sub(r',\s*]', ']', json_str)
             return json.loads(json_str)
     except json.JSONDecodeError:
         pass
 
-    return None
+    # Try 5: Fallback - create minimal valid response
+    print(f"⚠️ JSON extraction failed, using fallback response")
+    return {
+        "response": text[:500] if len(text) > 500 else text,
+        "sources": [],
+        "verses": [],
+        "metadata": {
+            "extraction_error": True,
+            "fallback_used": True
+        }
+    }
 
 # --- Token Counting Helper ---
 def count_tokens_approximate(text: str) -> int:
@@ -2642,40 +2772,86 @@ def get_folders():
 # VERSE-LEVEL ANNOTATIONS ENDPOINTS
 # ============================================================================
 
-@app.route("/annotations/verse/<int:surah>/<int:verse>", methods=["GET"])
-@firebase_auth_required
+@app.route("/annotations/verse/<path:surah>/<verse>", methods=["GET", "OPTIONS"])
 def get_verse_annotations(surah, verse):
     """Get all annotations for a specific verse"""
-    try:
-        uid = request.user['uid']
+    # Handle CORS preflight request
+    if request.method == "OPTIONS":
+        return "", 200
 
-        annotations_ref = users_db.collection('users').document(uid).collection('annotations')
-        # Updated to use FieldFilter (new Firestore syntax) - requires composite index
-        query = annotations_ref.where(filter=FieldFilter('surah', '==', surah)) \
-                              .where(filter=FieldFilter('verse', '==', verse)) \
-                              .order_by('createdAt', direction='DESCENDING')
+    # Apply authentication for GET requests
+    @firebase_auth_required
+    def handle_get():
+        try:
+            uid = request.user['uid']
 
-        annotations = []
-        for doc in query.stream():
-            data = doc.to_dict()
-            annotations.append({
-                'id': doc.id,
-                'surah': data.get('surah'),
-                'verse': data.get('verse'),
-                'type': data.get('type', 'personal_insight'),
-                'content': data.get('content', ''),
-                'tags': data.get('tags', []),
-                'linkedVerses': data.get('linkedVerses', []),
-                'createdAt': data.get('createdAt'),
-                'updatedAt': data.get('updatedAt'),
-                'isPrivate': data.get('isPrivate', True)
-            })
+            # Parse surah - could be number or name
+            try:
+                # Check if surah is a number
+                if surah.isdigit():
+                    surah_num = int(surah)
+                else:
+                    # Handle URL-encoded surah names (e.g., "Al-Baqarah" or "Ali%20'Imran")
+                    import urllib.parse
+                    surah_decoded = urllib.parse.unquote(surah)
+                    # Map surah name to number
+                    surah_num = SURAHS_BY_NAME.get(surah_decoded.lower())
+                    if not surah_num:
+                        # Try with various formats
+                        surah_normalized = surah_decoded.replace("'", "").replace("-", " ").lower()
+                        for name, num in SURAHS_BY_NAME.items():
+                            if name.replace("'", "").replace("-", " ") == surah_normalized:
+                                surah_num = num
+                                break
 
-        return jsonify({'annotations': annotations, 'count': len(annotations)}), 200
+                    if not surah_num:
+                        return jsonify({"error": f"Invalid surah: {surah}"}), 400
 
-    except Exception as e:
-        print(f"ERROR in /annotations/verse: {type(e).__name__} - {e}")
-        return jsonify({"error": str(e)}), 500
+                # Parse verse (handle "2:94" format if present)
+                if ':' in str(verse):
+                    verse = str(verse).split(':')[-1]
+                verse_num = int(verse)
+
+                # Validate verse reference
+                if surah_num not in QURAN_METADATA:
+                    return jsonify({"error": f"Invalid surah number: {surah_num}"}), 400
+                if verse_num < 1 or verse_num > QURAN_METADATA[surah_num]["verses"]:
+                    return jsonify({"error": f"Invalid verse number: {verse_num} for surah {surah_num}"}), 400
+
+            except ValueError:
+                return jsonify({"error": "Invalid verse reference format"}), 400
+
+            annotations_ref = users_db.collection('users').document(uid).collection('annotations')
+            # Updated to use FieldFilter (new Firestore syntax) - requires composite index
+            # Use surah_num and verse_num (integers) for the query
+            query = annotations_ref.where(filter=FieldFilter('surah', '==', surah_num)) \
+                                  .where(filter=FieldFilter('verse', '==', verse_num)) \
+                                  .order_by('createdAt', direction='DESCENDING')
+
+            annotations = []
+            for doc in query.stream():
+                data = doc.to_dict()
+                annotations.append({
+                    'id': doc.id,
+                    'surah': data.get('surah'),
+                    'verse': data.get('verse'),
+                    'type': data.get('type', 'personal_insight'),
+                    'content': data.get('content', ''),
+                    'tags': data.get('tags', []),
+                    'linkedVerses': data.get('linkedVerses', []),
+                    'createdAt': data.get('createdAt'),
+                    'updatedAt': data.get('updatedAt'),
+                    'isPrivate': data.get('isPrivate', True)
+                })
+
+            return jsonify({'annotations': annotations, 'count': len(annotations)}), 200
+
+        except Exception as e:
+            print(f"ERROR in /annotations/verse: {type(e).__name__} - {e}")
+            return jsonify({"error": str(e)}), 500
+
+    # Call the inner function for GET requests
+    return handle_get()
 
 @app.route("/annotations/user", methods=["GET"])
 @firebase_auth_required
@@ -3290,13 +3466,36 @@ def tafsir_handler_enhanced():
                     },
                 }
 
-                response = requests.post(
-                    VERTEX_ENDPOINT,
-                    headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
-                    json=body,
-                    timeout=30  # Reduced from 120s - fail fast for better UX
-                )
-                response.raise_for_status()
+                # Add retry logic for Gemini API calls
+                max_retries = 2
+                retry_delay = 2
+                response = None
+
+                for attempt in range(max_retries):
+                    try:
+                        response = requests.post(
+                            VERTEX_ENDPOINT,
+                            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+                            json=body,
+                            timeout=120  # Increased from 30s to match Gemini's actual response times
+                        )
+                        response.raise_for_status()
+                        break  # Success, exit retry loop
+                    except requests.Timeout:
+                        if attempt == max_retries - 1:
+                            print(f"❌ Gemini API timeout after {max_retries} attempts")
+                            return jsonify({
+                                "error": "AI service timeout. Please try again or simplify your query.",
+                                "retry": True,
+                                "error_type": "timeout"
+                            }), 503
+                        print(f"⚠️ Gemini timeout on attempt {attempt + 1}, retrying...")
+                        time.sleep(retry_delay)
+                    except requests.HTTPError as e:
+                        if attempt == max_retries - 1 or response.status_code != 503:
+                            raise  # Re-raise if final attempt or not a service unavailable error
+                        print(f"⚠️ Gemini service unavailable, retrying...")
+                        time.sleep(retry_delay)
 
                 # Parse response
                 raw_response = response.json()
@@ -3469,13 +3668,34 @@ def tafsir_handler_enhanced():
                         },
                     }
 
-                    response = requests.post(
-                        VERTEX_ENDPOINT,
-                        headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
-                        json=body,
-                        timeout=30  # Reduced from 120s - fail fast for better UX
-                    )
-                    response.raise_for_status()
+                    # Add retry logic for Gemini API calls
+                    max_retries = 2
+                    retry_delay = 2
+
+                    for attempt in range(max_retries):
+                        try:
+                            response = requests.post(
+                                VERTEX_ENDPOINT,
+                                headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+                                json=body,
+                                timeout=120  # Increased to match Gemini's actual response times
+                            )
+                            response.raise_for_status()
+                            break  # Success
+                        except requests.Timeout:
+                            if attempt == max_retries - 1:
+                                print(f"❌ Gemini timeout in Route 2 after {max_retries} attempts")
+                                return jsonify({
+                                    "error": "AI service timeout",
+                                    "retry": True,
+                                    "error_type": "timeout"
+                                }), 503
+                            print(f"⚠️ Retry {attempt + 1}/{max_retries}...")
+                            time.sleep(retry_delay)
+                        except requests.HTTPError as e:
+                            if attempt == max_retries - 1 or response.status_code != 503:
+                                raise
+                            time.sleep(retry_delay)
 
                     # Parse response
                     raw_response = response.json()
@@ -3597,13 +3817,34 @@ def tafsir_handler_enhanced():
                 }
 
                 try:
-                    response = requests.post(
-                        VERTEX_ENDPOINT,
-                        headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
-                        json=body,
-                        timeout=30  # Reduced from 120s - fail fast for better UX
-                    )
-                    response.raise_for_status()
+                    # Add retry logic for Gemini API calls
+                    max_retries = 2
+                    retry_delay = 2
+
+                    for attempt in range(max_retries):
+                        try:
+                            response = requests.post(
+                                VERTEX_ENDPOINT,
+                                headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+                                json=body,
+                                timeout=120  # Increased to match Gemini's actual response times
+                            )
+                            response.raise_for_status()
+                            break  # Success
+                        except requests.Timeout:
+                            if attempt == max_retries - 1:
+                                print(f"❌ Gemini timeout in Route 2 after {max_retries} attempts")
+                                return jsonify({
+                                    "error": "AI service timeout",
+                                    "retry": True,
+                                    "error_type": "timeout"
+                                }), 503
+                            print(f"⚠️ Retry {attempt + 1}/{max_retries}...")
+                            time.sleep(retry_delay)
+                        except requests.HTTPError as e:
+                            if attempt == max_retries - 1 or response.status_code != 503:
+                                raise
+                            time.sleep(retry_delay)
 
                     # Parse response
                     raw_response = response.json()
