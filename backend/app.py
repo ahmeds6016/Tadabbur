@@ -4058,6 +4058,108 @@ def debug_index():
             "traceback": traceback.format_exc()
         }), 500
 
+@app.route("/debug/test/<path:query>", methods=["GET"])
+def debug_query(query):
+    """Real-time debugging endpoint for any query"""
+    import urllib.parse
+    query = urllib.parse.unquote(query)
+
+    debug_info = {
+        "timestamp": datetime.now().isoformat(),
+        "query": query,
+        "steps": []
+    }
+
+    try:
+        # Step 1: Classification
+        classification = classify_query_enhanced(query)
+        debug_info["classification"] = {
+            "query_type": classification.get('query_type'),
+            "verse_ref": classification.get('verse_ref'),
+            "confidence": classification.get('confidence')
+        }
+        debug_info["steps"].append(f"Classified as: {classification.get('query_type')}")
+
+        # Step 2: Check verse metadata if applicable
+        if classification.get('verse_ref'):
+            surah, verse = classification['verse_ref']
+            verse_key = f"{surah}_{verse}"
+
+            in_metadata = verse_key in VERSE_METADATA
+            debug_info["verse_check"] = {
+                "verse_key": verse_key,
+                "in_metadata": in_metadata,
+                "total_metadata_keys": len(VERSE_METADATA)
+            }
+            debug_info["steps"].append(f"Verse {surah}:{verse} in metadata: {in_metadata}")
+
+            # Check if verse exists in chunks
+            verse_patterns = [f"{surah}:{verse}", f"[{surah}:{verse}]", f"({surah}:{verse})"]
+            chunks_with_verse = 0
+            for chunk_id, chunk_text in TAFSIR_CHUNKS.items():
+                if any(p in chunk_text for p in verse_patterns):
+                    chunks_with_verse += 1
+
+            debug_info["chunks_with_verse"] = chunks_with_verse
+            debug_info["steps"].append(f"Found in {chunks_with_verse} chunks")
+
+        # Step 3: Check which route it would take
+        query_type = classification.get('query_type')
+
+        if query_type == 'metadata' and classification.get('verse_ref'):
+            debug_info["route"] = "ROUTE 1: Metadata lookup"
+            debug_info["uses_vector_search"] = "Only if metadata not found"
+        elif query_type == 'direct_verse' and classification.get('verse_ref'):
+            debug_info["route"] = "ROUTE 2: Direct verse lookup"
+            debug_info["uses_vector_search"] = "Only if verse not found"
+        else:
+            debug_info["route"] = "ROUTE 3: Semantic search"
+            debug_info["uses_vector_search"] = "YES - Always"
+
+            # Test embedding generation
+            try:
+                from vertexai.language_models import TextEmbeddingModel
+                model = TextEmbeddingModel.from_pretrained(EMBEDDING_MODEL)
+
+                # Test with and without dimension
+                emb_default = model.get_embeddings([query])[0].values
+                emb_sized = model.get_embeddings([query], output_dimensionality=EMBEDDING_DIMENSION)[0].values
+
+                debug_info["embedding_test"] = {
+                    "default_dimension": len(emb_default),
+                    "specified_dimension": len(emb_sized),
+                    "index_expects": EMBEDDING_DIMENSION,
+                    "match": len(emb_sized) == EMBEDDING_DIMENSION
+                }
+                debug_info["steps"].append(f"Embedding: default={len(emb_default)}, specified={len(emb_sized)}, expected={EMBEDDING_DIMENSION}")
+
+            except Exception as e:
+                debug_info["embedding_test"] = {"error": str(e)}
+                debug_info["steps"].append(f"Embedding error: {str(e)[:100]}")
+
+        # Step 4: Check cache
+        cache_key = hashlib.md5(f"{query}_tafsir".encode()).hexdigest()
+        in_cache = cache_key in RESPONSE_CACHE
+        debug_info["cache"] = {
+            "key": cache_key,
+            "in_cache": in_cache,
+            "total_cached": len(RESPONSE_CACHE)
+        }
+        debug_info["steps"].append(f"Cache check: {in_cache}")
+
+        # Step 5: Summary
+        debug_info["likely_outcome"] = "WILL WORK" if (
+            (debug_info.get("verse_check", {}).get("in_metadata")) or
+            (debug_info.get("chunks_with_verse", 0) > 0) or
+            in_cache
+        ) else "MAY FAIL"
+
+    except Exception as e:
+        debug_info["error"] = str(e)
+        debug_info["steps"].append(f"Error: {str(e)}")
+
+    return jsonify(debug_info), 200
+
 @app.route("/debug/vector-diagnosis", methods=["GET"])
 def diagnose_vector_index():
     """Emergency diagnostic endpoint to check why vector search is failing"""
