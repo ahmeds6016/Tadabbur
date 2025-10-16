@@ -4078,7 +4078,7 @@ def diagnose_vector_index():
         try:
             from vertexai.language_models import TextEmbeddingModel
             model = TextEmbeddingModel.from_pretrained(EMBEDDING_MODEL)
-            test_emb = model.get_embeddings(["test"])
+            test_emb = model.get_embeddings(["test"], output_dimensionality=EMBEDDING_DIMENSION)
             actual_dim = len(test_emb[0].values)
 
             diagnosis["tests"]["embedding"] = {
@@ -4099,7 +4099,7 @@ def diagnose_vector_index():
             index_endpoint = aiplatform.MatchingEngineIndexEndpoint(index_endpoint_name=endpoint_name)
 
             # Test 3: Perform test search
-            test_embedding = model.get_embeddings(["Allah"])[0].values
+            test_embedding = model.get_embeddings(["Allah"], output_dimensionality=EMBEDDING_DIMENSION)[0].values
             result = index_endpoint.find_neighbors(
                 deployed_index_id=DEPLOYED_INDEX_ID,
                 queries=[test_embedding],
