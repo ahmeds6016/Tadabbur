@@ -1408,7 +1408,10 @@ def retrieve_chunks_from_neighbors(neighbors, distance_threshold=0.6):
                 'source': source
             })
         else:
+            # CRITICAL DEBUG: Log what's not matching
             print(f"WARNING: Chunk not found for ID: {neighbor_id} (base: {base_id})")
+            print(f"   First 5 TAFSIR_CHUNKS keys: {list(TAFSIR_CHUNKS.keys())[:5]}")
+            print(f"   Looking for: '{base_id}' in {len(TAFSIR_CHUNKS)} chunks")
 
     # Log filtering stats for debugging
     total = len(neighbors)
