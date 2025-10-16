@@ -4163,6 +4163,68 @@ def debug_query(query):
 
     return jsonify(debug_info), 200
 
+@app.route("/debug/vector-test", methods=["GET"])
+def test_vector_search():
+    """Test vector search directly without auth"""
+    try:
+        from vertexai.language_models import TextEmbeddingModel
+
+        # Initialize
+        model = TextEmbeddingModel.from_pretrained(EMBEDDING_MODEL)
+        endpoint_name = f"projects/{GCP_INFRASTRUCTURE_PROJECT}/locations/{LOCATION}/indexEndpoints/{INDEX_ENDPOINT_ID}"
+        index_endpoint = aiplatform.MatchingEngineIndexEndpoint(index_endpoint_name=endpoint_name)
+
+        # Generate embedding for test query
+        test_query = "Allah mercy compassion"
+        embeddings = model.get_embeddings([test_query], output_dimensionality=EMBEDDING_DIMENSION)
+        query_embedding = embeddings[0].values
+
+        # Perform vector search
+        result = index_endpoint.find_neighbors(
+            deployed_index_id=DEPLOYED_INDEX_ID,
+            queries=[query_embedding],
+            num_neighbors=5
+        )
+
+        # Process results
+        neighbors = result[0] if result else []
+
+        response = {
+            "test_query": test_query,
+            "embedding_dim": len(query_embedding),
+            "neighbors_found": len(neighbors),
+            "neighbors": []
+        }
+
+        # Check each neighbor
+        for i, neighbor in enumerate(neighbors[:5]):
+            neighbor_id = str(neighbor.id)
+            base_id = neighbor_id
+            if '_' in neighbor_id:
+                parts = neighbor_id.rsplit('_', 1)
+                if len(parts) == 2 and parts[1].isdigit():
+                    base_id = parts[0]
+
+            chunk_exists = base_id in TAFSIR_CHUNKS
+
+            response["neighbors"].append({
+                "index": i,
+                "vector_id": neighbor_id,
+                "base_id": base_id,
+                "distance": neighbor.distance,
+                "chunk_exists": chunk_exists,
+                "chunk_preview": TAFSIR_CHUNKS.get(base_id, "NOT FOUND")[:100] if chunk_exists else None
+            })
+
+        # Show sample of actual chunk keys
+        response["sample_chunk_keys"] = list(TAFSIR_CHUNKS.keys())[:10]
+        response["chunk_key_pattern"] = "Format of keys in TAFSIR_CHUNKS"
+
+        return jsonify(response), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e), "type": type(e).__name__}), 500
+
 @app.route("/debug/vector-diagnosis", methods=["GET"])
 def diagnose_vector_index():
     """Emergency diagnostic endpoint to check why vector search is failing"""
