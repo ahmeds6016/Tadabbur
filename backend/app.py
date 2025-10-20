@@ -3515,7 +3515,7 @@ def tafsir_handler_enhanced():
                     "generation_config": {
                         "response_mime_type": "application/json",
                         "temperature": 0.2,
-                        "maxOutputTokens": 8192
+                        "maxOutputTokens": 65536  # Increased from 8192 to prevent truncation of detailed responses
                     },
                 }
 
@@ -3717,7 +3717,7 @@ def tafsir_handler_enhanced():
                         "generation_config": {
                             "response_mime_type": "application/json",
                             "temperature": 0.2,
-                            "maxOutputTokens": 8192
+                            "maxOutputTokens": 65536  # Increased from 8192 to prevent truncation of detailed tafsir responses
                         },
                     }
 
@@ -4321,7 +4321,7 @@ def debug_query(query):
 
                 body = {
                     "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-                    "generation_config": {"temperature": 0.3, "maxOutputTokens": 8192},
+                    "generation_config": {"temperature": 0.3, "maxOutputTokens": 65536},
                 }
 
                 response = requests.post(
@@ -4488,7 +4488,7 @@ def debug_query(query):
 
                 body = {
                     "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-                    "generation_config": {"temperature": 0.3, "maxOutputTokens": 8192},
+                    "generation_config": {"temperature": 0.3, "maxOutputTokens": 65536},
                 }
 
                 response = requests.post(
@@ -4662,7 +4662,7 @@ def debug_query(query):
 
             body = {
                 "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-                "generation_config": {"temperature": 0.3, "maxOutputTokens": 8192},
+                "generation_config": {"temperature": 0.3, "maxOutputTokens": 65536},
             }
 
             response = requests.post(
