@@ -4860,6 +4860,64 @@ def diagnose_vector_index():
             "critical": True
         }), 500
 
+@app.route("/debug/verse-metadata/<surah>/<verse>", methods=["GET"])
+def check_verse_metadata(surah, verse):
+    """
+    Check what metadata exists for a specific verse
+    Usage: /debug/verse-metadata/2/183
+    """
+    try:
+        surah = int(surah)
+        verse = int(verse)
+
+        result = {
+            "query": f"{surah}:{verse}",
+            "metadata_store_stats": {
+                "total_verses": len(VERSE_METADATA),
+                "total_chunks": len(TAFSIR_CHUNKS)
+            },
+            "lookups": {}
+        }
+
+        # Check both sources
+        for source in ['ibn-kathir', 'al-qurtubi']:
+            chunk_id = f"{source}:{surah}:{verse}"
+
+            # Check VERSE_METADATA
+            metadata = VERSE_METADATA.get(chunk_id)
+
+            # Check TAFSIR_CHUNKS
+            chunk_text = TAFSIR_CHUNKS.get(chunk_id)
+
+            result["lookups"][source] = {
+                "chunk_id": chunk_id,
+                "in_verse_metadata": metadata is not None,
+                "in_tafsir_chunks": chunk_text is not None,
+                "metadata_keys": list(metadata.keys()) if metadata else None,
+                "chunk_text_length": len(chunk_text) if chunk_text else 0,
+                "has_commentary": metadata.get('commentary') is not None if metadata else False,
+                "commentary_length": len(metadata.get('commentary', '')) if metadata else 0
+            }
+
+        # Sample surrounding verses
+        result["surrounding_verses"] = {}
+        for v in range(max(1, verse - 2), verse + 3):
+            ibn_id = f"ibn-kathir:{surah}:{v}"
+            qur_id = f"al-qurtubi:{surah}:{v}"
+            result["surrounding_verses"][f"{surah}:{v}"] = {
+                "ibn-kathir": ibn_id in VERSE_METADATA,
+                "al-qurtubi": qur_id in VERSE_METADATA
+            }
+
+        return jsonify(result), 200
+
+    except Exception as e:
+        return jsonify({
+            "error": str(e),
+            "type": type(e).__name__,
+            "traceback": traceback.format_exc()
+        }), 500
+
 # --- Main ---
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
