@@ -3753,6 +3753,11 @@ def tafsir_handler_enhanced():
                     # Parse response
                     raw_response = response.json()
 
+                    # Check finish reason to understand why generation stopped
+                    finish_reason = safe_get_nested(raw_response, "candidates", 0, "finishReason")
+                    if finish_reason and finish_reason != "STOP":
+                        print(f"⚠️ Gemini finishReason: {finish_reason} (not STOP - response may be incomplete)")
+
                     # Safely extract generated text from nested response
                     generated_text = safe_get_nested(raw_response, "candidates", 0, "content", "parts", 0, "text")
 
@@ -3901,6 +3906,11 @@ def tafsir_handler_enhanced():
 
                     # Parse response
                     raw_response = response.json()
+
+                    # Check finish reason to understand why generation stopped
+                    finish_reason = safe_get_nested(raw_response, "candidates", 0, "finishReason")
+                    if finish_reason and finish_reason != "STOP":
+                        print(f"⚠️ Gemini finishReason: {finish_reason} (not STOP - response may be incomplete)")
 
                     # Safely extract generated text from nested response
                     generated_text = safe_get_nested(raw_response, "candidates", 0, "content", "parts", 0, "text")
