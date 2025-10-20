@@ -4390,35 +4390,123 @@ def debug_query(query):
                 })
                 query_type = 'semantic'  # Fall through to ROUTE 3
             else:
-                # Continue with ROUTE 2 processing (similar to ROUTE 1)
-                # For brevity, using similar flow as ROUTE 1
+                # Build context from tafsir
                 step_start = time.time()
-
-                # Build context
                 context_by_source = {}
                 for item in verse_metadata_list:
                     source_name = item['source']
                     metadata = item['metadata']
                     if metadata.get('commentary'):
-                        context_by_source[source_name] = [metadata['commentary'][:200] + "..."]
+                        context_by_source[source_name] = [metadata['commentary']]
 
-                log_step("8. Build Context", {
-                    "sources": len(context_by_source)
+                log_step("8. Build Context from Tafsir", {
+                    "num_sources": len(context_by_source),
+                    "sources": list(context_by_source.keys()),
+                    "total_commentary_chars": sum(len(c[0]) for c in context_by_source.values())
                 })
                 log_timing("8. Build Context", time.time() - step_start)
 
-                # Get verse data and call Gemini (similar to ROUTE 1)
-                # ... (abbreviated for space, would include full Gemini call)
+                # Get verse data from Firestore
+                step_start = time.time()
+                if verse_range and verse_range[1] != verse_range[2]:
+                    # For range, get all verses
+                    verse_data = get_verse_from_firestore(surah, verse_range[1])
+                    log_step("9. Fetch Verse from Firestore", {
+                        "verse_range": f"{surah}:{verse_range[1]}-{verse_range[2]}",
+                        "has_verse_data": bool(verse_data)
+                    })
+                else:
+                    verse_data = get_verse_from_firestore(surah, verse)
+                    log_step("9. Fetch Verse from Firestore", {
+                        "verse": f"{surah}:{verse}",
+                        "has_verse_data": bool(verse_data),
+                        "arabic_text_length": len(verse_data.get('text', '')) if verse_data else 0
+                    })
+                log_timing("9. Fetch Verse from Firestore", time.time() - step_start)
 
-                log_step("ROUTE 2 PROCESSING", {
-                    "note": "Full ROUTE 2 execution (abbreviated in debug)"
+                # Build prompt
+                step_start = time.time()
+                arabic_text = get_arabic_text_from_verse_data(verse_data) if verse_data else None
+                prompt = build_enhanced_prompt(query, context_by_source, user_profile,
+                                             arabic_text, None, 'direct_verse', verse_data, approach)
+
+                log_step("10. Build AI Prompt", {
+                    "prompt_length": len(prompt),
+                    "has_arabic": bool(arabic_text),
+                    "persona": user_profile.get('persona'),
+                    "num_sources": len(context_by_source)
+                })
+                log_timing("10. Build AI Prompt", time.time() - step_start)
+
+                # Call Gemini
+                step_start = time.time()
+                log_step("11. Calling Gemini API", {
+                    "model": "gemini-2.0-flash-exp",
+                    "temperature": 0.3,
+                    "timeout": 120
                 })
 
-                # For debug purposes, return summary
-                trace["note"] = "ROUTE 2 execution path confirmed - full implementation follows ROUTE 1 pattern"
-                trace["timings"] = step_timings
-                trace["timings"]["total"] = f"{time.time() - overall_start:.3f}s"
-                return jsonify(trace), 200
+                credentials, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
+                credentials.refresh(google.auth.transport.requests.Request())
+
+                gemini_url = f"https://us-central1-aiplatform.googleapis.com/v1/projects/{GCP_INFRASTRUCTURE_PROJECT}/locations/us-central1/publishers/google/models/gemini-2.0-flash-exp:generateContent"
+
+                body = {
+                    "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+                    "generation_config": {"temperature": 0.3, "maxOutputTokens": 8192},
+                }
+
+                response = requests.post(
+                    gemini_url,
+                    headers={
+                        "Authorization": f"Bearer {credentials.token}",
+                        "Content-Type": "application/json",
+                    },
+                    json=body,
+                    timeout=120
+                )
+
+                gemini_duration = time.time() - step_start
+
+                log_step("12. Gemini Response", {
+                    "status_code": response.status_code,
+                    "duration": f"{gemini_duration:.3f}s",
+                    "response_length": len(response.text) if response.ok else 0
+                })
+                log_timing("11. Gemini API Call", gemini_duration)
+
+                if response.ok:
+                    result = response.json()
+                    answer = result['candidates'][0]['content']['parts'][0]['text']
+
+                    final_response = {
+                        "answer": answer,
+                        "verse": verse_data,
+                        "sources": list(context_by_source.keys()),
+                        "route": "ROUTE 2"
+                    }
+
+                    # Cache it
+                    with cache_lock:
+                        RESPONSE_CACHE[cache_key] = final_response
+
+                    trace["response"] = final_response
+                    trace["timings"] = step_timings
+                    trace["timings"]["total"] = f"{time.time() - overall_start:.3f}s"
+
+                    log_step("ROUTE 2 COMPLETE", {
+                        "answer_length": len(answer),
+                        "cached": True
+                    })
+
+                    return jsonify(trace), 200
+                else:
+                    log_step("ERROR: Gemini API Failed", {
+                        "status": response.status_code,
+                        "error": response.text[:500]
+                    })
+                    trace["error"] = f"Gemini API error: {response.status_code}"
+                    return jsonify(trace), 500
 
         # ===================================================================
         # ROUTE 3: SEMANTIC SEARCH
