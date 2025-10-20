@@ -306,11 +306,15 @@ SOURCE_WEIGHTS = {
 # Named verses mapping (common references)
 NAMED_VERSES = {
     'ayat al-kursi': (2, 255),
+    'ayat al kursi': (2, 255),  # Without hyphen
+    'ayah al-kursi': (2, 255),  # After normalization
+    'ayah al kursi': (2, 255),  # After normalization, without hyphen
     'ayatul kursi': (2, 255),
     'throne verse': (2, 255),
     'verse of the throne': (2, 255),
     'light verse': (24, 35),
     'ayat an-nur': (24, 35),
+    'ayah an-nur': (24, 35),  # After normalization
     'debt verse': (2, 282),
     'bismillah': (1, 1),
     'basmala': (1, 1),
@@ -501,8 +505,8 @@ def classify_query_enhanced(query: str) -> Dict[str, Any]:
         # Has verse reference, check if it's direct or semantic
         word_count = len(query_normalized.split())
 
-        # Pure reference like "2:255"
-        if re.fullmatch(r'\d{1,3}:\d{1,3}', query_normalized.strip()):
+        # Pure reference like "2:255" or verse range like "2:255-256"
+        if re.fullmatch(r'\d{1,3}:\d{1,3}(?:-\d{1,3})?', query_normalized.strip()):
             return {
                 'query_type': 'direct_verse',
                 'confidence': 0.95,
@@ -1733,34 +1737,40 @@ Focus on HISTORICAL CONTEXT that helps find revelation circumstances:
 
         guidance = approach_guidance.get(approach, approach_guidance['tafsir'])
 
-        expansion_prompt = f"""
-You are helping expand a query to search Islamic tafsir (Quranic commentary) texts from classical sources:
-- Tafsir Ibn Kathir (complete Quran coverage)
-- Tafsir al-Qurtubi (Surahs 1-4, up to verse 4:22)
+        expansion_prompt = f"""You are a search query expander for an Islamic knowledge system that searches tafsir (Quranic commentary) from:
+- Tafsir Ibn Kathir (complete Quran)
+- Tafsir al-Qurtubi (Surahs 1-4)
 
-Approach: {approach.upper()}
-Original query: "{query}"
+INPUT QUERY: "{query}"
+APPROACH: {approach.upper()}
 
+TASK: Add 5-15 relevant Islamic/Arabic search terms to help find tafsir content.
+
+APPROACH GUIDANCE:
 {guidance}
 
 CRITICAL RULES:
-1. If the query contains verse references (e.g., "3:26-27", "18:65-70"), PRESERVE THEM EXACTLY - do not truncate or modify verse numbers
-2. If the query contains Surah names or numbers, PRESERVE THEM EXACTLY
-3. Only ADD supplementary terms - never remove or modify existing parts of the query
+1. Keep the ENTIRE original query intact - do not truncate or modify ANY words
+2. If query has verse references (e.g., "3:26-27", "Treaty of Hudaybiyyah"), preserve them EXACTLY
+3. Add supplementary terms AFTER the original query
+4. Total output must be under 200 tokens
+5. Return ONLY the expanded query - no explanations, no metadata
 
-Expand this query by adding relevant Islamic terms, Arabic concepts, and theological concepts that would help find relevant tafsir passages for the {approach} approach. Consider:
-- Related Arabic terminology
-- Connected Quranic verses or themes
-- Islamic jurisprudence concepts (especially for al-Qurtubi on early Surahs)
-- Historical context and hadith references (especially for Ibn Kathir)
-- Theological implications
+OUTPUT FORMAT: [complete original query] + [5-15 supplementary Islamic/Arabic terms]
 
-Keep the expansion concise but comprehensive. Return only the expanded query text, nothing else.
+EXAMPLE:
+Input: "patience"
+Output: "patience sabr steadfastness endurance trials perseverance sabirun quranic patience Islamic patience reward"
+
+Input: "Context of Treaty of Hudaybiyyah"
+Output: "Context of Treaty of Hudaybiyyah sulh hudaybiyah peace treaty Prophet Muhammad Quraysh Mecca pilgrimage umrah year 6 AH companions Umar Surah Al-Fath victory"
+
+Now expand: "{query}"
 """
 
         body = {
             "contents": [{"role": "user", "parts": [{"text": expansion_prompt}]}],
-            "generation_config": {"temperature": 0.3, "maxOutputTokens": 200},
+            "generation_config": {"temperature": 0.2, "maxOutputTokens": 300},
         }
 
         response = requests.post(
@@ -2824,9 +2834,10 @@ def get_verse_annotations(surah, verse):
                         return jsonify({"error": f"Invalid surah: {surah}"}), 400
 
                 # Parse verse (handle "2:94" format if present)
-                if ':' in str(verse):
-                    verse = str(verse).split(':')[-1]
-                verse_num = int(verse)
+                verse_str = str(verse)
+                if ':' in verse_str:
+                    verse_str = verse_str.split(':')[-1]
+                verse_num = int(verse_str)
 
                 # Validate verse reference
                 if surah_num not in QURAN_METADATA:
@@ -3819,9 +3830,9 @@ def tafsir_handler_enhanced():
             final_json = None
             generated_text = None
 
-            for attempt in range(max_retries):
+            for json_attempt in range(max_retries):
                 # Progressive temperature reduction on retries (0.3 → 0.1, never 0.0 to avoid robotic responses)
-                temperature = max(0.1, 0.3 - (attempt * 0.05))
+                temperature = max(0.1, round(0.3 - (json_attempt * 0.05), 2))
 
                 body = {
                     "contents": [{"role": "user", "parts": [{"text": prompt}]}],
@@ -3833,11 +3844,11 @@ def tafsir_handler_enhanced():
                 }
 
                 try:
-                    # Add retry logic for Gemini API calls
-                    max_retries = 2
+                    # Add retry logic for HTTP-level Gemini API calls
+                    max_http_retries = 2
                     retry_delay = 2
 
-                    for attempt in range(max_retries):
+                    for http_attempt in range(max_http_retries):
                         try:
                             response = requests.post(
                                 VERTEX_ENDPOINT,
@@ -3848,17 +3859,17 @@ def tafsir_handler_enhanced():
                             response.raise_for_status()
                             break  # Success
                         except requests.Timeout:
-                            if attempt == max_retries - 1:
-                                print(f"❌ Gemini timeout in Route 2 after {max_retries} attempts")
+                            if http_attempt == max_http_retries - 1:
+                                print(f"❌ Gemini HTTP timeout after {max_http_retries} attempts")
                                 return jsonify({
                                     "error": "AI service timeout",
                                     "retry": True,
                                     "error_type": "timeout"
                                 }), 503
-                            print(f"⚠️ Retry {attempt + 1}/{max_retries}...")
+                            print(f"⚠️ HTTP retry {http_attempt + 1}/{max_http_retries}...")
                             time.sleep(retry_delay)
                         except requests.HTTPError as e:
-                            if attempt == max_retries - 1 or response.status_code != 503:
+                            if http_attempt == max_http_retries - 1 or response.status_code != 503:
                                 raise
                             time.sleep(retry_delay)
 
@@ -3872,26 +3883,26 @@ def tafsir_handler_enhanced():
                         final_json = extract_json_from_response(generated_text)
 
                         if final_json:
-                            if attempt > 0:
-                                print(f"✅ JSON parsing succeeded on retry {attempt + 1}")
+                            if json_attempt > 0:
+                                print(f"✅ JSON parsing succeeded on retry {json_attempt + 1}")
                             break  # Success!
                         else:
-                            print(f"⚠️  Attempt {attempt + 1}/{max_retries}: Failed to parse JSON")
-                            if attempt < max_retries - 1:
+                            print(f"⚠️  JSON attempt {json_attempt + 1}/{max_retries}: Failed to parse JSON")
+                            if json_attempt < max_retries - 1:
                                 print(f"   Retrying with lower temperature ({temperature})...")
                                 time.sleep(0.5)  # Brief pause before retry
                     else:
-                        print(f"⚠️  Attempt {attempt + 1}/{max_retries}: Empty or malformed response from Gemini")
-                        if attempt < max_retries - 1:
+                        print(f"⚠️  JSON attempt {json_attempt + 1}/{max_retries}: Empty or malformed response from Gemini")
+                        if json_attempt < max_retries - 1:
                             time.sleep(0.5)
 
                 except requests.exceptions.Timeout:
-                    print(f"⚠️  Attempt {attempt + 1}/{max_retries}: Timeout")
-                    if attempt < max_retries - 1:
+                    print(f"⚠️  JSON attempt {json_attempt + 1}/{max_retries}: Timeout")
+                    if json_attempt < max_retries - 1:
                         time.sleep(1)
                 except Exception as e:
-                    print(f"⚠️  Attempt {attempt + 1}/{max_retries}: Error - {e}")
-                    if attempt < max_retries - 1:
+                    print(f"⚠️  JSON attempt {json_attempt + 1}/{max_retries}: Error - {e}")
+                    if json_attempt < max_retries - 1:
                         time.sleep(0.5)
 
             # Check if we got valid JSON after retries
