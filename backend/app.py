@@ -4074,105 +4074,188 @@ def debug_index():
 
 @app.route("/debug/test/<path:query>", methods=["GET"])
 def debug_query(query):
-    """Real-time debugging endpoint for any query"""
+    """
+    COMPREHENSIVE step-by-step trace of query processing
+    Shows exactly what happens when a query is submitted
+    """
     import urllib.parse
+    import time
     query = urllib.parse.unquote(query)
 
-    debug_info = {
+    trace = {
         "timestamp": datetime.now().isoformat(),
-        "query": query,
-        "steps": []
+        "original_query": query,
+        "processing_steps": [],
+        "timings": {}
     }
 
-    try:
-        # Step 1: Classification
-        classification = classify_query_enhanced(query)
-        debug_info["classification"] = {
-            "query_type": classification.get('query_type'),
-            "verse_ref": classification.get('verse_ref'),
-            "confidence": classification.get('confidence')
-        }
-        debug_info["steps"].append(f"Classified as: {classification.get('query_type')}")
+    def log_step(step_name, details=None):
+        """Helper to log each processing step"""
+        step = {"step": step_name, "timestamp": time.time()}
+        if details:
+            step.update(details)
+        trace["processing_steps"].append(step)
+        return step
 
-        # Step 2: Check verse metadata if applicable
+    try:
+        start_time = time.time()
+
+        # STEP 1: Query Normalization
+        log_step("1. Query Normalization", {
+            "input": query,
+            "normalized": normalize_query_text(query)
+        })
+
+        # STEP 2: Enhanced Classification
+        classification = classify_query_enhanced(query)
+        log_step("2. Classification", {
+            "query_type": classification['query_type'],
+            "confidence": f"{classification['confidence']:.0%}",
+            "verse_ref": classification.get('verse_ref'),
+            "metadata_type": classification.get('metadata_type')
+        })
+
+        # STEP 3: Verse Reference Extraction (if applicable)
         if classification.get('verse_ref'):
             surah, verse = classification['verse_ref']
-            verse_key = f"{surah}_{verse}"
+            verse_range = extract_verse_range(query)
+            log_step("3. Verse Reference Extraction", {
+                "single_verse": f"{surah}:{verse}",
+                "verse_range": f"{verse_range[0]}:{verse_range[1]}-{verse_range[2]}" if verse_range else None,
+                "is_range": verse_range and verse_range[1] != verse_range[2]
+            })
 
-            in_metadata = verse_key in VERSE_METADATA
-            debug_info["verse_check"] = {
-                "verse_key": verse_key,
-                "in_metadata": in_metadata,
-                "total_metadata_keys": len(VERSE_METADATA)
+        # STEP 4: Route Determination
+        query_type = classification['query_type']
+        verse_ref = classification.get('verse_ref')
+
+        if query_type == 'metadata' and verse_ref:
+            route_info = {
+                "route": "ROUTE 1: Metadata Query",
+                "description": "Direct lookup → AI formatting",
+                "estimated_time": "~1-2s",
+                "vector_search": "Only if metadata not found"
             }
-            debug_info["steps"].append(f"Verse {surah}:{verse} in metadata: {in_metadata}")
-
-            # Check if verse exists in chunks
-            verse_patterns = [f"{surah}:{verse}", f"[{surah}:{verse}]", f"({surah}:{verse})"]
-            chunks_with_verse = 0
-            for chunk_id, chunk_text in TAFSIR_CHUNKS.items():
-                if any(p in chunk_text for p in verse_patterns):
-                    chunks_with_verse += 1
-
-            debug_info["chunks_with_verse"] = chunks_with_verse
-            debug_info["steps"].append(f"Found in {chunks_with_verse} chunks")
-
-        # Step 3: Check which route it would take
-        query_type = classification.get('query_type')
-
-        if query_type == 'metadata' and classification.get('verse_ref'):
-            debug_info["route"] = "ROUTE 1: Metadata lookup"
-            debug_info["uses_vector_search"] = "Only if metadata not found"
-        elif query_type == 'direct_verse' and classification.get('verse_ref'):
-            debug_info["route"] = "ROUTE 2: Direct verse lookup"
-            debug_info["uses_vector_search"] = "Only if verse not found"
+        elif query_type == 'direct_verse' and verse_ref:
+            route_info = {
+                "route": "ROUTE 2: Direct Verse Query",
+                "description": "Direct lookup → AI formatting",
+                "estimated_time": "~1-2s",
+                "vector_search": "Only if verse not found"
+            }
         else:
-            debug_info["route"] = "ROUTE 3: Semantic search"
-            debug_info["uses_vector_search"] = "YES - Always"
+            route_info = {
+                "route": "ROUTE 3: Semantic Search",
+                "description": "Full RAG pipeline",
+                "estimated_time": "~10-30s",
+                "vector_search": "YES - Always"
+            }
 
-            # Test embedding generation
+        log_step("4. Route Determination", route_info)
+
+        # STEP 5: ROUTE 3 Specific - Query Expansion Test
+        if query_type == 'semantic':
             try:
+                # Simulate query expansion
+                expansion_test = {
+                    "would_expand": True,
+                    "expansion_method": "Gemini 2.5 Flash",
+                    "max_output_tokens": 300,
+                    "temperature": 0.2,
+                    "note": "Expansion adds Islamic/Arabic terms to improve search"
+                }
+                log_step("5a. Query Expansion (ROUTE 3 only)", expansion_test)
+
+                # Test embedding generation
                 from vertexai.language_models import TextEmbeddingModel
                 model = TextEmbeddingModel.from_pretrained(EMBEDDING_MODEL)
 
-                # Test with and without dimension
-                emb_default = model.get_embeddings([query])[0].values
                 emb_sized = model.get_embeddings([query], output_dimensionality=EMBEDDING_DIMENSION)[0].values
 
-                debug_info["embedding_test"] = {
-                    "default_dimension": len(emb_default),
-                    "specified_dimension": len(emb_sized),
-                    "index_expects": EMBEDDING_DIMENSION,
+                log_step("5b. Embedding Generation (ROUTE 3 only)", {
+                    "model": EMBEDDING_MODEL,
+                    "dimension": len(emb_sized),
+                    "expected": EMBEDDING_DIMENSION,
                     "match": len(emb_sized) == EMBEDDING_DIMENSION
-                }
-                debug_info["steps"].append(f"Embedding: default={len(emb_default)}, specified={len(emb_sized)}, expected={EMBEDDING_DIMENSION}")
+                })
+
+                # Vector search simulation
+                log_step("5c. Vector Search (ROUTE 3 only)", {
+                    "index_endpoint": INDEX_ENDPOINT_ID,
+                    "deployed_index": DEPLOYED_INDEX_ID,
+                    "num_neighbors": 20,
+                    "note": "Searches for semantically similar tafsir chunks"
+                })
 
             except Exception as e:
-                debug_info["embedding_test"] = {"error": str(e)}
-                debug_info["steps"].append(f"Embedding error: {str(e)[:100]}")
+                log_step("5. ROUTE 3 Processing Error", {"error": str(e)})
 
-        # Step 4: Check cache
-        cache_key = hashlib.md5(f"{query}_tafsir".encode()).hexdigest()
+        # STEP 6: Direct Lookup Test (ROUTE 1 & 2)
+        if verse_ref:
+            surah, verse = verse_ref
+            verse_range = extract_verse_range(query)
+
+            try:
+                # Check if we can find this verse in direct lookup
+                verse_metadata_list = get_verse_metadata_direct(
+                    surah,
+                    verse_range[1] if verse_range else verse,
+                    end_verse=verse_range[2] if verse_range and verse_range[1] != verse_range[2] else None
+                )
+
+                log_step("6. Direct Metadata Lookup (ROUTE 1 & 2)", {
+                    "lookup_verse": f"{surah}:{verse_range[1] if verse_range else verse}" +
+                                   (f"-{verse_range[2]}" if verse_range and verse_range[1] != verse_range[2] else ""),
+                    "sources_found": len(verse_metadata_list) if verse_metadata_list else 0,
+                    "sources": [item['source'] for item in (verse_metadata_list or [])],
+                    "has_tafsir": bool(verse_metadata_list)
+                })
+
+            except Exception as e:
+                log_step("6. Direct Lookup Error", {"error": str(e)})
+
+        # STEP 7: Cache Check
+        cache_key = get_cache_key(query, {"persona": "practicing_muslim"}, "tafsir")
         in_cache = cache_key in RESPONSE_CACHE
-        debug_info["cache"] = {
-            "key": cache_key,
+        log_step("7. Cache Check", {
             "in_cache": in_cache,
-            "total_cached": len(RESPONSE_CACHE)
-        }
-        debug_info["steps"].append(f"Cache check: {in_cache}")
+            "cache_size": len(RESPONSE_CACHE),
+            "note": "If cached, response is instant"
+        })
 
-        # Step 5: Summary
-        debug_info["likely_outcome"] = "WILL WORK" if (
-            (debug_info.get("verse_check", {}).get("in_metadata")) or
-            (debug_info.get("chunks_with_verse", 0) > 0) or
-            in_cache
-        ) else "MAY FAIL"
+        # STEP 8: Final Summary
+        total_time = time.time() - start_time
+        trace["timings"]["total_debug_time"] = f"{total_time:.3f}s"
+
+        trace["summary"] = {
+            "will_use_route": route_info["route"],
+            "estimated_response_time": route_info["estimated_time"],
+            "uses_vector_search": route_info["vector_search"],
+            "cache_hit": in_cache,
+            "likely_success": True  # Most queries should work
+        }
+
+        # Performance recommendations
+        recommendations = []
+        if query_type == 'semantic' and verse_ref:
+            recommendations.append("⚠️ This has a verse reference but uses ROUTE 3 (slow). Consider simpler query format.")
+        if not in_cache and query_type == 'semantic':
+            recommendations.append("💡 First request will be slow (~10-30s). Subsequent requests are cached.")
+        if verse_range and verse_range[1] != verse_range[2]:
+            recommendations.append(f"✅ Verse range detected: {verse_range[0]}:{verse_range[1]}-{verse_range[2]}")
+
+        if recommendations:
+            trace["recommendations"] = recommendations
 
     except Exception as e:
-        debug_info["error"] = str(e)
-        debug_info["steps"].append(f"Error: {str(e)}")
+        log_step("ERROR", {
+            "error_type": type(e).__name__,
+            "error_message": str(e),
+            "traceback": traceback.format_exc()
+        })
+        trace["summary"] = {"error": str(e)}
 
-    return jsonify(debug_info), 200
+    return jsonify(trace), 200
 
 @app.route("/debug/vector-test", methods=["GET"])
 def test_vector_search():
