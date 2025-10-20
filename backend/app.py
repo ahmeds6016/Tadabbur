@@ -3614,6 +3614,12 @@ def tafsir_handler_enhanced():
                 print(f"⚠️  Verse not found in Firestore, trying semantic search")
                 query_type = 'semantic'  # Fallback
             else:
+                # CRITICAL LOGGING: Verify we're getting the correct verse data
+                print(f"✅ Firestore returned: Surah {verse_data.get('surah_number')}, Verse {verse_data.get('verse_number')}, Name: {verse_data.get('surah_name')}")
+                print(f"   English preview: {verse_data.get('english', '')[:100]}...")
+                if verse_data.get('surah_number') != surah or verse_data.get('verse_number') != start_verse:
+                    print(f"❌❌❌ MISMATCH! Requested {surah}:{start_verse} but got {verse_data.get('surah_number')}:{verse_data.get('verse_number')}")
+
                 # Get metadata via direct lookup (with range support)
                 verse_metadata_list = get_verse_metadata_direct(surah, start_verse, end_verse=end_verse if start_verse != end_verse else None)
 
@@ -3702,6 +3708,9 @@ def tafsir_handler_enhanced():
 
                     prompt = build_enhanced_prompt(query, context_by_source, user_profile,
                                                  arabic_text, cross_refs, 'direct_verse', verse_data, approach)
+
+                    # CRITICAL LOGGING: Verify verse_data being passed to Gemini
+                    print(f"🔍 About to call Gemini with verse_data: {verse_data.get('surah_number')}:{verse_data.get('verse_number')} ({verse_data.get('surah_name')})")
 
                     # Get auth token
                     credentials, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
