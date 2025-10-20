@@ -1011,17 +1011,39 @@ def load_chunks_from_verse_files_enhanced():
             if surah is None:
                 continue
 
-            # Handle verse numbers (single or list)
+            # Handle verse numbers (single, list, or STRING RANGE like "183-184")
             verse_numbers_list = []
-            if isinstance(verse_num, list) and verse_num:
-                # CRITICAL FIX: Store under ALL verses in the range, not just first
+            if isinstance(verse_num, str) and '-' in verse_num:
+                # CRITICAL FIX: Handle string ranges like "183-184"
+                try:
+                    parts = verse_num.split('-')
+                    start_v = int(parts[0])
+                    end_v = int(parts[1])
+                    verse_numbers_list = list(range(start_v, end_v + 1))
+                    verse_num = start_v  # Use first verse for chunk_id
+                    print(f"INFO: Processing range {surah}:{verse_num} (string format '{verse.get('verse_number')}')")
+                except (ValueError, IndexError) as e:
+                    print(f"WARNING: Could not parse verse_number '{verse_num}': {e}")
+                    continue
+            elif isinstance(verse_num, list) and verse_num:
+                # Handle list format: [183, 184]
                 verse_numbers_list = verse_num
                 verse_num = verse_num[0]  # Use first for chunk_id
             elif verse_num is None:
                 verse_num = 0
                 verse_numbers_list = [0]
-            else:
+            elif isinstance(verse_num, (int, float)):
+                # Handle single integer/float
+                verse_num = int(verse_num)
                 verse_numbers_list = [verse_num]
+            else:
+                # Handle any other format
+                try:
+                    verse_num = int(verse_num)
+                    verse_numbers_list = [verse_num]
+                except (ValueError, TypeError):
+                    print(f"WARNING: Unexpected verse_number format: {verse_num} (type: {type(verse_num)})")
+                    continue
 
             verse_text = verse.get('verse_text', '')
             topics = verse.get('topics', [])
