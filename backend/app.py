@@ -1677,6 +1677,10 @@ def extract_json_from_response(text: str) -> Optional[dict]:
 
     # Try 5: Fallback - create minimal valid response
     print(f"⚠️ JSON extraction failed, using fallback response")
+    print(f"⚠️ Full Gemini response that failed to parse:")
+    print(f"⚠️ Length: {len(text)} chars")
+    print(f"⚠️ First 1000 chars: {text[:1000]}")
+    print(f"⚠️ Last 500 chars: {text[-500:]}")
     return {
         "response": text[:500] if len(text) > 500 else text,
         "sources": [],
@@ -3958,6 +3962,15 @@ def tafsir_handler_enhanced():
                 is_valid, validation_msg = validate_response(final_json)
                 if not is_valid:
                     print(f"⚠️  Validation failed: {validation_msg}")
+                    print(f"⚠️  Response keys: {list(final_json.keys())}")
+                    print(f"⚠️  Has tafsir_explanations: {'tafsir_explanations' in final_json}")
+                    if 'tafsir_explanations' in final_json:
+                        explanations = final_json.get('tafsir_explanations', [])
+                        print(f"⚠️  Number of explanations: {len(explanations)}")
+                        for i, exp in enumerate(explanations[:3]):  # Show first 3
+                            exp_text = exp.get('explanation', '')
+                            print(f"⚠️  Explanation {i+1} length: {len(exp_text)}, preview: {exp_text[:100]}")
+                    print(f"⚠️  Has metadata.extraction_error: {final_json.get('metadata', {}).get('extraction_error')}")
                     return jsonify({"error": "Response quality not met"}), 500
 
                 # Add approach suggestion if user might benefit from different approach
@@ -4918,7 +4931,7 @@ def check_verse_metadata(surah, verse):
                 "metadata_keys": list(metadata.keys()) if metadata else None,
                 "chunk_text_length": len(chunk_text) if chunk_text else 0,
                 "has_commentary": metadata.get('commentary') is not None if metadata else False,
-                "commentary_length": len(metadata.get('commentary', '')) if metadata else 0
+                "commentary_length": len(metadata.get('commentary') or '') if metadata else 0
             }
 
         # Sample surrounding verses
