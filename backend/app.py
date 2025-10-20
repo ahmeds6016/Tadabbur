@@ -4514,14 +4514,19 @@ def debug_query(query):
         if query_type == 'semantic':
             log_step("ROUTE 3 EXECUTION START", {"route": "Semantic Search (Full RAG)"})
 
-            # Query Expansion
+            # Get auth token for query expansion
             step_start = time.time()
+            credentials, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
+            credentials.refresh(google.auth.transport.requests.Request())
+            token = credentials.token
+
+            # Query Expansion
             log_step("6. Query Expansion", {
                 "original_query": query,
                 "status": "calling Gemini for expansion..."
             })
 
-            expanded_query = expand_query_with_gemini(query)
+            expanded_query = expand_query(query, token, approach)
 
             log_step("6b. Query Expansion Result", {
                 "original": query,
