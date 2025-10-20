@@ -4588,7 +4588,7 @@ def debug_query(query):
 
             chunks_by_source = {}
             for neighbor in neighbors:
-                chunk_doc = firestore_client.collection('tafsir_chunks').document(neighbor.id).get()
+                chunk_doc = quran_db.collection('tafsir_chunks').document(neighbor.id).get()
                 if chunk_doc.exists:
                     chunk_data = chunk_doc.to_dict()
                     source = chunk_data.get('source', 'Unknown')
