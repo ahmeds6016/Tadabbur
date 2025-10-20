@@ -1677,10 +1677,25 @@ def extract_json_from_response(text: str) -> Optional[dict]:
 
     # Try 5: Fallback - create minimal valid response
     print(f"⚠️ JSON extraction failed, using fallback response")
-    print(f"⚠️ Full Gemini response that failed to parse:")
-    print(f"⚠️ Length: {len(text)} chars")
-    print(f"⚠️ First 1000 chars: {text[:1000]}")
+    print(f"⚠️ Response length: {len(text)} chars")
+
+    # Check for common JSON issues
+    has_opening_brace = text.strip().startswith('{')
+    has_closing_brace = text.strip().endswith('}')
+    brace_count = text.count('{') - text.count('}')
+
+    print(f"⚠️ JSON structure check: starts_with_brace={has_opening_brace}, ends_with_brace={has_closing_brace}, brace_imbalance={brace_count}")
+    print(f"⚠️ First 500 chars: {text[:500]}")
     print(f"⚠️ Last 500 chars: {text[-500:]}")
+
+    # If response looks like it might be valid JSON that's just very long, try one more parse
+    if has_opening_brace and has_closing_brace and brace_count == 0:
+        print(f"⚠️ Response structure looks valid, attempting final JSON parse...")
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError as e:
+            print(f"⚠️ Final parse failed at position {e.pos}: {e.msg}")
+
     return {
         "response": text[:500] if len(text) > 500 else text,
         "sources": [],
