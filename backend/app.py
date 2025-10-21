@@ -4343,7 +4343,7 @@ def debug_query(query):
                 # Call Gemini
                 step_start = time.time()
                 log_step("11. Calling Gemini API", {
-                    "model": "gemini-2.0-flash-exp",
+                    "model": "{GEMINI_MODEL_ID}",
                     "temperature": 0.3,
                     "timeout": 120
                 })
@@ -4351,7 +4351,7 @@ def debug_query(query):
                 credentials, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
                 credentials.refresh(google.auth.transport.requests.Request())
 
-                gemini_url = f"https://us-central1-aiplatform.googleapis.com/v1/projects/{GCP_INFRASTRUCTURE_PROJECT}/locations/us-central1/publishers/google/models/gemini-2.0-flash-exp:generateContent"
+                gemini_url = f"https://us-central1-aiplatform.googleapis.com/v1/projects/{GCP_INFRASTRUCTURE_PROJECT}/locations/us-central1/publishers/google/models/{GEMINI_MODEL_ID}:generateContent"
 
                 body = {
                     "contents": [{"role": "user", "parts": [{"text": prompt}]}],
@@ -4520,7 +4520,7 @@ def debug_query(query):
                 # Call Gemini
                 step_start = time.time()
                 log_step("11. Calling Gemini API", {
-                    "model": "gemini-2.0-flash-exp",
+                    "model": "{GEMINI_MODEL_ID}",
                     "temperature": 0.3,
                     "timeout": 120
                 })
@@ -4528,7 +4528,7 @@ def debug_query(query):
                 credentials, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
                 credentials.refresh(google.auth.transport.requests.Request())
 
-                gemini_url = f"https://us-central1-aiplatform.googleapis.com/v1/projects/{GCP_INFRASTRUCTURE_PROJECT}/locations/us-central1/publishers/google/models/gemini-2.0-flash-exp:generateContent"
+                gemini_url = f"https://us-central1-aiplatform.googleapis.com/v1/projects/{GCP_INFRASTRUCTURE_PROJECT}/locations/us-central1/publishers/google/models/{GEMINI_MODEL_ID}:generateContent"
 
                 body = {
                     "contents": [{"role": "user", "parts": [{"text": prompt}]}],
@@ -4706,13 +4706,13 @@ def debug_query(query):
             # Gemini call
             step_start = time.time()
             log_step("11. Calling Gemini API", {
-                "model": "gemini-2.0-flash-exp"
+                "model": "{GEMINI_MODEL_ID}"
             })
 
             credentials, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
             credentials.refresh(google.auth.transport.requests.Request())
 
-            gemini_url = f"https://us-central1-aiplatform.googleapis.com/v1/projects/{GCP_INFRASTRUCTURE_PROJECT}/locations/us-central1/publishers/google/models/gemini-2.0-flash-exp:generateContent"
+            gemini_url = f"https://us-central1-aiplatform.googleapis.com/v1/projects/{GCP_INFRASTRUCTURE_PROJECT}/locations/us-central1/publishers/google/models/{GEMINI_MODEL_ID}:generateContent"
 
             body = {
                 "contents": [{"role": "user", "parts": [{"text": prompt}]}],
