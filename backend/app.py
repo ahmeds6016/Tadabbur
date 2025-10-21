@@ -1589,7 +1589,7 @@ def fix_malformed_json(text: str) -> str:
     Handles:
     1. Unescaped quotes inside string values
     2. Trailing commas before closing braces/brackets
-    3. Missing commas between properties
+    3. Invalid control characters (unescaped newlines, tabs, carriage returns)
     4. Unicode issues (BOM, zero-width spaces)
     5. Smart quotes and other typography
     """
@@ -1605,9 +1605,10 @@ def fix_malformed_json(text: str) -> str:
     # Step 3: Remove trailing commas before closing braces/brackets
     text = re.sub(r',(\s*[}\]])', r'\1', text)
 
-    # Step 4: Fix unescaped quotes in JSON string values
-    # This is the most complex part - we need to identify string values
-    # and escape any quotes inside them that aren't already escaped
+    # Step 4: Fix unescaped quotes and control characters in JSON string values
+    # We need to identify string values and escape:
+    # - Unescaped quotes
+    # - Control characters (newlines, tabs, carriage returns)
 
     result = []
     i = 0
@@ -1660,6 +1661,21 @@ def fix_malformed_json(text: str) -> str:
                     i += 1
                     continue
 
+        # Handle control characters INSIDE strings only
+        if in_string:
+            if char == '\n':
+                result.append('\\n')
+                i += 1
+                continue
+            elif char == '\r':
+                result.append('\\r')
+                i += 1
+                continue
+            elif char == '\t':
+                result.append('\\t')
+                i += 1
+                continue
+
         # Normal character
         result.append(char)
         i += 1
@@ -1688,8 +1704,8 @@ def extract_json_from_response(text: str) -> Optional[dict]:
     except json.JSONDecodeError as e:
         print(f"⚠️ Initial JSON parse failed at position {e.pos}: {e.msg}")
 
-        # If it looks like a quote/comma issue, try comprehensive fix
-        if any(keyword in str(e.msg) for keyword in ["Expecting ','", "Expecting ':'", "Unterminated string"]):
+        # If it looks like a quote/comma/control character issue, try comprehensive fix
+        if any(keyword in str(e.msg) for keyword in ["Expecting ','", "Expecting ':'", "Unterminated string", "Invalid control character"]):
             print(f"⚠️ Attempting comprehensive JSON cleanup...")
             try:
                 fixed_text = fix_malformed_json(text)
