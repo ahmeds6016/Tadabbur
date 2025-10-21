@@ -4379,25 +4379,35 @@ def debug_query(query):
 
                 if response.ok:
                     result = response.json()
-                    answer = result['candidates'][0]['content']['parts'][0]['text']
+                    generated_text = result['candidates'][0]['content']['parts'][0]['text']
 
-                    final_response = {
-                        "answer": answer,
-                        "verse": verse_data,
-                        "sources": list(context_by_source.keys()),
-                        "route": "ROUTE 1"
-                    }
+                    # CRITICAL FIX: Parse JSON from Gemini response
+                    final_json = extract_json_from_response(generated_text)
+
+                    if not final_json or final_json.get('metadata', {}).get('extraction_error'):
+                        log_step("ERROR: JSON Extraction Failed", {
+                            "has_extraction_error": bool(final_json and final_json.get('metadata', {}).get('extraction_error')),
+                            "response_preview": generated_text[:500]
+                        })
+                        trace["error"] = "Failed to parse AI response"
+                        return jsonify(trace), 500
+
+                    # Add route and sources to response
+                    final_json["route"] = "ROUTE 1"
+                    if "sources" not in final_json:
+                        final_json["sources"] = list(context_by_source.keys())
 
                     # Cache it
                     with cache_lock:
-                        RESPONSE_CACHE[cache_key] = final_response
+                        RESPONSE_CACHE[cache_key] = final_json
 
-                    trace["response"] = final_response
+                    trace["response"] = final_json
                     trace["timings"] = step_timings
                     trace["timings"]["total"] = f"{time.time() - overall_start:.3f}s"
 
                     log_step("ROUTE 1 COMPLETE", {
-                        "answer_length": len(answer),
+                        "has_verses": bool(final_json.get("verses")),
+                        "has_tafsir": bool(final_json.get("tafsir_explanations")),
                         "cached": True
                     })
 
@@ -4546,25 +4556,35 @@ def debug_query(query):
 
                 if response.ok:
                     result = response.json()
-                    answer = result['candidates'][0]['content']['parts'][0]['text']
+                    generated_text = result['candidates'][0]['content']['parts'][0]['text']
 
-                    final_response = {
-                        "answer": answer,
-                        "verse": verse_data,
-                        "sources": list(context_by_source.keys()),
-                        "route": "ROUTE 2"
-                    }
+                    # CRITICAL FIX: Parse JSON from Gemini response
+                    final_json = extract_json_from_response(generated_text)
+
+                    if not final_json or final_json.get('metadata', {}).get('extraction_error'):
+                        log_step("ERROR: JSON Extraction Failed", {
+                            "has_extraction_error": bool(final_json and final_json.get('metadata', {}).get('extraction_error')),
+                            "response_preview": generated_text[:500]
+                        })
+                        trace["error"] = "Failed to parse AI response"
+                        return jsonify(trace), 500
+
+                    # Add route and sources to response
+                    final_json["route"] = "ROUTE 2"
+                    if "sources" not in final_json:
+                        final_json["sources"] = list(context_by_source.keys())
 
                     # Cache it
                     with cache_lock:
-                        RESPONSE_CACHE[cache_key] = final_response
+                        RESPONSE_CACHE[cache_key] = final_json
 
-                    trace["response"] = final_response
+                    trace["response"] = final_json
                     trace["timings"] = step_timings
                     trace["timings"]["total"] = f"{time.time() - overall_start:.3f}s"
 
                     log_step("ROUTE 2 COMPLETE", {
-                        "answer_length": len(answer),
+                        "has_verses": bool(final_json.get("verses")),
+                        "has_tafsir": bool(final_json.get("tafsir_explanations")),
                         "cached": True
                     })
 
