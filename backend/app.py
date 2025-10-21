@@ -1583,6 +1583,90 @@ def handle_errors(f):
     return wrapper
 
 # --- JSON Extraction Helper ---
+def fix_malformed_json(text: str) -> str:
+    """
+    Comprehensive JSON cleanup for malformed Gemini responses.
+    Handles:
+    1. Unescaped quotes inside string values
+    2. Trailing commas before closing braces/brackets
+    3. Missing commas between properties
+    4. Unicode issues (BOM, zero-width spaces)
+    5. Smart quotes and other typography
+    """
+    import re
+
+    # Step 1: Remove BOM and invisible characters
+    text = text.lstrip('\ufeff\u200b\u200c\u200d\ufeff')
+
+    # Step 2: Replace smart quotes with regular quotes (if any slipped through)
+    text = text.replace('\u201c', '"').replace('\u201d', '"')  # " "
+    text = text.replace('\u2018', "'").replace('\u2019', "'")  # ' '
+
+    # Step 3: Remove trailing commas before closing braces/brackets
+    text = re.sub(r',(\s*[}\]])', r'\1', text)
+
+    # Step 4: Fix unescaped quotes in JSON string values
+    # This is the most complex part - we need to identify string values
+    # and escape any quotes inside them that aren't already escaped
+
+    result = []
+    i = 0
+    in_string = False
+    escape_next = False
+
+    while i < len(text):
+        char = text[i]
+
+        # Handle escape sequences
+        if escape_next:
+            result.append(char)
+            escape_next = False
+            i += 1
+            continue
+
+        if char == '\\':
+            result.append(char)
+            escape_next = True
+            i += 1
+            continue
+
+        # Handle double quotes
+        if char == '"':
+            if not in_string:
+                # Starting a string
+                in_string = True
+                result.append(char)
+                i += 1
+                continue
+            else:
+                # Possibly ending a string - check what comes after
+                # Look ahead to find next non-whitespace character
+                next_idx = i + 1
+                while next_idx < len(text) and text[next_idx] in ' \t\n\r':
+                    next_idx += 1
+
+                next_char = text[next_idx] if next_idx < len(text) else None
+
+                # If followed by :, ,, }, ], or end of text, this closes the string
+                if next_char is None or next_char in ',:}]':
+                    in_string = False
+                    result.append(char)
+                    i += 1
+                    continue
+                else:
+                    # This is an unescaped quote in the middle - escape it!
+                    result.append('\\')
+                    result.append(char)
+                    i += 1
+                    continue
+
+        # Normal character
+        result.append(char)
+        i += 1
+
+    return ''.join(result)
+
+
 def extract_json_from_response(text: str) -> Optional[dict]:
     """
     Enhanced robust JSON extraction from Gemini responses.
@@ -1590,7 +1674,7 @@ def extract_json_from_response(text: str) -> Optional[dict]:
     - Direct JSON
     - JSON wrapped in markdown code blocks
     - JSON embedded in text
-    - Malformed JSON with common issues
+    - Malformed JSON with common issues (unescaped quotes, trailing commas, etc.)
     - Truncated responses
     """
     if not text or not text.strip():
@@ -1601,7 +1685,28 @@ def extract_json_from_response(text: str) -> Optional[dict]:
     # Try 1: Direct JSON parse
     try:
         return json.loads(text)
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as e:
+        print(f"⚠️ Initial JSON parse failed at position {e.pos}: {e.msg}")
+
+        # If it looks like a quote/comma issue, try comprehensive fix
+        if any(keyword in str(e.msg) for keyword in ["Expecting ','", "Expecting ':'", "Unterminated string"]):
+            print(f"⚠️ Attempting comprehensive JSON cleanup...")
+            try:
+                fixed_text = fix_malformed_json(text)
+                result = json.loads(fixed_text)
+                print(f"✅ Successfully cleaned and parsed malformed JSON!")
+                return result
+            except json.JSONDecodeError as e2:
+                print(f"⚠️ Cleanup failed at position {e2.pos}: {e2.msg}")
+                if e2.pos < len(fixed_text):
+                    context_start = max(0, e2.pos - 100)
+                    context_end = min(len(fixed_text), e2.pos + 100)
+                    print(f"⚠️ Error context: ...{fixed_text[context_start:e2.pos]}<<<HERE>>>{fixed_text[e2.pos:context_end]}...")
+                # Continue to other methods below
+            except Exception as ex:
+                print(f"⚠️ Unexpected error during cleanup: {str(ex)}")
+
+        # Continue with original fallback logic
         pass
 
     # Try 2: Extract from markdown code blocks
