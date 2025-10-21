@@ -1685,8 +1685,11 @@ def extract_json_from_response(text: str) -> Optional[dict]:
     brace_count = text.count('{') - text.count('}')
 
     print(f"⚠️ JSON structure check: starts_with_brace={has_opening_brace}, ends_with_brace={has_closing_brace}, brace_imbalance={brace_count}")
-    print(f"⚠️ First 500 chars: {text[:500]}")
-    print(f"⚠️ Last 500 chars: {text[-500:]}")
+
+    # LOG COMPLETE RESPONSE (no truncation)
+    print("⚠️ === COMPLETE GEMINI RESPONSE ===")
+    print(text)
+    print("⚠️ === END COMPLETE RESPONSE ===")
 
     # If response looks like it might be valid JSON that's just very long, try one more parse
     if has_opening_brace and has_closing_brace and brace_count == 0:
@@ -1695,6 +1698,13 @@ def extract_json_from_response(text: str) -> Optional[dict]:
             return json.loads(text)
         except json.JSONDecodeError as e:
             print(f"⚠️ Final parse failed at position {e.pos}: {e.msg}")
+
+            # Show context around the exact error
+            if e.pos < len(text):
+                context_start = max(0, e.pos - 150)
+                context_end = min(len(text), e.pos + 150)
+                print(f"⚠️ Error context (150 chars before/after pos {e.pos}):")
+                print(text[context_start:e.pos] + " <<<ERROR_HERE>>> " + text[e.pos:context_end])
 
     return {
         "response": text[:500] if len(text) > 500 else text,
@@ -4333,6 +4343,11 @@ def debug_query(query):
                 prompt = build_enhanced_prompt(query, context_by_source, user_profile,
                                              arabic_text, None, 'metadata', verse_data, approach)
 
+                # LOG COMPLETE PROMPT
+                print("🔵 === COMPLETE PROMPT TO GEMINI ===")
+                print(prompt)
+                print("🔵 === END COMPLETE PROMPT ===")
+
                 log_step("10. Build AI Prompt", {
                     "prompt_length": len(prompt),
                     "has_arabic": bool(arabic_text),
@@ -4380,6 +4395,11 @@ def debug_query(query):
                 if response.ok:
                     result = response.json()
                     generated_text = result['candidates'][0]['content']['parts'][0]['text']
+
+                    # LOG COMPLETE GEMINI RESPONSE
+                    print("🟢 === COMPLETE GEMINI RESPONSE ===")
+                    print(generated_text)
+                    print("🟢 === END COMPLETE RESPONSE ===")
 
                     # CRITICAL FIX: Parse JSON from Gemini response
                     final_json = extract_json_from_response(generated_text)
@@ -4509,6 +4529,11 @@ def debug_query(query):
                 prompt = build_enhanced_prompt(query, context_by_source, user_profile,
                                              arabic_text, None, 'direct_verse', verse_data, approach)
 
+                # LOG COMPLETE PROMPT
+                print("🔵 === COMPLETE PROMPT TO GEMINI ===")
+                print(prompt)
+                print("🔵 === END COMPLETE PROMPT ===")
+
                 log_step("10. Build AI Prompt", {
                     "prompt_length": len(prompt),
                     "has_arabic": bool(arabic_text),
@@ -4557,6 +4582,11 @@ def debug_query(query):
                 if response.ok:
                     result = response.json()
                     generated_text = result['candidates'][0]['content']['parts'][0]['text']
+
+                    # LOG COMPLETE GEMINI RESPONSE
+                    print("🟢 === COMPLETE GEMINI RESPONSE ===")
+                    print(generated_text)
+                    print("🟢 === END COMPLETE RESPONSE ===")
 
                     # CRITICAL FIX: Parse JSON from Gemini response
                     final_json = extract_json_from_response(generated_text)
