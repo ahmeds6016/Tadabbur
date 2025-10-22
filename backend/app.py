@@ -1960,7 +1960,31 @@ Now expand: "{query}"
 
             if expanded:
                 expanded = expanded.strip()
-                print(f"INFO: Query expanded from '{query}' to '{expanded}'")
+
+                # VALIDATION: Prevent truncated or malformed expansions
+                original_word_count = len(query.split())
+                expanded_word_count = len(expanded.split())
+
+                # Check 1: Expansion should NOT be shorter than original
+                if expanded_word_count < original_word_count:
+                    print(f"⚠️ REJECTED truncated expansion: '{expanded}'")
+                    print(f"   Original had {original_word_count} words, expansion has {expanded_word_count}")
+                    print(f"   Using original query: '{query}'")
+                    return query
+
+                # Check 2: Original query terms must be preserved
+                original_words = set(word.lower() for word in query.split())
+                expanded_words = set(word.lower() for word in expanded.split())
+
+                missing_words = original_words - expanded_words
+                if missing_words:
+                    print(f"⚠️ REJECTED expansion missing original terms: {missing_words}")
+                    print(f"   Expansion was: '{expanded}'")
+                    print(f"   Using original query: '{query}'")
+                    return query
+
+                # Validation passed
+                print(f"✅ Query expanded from '{query}' to '{expanded}'")
                 return expanded
 
         print(f"WARNING: Query expansion failed, using original query")
