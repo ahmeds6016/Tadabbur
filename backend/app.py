@@ -2007,11 +2007,9 @@ def perform_diversified_rag_search(query, expanded_query, embedding_model, index
         output_dimensionality=EMBEDDING_DIMENSION
     )[0].values
 
-    # Step 2: Retrieve candidates (more for thematic, focused for tafsir)
-    if approach == 'thematic':
-        num_neighbors = 30  # Broader search for thematic connections
-    elif approach == 'historical':
-        num_neighbors = 25  # Medium for historical context
+    # Step 2: Retrieve candidates (approach-aware retrieval)
+    if approach == 'semantic':
+        num_neighbors = 30  # Broader search for themes, events, and concepts
     else:  # tafsir
         num_neighbors = 20  # Focused classical commentary
 
@@ -2102,10 +2100,8 @@ def perform_diversified_rag_search(query, expanded_query, embedding_model, index
             weight = weights.get(source_name, 0.5)
 
             # Adjust chunk count based on approach
-            if approach == 'thematic':
-                num_chunks = max(3, int(weight * 15))  # More chunks for thematic
-            elif approach == 'historical':
-                num_chunks = max(3, int(weight * 12))  # Medium for historical
+            if approach == 'semantic':
+                num_chunks = max(3, int(weight * 15))  # More chunks for themes, events, concepts
             else:  # tafsir
                 num_chunks = max(2, int(weight * 10))  # Focused for tafsir
 
@@ -2183,7 +2179,7 @@ def build_enhanced_prompt(query, context_by_source, user_profile, arabic_text=No
 
     goal_instruction = goal_instructions.get(learning_goal, goal_instructions['balanced'])
 
-    # NEW: Approach-specific instructions
+    # NEW: Approach-specific instructions (MERGED: historical + thematic → semantic)
     approach_instructions = {
         'tafsir': """
 📖 TAFSIR-BASED APPROACH:
@@ -2193,25 +2189,15 @@ Focus on CLASSICAL COMMENTARY and verse-by-verse analysis.
 - Deep dive into the interpretation of individual verses or small verse sets
 - Prioritize scholarly precision and detailed explanation
         """,
-        'thematic': """
-🔍 THEMATIC APPROACH:
-Focus on MULTI-VERSE CONNECTIONS and overarching themes.
-- Identify verses across different surahs that relate to the same theme
-- Group related verses by sub-themes or aspects
-- Extract common patterns, principles, and lessons that emerge across verses
-- Show how the concept develops throughout the Quran
-- Present a holistic view of how the Quran addresses this topic
-- Structure your response around theme clusters rather than verse-by-verse
-        """,
-        'historical': """
-📜 HISTORICAL CONTEXT APPROACH:
-Focus on REVELATION CIRCUMSTANCES and historical background.
-- Emphasize asbab al-nuzul (circumstances of revelation)
-- Provide chronological context and timeline
-- Explain the historical situation when verses were revealed
-- Connect verses to specific events, battles, or incidents
-- Show how historical context illuminates the meaning
-- Present information in a way that helps understand the sequence and progression
+        'semantic': """
+🔍 SEMANTIC SEARCH APPROACH:
+Focus on COMPREHENSIVE EXPLORATION of themes, events, and concepts.
+- For THEMATIC queries: Identify verses across different surahs that relate to the same theme, extract patterns and principles
+- For HISTORICAL queries: Emphasize asbab al-nuzul, chronological context, and how events illuminate meaning
+- For EVENT queries: Connect verses to specific battles, treaties, or incidents with timeline
+- Group content by sub-topics or themes rather than verse-by-verse
+- Show connections and relationships across different verses and contexts
+- Present a holistic view of how the Quran addresses this topic or event
         """
     }
 
@@ -3480,10 +3466,10 @@ def tafsir_handler_enhanced():
     """
     HYBRID tafsir endpoint with 3-tier intelligent routing + approach-based customization:
 
-    APPROACHES:
-    - tafsir: Classical commentary focus (default)
-    - thematic: Multi-verse connections on a theme
-    - historical: Timeline and revelation context focus
+    APPROACHES (Simplified):
+    - tafsir: Classical verse-by-verse commentary (default)
+    - semantic: Themes, events, and concepts (merged historical + thematic)
+      * Frontend can send 'historical' or 'thematic' - both map to 'semantic'
 
     ROUTES:
     1. METADATA QUERIES (e.g., "hadith in 2:255")
@@ -3496,13 +3482,12 @@ def tafsir_handler_enhanced():
        - AI formats tafsir with persona (1 LLM call)
        - Total: ~1-2s, 50% cheaper than full RAG
 
-    3. SEMANTIC QUERIES (e.g., "explain charity")
-       - Full RAG pipeline:
-         * Query expansion (1 LLM call)
-         * Vector search
+    3. SEMANTIC QUERIES (e.g., "patience", "Battle of Badr", "migration to Madinah")
+       - RAG pipeline (NO expansion for semantic to avoid garbage):
+         * Vector search (30 neighbors, 15 chunks)
          * Context building
          * AI generation (1 LLM call)
-       - Total: ~3-5s, 2 LLM calls
+       - Total: ~2-3s, 1 LLM call (faster without expansion!)
 
     Routes 1 & 2 skip expensive RAG but keep AI quality & persona adaptation!
     """
@@ -3515,8 +3500,12 @@ def tafsir_handler_enhanced():
         if not query:
             return jsonify({'error': 'Query is required'}), 400
 
-        # Validate approach
-        if approach not in ['tafsir', 'thematic', 'historical']:
+        # Validate and normalize approach
+        # MERGE: historical + thematic → semantic (same underlying mechanism)
+        if approach in ['historical', 'thematic']:
+            approach = 'semantic'
+            print(f"📍 Normalized approach: {data.get('approach')} → semantic")
+        elif approach not in ['tafsir', 'semantic']:
             approach = 'tafsir'  # Default fallback
 
         # Rate limiting
@@ -4012,10 +4001,11 @@ def tafsir_handler_enhanced():
             token = credentials.token
 
             # Query expansion (approach-aware)
-            # DISABLED for historical queries to avoid garbage expansions
-            if approach == 'historical':
+            # DISABLED for semantic queries to avoid garbage expansions
+            # (historical + thematic both map to semantic now)
+            if approach == 'semantic':
                 expanded_query = rag_query
-                print(f"⚡ Skipping query expansion for historical approach (using original query)")
+                print(f"⚡ Skipping query expansion for semantic approach (using original query)")
             else:
                 expanded_query = expand_query(rag_query, token, approach)
 
