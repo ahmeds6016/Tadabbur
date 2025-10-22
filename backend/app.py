@@ -1899,39 +1899,11 @@ Focus on THEMATIC CONNECTIONS that help find verses across different surahs:
 """,
             'historical': """
 Focus on HISTORICAL CONTEXT that helps find revelation circumstances:
-
-⚠️ CRITICAL: You MUST preserve the COMPLETE original query, especially:
-- Arabic terms and transliterations (Asbāb al-Nuzūl, Ghazwah, Sulh, etc.)
-- Proper nouns (Battle of Badr, Treaty of Hudaybiyyah, names of people/places)
-- Event names and specific references
-- The ENTIRE query must appear in your expansion
-
-✅ CORRECT EXPANSION PATTERN:
-1. Start with the COMPLETE original query word-for-word
-2. Then add 5-12 supplementary terms
-
-GOOD EXAMPLES:
-Input: "Asbāb al-Nuzūl of Battle of Badr"
-Output: "Asbāb al-Nuzūl of Battle of Badr circumstances revelation Ghazwah Badr 2 AH Ramadan Quraysh Muhammad companions prisoners ransom spoils war"
-
-Input: "Context of Treaty of Hudaybiyyah"
-Output: "Context of Treaty of Hudaybiyyah Sulh Hudaybiyah 6 AH peace agreement pilgrimage umrah Mecca Quraysh Prophet companions pledge Ridwan Surah Al-Fath victory"
-
-Input: "Background of Surah Al-Anfal"
-Output: "Background of Surah Al-Anfal Battle Badr spoils war anfal booty division 2 AH revelation circumstances victory"
-
-❌ WRONG (DO NOT DO THIS):
-Input: "Asbāb al-Nuzūl of Battle of Badr"
-Output: "Asbāb al-Nuzūl of" ← WRONG! Missing "Battle of Badr"
-
-WHAT TO ADD:
-- Asbab al-nuzul terms (circumstances, revelation, context, background)
-- Historical events (battles: Ghazwah, conquests: Fath, treaties: Sulh)
-- Timeline markers (AH dates: 2 AH, 6 AH, etc.)
-- People involved (Prophet Muhammad, companions, tribes, opponents)
-- Places (Mecca, Medina, battlefields, locations)
-- Related surahs or verses that share historical context
-- Chronological markers (before, after, during specific events)
+- Asbab al-nuzul (circumstances of revelation)
+- Historical events, battles, and incidents
+- Chronological and sequential context
+- Names of people, places, and tribes
+- Pre-Islamic and early Islamic history
 """
         }
 
@@ -1988,32 +1960,7 @@ Now expand: "{query}"
 
             if expanded:
                 expanded = expanded.strip()
-
-                # VALIDATION: Prevent truncated or malformed expansions
-                original_word_count = len(query.split())
-                expanded_word_count = len(expanded.split())
-
-                # Check 1: Expansion should NOT be shorter than original
-                if expanded_word_count < original_word_count:
-                    print(f"⚠️ REJECTED truncated expansion: '{expanded}'")
-                    print(f"   Original had {original_word_count} words, expansion has {expanded_word_count}")
-                    print(f"   Using original query: '{query}'")
-                    return query
-
-                # Check 2: Original query terms must be preserved
-                # Split both into words and check if all original words appear in expansion
-                original_words = set(word.lower() for word in query.split())
-                expanded_words = set(word.lower() for word in expanded.split())
-
-                missing_words = original_words - expanded_words
-                if missing_words:
-                    print(f"⚠️ REJECTED expansion missing original terms: {missing_words}")
-                    print(f"   Expansion was: '{expanded}'")
-                    print(f"   Using original query: '{query}'")
-                    return query
-
-                # Validation passed
-                print(f"✅ Query expanded from '{query}' to '{expanded}'")
+                print(f"INFO: Query expanded from '{query}' to '{expanded}'")
                 return expanded
 
         print(f"WARNING: Query expansion failed, using original query")
@@ -2036,11 +1983,11 @@ def perform_diversified_rag_search(query, expanded_query, embedding_model, index
         output_dimensionality=EMBEDDING_DIMENSION
     )[0].values
 
-    # Step 2: Retrieve candidates (approach-aware retrieval)
+    # Step 2: Retrieve candidates (more for thematic, focused for tafsir)
     if approach == 'thematic':
         num_neighbors = 30  # Broader search for thematic connections
     elif approach == 'historical':
-        num_neighbors = 35  # INCREASED: Historical needs most context (events, timeline, people, battles)
+        num_neighbors = 25  # Medium for historical context
     else:  # tafsir
         num_neighbors = 20  # Focused classical commentary
 
