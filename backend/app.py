@@ -4012,7 +4012,12 @@ def tafsir_handler_enhanced():
             token = credentials.token
 
             # Query expansion (approach-aware)
-            expanded_query = expand_query(rag_query, token, approach)
+            # DISABLED for historical queries to avoid garbage expansions
+            if approach == 'historical':
+                expanded_query = rag_query
+                print(f"⚡ Skipping query expansion for historical approach (using original query)")
+            else:
+                expanded_query = expand_query(rag_query, token, approach)
 
             # Initialize models
             embedding_model = TextEmbeddingModel.from_pretrained(EMBEDDING_MODEL)
