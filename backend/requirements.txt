@@ -9,3 +9,4 @@ google-cloud-firestore==2.18.0
 google-cloud-aiplatform==1.60.0
 google-cloud-storage==2.16.0
 vertexai==1.60.0
+sentence-transformers==5.1.2
