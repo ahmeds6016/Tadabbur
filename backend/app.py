@@ -72,7 +72,7 @@ EMBEDDING_DIMENSION = 1536  # Changed from 1024 to 1536
 # Tiered model approach for maximum reliability
 RERANKER_MODELS = [
     {
-        "name": "jina-reranker-v2-base-multilingual",
+        "name": "jinaai/jina-reranker-v2-base-multilingual",
         "description": "Primary: Multilingual (Arabic+English), 8192 token context, optimized for RAG",
         "max_length": 8192,
         "default_threshold": 0.0,  # Jina scores typically [0, 1]
@@ -1533,7 +1533,18 @@ def initialize_reranker():
 
             # Load model with timeout protection
             start_time = time.time()
-            model = CrossEncoder(model_name, max_length=model_config['max_length'])
+
+            # Jina models require trust_remote_code=True
+            if 'jina' in model_name.lower():
+                model = CrossEncoder(
+                    model_name,
+                    max_length=model_config['max_length'],
+                    trust_remote_code=True,
+                    automodel_args={"torch_dtype": "auto"}
+                )
+            else:
+                model = CrossEncoder(model_name, max_length=model_config['max_length'])
+
             load_time = time.time() - start_time
 
             # Verify model loaded correctly with a test
