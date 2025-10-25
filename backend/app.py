@@ -1629,7 +1629,47 @@ def create_sliding_windows(query: str, document: str, model_config: Dict) -> Lis
             actual_max_doc_tokens = max_total_tokens - query_tokens - 10  # 10 for special tokens
             actual_max_doc_tokens = min(actual_max_doc_tokens, max_doc_tokens)
 
-            # Tokenize document
+            # CRITICAL FIX: Pre-chunk document to avoid tokenizer limit exceeded error
+            # First, do a rough character-based chunking to get manageable pieces
+            chars_per_token_estimate = 4
+            safe_chunk_size = max_total_tokens * chars_per_token_estimate * 2  # 2x safety margin
+
+            # If document is too long, pre-chunk it
+            if len(document) > safe_chunk_size:
+                # Work with smaller pieces to avoid tokenizer errors
+                windows = []
+
+                # Process document in safe-sized chunks
+                for chunk_start in range(0, len(document), int(safe_chunk_size * 0.8)):  # 80% to ensure overlap
+                    chunk_end = min(chunk_start + safe_chunk_size, len(document))
+                    doc_chunk = document[chunk_start:chunk_end]
+
+                    # Tokenize this smaller chunk safely
+                    try:
+                        chunk_tokens = RERANKER_TOKENIZER.encode(doc_chunk, add_special_tokens=False)
+                    except Exception as e:
+                        # If even this fails, fall back to character approximation
+                        print(f"   ⚠️  Tokenizer failed on chunk, using character approximation: {e}")
+                        raise  # Fall through to character-based method
+
+                    # Create windows from this chunk's tokens
+                    window_stride = max(1, actual_max_doc_tokens - overlap_tokens)
+                    for i in range(0, len(chunk_tokens), window_stride):
+                        window_tokens = chunk_tokens[i:i + actual_max_doc_tokens]
+                        window_text = RERANKER_TOKENIZER.decode(window_tokens, skip_special_tokens=True)
+
+                        # Calculate positions relative to full document
+                        token_start_in_doc = chunk_start + (i * chars_per_token_estimate)
+                        token_end_in_doc = min(token_start_in_doc + (len(window_tokens) * chars_per_token_estimate), len(document))
+
+                        windows.append((window_text, token_start_in_doc, token_end_in_doc))
+
+                        if i + actual_max_doc_tokens >= len(chunk_tokens):
+                            break
+
+                return windows if windows else [(document[:safe_chunk_size], 0, min(len(document), safe_chunk_size))]
+
+            # Document is short enough to tokenize directly
             doc_tokens = RERANKER_TOKENIZER.encode(document, add_special_tokens=False)
 
             # If document fits in one window, return as is
@@ -1733,6 +1773,8 @@ def rerank_chunks(query: str, chunks: List[Dict], approach: str = 'tafsir') -> L
 
     # RERANKING PATH
     start_time = time.time()
+    MAX_RERANKING_TIME = 60  # Maximum 60 seconds for reranking (will tune based on metrics)
+    MAX_WINDOWS_PER_CHUNK = 30  # Limit windows per chunk to prevent excessive processing
 
     try:
         # Get model configuration for sliding window support
@@ -1747,7 +1789,16 @@ def rerank_chunks(query: str, chunks: List[Dict], approach: str = 'tafsir') -> L
             # Process each chunk, potentially with sliding windows
             all_chunk_scores = []
 
-            for chunk in chunks:
+            for chunk_idx, chunk in enumerate(chunks):
+                # Check timeout
+                if time.time() - start_time > MAX_RERANKING_TIME:
+                    print(f"   ⚠️  Reranking timeout after {chunk_idx}/{len(chunks)} chunks, elapsed: {time.time() - start_time:.1f}s")
+                    # Fill remaining chunks with distance-based scores
+                    for remaining_chunk in chunks[chunk_idx:]:
+                        all_chunk_scores.append(1.0 - remaining_chunk.get('distance', 0.5))
+                        remaining_chunk['rerank_strategy'] = 'timeout_fallback'
+                    RERANKER_STATS['chunks_truncated'] += len(chunks) - chunk_idx
+                    break
                 chunk_text = chunk['text']
 
                 # Check if we need sliding windows
@@ -1757,6 +1808,12 @@ def rerank_chunks(query: str, chunks: List[Dict], approach: str = 'tafsir') -> L
                     if len(windows) > 1:
                         # Multiple windows needed - use sliding window approach
                         chunks_using_windows += 1
+
+                        # Limit windows to prevent excessive processing
+                        if len(windows) > MAX_WINDOWS_PER_CHUNK:
+                            print(f"   ⚠️  Limiting windows from {len(windows)} to {MAX_WINDOWS_PER_CHUNK} for chunk {chunk.get('chunk_id', 'unknown')}")
+                            windows = windows[:MAX_WINDOWS_PER_CHUNK]
+
                         total_windows += len(windows)
 
                         # Score each window
@@ -1846,6 +1903,9 @@ def rerank_chunks(query: str, chunks: List[Dict], approach: str = 'tafsir') -> L
         total_calls = RERANKER_STATS['total_calls']
         RERANKER_STATS['avg_latency_ms'] = ((prev_avg * (total_calls - 1)) + latency_ms) / total_calls
 
+        # Track timing for performance analysis (for tuning MAX_RERANKING_TIME)
+        print(f"   ⏱️  RERANKER TIMING: {latency_ms:.0f}ms for {len(chunks)} chunks")
+
         # Logging
         print(f"   ✨ Reranker: {len(chunks)} → {len(relevant_chunks)} relevant → {len(final_chunks)} final")
         print(f"      Model: {RERANKER_MODEL_NAME}")
@@ -1857,6 +1917,10 @@ def rerank_chunks(query: str, chunks: List[Dict], approach: str = 'tafsir') -> L
 
         print(f"      Top score: {final_chunks[0]['rerank_score']:.3f}" if final_chunks else "      No chunks passed threshold")
         print(f"      Latency: {latency_ms:.1f}ms")
+
+        # Log warning for slow reranking
+        if latency_ms > 10000:  # More than 10 seconds
+            print(f"   ⚠️  SLOW RERANKING: {latency_ms:.0f}ms - consider reducing chunk count or window size")
 
         return final_chunks
 
@@ -2458,14 +2522,18 @@ def perform_diversified_rag_search(query, expanded_query, embedding_model, index
     # ========================================================================
     # STAGE 1: FAST RETRIEVER (High Recall)
     # ========================================================================
+    perf_start = time.time()
     print(f"\n🔍 STAGE 1: Vector Retrieval (High Recall)")
 
     # Use ORIGINAL query for embedding (not expanded)
     # Reasoning: CrossEncoder will handle semantic matching in Stage 2
+    embedding_start = time.time()
     query_embedding = embedding_model.get_embeddings(
         [query],  # CHANGED: Use original query, not expanded
         output_dimensionality=EMBEDDING_DIMENSION
     )[0].values
+    embedding_time = (time.time() - embedding_start) * 1000
+    print(f"   ⏱️  Query embedding: {embedding_time:.0f}ms")
 
     # Increased candidate count for better recall (reranker will filter)
     config = RERANKER_CONFIG.get(approach, RERANKER_CONFIG['tafsir'])
@@ -2477,34 +2545,43 @@ def perform_diversified_rag_search(query, expanded_query, embedding_model, index
     print(f"   Embedding dimension: {len(query_embedding)}")
 
     try:
+        vector_start = time.time()
         neighbors_result = index_endpoint.find_neighbors(
             deployed_index_id=DEPLOYED_INDEX_ID,
             queries=[query_embedding],
             num_neighbors=num_neighbors
         )
-        print(f"   ✅ Vector search returned: {len(neighbors_result[0]) if neighbors_result else 0} neighbors")
+        vector_time = (time.time() - vector_start) * 1000
+        print(f"   ✅ Vector search returned: {len(neighbors_result[0]) if neighbors_result else 0} neighbors in {vector_time:.0f}ms")
     except Exception as e:
         print(f"   ❌ Vector search failed: {e}")
         neighbors_result = [[]]
 
     # Retrieve ALL chunks without distance filtering (reranker will filter)
     # CHANGED: Remove distance threshold - let reranker decide relevance
+    retrieval_start = time.time()
     retrieved_chunks = retrieve_chunks_from_neighbors(
         neighbors_result[0],
         distance_threshold=1.0  # Accept everything - reranker will filter
     )
+    retrieval_time = (time.time() - retrieval_start) * 1000
 
-    print(f"   Retrieved: {len(retrieved_chunks)} chunks for reranking")
+    print(f"   Retrieved: {len(retrieved_chunks)} chunks for reranking in {retrieval_time:.0f}ms")
+    print(f"   ⏱️  STAGE 1 TOTAL: {(time.time() - perf_start) * 1000:.0f}ms")
 
     # ========================================================================
     # STAGE 2: PRECISE RERANKER (High Precision)
     # ========================================================================
+    stage2_start = time.time()
     print(f"\n✨ STAGE 2: CrossEncoder Reranking (High Precision)")
 
     # Rerank all retrieved chunks using CrossEncoder
+    rerank_start = time.time()
     reranked_chunks = rerank_chunks(query, retrieved_chunks, approach)
+    rerank_time = (time.time() - rerank_start) * 1000
 
     print(f"   Final chunks after reranking: {len(reranked_chunks)}")
+    print(f"   ⏱️  STAGE 2 TOTAL: {rerank_time:.0f}ms")
 
     # ========================================================================
     # STAGE 3: SOURCE DIVERSIFICATION (Rerank Score-Based Weighting)
@@ -3956,10 +4033,25 @@ def tafsir_handler_enhanced():
     Routes 1 & 2 skip expensive RAG but keep AI quality & persona adaptation!
     """
     try:
+        # Initialize performance tracking
+        perf_start = time.time()
+        perf_metrics = {
+            'total_start': perf_start,
+            'stages': {},
+            'route': None,
+            'approach': None,
+            'chunks_retrieved': 0,
+            'windows_processed': 0,
+            'llm_calls': 0
+        }
+
+        # Request parsing
+        stage_start = time.time()
         data = request.get_json()
         query = data.get('query', '').strip()
         approach = data.get('approach', 'tafsir').strip()  # NEW: Get approach parameter
         user_id = request.user.get('uid')
+        perf_metrics['stages']['request_parsing'] = (time.time() - stage_start) * 1000
 
         if not query:
             return jsonify({'error': 'Query is required'}), 400
@@ -3972,6 +4064,8 @@ def tafsir_handler_enhanced():
         elif approach not in ['tafsir', 'semantic']:
             approach = 'tafsir'  # Default fallback
 
+        perf_metrics['approach'] = approach
+
         # Rate limiting
         if is_rate_limited(user_id):
             return jsonify({'error': 'Rate limit exceeded'}), 429
@@ -3980,14 +4074,20 @@ def tafsir_handler_enhanced():
         ANALYTICS[query] += 1
 
         # Get user profile for caching
+        stage_start = time.time()
         user_profile = get_user_profile(user_id)
+        perf_metrics['stages']['user_profile'] = (time.time() - stage_start) * 1000
 
         # Check cache BEFORE any processing (applies to ALL routes)
+        stage_start = time.time()
         cache_key = get_cache_key(query, user_profile, approach)
         with cache_lock:
             if cache_key in RESPONSE_CACHE:
+                perf_metrics['stages']['cache_check'] = (time.time() - stage_start) * 1000
                 print(f"💾 Cache hit for query (approach: {approach})")
+                print(f"   ⏱️  PERFORMANCE: Cache hit in {perf_metrics['stages']['cache_check']:.0f}ms")
                 return jsonify(RESPONSE_CACHE[cache_key]), 200
+        perf_metrics['stages']['cache_check'] = (time.time() - stage_start) * 1000
 
         print(f"\n{'='*70}")
         print(f"📥 QUERY: {query}")
@@ -4479,25 +4579,34 @@ def tafsir_handler_enhanced():
             # ================================================================
 
             # Initialize models
+            stage_start = time.time()
             embedding_model = TextEmbeddingModel.from_pretrained(EMBEDDING_MODEL)
             endpoint_resource_name = f"projects/{GCP_INFRASTRUCTURE_PROJECT}/locations/{LOCATION}/indexEndpoints/{INDEX_ENDPOINT_ID}"
             index_endpoint = aiplatform.MatchingEngineIndexEndpoint(index_endpoint_name=endpoint_resource_name)
+            perf_metrics['stages']['model_init'] = (time.time() - stage_start) * 1000
 
             # Perform two-stage Retriever-Reranker search
             # Stage 1: Fast vector retrieval (high recall)
             # Stage 2: CrossEncoder reranking (high precision)
+            stage_start = time.time()
             selected_chunks, context_by_source = perform_diversified_rag_search(
                 rag_query, rag_query, embedding_model, index_endpoint, rag_query_type, approach
             )
+            perf_metrics['stages']['rag_search'] = (time.time() - stage_start) * 1000
+            perf_metrics['chunks_retrieved'] = len(selected_chunks)
 
-            print(f"   Retrieved {len(selected_chunks)} chunks (approach: {approach})")
+            print(f"   Retrieved {len(selected_chunks)} chunks (approach: {approach}) in {perf_metrics['stages']['rag_search']:.0f}ms")
 
             # Build prompt (approach-aware)
+            stage_start = time.time()
             prompt = build_enhanced_prompt(rag_query, context_by_source, user_profile,
                                          arabic_text, cross_refs, rag_query_type, verse_data, approach)
+            perf_metrics['stages']['prompt_building'] = (time.time() - stage_start) * 1000
 
             # Truncate prompt if needed to fit token limits (50K max - typical: 6K-25K)
+            stage_start = time.time()
             prompt = truncate_context_if_needed(prompt, max_tokens=50000)
+            perf_metrics['stages']['prompt_truncation'] = (time.time() - stage_start) * 1000
 
             # Generate response with retry logic for malformed JSON
             VERTEX_ENDPOINT = f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/{GCP_INFRASTRUCTURE_PROJECT}/locations/{LOCATION}/publishers/google/models/{GEMINI_MODEL_ID}:generateContent"
@@ -4506,6 +4615,7 @@ def tafsir_handler_enhanced():
             final_json = None
             generated_text = None
 
+            llm_start = time.time()
             for json_attempt in range(max_retries):
                 # Progressive temperature reduction on retries (0.3 → 0.1, never 0.0 to avoid robotic responses)
                 temperature = max(0.1, round(0.3 - (json_attempt * 0.05), 2))
@@ -4649,7 +4759,26 @@ def tafsir_handler_enhanced():
                         for key in keys_to_remove:
                             RESPONSE_CACHE.pop(key, None)  # Use pop to avoid KeyError
 
-                print(f"✅ Semantic response generated")
+                # Performance summary
+                perf_metrics['stages']['llm_generation'] = (time.time() - llm_start) * 1000
+                perf_metrics['llm_calls'] = json_attempt + 1
+                total_time = (time.time() - perf_metrics['total_start']) * 1000
+
+                print(f"\n{'='*70}")
+                print(f"⏱️  PERFORMANCE SUMMARY - ROUTE 3 (Semantic Search)")
+                print(f"{'='*70}")
+                print(f"Total Request Time: {total_time:.0f}ms")
+                print(f"\nStage Breakdown:")
+                for stage, timing in perf_metrics['stages'].items():
+                    print(f"  • {stage}: {timing:.0f}ms ({timing/total_time*100:.1f}%)")
+                print(f"\nMetrics:")
+                print(f"  • Chunks retrieved: {perf_metrics['chunks_retrieved']}")
+                print(f"  • LLM calls: {perf_metrics['llm_calls']}")
+                print(f"  • Route: Semantic Search (Full RAG)")
+                print(f"  • Approach: {perf_metrics['approach']}")
+                print(f"{'='*70}")
+
+                print(f"✅ Semantic response generated in {total_time:.0f}ms")
                 return jsonify(final_json), 200
 
             except (KeyError, IndexError, json.JSONDecodeError) as e:
