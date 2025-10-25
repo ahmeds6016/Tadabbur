@@ -32,12 +32,14 @@ from google.cloud import storage
 # Imports for Reranking (Setup 1: Retriever-Reranker pattern)
 try:
     from sentence_transformers import CrossEncoder
+    from transformers import AutoTokenizer
     RERANKER_AVAILABLE = True
 except ImportError:
     print("⚠️  WARNING: sentence-transformers not installed. Reranking will be disabled.")
-    print("   Install with: pip install sentence-transformers")
+    print("   Install with: pip install sentence-transformers transformers")
     RERANKER_AVAILABLE = False
     CrossEncoder = None
+    AutoTokenizer = None
 
 # --- App Initialization ---
 app = Flask(__name__)
@@ -73,15 +75,22 @@ EMBEDDING_DIMENSION = 1536  # Changed from 1024 to 1536
 RERANKER_MODELS = [
     {
         "name": "jinaai/jina-reranker-v2-base-multilingual",
-        "description": "Primary: Multilingual (Arabic+English), 8192 token context, optimized for RAG",
-        "max_length": 8192,
+        "description": "Primary: Multilingual (Arabic+English), 1024 token limit for query+document combined",
+        "max_length": 1024,  # CORRECTED: Total limit for query + document combined
         "default_threshold": 0.0,  # Jina scores typically [0, 1]
+        "supports_sliding_window": True,
+        "window_overlap": 200,  # Tokens to overlap between windows
+        "query_reserved_tokens": 150,  # Reserve tokens for query (avg query ~100 tokens)
+        "max_document_tokens": 874,  # 1024 - 150 = max tokens for document per window
     },
     {
         "name": "cross-encoder/ms-marco-MiniLM-L-6-v2",
         "description": "Fallback: Fast, reliable, English-focused",
-        "max_length": 512,
+        "max_length": 512,  # Total limit for query + document combined
         "default_threshold": -2.0,  # MS-MARCO scores typically [-10, 10]
+        "supports_sliding_window": False,
+        "query_reserved_tokens": 100,
+        "max_document_tokens": 412,
     }
 ]
 
@@ -142,11 +151,16 @@ ANALYTICS = defaultdict(int)  # Usage analytics
 # Reranker global state
 RERANKER_MODEL = None  # Will be initialized at startup
 RERANKER_MODEL_NAME = None  # Track which model loaded successfully
+RERANKER_TOKENIZER = None  # Tokenizer for counting tokens in sliding window
 RERANKER_STATS = {
     'total_calls': 0,
     'total_chunks_scored': 0,
     'avg_latency_ms': 0.0,
     'fallback_to_distance': 0,
+    'sliding_window_used': 0,
+    'total_windows_processed': 0,
+    'avg_windows_per_chunk': 0.0,
+    'chunks_truncated': 0,
 }
 
 # Thread safety locks
@@ -1511,7 +1525,7 @@ def initialize_reranker():
 
     If all models fail, system falls back to distance-based filtering.
     """
-    global RERANKER_MODEL, RERANKER_MODEL_NAME
+    global RERANKER_MODEL, RERANKER_MODEL_NAME, RERANKER_TOKENIZER
 
     if not RERANKER_AVAILABLE:
         print("❌ RERANKER INITIALIZATION SKIPPED: sentence-transformers not available")
@@ -1555,6 +1569,15 @@ def initialize_reranker():
             RERANKER_MODEL = model
             RERANKER_MODEL_NAME = model_name
 
+            # Load tokenizer for sliding window support
+            try:
+                RERANKER_TOKENIZER = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
+                print(f"   Tokenizer: Loaded successfully")
+                print(f"   Sliding window: {'Enabled' if model_config.get('supports_sliding_window', False) else 'Disabled'}")
+            except Exception as e:
+                print(f"   Tokenizer: Failed to load ({e}), will use character-based approximation")
+                RERANKER_TOKENIZER = None
+
             print(f"✅ SUCCESS: Reranker loaded in {load_time:.2f}s")
             print(f"   Model: {model_name}")
             print(f"   Test score: {test_score:.4f}")
@@ -1576,6 +1599,96 @@ def initialize_reranker():
     print("="*70 + "\n")
     RERANKER_MODEL = None
     RERANKER_MODEL_NAME = None
+
+def create_sliding_windows(query: str, document: str, model_config: Dict) -> List[Tuple[str, int, int]]:
+    """
+    Create sliding windows for documents that exceed token limits.
+
+    Args:
+        query: The search query
+        document: The document text to split
+        model_config: Model configuration with max_length, overlap, etc.
+
+    Returns:
+        List of tuples: (window_text, start_char, end_char)
+    """
+    global RERANKER_TOKENIZER
+
+    max_total_tokens = model_config.get('max_length', 1024)
+    query_reserved = model_config.get('query_reserved_tokens', 150)
+    max_doc_tokens = model_config.get('max_document_tokens', 874)
+    overlap_tokens = model_config.get('window_overlap', 200)
+
+    # If tokenizer available, use it for accurate token counting
+    if RERANKER_TOKENIZER is not None:
+        try:
+            # Count query tokens
+            query_tokens = len(RERANKER_TOKENIZER.encode(query, add_special_tokens=False))
+
+            # Adjust max document tokens based on actual query length
+            actual_max_doc_tokens = max_total_tokens - query_tokens - 10  # 10 for special tokens
+            actual_max_doc_tokens = min(actual_max_doc_tokens, max_doc_tokens)
+
+            # Tokenize document
+            doc_tokens = RERANKER_TOKENIZER.encode(document, add_special_tokens=False)
+
+            # If document fits in one window, return as is
+            if len(doc_tokens) <= actual_max_doc_tokens:
+                return [(document, 0, len(document))]
+
+            # Create sliding windows
+            windows = []
+            window_size = actual_max_doc_tokens
+            stride = window_size - overlap_tokens
+
+            for i in range(0, len(doc_tokens), stride):
+                # Get window tokens
+                window_tokens = doc_tokens[i:i + window_size]
+
+                # Decode back to text
+                window_text = RERANKER_TOKENIZER.decode(window_tokens, skip_special_tokens=True)
+
+                # Calculate approximate character positions
+                start_ratio = i / len(doc_tokens)
+                end_ratio = min((i + len(window_tokens)) / len(doc_tokens), 1.0)
+                start_char = int(start_ratio * len(document))
+                end_char = int(end_ratio * len(document))
+
+                windows.append((window_text, start_char, end_char))
+
+                # Stop if we've covered the entire document
+                if i + window_size >= len(doc_tokens):
+                    break
+
+            return windows
+
+        except Exception as e:
+            print(f"   ⚠️  Tokenizer error in sliding window: {e}")
+            # Fall through to character-based approximation
+
+    # Fallback: Character-based approximation (4 chars ≈ 1 token)
+    chars_per_token = 4
+    max_doc_chars = max_doc_tokens * chars_per_token
+    overlap_chars = overlap_tokens * chars_per_token
+
+    # If document fits in one window, return as is
+    if len(document) <= max_doc_chars:
+        return [(document, 0, len(document))]
+
+    # Create sliding windows based on characters
+    windows = []
+    stride = max_doc_chars - overlap_chars
+
+    for i in range(0, len(document), stride):
+        window_text = document[i:i + max_doc_chars]
+        windows.append((window_text, i, i + len(window_text)))
+
+        # Stop if we've covered the entire document
+        if i + max_doc_chars >= len(document):
+            break
+
+    return windows
+
 
 def rerank_chunks(query: str, chunks: List[Dict], approach: str = 'tafsir') -> List[Dict]:
     """
@@ -1622,16 +1735,79 @@ def rerank_chunks(query: str, chunks: List[Dict], approach: str = 'tafsir') -> L
     start_time = time.time()
 
     try:
-        with reranker_lock:  # Thread-safe reranker usage
-            # Prepare (query, document) pairs for CrossEncoder
-            pairs = [(query, chunk['text']) for chunk in chunks]
+        # Get model configuration for sliding window support
+        model_config = next((m for m in RERANKER_MODELS if m['name'] == RERANKER_MODEL_NAME), None)
+        supports_sliding = model_config.get('supports_sliding_window', False) if model_config else False
 
-            # Get rerank scores
-            rerank_scores = RERANKER_MODEL.predict(pairs)
+        # Initialize sliding window tracking variables
+        total_windows = 0
+        chunks_using_windows = 0
+
+        with reranker_lock:  # Thread-safe reranker usage
+            # Process each chunk, potentially with sliding windows
+            all_chunk_scores = []
+
+            for chunk in chunks:
+                chunk_text = chunk['text']
+
+                # Check if we need sliding windows
+                if supports_sliding and model_config:
+                    windows = create_sliding_windows(query, chunk_text, model_config)
+
+                    if len(windows) > 1:
+                        # Multiple windows needed - use sliding window approach
+                        chunks_using_windows += 1
+                        total_windows += len(windows)
+
+                        # Score each window
+                        window_pairs = [(query, window_text) for window_text, _, _ in windows]
+                        window_scores = RERANKER_MODEL.predict(window_pairs)
+
+                        # Max pooling: use highest score from any window
+                        max_score = float(max(window_scores))
+                        all_chunk_scores.append(max_score)
+
+                        # Optional: Store window details for debugging
+                        chunk['window_count'] = len(windows)
+                        chunk['window_scores'] = [float(s) for s in window_scores]
+                        chunk['rerank_strategy'] = 'sliding_window_max'
+
+                        # Log if many windows were needed
+                        if len(windows) > 10:
+                            print(f"   📊 Large chunk used {len(windows)} windows (chunk_id: {chunk.get('chunk_id', 'unknown')})")
+
+                    else:
+                        # Single window - process normally
+                        total_windows += 1
+                        score = RERANKER_MODEL.predict([(query, chunk_text)])[0]
+                        all_chunk_scores.append(float(score))
+                        chunk['window_count'] = 1
+                        chunk['rerank_strategy'] = 'single_window'
+
+                else:
+                    # No sliding window support or disabled - process normally
+                    # Note: This may truncate very long chunks
+                    score = RERANKER_MODEL.predict([(query, chunk_text)])[0]
+                    all_chunk_scores.append(float(score))
+                    chunk['rerank_strategy'] = 'direct'
 
             # Add scores to chunks
-            for chunk, score in zip(chunks, rerank_scores):
-                chunk['rerank_score'] = float(score)
+            for chunk, score in zip(chunks, all_chunk_scores):
+                chunk['rerank_score'] = score
+
+            # Update sliding window statistics
+            if chunks_using_windows > 0:
+                RERANKER_STATS['sliding_window_used'] += chunks_using_windows
+                RERANKER_STATS['total_windows_processed'] += total_windows
+
+                # Update running average of windows per chunk
+                prev_total = RERANKER_STATS['sliding_window_used'] - chunks_using_windows
+                if prev_total > 0:
+                    prev_avg = RERANKER_STATS['avg_windows_per_chunk']
+                    new_avg = (total_windows / chunks_using_windows)
+                    RERANKER_STATS['avg_windows_per_chunk'] = ((prev_avg * prev_total) + (new_avg * chunks_using_windows)) / RERANKER_STATS['sliding_window_used']
+                else:
+                    RERANKER_STATS['avg_windows_per_chunk'] = total_windows / chunks_using_windows if chunks_using_windows > 0 else 0
 
         # Sort by rerank score (higher = more relevant)
         chunks.sort(key=lambda x: x['rerank_score'], reverse=True)
@@ -1674,6 +1850,11 @@ def rerank_chunks(query: str, chunks: List[Dict], approach: str = 'tafsir') -> L
         print(f"   ✨ Reranker: {len(chunks)} → {len(relevant_chunks)} relevant → {len(final_chunks)} final")
         print(f"      Model: {RERANKER_MODEL_NAME}")
         print(f"      Threshold: {threshold:.2f}")
+
+        # Add sliding window info if used
+        if chunks_using_windows > 0:
+            print(f"      Sliding windows: {chunks_using_windows} chunks used {total_windows} windows (avg: {total_windows/chunks_using_windows:.1f} per chunk)")
+
         print(f"      Top score: {final_chunks[0]['rerank_score']:.3f}" if final_chunks else "      No chunks passed threshold")
         print(f"      Latency: {latency_ms:.1f}ms")
 
@@ -4506,7 +4687,9 @@ def health_check_enhanced():
             "model": RERANKER_MODEL_NAME if RERANKER_MODEL_NAME else "none (fallback to distance)",
             "status": "active" if RERANKER_MODEL is not None else "disabled",
             "calls": RERANKER_STATS['total_calls'],
-            "avg_latency_ms": round(RERANKER_STATS['avg_latency_ms'], 2)
+            "avg_latency_ms": round(RERANKER_STATS['avg_latency_ms'], 2),
+            "sliding_window_active": RERANKER_STATS['sliding_window_used'] > 0,
+            "windows_processed": RERANKER_STATS['total_windows_processed']
         },
         "query_routes": {
             "metadata": {
@@ -4568,7 +4751,11 @@ def reranker_stats():
             "name": RERANKER_MODEL_NAME,
             "description": model_config['description'] if model_config else "N/A",
             "max_length": model_config['max_length'] if model_config else "N/A",
-            "default_threshold": model_config['default_threshold'] if model_config else "N/A"
+            "default_threshold": model_config['default_threshold'] if model_config else "N/A",
+            "supports_sliding_window": model_config.get('supports_sliding_window', False) if model_config else False,
+            "query_reserved_tokens": model_config.get('query_reserved_tokens', 150) if model_config else "N/A",
+            "max_document_tokens": model_config.get('max_document_tokens', 874) if model_config else "N/A",
+            "window_overlap": model_config.get('window_overlap', 200) if model_config else "N/A"
         },
         "performance": {
             "total_calls": RERANKER_STATS['total_calls'],
@@ -4576,6 +4763,14 @@ def reranker_stats():
             "avg_latency_ms": round(RERANKER_STATS['avg_latency_ms'], 2),
             "fallback_to_distance_count": RERANKER_STATS['fallback_to_distance'],
             "avg_chunks_per_call": round(RERANKER_STATS['total_chunks_scored'] / max(RERANKER_STATS['total_calls'], 1), 1)
+        },
+        "sliding_window": {
+            "enabled": model_config.get('supports_sliding_window', False) if model_config else False,
+            "tokenizer_loaded": RERANKER_TOKENIZER is not None,
+            "chunks_using_windows": RERANKER_STATS['sliding_window_used'],
+            "total_windows_processed": RERANKER_STATS['total_windows_processed'],
+            "avg_windows_per_chunk": round(RERANKER_STATS['avg_windows_per_chunk'], 2),
+            "window_usage_rate": f"{(RERANKER_STATS['sliding_window_used'] / max(RERANKER_STATS['total_chunks_scored'], 1) * 100):.1f}%" if RERANKER_STATS['total_chunks_scored'] > 0 else "0%"
         },
         "configuration": {
             "tafsir": RERANKER_CONFIG['tafsir'],
