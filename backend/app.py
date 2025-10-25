@@ -98,12 +98,23 @@ RERANKER_MODELS = [
 RERANKER_CONFIG = {
     'tafsir': {
         'num_candidates': 40,  # Increased from 20 for better recall
-        'final_chunks': 15,    # After reranking
+        'final_chunks': 8,     # REDUCED from 15 - too many chunks causing long responses
     },
     'semantic': {
         'num_candidates': 50,  # Increased from 30 for better recall
-        'final_chunks': 20,    # After reranking
+        'final_chunks': 10,    # REDUCED from 20 - too many chunks causing long responses
     }
+}
+
+# Persona-based verse limits (to prevent overwhelming responses)
+PERSONA_VERSE_LIMITS = {
+    'new_revert': 5,        # Simple, focused responses
+    'practicing_muslim': 8, # Balanced depth
+    'revert_muslim': 6,     # Gentle progression
+    'scholar': 12,          # More comprehensive
+    'spiritual_seeker': 7,  # Relevant exploration
+    'student': 10,          # Academic depth
+    'teacher_imam': 12      # Teaching resources
 }
 
 # Source coverage information
@@ -1622,8 +1633,23 @@ def create_sliding_windows(query: str, document: str, model_config: Dict) -> Lis
     # If tokenizer available, use it for accurate token counting
     if RERANKER_TOKENIZER is not None:
         try:
-            # Count query tokens
-            query_tokens = len(RERANKER_TOKENIZER.encode(query, add_special_tokens=False))
+            # CRITICAL FIX: Safely count query tokens without exceeding limit
+            # First check if query is too long using character approximation
+            query_char_estimate = len(query) * 4  # Rough estimate: 4 chars per token
+            if query_char_estimate > max_total_tokens * 3:  # If query alone might exceed limit
+                # Query is too long, truncate it safely
+                safe_query = query[:max_total_tokens * 3]  # Use first ~750 chars
+                try:
+                    query_tokens = len(RERANKER_TOKENIZER.encode(safe_query, add_special_tokens=False, truncation=True, max_length=max_total_tokens))
+                except:
+                    query_tokens = min(len(safe_query) // 4, query_reserved)  # Fallback estimate
+            else:
+                # Query should be safe to tokenize
+                try:
+                    query_tokens = len(RERANKER_TOKENIZER.encode(query, add_special_tokens=False, truncation=True, max_length=max_total_tokens))
+                except:
+                    # Even if it fails, use approximation
+                    query_tokens = min(len(query) // 4, query_reserved)
 
             # Adjust max document tokens based on actual query length
             actual_max_doc_tokens = max_total_tokens - query_tokens - 10  # 10 for special tokens
@@ -1646,6 +1672,11 @@ def create_sliding_windows(query: str, document: str, model_config: Dict) -> Lis
 
                     # Tokenize this smaller chunk safely
                     try:
+                        # First verify this chunk is actually small enough
+                        if len(doc_chunk) // 3 > max_total_tokens:
+                            # Still too big, make it smaller
+                            doc_chunk = doc_chunk[:max_total_tokens * 3]
+
                         chunk_tokens = RERANKER_TOKENIZER.encode(doc_chunk, add_special_tokens=False)
                     except Exception as e:
                         # If even this fails, fall back to character approximation
@@ -1669,8 +1700,25 @@ def create_sliding_windows(query: str, document: str, model_config: Dict) -> Lis
 
                 return windows if windows else [(document[:safe_chunk_size], 0, min(len(document), safe_chunk_size))]
 
-            # Document is short enough to tokenize directly
-            doc_tokens = RERANKER_TOKENIZER.encode(document, add_special_tokens=False)
+            # Check if document is ACTUALLY safe to tokenize (not just based on character count)
+            # The tokenizer has a hard limit that we must not exceed
+            # Estimate: average 3-4 chars per token, but can vary widely
+            estimated_tokens = len(document) // 3  # Conservative estimate
+
+            if estimated_tokens > max_total_tokens:
+                # Document is still too large, need to use chunking approach
+                print(f"   ⚠️  Document estimated at {estimated_tokens} tokens, using chunking approach")
+                # Fall through to character-based approximation
+                raise ValueError("Document too large for direct tokenization")
+
+            # Document should be safe to tokenize
+            try:
+                # Do NOT truncate - we want to process the full document
+                doc_tokens = RERANKER_TOKENIZER.encode(document, add_special_tokens=False)
+            except Exception as e:
+                print(f"   ⚠️  Tokenizer error: {e}")
+                # Fall back to character-based approximation
+                raise  # This will trigger the fallback below
 
             # If document fits in one window, return as is
             if len(doc_tokens) <= actual_max_doc_tokens:
@@ -1875,23 +1923,35 @@ def rerank_chunks(query: str, chunks: List[Dict], approach: str = 'tafsir') -> L
         if model_config:
             base_threshold = model_config['default_threshold']
 
-            # Adaptive threshold based on approach
+            # STRICTER thresholds to reduce irrelevant chunks
             if approach == 'semantic':
-                # More lenient for semantic (broader topics)
-                threshold = base_threshold - 0.5 if 'jina' in RERANKER_MODEL_NAME else base_threshold - 1.0
+                # Semantic queries need higher relevance
+                threshold = base_threshold + 0.2 if 'jina' in RERANKER_MODEL_NAME else base_threshold + 1.0
             else:  # tafsir
-                # Standard threshold for focused queries
-                threshold = base_threshold
+                # Tafsir queries also need good relevance
+                threshold = base_threshold + 0.1 if 'jina' in RERANKER_MODEL_NAME else base_threshold + 0.5
         else:
             # Fallback threshold
-            threshold = 0.0 if 'jina' in RERANKER_MODEL_NAME else -2.0
+            threshold = 0.2 if 'jina' in RERANKER_MODEL_NAME else 0.0
 
-        # Filter by threshold
+        # Filter by threshold - only keep highly relevant chunks
         relevant_chunks = [c for c in chunks if c['rerank_score'] > threshold]
 
-        # Apply final count limits
+        # Additional filtering: if we still have too many chunks, increase threshold dynamically
         config = RERANKER_CONFIG.get(approach, RERANKER_CONFIG['tafsir'])
-        final_chunks = relevant_chunks[:config['final_chunks']]
+        max_chunks = config['final_chunks']
+
+        # If we have way too many chunks even after threshold, take only the top scoring ones
+        if len(relevant_chunks) > max_chunks * 2:
+            # Sort by score and take top chunks
+            relevant_chunks.sort(key=lambda x: x['rerank_score'], reverse=True)
+            # Increase threshold to the score of the chunk at max_chunks position
+            if len(relevant_chunks) > max_chunks:
+                dynamic_threshold = relevant_chunks[max_chunks]['rerank_score']
+                relevant_chunks = [c for c in relevant_chunks if c['rerank_score'] >= dynamic_threshold]
+
+        # Apply final count limits
+        final_chunks = relevant_chunks[:max_chunks]
 
         # Update stats
         latency_ms = (time.time() - start_time) * 1000
@@ -2852,6 +2912,25 @@ YOUR ROLE AS SCHOLARLY EDITOR
    • Do NOT paraphrase verse translations
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+VERSE LIMITS - CRITICAL FOR PERFORMANCE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🚨 STRICT VERSE LIMITS BASED ON PERSONA:
+• new_revert: Maximum 5 verses
+• revert: Maximum 5 verses
+• seeker: Maximum 5 verses
+• practicing_muslim: Maximum 8 verses
+• teacher: Maximum 8 verses
+• scholar: Maximum 12 verses
+• student: Maximum 12 verses
+
+IMPORTANT: Even if more verses are provided in the source material, you MUST:
+1. Select only the MOST RELEVANT verses that directly answer the query
+2. Stay WITHIN the persona's maximum verse limit
+3. Prioritize quality over quantity - better to have 3 highly relevant verses than 10 tangentially related ones
+4. For broad queries, focus on the most foundational or representative verses
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 RESPONSE FORMAT - PERSONA-ADAPTIVE CONTENT STRUCTURE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -2924,6 +3003,12 @@ CRITICAL: Return valid JSON, but ADAPT THE CONTENT FORMAT based on user persona:
 
 JSON Structure (verse text ALREADY provided by backend - you focus on tafsir):
 
+CRITICAL VERSE SELECTION RULES:
+• Maximum verses for {persona_name}: {PERSONA_VERSE_LIMITS.get(persona_name, 8)} verses
+• Include ONLY the most directly relevant verses to the query
+• If more verses are provided in source material, SELECT and PRIORITIZE based on relevance
+• Better to have fewer highly relevant verses than many tangentially related ones
+
 CRITICAL: The tafsir_explanations array MUST contain EXACTLY TWO sources and NO MORE:
 1. al-Qurtubi
 2. Ibn Kathir
@@ -2939,6 +3024,7 @@ ONLY use the source material provided above. DO NOT generate additional explanat
             "text_saheeh_international": "English translation (from verse_data)",
             "arabic_text": "Arabic text (from verse_data)"
         }}
+        // LIMIT: Maximum {PERSONA_VERSE_LIMITS.get(persona_name, 8)} verses for {persona_name} persona
     ],
 
     "tafsir_explanations": [
@@ -2985,16 +3071,17 @@ If query is about verses beyond Surah 4:22, explain that al-Qurtubi's commentary
 CRITICAL REMINDERS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-1. **ADAPT FORMAT TO PERSONA** - Beginners get bullets + MINIMAL emojis, scholars get short paragraphs with sub-headers
-2. **You are an EDITOR, not an author** - Polish what's there, don't create new interpretations
-3. **PRESERVE ACCURACY** - Never change meanings, attributions, or theological positions
-4. **ENHANCE CLARITY** - Fix grammar, improve structure, make readable
-5. **CITE ACCURATELY** - Keep all scholar names exactly as provided (Ibn Kathir, al-Qurtubi)
-6. **VERSES FROM BACKEND** - Don't try to provide translations, they're already in verse_data
-7. **BE HELPFUL** - Make the response answer the user's query directly and clearly
-8. **NEVER FABRICATE** - If insufficient source material, acknowledge limitations
-9. **FOLLOW CONTENT GUIDELINES** - {'Include hadith' if persona['include_hadith'] else 'Avoid hadith'}, {'include scholarly debates' if persona['scholarly_debates'] else 'avoid scholarly disagreements'}
-10. **MATCH LEARNING GOAL** - {goal_instruction}
+1. **ENFORCE VERSE LIMITS** - {persona_name} gets MAXIMUM {PERSONA_VERSE_LIMITS.get(persona_name, 8)} verses. Select only the MOST relevant ones.
+2. **ADAPT FORMAT TO PERSONA** - Beginners get bullets + MINIMAL emojis, scholars get short paragraphs with sub-headers
+3. **You are an EDITOR, not an author** - Polish what's there, don't create new interpretations
+4. **PRESERVE ACCURACY** - Never change meanings, attributions, or theological positions
+5. **ENHANCE CLARITY** - Fix grammar, improve structure, make readable
+6. **CITE ACCURATELY** - Keep all scholar names exactly as provided (Ibn Kathir, al-Qurtubi)
+7. **VERSES FROM BACKEND** - Don't try to provide translations, they're already in verse_data
+8. **BE HELPFUL** - Make the response answer the user's query directly and clearly
+9. **NEVER FABRICATE** - If insufficient source material, acknowledge limitations
+10. **FOLLOW CONTENT GUIDELINES** - {'Include hadith' if persona['include_hadith'] else 'Avoid hadith'}, {'include scholarly debates' if persona['scholarly_debates'] else 'avoid scholarly disagreements'}
+11. **MATCH LEARNING GOAL** - {goal_instruction}
 
 Current persona: **{persona_name}** ({knowledge_level} level)
 Apply formatting rules for: {'BEGINNER (bullets + MINIMAL emojis)' if format_style == 'bullets_emojis' else 'INTERMEDIATE (balanced, NO emojis)' if format_style == 'balanced' else 'SCHOLAR (short paragraphs with sub-headers, NO bullets)'}
@@ -4297,6 +4384,15 @@ def tafsir_handler_enhanced():
                     # Filter out unavailable sources before caching and returning
                     final_json = filter_unavailable_sources(final_json)
 
+                    # Log verse count for monitoring
+                    verse_count = len(final_json.get('verses', []))
+                    persona_name = user_profile.get('persona', 'practicing_muslim')
+                    verse_limit = PERSONA_VERSE_LIMITS.get(persona_name, 8)
+                    if verse_count > verse_limit:
+                        print(f"   ⚠️  VERSE LIMIT EXCEEDED: {verse_count} verses returned (limit: {verse_limit} for {persona_name})")
+                    else:
+                        print(f"   ✅ Verse count: {verse_count}/{verse_limit} for {persona_name}")
+
                     # Cache the response (Route 1)
                     with cache_lock:
                         RESPONSE_CACHE[cache_key] = final_json
@@ -4509,6 +4605,15 @@ def tafsir_handler_enhanced():
 
                         # Filter out unavailable sources before caching and returning
                         final_json = filter_unavailable_sources(final_json)
+
+                        # Log verse count for monitoring
+                        verse_count = len(final_json.get('verses', []))
+                        persona_name = user_profile.get('persona', 'practicing_muslim')
+                        verse_limit = PERSONA_VERSE_LIMITS.get(persona_name, 8)
+                        if verse_count > verse_limit:
+                            print(f"   ⚠️  VERSE LIMIT EXCEEDED: {verse_count} verses returned (limit: {verse_limit} for {persona_name})")
+                        else:
+                            print(f"   ✅ Verse count: {verse_count}/{verse_limit} for {persona_name}")
 
                         # Cache the response (Route 2)
                         with cache_lock:
@@ -4751,6 +4856,17 @@ def tafsir_handler_enhanced():
                 # Filter out unavailable sources before caching and returning
                 final_json = filter_unavailable_sources(final_json)
 
+                # Log verse count for monitoring
+                verse_count = len(final_json.get('verses', []))
+                persona_name = user_profile.get('persona', 'practicing_muslim')
+                verse_limit = PERSONA_VERSE_LIMITS.get(persona_name, 8)
+                if verse_count > verse_limit:
+                    print(f"   ⚠️  VERSE LIMIT EXCEEDED: {verse_count} verses returned (limit: {verse_limit} for {persona_name})")
+                    perf_metrics['verse_limit_exceeded'] = True
+                else:
+                    print(f"   ✅ Verse count: {verse_count}/{verse_limit} for {persona_name}")
+                perf_metrics['verse_count'] = verse_count
+
                 # Cache with thread safety
                 with cache_lock:
                     RESPONSE_CACHE[cache_key] = final_json
@@ -4774,6 +4890,9 @@ def tafsir_handler_enhanced():
                 print(f"\nMetrics:")
                 print(f"  • Chunks retrieved: {perf_metrics['chunks_retrieved']}")
                 print(f"  • LLM calls: {perf_metrics['llm_calls']}")
+                print(f"  • Verses returned: {perf_metrics.get('verse_count', 0)}")
+                if perf_metrics.get('verse_limit_exceeded'):
+                    print(f"  • ⚠️  VERSE LIMIT EXCEEDED")
                 print(f"  • Route: Semantic Search (Full RAG)")
                 print(f"  • Approach: {perf_metrics['approach']}")
                 print(f"{'='*70}")

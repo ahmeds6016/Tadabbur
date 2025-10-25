@@ -1,0 +1,3835 @@
+[
+  {
+    "insertId": "68fbd96100025406ee09f749",
+    "httpRequest": {
+      "requestMethod": "OPTIONS",
+      "requestUrl": "https://tafsir-backend-612616741510.us-central1.run.app/query-history",
+      "requestSize": "805",
+      "status": 200,
+      "responseSize": "413",
+      "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0.1 Mobile/15E148 Safari/604.1",
+      "remoteIp": "2a04:4e41:2e02:a602::2c80:7602",
+      "referer": "https://tafsir-frontend-612616741510.us-central1.run.app/",
+      "serverIp": "2600:1901:81d4:200::",
+      "latency": "0.003689465s",
+      "protocol": "HTTP/1.1"
+    },
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "location": "us-central1",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "project_id": "tafsir-simplified",
+        "service_name": "tafsir-backend",
+        "configuration_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T19:54:09.147142Z",
+    "severity": "INFO",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Frequests",
+    "trace": "projects/tafsir-simplified/traces/f19291abc228e259895a471b84e9fb9d",
+    "receiveTimestamp": "2025-10-24T19:54:09.418188561Z",
+    "spanId": "52fda9c6932a34d6",
+    "traceSampled": true
+  },
+  {
+    "insertId": "68fbd96100041659c2c5b560",
+    "httpRequest": {
+      "requestMethod": "POST",
+      "requestUrl": "https://tafsir-backend-612616741510.us-central1.run.app/query-history",
+      "requestSize": "1811",
+      "status": 201,
+      "responseSize": "295",
+      "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0.1 Mobile/15E148 Safari/604.1",
+      "remoteIp": "2a04:4e41:2e02:a602::2c80:7602",
+      "referer": "https://tafsir-frontend-612616741510.us-central1.run.app/",
+      "serverIp": "2600:1901:81d4:200::",
+      "latency": "0.066451150s",
+      "protocol": "HTTP/1.1"
+    },
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "location": "us-central1",
+        "configuration_name": "tafsir-backend",
+        "project_id": "tafsir-simplified",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "service_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T19:54:09.199874Z",
+    "severity": "INFO",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Frequests",
+    "trace": "projects/tafsir-simplified/traces/c7f0ecd5ac23e797895a471b84e9f305",
+    "receiveTimestamp": "2025-10-24T19:54:09.418188561Z",
+    "spanId": "6081c9f759a452a4"
+  },
+  {
+    "insertId": "68fbd9b7000f0aea36ef0bf0",
+    "httpRequest": {
+      "requestMethod": "OPTIONS",
+      "requestUrl": "https://tafsir-backend-612616741510.us-central1.run.app/tafsir",
+      "requestSize": "797",
+      "status": 200,
+      "responseSize": "402",
+      "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0.1 Mobile/15E148 Safari/604.1",
+      "remoteIp": "2a04:4e41:2e02:a602::2c80:7602",
+      "referer": "https://tafsir-frontend-612616741510.us-central1.run.app/",
+      "serverIp": "2600:1901:81d4:200::",
+      "latency": "0.004204155s",
+      "protocol": "HTTP/1.1"
+    },
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "location": "us-central1",
+        "service_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "configuration_name": "tafsir-backend",
+        "project_id": "tafsir-simplified"
+      }
+    },
+    "timestamp": "2025-10-24T19:55:35.980001Z",
+    "severity": "INFO",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Frequests",
+    "trace": "projects/tafsir-simplified/traces/b76582d5446cb0853423840032fe430d",
+    "receiveTimestamp": "2025-10-24T19:55:35.989448649Z",
+    "spanId": "878e781e17a52db9",
+    "traceSampled": true
+  },
+  {
+    "insertId": "68fbd9d9000cd067cf2494c8",
+    "httpRequest": {
+      "requestMethod": "POST",
+      "requestUrl": "https://tafsir-backend-612616741510.us-central1.run.app/tafsir",
+      "requestSize": "1760",
+      "status": 500,
+      "responseSize": "287",
+      "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0.1 Mobile/15E148 Safari/604.1",
+      "remoteIp": "2a04:4e41:2e02:a602::2c80:7602",
+      "referer": "https://tafsir-frontend-612616741510.us-central1.run.app/",
+      "serverIp": "2600:1901:81d4:200::",
+      "latency": "33.793521794s",
+      "protocol": "HTTP/1.1"
+    },
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "location": "us-central1",
+        "service_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "project_id": "tafsir-simplified",
+        "configuration_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T19:55:36.040693Z",
+    "severity": "ERROR",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Frequests",
+    "trace": "projects/tafsir-simplified/traces/91834eafc69a93bc3423840032fe4194",
+    "receiveTimestamp": "2025-10-24T19:56:09.844419738Z",
+    "spanId": "b79ddea23bc6c516"
+  },
+  {
+    "insertId": "68fbd9d9000ee86b6696523b",
+    "httpRequest": {
+      "requestMethod": "OPTIONS",
+      "requestUrl": "https://tafsir-backend-612616741510.us-central1.run.app/query-history",
+      "requestSize": "805",
+      "status": 200,
+      "responseSize": "413",
+      "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0.1 Mobile/15E148 Safari/604.1",
+      "remoteIp": "2a04:4e41:2e02:a602::2c80:7602",
+      "referer": "https://tafsir-frontend-612616741510.us-central1.run.app/",
+      "serverIp": "2600:1901:81d4:200::",
+      "latency": "0.002775765s",
+      "protocol": "HTTP/1.1"
+    },
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "project_id": "tafsir-simplified",
+        "location": "us-central1",
+        "configuration_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "service_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T19:56:09.972422Z",
+    "severity": "INFO",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Frequests",
+    "trace": "projects/tafsir-simplified/traces/49d9b7968e3d13052db6b42ef7fd2d2b",
+    "receiveTimestamp": "2025-10-24T19:56:10.176581369Z",
+    "spanId": "0fa721df1b0f6ea6",
+    "traceSampled": true
+  },
+  {
+    "insertId": "68fbd9da0001674a2b676752",
+    "httpRequest": {
+      "requestMethod": "POST",
+      "requestUrl": "https://tafsir-backend-612616741510.us-central1.run.app/query-history",
+      "requestSize": "1805",
+      "status": 201,
+      "responseSize": "295",
+      "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0.1 Mobile/15E148 Safari/604.1",
+      "remoteIp": "2a04:4e41:2e02:a602::2c80:7602",
+      "referer": "https://tafsir-frontend-612616741510.us-central1.run.app/",
+      "serverIp": "2600:1901:81d4:200::",
+      "latency": "0.064727150s",
+      "protocol": "HTTP/1.1"
+    },
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "revision_name": "tafsir-backend-00137-sc7",
+        "project_id": "tafsir-simplified",
+        "location": "us-central1",
+        "configuration_name": "tafsir-backend",
+        "service_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T19:56:10.025786Z",
+    "severity": "INFO",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Frequests",
+    "trace": "projects/tafsir-simplified/traces/6219adda0bbf3f282db6b42ef7fd2461",
+    "receiveTimestamp": "2025-10-24T19:56:10.176581369Z",
+    "spanId": "e9c32ed3ed9adbc4"
+  },
+  {
+    "textPayload": "[2025-10-24 20:11:10 +0000] [1] [INFO] Handling signal: term",
+    "insertId": "68fbdd5e000a9f23cf618c4d",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "revision_name": "tafsir-backend-00137-sc7",
+        "location": "us-central1",
+        "service_name": "tafsir-backend",
+        "configuration_name": "tafsir-backend",
+        "project_id": "tafsir-simplified"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:10.696099Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2025-10-24T20:11:10.698754360Z"
+  },
+  {
+    "textPayload": "[2025-10-24 20:11:11 +0000] [2] [INFO] Worker exiting (pid: 2)",
+    "insertId": "68fbdd5f0008c564e778270a",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "revision_name": "tafsir-backend-00137-sc7",
+        "configuration_name": "tafsir-backend",
+        "project_id": "tafsir-simplified",
+        "service_name": "tafsir-backend",
+        "location": "us-central1"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.574820Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2025-10-24T20:11:11.698842940Z"
+  },
+  {
+    "textPayload": "INFO: Firebase Admin SDK initialized for project 'tafsir-simplified-6b262'",
+    "insertId": "68fbdd5f0008c86994287f57",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "project_id": "tafsir-simplified",
+        "service_name": "tafsir-backend",
+        "location": "us-central1",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "configuration_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575593Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.580399310Z"
+  },
+  {
+    "textPayload": "INFO: User profiles database connected: (default)",
+    "insertId": "68fbdd5f0008c8820805a0e4",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "revision_name": "tafsir-backend-00137-sc7",
+        "configuration_name": "tafsir-backend",
+        "service_name": "tafsir-backend",
+        "project_id": "tafsir-simplified",
+        "location": "us-central1"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575618Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.580399310Z"
+  },
+  {
+    "textPayload": "INFO: Quran texts database connected: tafsir-db",
+    "insertId": "68fbdd5f0008c8872d1b9da6",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "location": "us-central1",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "configuration_name": "tafsir-backend",
+        "service_name": "tafsir-backend",
+        "project_id": "tafsir-simplified"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575623Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.580399310Z"
+  },
+  {
+    "textPayload": "INFO: Users database verified - found 1 collections",
+    "insertId": "68fbdd5f0008c88b37b41832",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "project_id": "tafsir-simplified",
+        "configuration_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "service_name": "tafsir-backend",
+        "location": "us-central1"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575627Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.580399310Z"
+  },
+  {
+    "textPayload": "INFO: Quran database verified - found 1 collections",
+    "insertId": "68fbdd5f0008c890ff1a97be",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "project_id": "tafsir-simplified",
+        "service_name": "tafsir-backend",
+        "configuration_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "location": "us-central1"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575632Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.580399310Z"
+  },
+  {
+    "textPayload": "INFO: Initializing enhanced dual-storage system",
+    "insertId": "68fbdd5f0008c8943dc67ab5",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "configuration_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "location": "us-central1",
+        "project_id": "tafsir-simplified",
+        "service_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575636Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.580399310Z"
+  },
+  {
+    "textPayload": "INFO: Loaded 674 verses from processed/ibnkathir-Fatiha-Tawbah_fixed.json",
+    "insertId": "68fbdd5f0008c898dfc1261d",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "location": "us-central1",
+        "configuration_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "service_name": "tafsir-backend",
+        "project_id": "tafsir-simplified"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575640Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.580399310Z"
+  },
+  {
+    "textPayload": "INFO: Loaded 755 verses from processed/ibnkathir-Yunus-Ankabut_FINAL_fixed.json",
+    "insertId": "68fbdd5f0008c89c421e8868",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "location": "us-central1",
+        "configuration_name": "tafsir-backend",
+        "project_id": "tafsir-simplified",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "service_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575644Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.580399310Z"
+  },
+  {
+    "textPayload": "INFO: Loaded 717 verses from processed/ibnkathir-Rum-Nas_FINAL_fixed.json",
+    "insertId": "68fbdd5f0008c8a02e77afb5",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "service_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "location": "us-central1",
+        "configuration_name": "tafsir-backend",
+        "project_id": "tafsir-simplified"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575648Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.580399310Z"
+  },
+  {
+    "textPayload": "INFO: Loaded 136 verses from processed/al-Qurtubi Vol. 1_FINAL_fixed.json",
+    "insertId": "68fbdd5f0008c8ab352becdf",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "project_id": "tafsir-simplified",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "configuration_name": "tafsir-backend",
+        "service_name": "tafsir-backend",
+        "location": "us-central1"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575659Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.580399310Z"
+  },
+  {
+    "textPayload": "INFO: Loaded 116 verses from processed/al-Qurtubi Vol. 2_FINAL_fixed.json",
+    "insertId": "68fbdd5f0008c8b59e2c5597",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "service_name": "tafsir-backend",
+        "configuration_name": "tafsir-backend",
+        "location": "us-central1",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "project_id": "tafsir-simplified"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575669Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.580399310Z"
+  },
+  {
+    "textPayload": "INFO: Loaded 115 verses from processed/al-Qurtubi Vol. 3_fixed.json",
+    "insertId": "68fbdd5f0008c8ba3b4012f9",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "location": "us-central1",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "service_name": "tafsir-backend",
+        "project_id": "tafsir-simplified",
+        "configuration_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575674Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.580399310Z"
+  },
+  {
+    "textPayload": "INFO: Loaded 118 verses from processed/al-Qurtubi Vol. 4_FINAL_fixed.json",
+    "insertId": "68fbdd5f0008c8be2e2b8df9",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "project_id": "tafsir-simplified",
+        "configuration_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "location": "us-central1",
+        "service_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575678Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.580399310Z"
+  },
+  {
+    "textPayload": "INFO: Total verses loaded: 2631",
+    "insertId": "68fbdd5f0008c8c2299d7f64",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "project_id": "tafsir-simplified",
+        "service_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "configuration_name": "tafsir-backend",
+        "location": "us-central1"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575682Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.580399310Z"
+  },
+  {
+    "textPayload": "WARNING: Unexpected verse_number format: [] (type: <class 'list'>)",
+    "insertId": "68fbdd5f0008c8c6309f993e",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "configuration_name": "tafsir-backend",
+        "service_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "location": "us-central1",
+        "project_id": "tafsir-simplified"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575686Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.580399310Z"
+  },
+  {
+    "textPayload": "INFO: Processing range 2:121 (string format '121-123')",
+    "insertId": "68fbdd5f0008c8caa5202e49",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "revision_name": "tafsir-backend-00137-sc7",
+        "configuration_name": "tafsir-backend",
+        "location": "us-central1",
+        "project_id": "tafsir-simplified",
+        "service_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575690Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.580399310Z"
+  },
+  {
+    "textPayload": "INFO: Processing range 2:161 (string format '161-162')",
+    "insertId": "68fbdd5f0008c8cea2402f40",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "project_id": "tafsir-simplified",
+        "location": "us-central1",
+        "service_name": "tafsir-backend",
+        "configuration_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00137-sc7"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575694Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.580399310Z"
+  },
+  {
+    "textPayload": "INFO: Processing range 2:183 (string format '183-184')",
+    "insertId": "68fbdd5f0008c8d2172cc51a",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "project_id": "tafsir-simplified",
+        "configuration_name": "tafsir-backend",
+        "service_name": "tafsir-backend",
+        "location": "us-central1",
+        "revision_name": "tafsir-backend-00137-sc7"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575698Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.580399310Z"
+  },
+  {
+    "textPayload": "INFO: Processing range 2:217 (string format '217-218')",
+    "insertId": "68fbdd5f0008c8d5a532113a",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "service_name": "tafsir-backend",
+        "project_id": "tafsir-simplified",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "configuration_name": "tafsir-backend",
+        "location": "us-central1"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575701Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "INFO: Processing range 3:190 (string format '190-200')",
+    "insertId": "68fbdd5f0008c8d939e0ec37",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "location": "us-central1",
+        "service_name": "tafsir-backend",
+        "configuration_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "project_id": "tafsir-simplified"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575705Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "INFO: Dual storage complete:",
+    "insertId": "68fbdd5f0008c8dd2855c47c",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "service_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "configuration_name": "tafsir-backend",
+        "location": "us-central1",
+        "project_id": "tafsir-simplified"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575709Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "  - Flat chunks: 2583",
+    "insertId": "68fbdd5f0008c8e1db2cab97",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "location": "us-central1",
+        "configuration_name": "tafsir-backend",
+        "service_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "project_id": "tafsir-simplified"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575713Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "  - Structured metadata: 6713",
+    "insertId": "68fbdd5f0008c8e6b5798bd8",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "project_id": "tafsir-simplified",
+        "location": "us-central1",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "configuration_name": "tafsir-backend",
+        "service_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575718Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "  - Ibn Kathir: 2146 verses",
+    "insertId": "68fbdd5f0008c8ea26d31f95",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "project_id": "tafsir-simplified",
+        "configuration_name": "tafsir-backend",
+        "location": "us-central1",
+        "service_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00137-sc7"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575722Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "  - al-Qurtubi: 485 verses",
+    "insertId": "68fbdd5f0008c8f0c2216868",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "configuration_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "service_name": "tafsir-backend",
+        "location": "us-central1",
+        "project_id": "tafsir-simplified"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575728Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "======================================================================",
+    "insertId": "68fbdd5f0008c8f6d77344f4",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "service_name": "tafsir-backend",
+        "project_id": "tafsir-simplified",
+        "configuration_name": "tafsir-backend",
+        "location": "us-central1",
+        "revision_name": "tafsir-backend-00137-sc7"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575734Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "🔄 INITIALIZING RERANKER SYSTEM (Setup 1: Retriever-Reranker)",
+    "insertId": "68fbdd5f0008c8fad3e4c76e",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "revision_name": "tafsir-backend-00137-sc7",
+        "project_id": "tafsir-simplified",
+        "location": "us-central1",
+        "service_name": "tafsir-backend",
+        "configuration_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575738Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "======================================================================",
+    "insertId": "68fbdd5f0008c8fea7cb07be",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "project_id": "tafsir-simplified",
+        "configuration_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "location": "us-central1",
+        "service_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575742Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "📥 Attempting to load: jina-reranker-v2-base-multilingual",
+    "insertId": "68fbdd5f0008c9076211f480",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "service_name": "tafsir-backend",
+        "project_id": "tafsir-simplified",
+        "location": "us-central1",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "configuration_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575751Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "   Description: Primary: Multilingual (Arabic+English), 8192 token context, optimized for RAG",
+    "insertId": "68fbdd5f0008c90cbe6fad78",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "revision_name": "tafsir-backend-00137-sc7",
+        "location": "us-central1",
+        "service_name": "tafsir-backend",
+        "project_id": "tafsir-simplified",
+        "configuration_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575756Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "   Max length: 8192 tokens",
+    "insertId": "68fbdd5f0008c910fc9e2196",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "service_name": "tafsir-backend",
+        "location": "us-central1",
+        "configuration_name": "tafsir-backend",
+        "project_id": "tafsir-simplified",
+        "revision_name": "tafsir-backend-00137-sc7"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575760Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "⚠️  FAILED to load jina-reranker-v2-base-multilingual",
+    "insertId": "68fbdd5f0008c9146cec7b70",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "service_name": "tafsir-backend",
+        "location": "us-central1",
+        "configuration_name": "tafsir-backend",
+        "project_id": "tafsir-simplified",
+        "revision_name": "tafsir-backend-00137-sc7"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575764Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "   Error: OSError: jina-reranker-v2-base-multilingual is not a local folder and is not a valid model identifier listed on 'https://huggingface.co/models'",
+    "insertId": "68fbdd5f0008c92833792c04",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "project_id": "tafsir-simplified",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "configuration_name": "tafsir-backend",
+        "service_name": "tafsir-backend",
+        "location": "us-central1"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575784Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "If this is a private repository, make sure to pass a token having permission to this repo either by logging in with `hf auth login` or by passing `token=<your_token>`",
+    "insertId": "68fbdd5f0008c93270a10d99",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "service_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "configuration_name": "tafsir-backend",
+        "location": "us-central1",
+        "project_id": "tafsir-simplified"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575794Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "   Trying next model...",
+    "insertId": "68fbdd5f0008c936fb7ed892",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "configuration_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "project_id": "tafsir-simplified",
+        "location": "us-central1",
+        "service_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575798Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "📥 Attempting to load: cross-encoder/ms-marco-MiniLM-L-6-v2",
+    "insertId": "68fbdd5f0008c93e62f2e2bb",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "revision_name": "tafsir-backend-00137-sc7",
+        "service_name": "tafsir-backend",
+        "project_id": "tafsir-simplified",
+        "location": "us-central1",
+        "configuration_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575806Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "   Description: Fallback: Fast, reliable, English-focused",
+    "insertId": "68fbdd5f0008c9425f603dc4",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "location": "us-central1",
+        "project_id": "tafsir-simplified",
+        "configuration_name": "tafsir-backend",
+        "service_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00137-sc7"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575810Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "   Max length: 512 tokens",
+    "insertId": "68fbdd5f0008c946966a0c75",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "project_id": "tafsir-simplified",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "service_name": "tafsir-backend",
+        "configuration_name": "tafsir-backend",
+        "location": "us-central1"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575814Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "⚠️  FAILED to load cross-encoder/ms-marco-MiniLM-L-6-v2",
+    "insertId": "68fbdd5f0008c94dd4c5b76a",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "configuration_name": "tafsir-backend",
+        "location": "us-central1",
+        "service_name": "tafsir-backend",
+        "project_id": "tafsir-simplified",
+        "revision_name": "tafsir-backend-00137-sc7"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575821Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "   Error: OSError: We couldn't connect to 'https://huggingface.co' to load the files, and couldn't find them in the cached files.",
+    "insertId": "68fbdd5f0008c956c101c3e0",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "revision_name": "tafsir-backend-00137-sc7",
+        "configuration_name": "tafsir-backend",
+        "service_name": "tafsir-backend",
+        "location": "us-central1",
+        "project_id": "tafsir-simplified"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575830Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "Check your internet connection or see how to run the library in offline mode at 'https://huggingface.co/docs/transformers/installation#offline-mode'.",
+    "insertId": "68fbdd5f0008c95b98409acb",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "configuration_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "project_id": "tafsir-simplified",
+        "service_name": "tafsir-backend",
+        "location": "us-central1"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575835Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "   Trying next model...",
+    "insertId": "68fbdd5f0008c960c0c89653",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "service_name": "tafsir-backend",
+        "project_id": "tafsir-simplified",
+        "location": "us-central1",
+        "configuration_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00137-sc7"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575840Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "❌ RERANKER INITIALIZATION FAILED: All models failed to load",
+    "insertId": "68fbdd5f0008c965e1231833",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "revision_name": "tafsir-backend-00137-sc7",
+        "location": "us-central1",
+        "project_id": "tafsir-simplified",
+        "service_name": "tafsir-backend",
+        "configuration_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575845Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "   System will fall back to distance-based filtering",
+    "insertId": "68fbdd5f0008c96924416b9c",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "project_id": "tafsir-simplified",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "location": "us-central1",
+        "service_name": "tafsir-backend",
+        "configuration_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575849Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "   Recommendation: Install sentence-transformers or check model availability",
+    "insertId": "68fbdd5f0008c96d314db1a0",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "project_id": "tafsir-simplified",
+        "service_name": "tafsir-backend",
+        "configuration_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "location": "us-central1"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575853Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "======================================================================",
+    "insertId": "68fbdd5f0008c971435bf2c2",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "location": "us-central1",
+        "project_id": "tafsir-simplified",
+        "service_name": "tafsir-backend",
+        "configuration_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00137-sc7"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575857Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "📍 Normalized approach: historical → semantic",
+    "insertId": "68fbdd5f0008c97768616182",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "configuration_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "service_name": "tafsir-backend",
+        "location": "us-central1",
+        "project_id": "tafsir-simplified"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575863Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "======================================================================",
+    "insertId": "68fbdd5f0008c97c36bb688c",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "location": "us-central1",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "service_name": "tafsir-backend",
+        "configuration_name": "tafsir-backend",
+        "project_id": "tafsir-simplified"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575868Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "📥 QUERY: Context of Treaty of Hudaybiyyah",
+    "insertId": "68fbdd5f0008c981e4540eeb",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "revision_name": "tafsir-backend-00137-sc7",
+        "service_name": "tafsir-backend",
+        "configuration_name": "tafsir-backend",
+        "project_id": "tafsir-simplified",
+        "location": "us-central1"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575873Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "🎯 APPROACH: SEMANTIC",
+    "insertId": "68fbdd5f0008c985676983f1",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "project_id": "tafsir-simplified",
+        "service_name": "tafsir-backend",
+        "configuration_name": "tafsir-backend",
+        "location": "us-central1",
+        "revision_name": "tafsir-backend-00137-sc7"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575877Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "======================================================================",
+    "insertId": "68fbdd5f0008c98a06ebccba",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "project_id": "tafsir-simplified",
+        "service_name": "tafsir-backend",
+        "location": "us-central1",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "configuration_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575882Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "🎯 Type: semantic (confidence: 100%)",
+    "insertId": "68fbdd5f0008c98ed2ed79e2",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "revision_name": "tafsir-backend-00137-sc7",
+        "location": "us-central1",
+        "service_name": "tafsir-backend",
+        "project_id": "tafsir-simplified",
+        "configuration_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575886Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "🚀 ROUTE 3: Semantic Search (Full RAG)",
+    "insertId": "68fbdd5f0008c993b76f74bd",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "configuration_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "project_id": "tafsir-simplified",
+        "location": "us-central1",
+        "service_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575891Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "🔍 STAGE 1: Vector Retrieval (High Recall)",
+    "insertId": "68fbdd5f0008c998d18b3847",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "location": "us-central1",
+        "service_name": "tafsir-backend",
+        "configuration_name": "tafsir-backend",
+        "project_id": "tafsir-simplified",
+        "revision_name": "tafsir-backend-00137-sc7"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575896Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "   Query: Context of Treaty of Hudaybiyyah",
+    "insertId": "68fbdd5f0008c99db809b8cd",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "revision_name": "tafsir-backend-00137-sc7",
+        "service_name": "tafsir-backend",
+        "location": "us-central1",
+        "configuration_name": "tafsir-backend",
+        "project_id": "tafsir-simplified"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575901Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "   Approach: semantic",
+    "insertId": "68fbdd5f0008c9a16b297968",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "location": "us-central1",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "project_id": "tafsir-simplified",
+        "configuration_name": "tafsir-backend",
+        "service_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575905Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "   Candidates to retrieve: 50 (increased for reranking)",
+    "insertId": "68fbdd5f0008c9a629eebe5d",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "location": "us-central1",
+        "service_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "project_id": "tafsir-simplified",
+        "configuration_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575910Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "   Embedding dimension: 1536",
+    "insertId": "68fbdd5f0008c9ad78724b26",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "configuration_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "project_id": "tafsir-simplified",
+        "service_name": "tafsir-backend",
+        "location": "us-central1"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575917Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "   ✅ Vector search returned: 50 neighbors",
+    "insertId": "68fbdd5f0008c9b0ff68588a",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "service_name": "tafsir-backend",
+        "project_id": "tafsir-simplified",
+        "location": "us-central1",
+        "configuration_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00137-sc7"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575920Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "WARNING: Chunk not found for ID: al-qurtubi:2:217-218 (base: al-qurtubi:2:217-218)",
+    "insertId": "68fbdd5f0008c9b4b8bc4191",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "service_name": "tafsir-backend",
+        "location": "us-central1",
+        "project_id": "tafsir-simplified",
+        "configuration_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00137-sc7"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575924Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "   First 5 TAFSIR_CHUNKS keys: ['ibn-kathir:1:0', 'ibn-kathir:1:1', 'ibn-kathir:2:0', 'ibn-kathir:2:1', 'ibn-kathir:2:2']",
+    "insertId": "68fbdd5f0008c9b83ec09838",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "project_id": "tafsir-simplified",
+        "location": "us-central1",
+        "service_name": "tafsir-backend",
+        "configuration_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00137-sc7"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575928Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "   Looking for: 'al-qurtubi:2:217-218' in 2583 chunks",
+    "insertId": "68fbdd5f0008c9bc4cd91584",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "revision_name": "tafsir-backend-00137-sc7",
+        "project_id": "tafsir-simplified",
+        "configuration_name": "tafsir-backend",
+        "service_name": "tafsir-backend",
+        "location": "us-central1"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575932Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "   Vector search: 50 neighbors → 49 relevant (filtered 0, threshold=1.0)",
+    "insertId": "68fbdd5f0008c9c0cdd0438e",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "location": "us-central1",
+        "service_name": "tafsir-backend",
+        "project_id": "tafsir-simplified",
+        "configuration_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00137-sc7"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575936Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "   Retrieved: 49 chunks for reranking",
+    "insertId": "68fbdd5f0008c9c758401cf4",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "location": "us-central1",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "service_name": "tafsir-backend",
+        "project_id": "tafsir-simplified",
+        "configuration_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575943Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "✨ STAGE 2: CrossEncoder Reranking (High Precision)",
+    "insertId": "68fbdd5f0008c9d17a528ae5",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "configuration_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "project_id": "tafsir-simplified",
+        "service_name": "tafsir-backend",
+        "location": "us-central1"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575953Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "   ⚠️  Reranker unavailable - using distance-based filtering",
+    "insertId": "68fbdd5f0008c9ec10e14279",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "service_name": "tafsir-backend",
+        "configuration_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "project_id": "tafsir-simplified",
+        "location": "us-central1"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575980Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "   Final chunks after reranking: 49",
+    "insertId": "68fbdd5f0008c9fdc0f2578e",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "revision_name": "tafsir-backend-00137-sc7",
+        "project_id": "tafsir-simplified",
+        "configuration_name": "tafsir-backend",
+        "service_name": "tafsir-backend",
+        "location": "us-central1"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.575997Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "📊 STAGE 3: Dynamic Source Weighting",
+    "insertId": "68fbdd5f0008ca10b277ef3a",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "revision_name": "tafsir-backend-00137-sc7",
+        "configuration_name": "tafsir-backend",
+        "project_id": "tafsir-simplified",
+        "service_name": "tafsir-backend",
+        "location": "us-central1"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.576016Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "   ✅ Dynamic weights: Similar quality (IK:0.71, Q:0.71) → 50%/50%",
+    "insertId": "68fbdd5f0008ca149e6254cc",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "service_name": "tafsir-backend",
+        "configuration_name": "tafsir-backend",
+        "location": "us-central1",
+        "project_id": "tafsir-simplified",
+        "revision_name": "tafsir-backend-00137-sc7"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.576020Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "   Final distribution: IK=43, Q=6",
+    "insertId": "68fbdd5f0008ca1a5436120b",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "project_id": "tafsir-simplified",
+        "service_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "location": "us-central1",
+        "configuration_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.576026Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "   Retrieved 49 chunks (approach: semantic)",
+    "insertId": "68fbdd5f0008ca1ed3ed73cb",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "service_name": "tafsir-backend",
+        "project_id": "tafsir-simplified",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "location": "us-central1",
+        "configuration_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.576030Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "⚠️ Context too large (70961 tokens), truncating to 50000 tokens",
+    "insertId": "68fbdd5f0008ca22ad50bed7",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "configuration_name": "tafsir-backend",
+        "location": "us-central1",
+        "project_id": "tafsir-simplified",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "service_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.576034Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "⚠️  Validation failed: Missing required fields",
+    "insertId": "68fbdd5f0008ca25b7b48815",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "location": "us-central1",
+        "project_id": "tafsir-simplified",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "service_name": "tafsir-backend",
+        "configuration_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.576037Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "⚠️  Response keys: ['title', 'introduction', 'sections', 'query_type']",
+    "insertId": "68fbdd5f0008ca29a128e6e2",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "project_id": "tafsir-simplified",
+        "service_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "configuration_name": "tafsir-backend",
+        "location": "us-central1"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.576041Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "⚠️  Has tafsir_explanations: False",
+    "insertId": "68fbdd5f0008ca2dfc986d5a",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "project_id": "tafsir-simplified",
+        "location": "us-central1",
+        "service_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "configuration_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.576045Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "⚠️  Has metadata.extraction_error: None",
+    "insertId": "68fbdd5f0008ca321f279231",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "project_id": "tafsir-simplified",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "service_name": "tafsir-backend",
+        "configuration_name": "tafsir-backend",
+        "location": "us-central1"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.576050Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "📍 Normalized approach: historical → semantic",
+    "insertId": "68fbdd5f0008ca365d3dacd7",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "location": "us-central1",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "service_name": "tafsir-backend",
+        "configuration_name": "tafsir-backend",
+        "project_id": "tafsir-simplified"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.576054Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "======================================================================",
+    "insertId": "68fbdd5f0008ca3a639a9c68",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "configuration_name": "tafsir-backend",
+        "project_id": "tafsir-simplified",
+        "service_name": "tafsir-backend",
+        "location": "us-central1",
+        "revision_name": "tafsir-backend-00137-sc7"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.576058Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "📥 QUERY: Context of Ayat al-Tayammum",
+    "insertId": "68fbdd5f0008ca3e6eb6f02e",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "location": "us-central1",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "configuration_name": "tafsir-backend",
+        "service_name": "tafsir-backend",
+        "project_id": "tafsir-simplified"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.576062Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "🎯 APPROACH: SEMANTIC",
+    "insertId": "68fbdd5f0008ca41a927436a",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "configuration_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "location": "us-central1",
+        "service_name": "tafsir-backend",
+        "project_id": "tafsir-simplified"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.576065Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "======================================================================",
+    "insertId": "68fbdd5f0008ca490c472be6",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "service_name": "tafsir-backend",
+        "configuration_name": "tafsir-backend",
+        "location": "us-central1",
+        "project_id": "tafsir-simplified",
+        "revision_name": "tafsir-backend-00137-sc7"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.576073Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "🎯 Type: semantic (confidence: 100%)",
+    "insertId": "68fbdd5f0008ca4c549e011c",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "location": "us-central1",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "service_name": "tafsir-backend",
+        "project_id": "tafsir-simplified",
+        "configuration_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.576076Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "🚀 ROUTE 3: Semantic Search (Full RAG)",
+    "insertId": "68fbdd5f0008ca5076c6b712",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "configuration_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "location": "us-central1",
+        "service_name": "tafsir-backend",
+        "project_id": "tafsir-simplified"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.576080Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "🔍 STAGE 1: Vector Retrieval (High Recall)",
+    "insertId": "68fbdd5f0008ca59fc66cd1b",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "revision_name": "tafsir-backend-00137-sc7",
+        "location": "us-central1",
+        "configuration_name": "tafsir-backend",
+        "project_id": "tafsir-simplified",
+        "service_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.576089Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "   Query: Context of Ayat al-Tayammum",
+    "insertId": "68fbdd5f0008ca5d645d797b",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "location": "us-central1",
+        "project_id": "tafsir-simplified",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "configuration_name": "tafsir-backend",
+        "service_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.576093Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "   Approach: semantic",
+    "insertId": "68fbdd5f0008ca6153b632f1",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "revision_name": "tafsir-backend-00137-sc7",
+        "configuration_name": "tafsir-backend",
+        "location": "us-central1",
+        "project_id": "tafsir-simplified",
+        "service_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.576097Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "   Candidates to retrieve: 50 (increased for reranking)",
+    "insertId": "68fbdd5f0008ca6452d1ca0f",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "configuration_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "service_name": "tafsir-backend",
+        "project_id": "tafsir-simplified",
+        "location": "us-central1"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.576100Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "   Embedding dimension: 1536",
+    "insertId": "68fbdd5f0008ca682c813f24",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "project_id": "tafsir-simplified",
+        "location": "us-central1",
+        "service_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "configuration_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.576104Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "   ✅ Vector search returned: 50 neighbors",
+    "insertId": "68fbdd5f0008ca6ef8b4da3c",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "project_id": "tafsir-simplified",
+        "configuration_name": "tafsir-backend",
+        "location": "us-central1",
+        "service_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00137-sc7"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.576110Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "WARNING: Chunk not found for ID: al-qurtubi:2:183-184 (base: al-qurtubi:2:183-184)",
+    "insertId": "68fbdd5f0008ca7339c43ed8",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "service_name": "tafsir-backend",
+        "configuration_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "project_id": "tafsir-simplified",
+        "location": "us-central1"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.576115Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "   First 5 TAFSIR_CHUNKS keys: ['ibn-kathir:1:0', 'ibn-kathir:1:1', 'ibn-kathir:2:0', 'ibn-kathir:2:1', 'ibn-kathir:2:2']",
+    "insertId": "68fbdd5f0008ca76fd752b08",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "revision_name": "tafsir-backend-00137-sc7",
+        "service_name": "tafsir-backend",
+        "configuration_name": "tafsir-backend",
+        "location": "us-central1",
+        "project_id": "tafsir-simplified"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.576118Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "   Looking for: 'al-qurtubi:2:183-184' in 2583 chunks",
+    "insertId": "68fbdd5f0008ca7b1e9710b1",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "revision_name": "tafsir-backend-00137-sc7",
+        "service_name": "tafsir-backend",
+        "location": "us-central1",
+        "configuration_name": "tafsir-backend",
+        "project_id": "tafsir-simplified"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.576123Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "WARNING: Chunk not found for ID: al-qurtubi:2:217-218 (base: al-qurtubi:2:217-218)",
+    "insertId": "68fbdd5f0008ca80dcf15aec",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "location": "us-central1",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "project_id": "tafsir-simplified",
+        "service_name": "tafsir-backend",
+        "configuration_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.576128Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "   First 5 TAFSIR_CHUNKS keys: ['ibn-kathir:1:0', 'ibn-kathir:1:1', 'ibn-kathir:2:0', 'ibn-kathir:2:1', 'ibn-kathir:2:2']",
+    "insertId": "68fbdd5f0008ca85b893d0c6",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "location": "us-central1",
+        "project_id": "tafsir-simplified",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "configuration_name": "tafsir-backend",
+        "service_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.576133Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "   Looking for: 'al-qurtubi:2:217-218' in 2583 chunks",
+    "insertId": "68fbdd5f0008ca8a083e9900",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "revision_name": "tafsir-backend-00137-sc7",
+        "project_id": "tafsir-simplified",
+        "configuration_name": "tafsir-backend",
+        "location": "us-central1",
+        "service_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.576138Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "WARNING: Chunk not found for ID: al-qurtubi:3:190-200 (base: al-qurtubi:3:190-200)",
+    "insertId": "68fbdd5f0008ca8ec635d087",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "project_id": "tafsir-simplified",
+        "location": "us-central1",
+        "service_name": "tafsir-backend",
+        "configuration_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00137-sc7"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.576142Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "   First 5 TAFSIR_CHUNKS keys: ['ibn-kathir:1:0', 'ibn-kathir:1:1', 'ibn-kathir:2:0', 'ibn-kathir:2:1', 'ibn-kathir:2:2']",
+    "insertId": "68fbdd5f0008ca917d7d431a",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "service_name": "tafsir-backend",
+        "configuration_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "project_id": "tafsir-simplified",
+        "location": "us-central1"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.576145Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "   Looking for: 'al-qurtubi:3:190-200' in 2583 chunks",
+    "insertId": "68fbdd5f0008ca955222c03a",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "configuration_name": "tafsir-backend",
+        "project_id": "tafsir-simplified",
+        "service_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "location": "us-central1"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.576149Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "   Vector search: 50 neighbors → 47 relevant (filtered 0, threshold=1.0)",
+    "insertId": "68fbdd5f0008ca9af7e86fa5",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "location": "us-central1",
+        "configuration_name": "tafsir-backend",
+        "service_name": "tafsir-backend",
+        "project_id": "tafsir-simplified",
+        "revision_name": "tafsir-backend-00137-sc7"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.576154Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "   Retrieved: 47 chunks for reranking",
+    "insertId": "68fbdd5f0008caa0f3cb2ef2",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "revision_name": "tafsir-backend-00137-sc7",
+        "location": "us-central1",
+        "service_name": "tafsir-backend",
+        "configuration_name": "tafsir-backend",
+        "project_id": "tafsir-simplified"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.576160Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "✨ STAGE 2: CrossEncoder Reranking (High Precision)",
+    "insertId": "68fbdd5f0008caa510f9aa1f",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "location": "us-central1",
+        "service_name": "tafsir-backend",
+        "project_id": "tafsir-simplified",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "configuration_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.576165Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "   ⚠️  Reranker unavailable - using distance-based filtering",
+    "insertId": "68fbdd5f0008caa980c54543",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "service_name": "tafsir-backend",
+        "configuration_name": "tafsir-backend",
+        "location": "us-central1",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "project_id": "tafsir-simplified"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.576169Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "   Final chunks after reranking: 47",
+    "insertId": "68fbdd5f0008caad2b2bbb0e",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "configuration_name": "tafsir-backend",
+        "location": "us-central1",
+        "service_name": "tafsir-backend",
+        "project_id": "tafsir-simplified",
+        "revision_name": "tafsir-backend-00137-sc7"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.576173Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "📊 STAGE 3: Dynamic Source Weighting",
+    "insertId": "68fbdd5f0008cab2ed16ea4f",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "revision_name": "tafsir-backend-00137-sc7",
+        "service_name": "tafsir-backend",
+        "project_id": "tafsir-simplified",
+        "location": "us-central1",
+        "configuration_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.576178Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "   ✅ Dynamic weights: Similar quality (IK:0.71, Q:0.71) → 50%/50%",
+    "insertId": "68fbdd5f0008cab6c23646fa",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "service_name": "tafsir-backend",
+        "project_id": "tafsir-simplified",
+        "location": "us-central1",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "configuration_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.576182Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "   Final distribution: IK=31, Q=16",
+    "insertId": "68fbdd5f0008caba6908fd52",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "service_name": "tafsir-backend",
+        "location": "us-central1",
+        "configuration_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "project_id": "tafsir-simplified"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.576186Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "   Retrieved 47 chunks (approach: semantic)",
+    "insertId": "68fbdd5f0008cabe12487673",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "service_name": "tafsir-backend",
+        "project_id": "tafsir-simplified",
+        "location": "us-central1",
+        "configuration_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00137-sc7"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.576190Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "⚠️ Context too large (75173 tokens), truncating to 50000 tokens",
+    "insertId": "68fbdd5f0008cac328853c3a",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "location": "us-central1",
+        "service_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "configuration_name": "tafsir-backend",
+        "project_id": "tafsir-simplified"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.576195Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "⚠️  Validation failed: Missing required fields",
+    "insertId": "68fbdd5f0008cac745c282d5",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "service_name": "tafsir-backend",
+        "project_id": "tafsir-simplified",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "configuration_name": "tafsir-backend",
+        "location": "us-central1"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.576199Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "⚠️  Response keys: ['title', 'introduction', 'verses_of_tayammum', 'theological_and_historical_context', 'conditions_for_tayammum', 'method_of_tayammum', 'scholarly_insights_and_theological_significance', 'conclusion', 'query_type']",
+    "insertId": "68fbdd5f0008cacc0c2aef0e",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "configuration_name": "tafsir-backend",
+        "location": "us-central1",
+        "service_name": "tafsir-backend",
+        "project_id": "tafsir-simplified",
+        "revision_name": "tafsir-backend-00137-sc7"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.576204Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "⚠️  Has tafsir_explanations: False",
+    "insertId": "68fbdd5f0008cacff0662acc",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "configuration_name": "tafsir-backend",
+        "project_id": "tafsir-simplified",
+        "location": "us-central1",
+        "service_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00137-sc7"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.576207Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "⚠️  Has metadata.extraction_error: None",
+    "insertId": "68fbdd5f0008cad3aaa63dd1",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "location": "us-central1",
+        "project_id": "tafsir-simplified",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "configuration_name": "tafsir-backend",
+        "service_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:11.576211Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2025-10-24T20:11:11.917131044Z"
+  },
+  {
+    "textPayload": "[2025-10-24 20:11:18 +0000] [1] [INFO] Shutting down: Master",
+    "insertId": "68fbdd660009db08183d25ab",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "location": "us-central1",
+        "configuration_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00137-sc7",
+        "service_name": "tafsir-backend",
+        "project_id": "tafsir-simplified"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:18.645896Z",
+    "labels": {
+      "instanceId": "0069c7a988e322690795d07fbc0ca836587b479f7002811c04c2e215b5cbadc2249d54c0b640a97ee716dc022e628025f16f682bad55b0037bf2e94982f39f8d410284203dd422741f33acc77c8284"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2025-10-24T20:11:18.694130475Z"
+  },
+  {
+    "protoPayload": {
+      "@type": "type.googleapis.com/google.cloud.audit.AuditLog",
+      "authenticationInfo": {
+        "principalEmail": "ahmedsheik123@gmail.com"
+      },
+      "requestMetadata": {
+        "callerIp": "140.209.216.34",
+        "callerSuppliedUserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36,gzip(gfe),gzip(gfe)",
+        "requestAttributes": {
+          "time": "2025-10-24T20:11:31.336440Z",
+          "reason": "8uSywAYQGg5Db2xpc2V1bSBGbG93cw",
+          "auth": {}
+        },
+        "destinationAttributes": {}
+      },
+      "serviceName": "run.googleapis.com",
+      "methodName": "google.cloud.run.v1.Services.ReplaceService",
+      "authorizationInfo": [
+        {
+          "resource": "namespaces/tafsir-simplified/services/tafsir-backend",
+          "permission": "run.services.update",
+          "granted": true,
+          "resourceAttributes": {},
+          "permissionType": "ADMIN_WRITE"
+        },
+        {
+          "resource": "namespaces/tafsir-simplified/services/tafsir-backend",
+          "permission": "run.services.update",
+          "granted": true,
+          "resourceAttributes": {
+            "service": "run.googleapis.com/",
+            "name": "namespaces/tafsir-simplified/services/tafsir-backend",
+            "type": "run.googleapis.com/Service"
+          },
+          "permissionType": "ADMIN_WRITE"
+        }
+      ],
+      "resourceName": "namespaces/tafsir-simplified/services/tafsir-backend",
+      "request": {
+        "service": {
+          "metadata": {
+            "annotations": {
+              "run.googleapis.com/operation-id": "cb05abfa-b816-4dc5-a963-7b129f898f42",
+              "run.googleapis.com/launch-stage": "ALPHA",
+              "run.googleapis.com/client-name": "cloud-console",
+              "serving.knative.dev/creator": "ahmedsheik123@gmail.com",
+              "run.googleapis.com/invoker-iam-disabled": "true",
+              "serving.knative.dev/lastModifier": "ahmedsheik123@gmail.com",
+              "run.googleapis.com/ingress": "all",
+              "run.googleapis.com/urls": "[\"https://tafsir-backend-612616741510.us-central1.run.app\",\"https://tafsir-backend-vg7kshbegq-uc.a.run.app\"]",
+              "run.googleapis.com/ingress-status": "all"
+            },
+            "labels": {
+              "cloud.googleapis.com/location": "us-central1"
+            },
+            "namespace": "612616741510",
+            "resourceVersion": "AAZB21l9Ro8",
+            "selfLink": "/apis/serving.knative.dev/v1/namespaces/612616741510/services/tafsir-backend",
+            "uid": "4bdb38cb-c466-4bc7-a79f-da3010bcfbe6",
+            "generation": 137,
+            "name": "tafsir-backend",
+            "creationTimestamp": "2025-09-15T19:16:29.589373Z"
+          },
+          "kind": "Service",
+          "apiVersion": "serving.knative.dev/v1",
+          "spec": {
+            "template": {
+              "metadata": {
+                "annotations": {
+                  "run.googleapis.com/startup-cpu-boost": "true",
+                  "run.googleapis.com/client-name": "cloud-console",
+                  "autoscaling.knative.dev/maxScale": "10"
+                },
+                "labels": {
+                  "run.googleapis.com/startupProbeType": "Default",
+                  "client.knative.dev/nonce": "894f4432-3a37-4fac-865e-3c78128627e0"
+                }
+              },
+              "spec": {
+                "serviceAccountName": "612616741510-compute@developer.gserviceaccount.com",
+                "containers": [
+                  {
+                    "resources": {
+                      "limits": {
+                        "cpu": "2000m",
+                        "memory": "4Gi"
+                      }
+                    },
+                    "name": "tafsir-backend-1",
+                    "image": "gcr.io/tafsir-simplified/tafsir-backend@sha256:f2d92e080ea221e38b217f84398c6840f085e8c9bbcf3a7c5aa8bda53d330ee5"
+                  }
+                ],
+                "containerConcurrency": 80,
+                "timeoutSeconds": 300
+              }
+            }
+          },
+          "status": {
+            "url": "https://tafsir-backend-vg7kshbegq-uc.a.run.app",
+            "latestCreatedRevisionName": "tafsir-backend-00137-sc7",
+            "traffic": [
+              {
+                "latestRevision": true,
+                "revisionName": "tafsir-backend-00137-sc7",
+                "percent": 100
+              }
+            ],
+            "conditions": [
+              {
+                "lastTransitionTime": "2025-10-23T22:56:55.289487Z",
+                "status": "True",
+                "type": "Ready"
+              },
+              {
+                "lastTransitionTime": "2025-10-23T22:56:51.511730Z",
+                "type": "ConfigurationsReady",
+                "status": "True"
+              },
+              {
+                "lastTransitionTime": "2025-10-23T22:56:55.248163Z",
+                "status": "True",
+                "type": "RoutesReady"
+              }
+            ],
+            "observedGeneration": 137,
+            "latestReadyRevisionName": "tafsir-backend-00137-sc7"
+          }
+        },
+        "region": "us-central1",
+        "@type": "type.googleapis.com/google.cloud.run.v1.ReplaceServiceRequest",
+        "name": "projects/tafsir-simplified/locations/us-central1/services/tafsir-backend"
+      },
+      "resourceLocation": {
+        "currentLocations": [
+          "us-central1"
+        ]
+      }
+    },
+    "insertId": "hrfgc6e1k4fb",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "configuration_name": "",
+        "revision_name": "",
+        "location": "us-central1",
+        "project_id": "tafsir-simplified",
+        "service_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:11:31.142022Z",
+    "severity": "NOTICE",
+    "logName": "projects/tafsir-simplified/logs/cloudaudit.googleapis.com%2Factivity",
+    "receiveTimestamp": "2025-10-24T20:11:32.227767295Z"
+  },
+  {
+    "textPayload": "Starting new instance. Reason: DEPLOYMENT_ROLLOUT - Instance started due to traffic shifting between revisions due to deployment, traffic split adjustment, or deployment health check.",
+    "insertId": "68fbde0d0009273f67d2662e",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "service_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00138-c6d",
+        "project_id": "tafsir-simplified",
+        "location": "us-central1",
+        "configuration_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:14:05.599871Z",
+    "severity": "INFO",
+    "labels": {
+      "scaling_reason": "DEPLOYMENT_ROLLOUT",
+      "instanceId": "0069c7a9887d1263ed04794d7b172eaf6baa318cdb18c5ad2110fdf704d662f5c62c8aad6f37dfba816a2c99d8ae2c2d9718aa83561e179e4c2922dcfa0daae407dba28765607f21d4c709028df25b"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fvarlog%2Fsystem",
+    "receiveTimestamp": "2025-10-24T20:14:05.604845932Z"
+  },
+  {
+    "textPayload": "[2025-10-24 20:14:06 +0000] [1] [INFO] Starting gunicorn 22.0.0",
+    "insertId": "68fbde0e00059727442f3ad2",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "revision_name": "tafsir-backend-00138-c6d",
+        "project_id": "tafsir-simplified",
+        "location": "us-central1",
+        "service_name": "tafsir-backend",
+        "configuration_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:14:06.366375Z",
+    "labels": {
+      "instanceId": "0069c7a9887d1263ed04794d7b172eaf6baa318cdb18c5ad2110fdf704d662f5c62c8aad6f37dfba816a2c99d8ae2c2d9718aa83561e179e4c2922dcfa0daae407dba28765607f21d4c709028df25b"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2025-10-24T20:14:06.369035653Z"
+  },
+  {
+    "textPayload": "[2025-10-24 20:14:06 +0000] [1] [INFO] Listening at: http://0.0.0.0:8080 (1)",
+    "insertId": "68fbde0e0005a2388a2c8148",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "project_id": "tafsir-simplified",
+        "location": "us-central1",
+        "configuration_name": "tafsir-backend",
+        "service_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00138-c6d"
+      }
+    },
+    "timestamp": "2025-10-24T20:14:06.369208Z",
+    "labels": {
+      "instanceId": "0069c7a9887d1263ed04794d7b172eaf6baa318cdb18c5ad2110fdf704d662f5c62c8aad6f37dfba816a2c99d8ae2c2d9718aa83561e179e4c2922dcfa0daae407dba28765607f21d4c709028df25b"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2025-10-24T20:14:06.703863961Z"
+  },
+  {
+    "textPayload": "[2025-10-24 20:14:06 +0000] [1] [INFO] Using worker: gthread",
+    "insertId": "68fbde0e0005a2880f86899b",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "location": "us-central1",
+        "configuration_name": "tafsir-backend",
+        "service_name": "tafsir-backend",
+        "project_id": "tafsir-simplified",
+        "revision_name": "tafsir-backend-00138-c6d"
+      }
+    },
+    "timestamp": "2025-10-24T20:14:06.369288Z",
+    "labels": {
+      "instanceId": "0069c7a9887d1263ed04794d7b172eaf6baa318cdb18c5ad2110fdf704d662f5c62c8aad6f37dfba816a2c99d8ae2c2d9718aa83561e179e4c2922dcfa0daae407dba28765607f21d4c709028df25b"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2025-10-24T20:14:06.703863961Z"
+  },
+  {
+    "textPayload": "Default STARTUP TCP probe succeeded after 1 attempt for container \"tafsir-backend-1\" on port 8080.",
+    "insertId": "68fbde0e0005a2ffbe361c8f",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "location": "us-central1",
+        "project_id": "tafsir-simplified",
+        "revision_name": "tafsir-backend-00138-c6d",
+        "service_name": "tafsir-backend",
+        "configuration_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:14:06.369407Z",
+    "severity": "INFO",
+    "labels": {
+      "instanceId": "0069c7a9887d1263ed04794d7b172eaf6baa318cdb18c5ad2110fdf704d662f5c62c8aad6f37dfba816a2c99d8ae2c2d9718aa83561e179e4c2922dcfa0daae407dba28765607f21d4c709028df25b"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fvarlog%2Fsystem",
+    "receiveTimestamp": "2025-10-24T20:14:06.601523916Z"
+  },
+  {
+    "textPayload": "[2025-10-24 20:14:06 +0000] [2] [INFO] Booting worker with pid: 2",
+    "insertId": "68fbde0e0005e74c1bbefc38",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "service_name": "tafsir-backend",
+        "configuration_name": "tafsir-backend",
+        "project_id": "tafsir-simplified",
+        "location": "us-central1",
+        "revision_name": "tafsir-backend-00138-c6d"
+      }
+    },
+    "timestamp": "2025-10-24T20:14:06.386892Z",
+    "labels": {
+      "instanceId": "0069c7a9887d1263ed04794d7b172eaf6baa318cdb18c5ad2110fdf704d662f5c62c8aad6f37dfba816a2c99d8ae2c2d9718aa83561e179e4c2922dcfa0daae407dba28765607f21d4c709028df25b"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2025-10-24T20:14:06.703863961Z"
+  },
+  {
+    "protoPayload": {
+      "@type": "type.googleapis.com/google.cloud.audit.AuditLog",
+      "status": {
+        "message": "Ready condition status changed to True for Revision tafsir-backend-00138-c6d with message: Deploying revision succeeded in 2m34.96s."
+      },
+      "serviceName": "run.googleapis.com",
+      "methodName": "/Services.ReplaceService",
+      "resourceName": "namespaces/tafsir-simplified/revisions/tafsir-backend-00138-c6d",
+      "response": {
+        "metadata": {
+          "name": "tafsir-backend-00138-c6d",
+          "namespace": "612616741510",
+          "selfLink": "/apis/serving.knative.dev/v1/namespaces/612616741510/revisions/tafsir-backend-00138-c6d",
+          "uid": "8708dae1-73ab-42e0-aac4-f4c6fc853fbf",
+          "resourceVersion": "AAZB7TEP5W4",
+          "generation": 1,
+          "creationTimestamp": "2025-10-24T20:11:31.484114Z",
+          "labels": {
+            "client.knative.dev/nonce": "894f4432-3a37-4fac-865e-3c78128627e0",
+            "serving.knative.dev/configuration": "tafsir-backend",
+            "serving.knative.dev/configurationGeneration": "138",
+            "serving.knative.dev/service": "tafsir-backend",
+            "serving.knative.dev/serviceUid": "4bdb38cb-c466-4bc7-a79f-da3010bcfbe6",
+            "serving.knative.dev/route": "tafsir-backend",
+            "cloud.googleapis.com/location": "us-central1",
+            "run.googleapis.com/startupProbeType": "Default"
+          },
+          "annotations": {
+            "autoscaling.knative.dev/maxScale": "10",
+            "run.googleapis.com/client-name": "cloud-console",
+            "serving.knative.dev/creator": "ahmedsheik123@gmail.com",
+            "run.googleapis.com/operation-id": "43df834d-348a-4999-b003-7e0d4bcecd81",
+            "run.googleapis.com/startup-cpu-boost": "true"
+          },
+          "ownerReferences": [
+            {
+              "kind": "Configuration",
+              "name": "tafsir-backend",
+              "uid": "5fe2759a-67c7-4dab-87c2-481133e521cc",
+              "apiVersion": "serving.knative.dev/v1",
+              "controller": true,
+              "blockOwnerDeletion": true
+            }
+          ]
+        },
+        "apiVersion": "serving.knative.dev/v1",
+        "kind": "Revision",
+        "spec": {
+          "containerConcurrency": 80,
+          "timeoutSeconds": 300,
+          "serviceAccountName": "612616741510-compute@developer.gserviceaccount.com",
+          "containers": [
+            {
+              "name": "tafsir-backend-1",
+              "image": "gcr.io/tafsir-simplified/tafsir-backend@sha256:f2d92e080ea221e38b217f84398c6840f085e8c9bbcf3a7c5aa8bda53d330ee5",
+              "ports": [
+                {
+                  "name": "http1",
+                  "containerPort": 8080
+                }
+              ],
+              "env": [
+                {
+                  "name": "FIREBASE_PROJECT",
+                  "value": "tafsir-simplified-6b262"
+                },
+                {
+                  "name": "GCP_INFRASTRUCTURE_PROJECT",
+                  "value": "tafsir-simplified"
+                },
+                {
+                  "name": "GCP_LOCATION",
+                  "value": "us-central1"
+                },
+                {
+                  "name": "GEMINI_MODEL_ID",
+                  "value": "gemini-2.5-flash"
+                },
+                {
+                  "name": "INDEX_ENDPOINT_ID",
+                  "value": "3478417184655409152"
+                },
+                {
+                  "name": "DEPLOYED_INDEX_ID",
+                  "value": "deployed_tafsir_sliding_1760263278167"
+                },
+                {
+                  "name": "VECTOR_INDEX_ID",
+                  "value": "5746296256385253376"
+                },
+                {
+                  "name": "GCS_BUCKET_NAME",
+                  "value": "tafsir-simplified-sources"
+                },
+                {
+                  "name": "FIREBASE_SECRET_FULL_PATH",
+                  "value": "projects/612616741510/secrets/firebase-sa-key/versions/latest"
+                }
+              ],
+              "resources": {
+                "limits": {
+                  "cpu": "2000m",
+                  "memory": "4Gi"
+                }
+              },
+              "startupProbe": {
+                "timeoutSeconds": 240,
+                "periodSeconds": 240,
+                "failureThreshold": 1,
+                "tcpSocket": {
+                  "port": 8080
+                }
+              }
+            }
+          ]
+        },
+        "status": {
+          "observedGeneration": 1,
+          "conditions": [
+            {
+              "type": "Ready",
+              "status": "True",
+              "message": "Deploying revision succeeded in 2m34.96s.",
+              "lastTransitionTime": "2025-10-24T20:14:06.443886Z"
+            },
+            {
+              "type": "ContainerHealthy",
+              "status": "True",
+              "message": "Containers became healthy.",
+              "lastTransitionTime": "2025-10-24T20:14:06.384349Z"
+            },
+            {
+              "type": "ContainerReady",
+              "status": "True",
+              "message": "Container image import completed in 2m31.58s.",
+              "lastTransitionTime": "2025-10-24T20:14:03.773611Z"
+            },
+            {
+              "type": "ResourcesAvailable",
+              "status": "True",
+              "message": "Provisioning imported containers completed in 1.72s. Checking container health. This will wait for up to 4m for the configured startup probe, including an initial delay of 0s.",
+              "lastTransitionTime": "2025-10-24T20:14:05.500139Z"
+            }
+          ],
+          "logUrl": "https://console.cloud.google.com/logs/viewer?project=tafsir-simplified&resource=cloud_run_revision/service_name/tafsir-backend/revision_name/tafsir-backend-00138-c6d&advancedFilter=resource.type%3D%22cloud_run_revision%22%0Aresource.labels.service_name%3D%22tafsir-backend%22%0Aresource.labels.revision_name%3D%22tafsir-backend-00138-c6d%22",
+          "imageDigest": "gcr.io/tafsir-simplified/tafsir-backend@sha256:f2d92e080ea221e38b217f84398c6840f085e8c9bbcf3a7c5aa8bda53d330ee5",
+          "containerStatuses": [
+            {
+              "name": "tafsir-backend-1",
+              "imageDigest": "gcr.io/tafsir-simplified/tafsir-backend@sha256:f2d92e080ea221e38b217f84398c6840f085e8c9bbcf3a7c5aa8bda53d330ee5"
+            }
+          ]
+        },
+        "@type": "type.googleapis.com/google.cloud.run.v1.Revision"
+      }
+    },
+    "insertId": "-31s935d7cb2",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "location": "us-central1",
+        "project_id": "tafsir-simplified",
+        "service_name": "tafsir-backend",
+        "configuration_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00138-c6d"
+      }
+    },
+    "timestamp": "2025-10-24T20:14:06.458389Z",
+    "severity": "INFO",
+    "logName": "projects/tafsir-simplified/logs/cloudaudit.googleapis.com%2Fsystem_event",
+    "receiveTimestamp": "2025-10-24T20:14:06.685154874Z"
+  },
+  {
+    "protoPayload": {
+      "@type": "type.googleapis.com/google.cloud.audit.AuditLog",
+      "status": {
+        "message": "Ready condition status changed to True for Service tafsir-backend."
+      },
+      "serviceName": "run.googleapis.com",
+      "methodName": "/Services.ReplaceService",
+      "resourceName": "namespaces/tafsir-simplified/services/tafsir-backend",
+      "response": {
+        "metadata": {
+          "name": "tafsir-backend",
+          "namespace": "612616741510",
+          "selfLink": "/apis/serving.knative.dev/v1/namespaces/612616741510/services/tafsir-backend",
+          "uid": "4bdb38cb-c466-4bc7-a79f-da3010bcfbe6",
+          "resourceVersion": "AAZB7TEkZYk",
+          "generation": 138,
+          "creationTimestamp": "2025-09-15T19:16:29.589373Z",
+          "labels": {
+            "cloud.googleapis.com/location": "us-central1"
+          },
+          "annotations": {
+            "serving.knative.dev/creator": "ahmedsheik123@gmail.com",
+            "serving.knative.dev/lastModifier": "ahmedsheik123@gmail.com",
+            "run.googleapis.com/client-name": "cloud-console",
+            "run.googleapis.com/operation-id": "43df834d-348a-4999-b003-7e0d4bcecd81",
+            "run.googleapis.com/ingress": "all",
+            "run.googleapis.com/ingress-status": "all",
+            "run.googleapis.com/invoker-iam-disabled": "true",
+            "run.googleapis.com/urls": "[\"https://tafsir-backend-612616741510.us-central1.run.app\",\"https://tafsir-backend-vg7kshbegq-uc.a.run.app\"]"
+          }
+        },
+        "apiVersion": "serving.knative.dev/v1",
+        "kind": "Service",
+        "spec": {
+          "template": {
+            "metadata": {
+              "labels": {
+                "client.knative.dev/nonce": "894f4432-3a37-4fac-865e-3c78128627e0",
+                "run.googleapis.com/startupProbeType": "Default"
+              },
+              "annotations": {
+                "autoscaling.knative.dev/maxScale": "10",
+                "run.googleapis.com/client-name": "cloud-console",
+                "run.googleapis.com/startup-cpu-boost": "true"
+              }
+            },
+            "spec": {
+              "containerConcurrency": 80,
+              "timeoutSeconds": 300,
+              "serviceAccountName": "612616741510-compute@developer.gserviceaccount.com",
+              "containers": [
+                {
+                  "name": "tafsir-backend-1",
+                  "image": "gcr.io/tafsir-simplified/tafsir-backend@sha256:f2d92e080ea221e38b217f84398c6840f085e8c9bbcf3a7c5aa8bda53d330ee5",
+                  "ports": [
+                    {
+                      "name": "http1",
+                      "containerPort": 8080
+                    }
+                  ],
+                  "env": [
+                    {
+                      "name": "FIREBASE_PROJECT",
+                      "value": "tafsir-simplified-6b262"
+                    },
+                    {
+                      "name": "GCP_INFRASTRUCTURE_PROJECT",
+                      "value": "tafsir-simplified"
+                    },
+                    {
+                      "name": "GCP_LOCATION",
+                      "value": "us-central1"
+                    },
+                    {
+                      "name": "GEMINI_MODEL_ID",
+                      "value": "gemini-2.5-flash"
+                    },
+                    {
+                      "name": "INDEX_ENDPOINT_ID",
+                      "value": "3478417184655409152"
+                    },
+                    {
+                      "name": "DEPLOYED_INDEX_ID",
+                      "value": "deployed_tafsir_sliding_1760263278167"
+                    },
+                    {
+                      "name": "VECTOR_INDEX_ID",
+                      "value": "5746296256385253376"
+                    },
+                    {
+                      "name": "GCS_BUCKET_NAME",
+                      "value": "tafsir-simplified-sources"
+                    },
+                    {
+                      "name": "FIREBASE_SECRET_FULL_PATH",
+                      "value": "projects/612616741510/secrets/firebase-sa-key/versions/latest"
+                    }
+                  ],
+                  "resources": {
+                    "limits": {
+                      "cpu": "2000m",
+                      "memory": "4Gi"
+                    }
+                  },
+                  "startupProbe": {
+                    "timeoutSeconds": 240,
+                    "periodSeconds": 240,
+                    "failureThreshold": 1,
+                    "tcpSocket": {
+                      "port": 8080
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "traffic": [
+            {
+              "percent": 100,
+              "latestRevision": true
+            }
+          ]
+        },
+        "status": {
+          "observedGeneration": 138,
+          "conditions": [
+            {
+              "type": "Ready",
+              "status": "True",
+              "lastTransitionTime": "2025-10-24T20:14:07.787401Z"
+            },
+            {
+              "type": "ConfigurationsReady",
+              "status": "True",
+              "lastTransitionTime": "2025-10-24T20:14:03.892849Z"
+            },
+            {
+              "type": "RoutesReady",
+              "status": "True",
+              "lastTransitionTime": "2025-10-24T20:14:07.744725Z"
+            }
+          ],
+          "latestReadyRevisionName": "tafsir-backend-00138-c6d",
+          "latestCreatedRevisionName": "tafsir-backend-00138-c6d",
+          "traffic": [
+            {
+              "revisionName": "tafsir-backend-00138-c6d",
+              "percent": 100,
+              "latestRevision": true
+            }
+          ],
+          "url": "https://tafsir-backend-vg7kshbegq-uc.a.run.app",
+          "address": {
+            "url": "https://tafsir-backend-vg7kshbegq-uc.a.run.app"
+          }
+        },
+        "@type": "type.googleapis.com/google.cloud.run.v1.Service"
+      }
+    },
+    "insertId": "vnj7rydpww8",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "revision_name": "",
+        "configuration_name": "",
+        "location": "us-central1",
+        "project_id": "tafsir-simplified",
+        "service_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:14:07.802418Z",
+    "severity": "INFO",
+    "logName": "projects/tafsir-simplified/logs/cloudaudit.googleapis.com%2Fsystem_event",
+    "receiveTimestamp": "2025-10-24T20:14:08.610445861Z"
+  },
+  {
+    "insertId": "68fbde860009c956ed29c6a9",
+    "httpRequest": {
+      "requestMethod": "OPTIONS",
+      "requestUrl": "https://tafsir-backend-612616741510.us-central1.run.app/get_profile",
+      "requestSize": "771",
+      "status": 200,
+      "responseSize": "393",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+      "remoteIp": "140.209.216.34",
+      "referer": "https://tafsir-frontend-612616741510.us-central1.run.app/",
+      "serverIp": "34.143.72.2",
+      "latency": "32.141794869s",
+      "protocol": "HTTP/1.1"
+    },
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "configuration_name": "tafsir-backend",
+        "location": "us-central1",
+        "revision_name": "tafsir-backend-00138-c6d",
+        "project_id": "tafsir-simplified",
+        "service_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:15:34.498177Z",
+    "severity": "INFO",
+    "labels": {
+      "instanceId": "0069c7a9887d1263ed04794d7b172eaf6baa318cdb18c5ad2110fdf704d662f5c62c8aad6f37dfba816a2c99d8ae2c2d9718aa83561e179e4c2922dcfa0daae407dba28765607f21d4c709028df25b"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Frequests",
+    "trace": "projects/tafsir-simplified/traces/ba320faaa75067ff79b4e0c9d4a3356c",
+    "receiveTimestamp": "2025-10-24T20:16:06.644106496Z",
+    "spanId": "9afcfcc7ec079fb2",
+    "traceSampled": true
+  },
+  {
+    "textPayload": "The CrossEncoder `automodel_args` argument was renamed and is now deprecated, please use `model_kwargs` instead.",
+    "insertId": "68fbde8600076bad62604fea",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "location": "us-central1",
+        "configuration_name": "tafsir-backend",
+        "project_id": "tafsir-simplified",
+        "service_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00138-c6d"
+      }
+    },
+    "timestamp": "2025-10-24T20:16:06.486317Z",
+    "labels": {
+      "instanceId": "0069c7a9887d1263ed04794d7b172eaf6baa318cdb18c5ad2110fdf704d662f5c62c8aad6f37dfba816a2c99d8ae2c2d9718aa83561e179e4c2922dcfa0daae407dba28765607f21d4c709028df25b"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2025-10-24T20:16:06.491754889Z"
+  },
+  {
+    "insertId": "68fbde86000df6fe74e375a9",
+    "httpRequest": {
+      "requestMethod": "GET",
+      "requestUrl": "https://tafsir-backend-612616741510.us-central1.run.app/get_profile",
+      "requestSize": "1754",
+      "status": 200,
+      "responseSize": "333",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+      "remoteIp": "140.209.216.34",
+      "referer": "https://tafsir-frontend-612616741510.us-central1.run.app/",
+      "serverIp": "34.143.72.2",
+      "latency": "0.079345619s",
+      "protocol": "HTTP/1.1"
+    },
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "configuration_name": "tafsir-backend",
+        "location": "us-central1",
+        "service_name": "tafsir-backend",
+        "project_id": "tafsir-simplified",
+        "revision_name": "tafsir-backend-00138-c6d"
+      }
+    },
+    "timestamp": "2025-10-24T20:16:06.834439Z",
+    "severity": "INFO",
+    "labels": {
+      "instanceId": "0069c7a9887d1263ed04794d7b172eaf6baa318cdb18c5ad2110fdf704d662f5c62c8aad6f37dfba816a2c99d8ae2c2d9718aa83561e179e4c2922dcfa0daae407dba28765607f21d4c709028df25b"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Frequests",
+    "trace": "projects/tafsir-simplified/traces/66c80e33a78bc88079b4e0c9d4a33fcb",
+    "receiveTimestamp": "2025-10-24T20:16:06.977042448Z",
+    "spanId": "570fcf7bae33bf8d",
+    "traceSampled": true
+  },
+  {
+    "insertId": "68fbde8700015b0738023ef2",
+    "httpRequest": {
+      "requestMethod": "GET",
+      "requestUrl": "https://tafsir-backend-612616741510.us-central1.run.app/suggestions",
+      "requestSize": "796",
+      "status": 200,
+      "responseSize": "923",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+      "remoteIp": "140.209.216.34",
+      "referer": "https://tafsir-frontend-612616741510.us-central1.run.app/",
+      "serverIp": "34.143.72.2",
+      "latency": "0.003195649s",
+      "protocol": "HTTP/1.1"
+    },
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "configuration_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00138-c6d",
+        "project_id": "tafsir-simplified",
+        "location": "us-central1",
+        "service_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:16:07.083950Z",
+    "severity": "INFO",
+    "labels": {
+      "instanceId": "0069c7a9887d1263ed04794d7b172eaf6baa318cdb18c5ad2110fdf704d662f5c62c8aad6f37dfba816a2c99d8ae2c2d9718aa83561e179e4c2922dcfa0daae407dba28765607f21d4c709028df25b"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Frequests",
+    "trace": "projects/tafsir-simplified/traces/b33097039fb9037b79b4e0c9d4a33d5a",
+    "receiveTimestamp": "2025-10-24T20:16:07.309768478Z",
+    "spanId": "81e7189ac1b38705"
+  },
+  {
+    "insertId": "68fbdeab000485b21d3a152b",
+    "httpRequest": {
+      "requestMethod": "OPTIONS",
+      "requestUrl": "https://tafsir-backend-612616741510.us-central1.run.app/tafsir",
+      "requestSize": "780",
+      "status": 200,
+      "responseSize": "402",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+      "remoteIp": "140.209.216.34",
+      "referer": "https://tafsir-frontend-612616741510.us-central1.run.app/",
+      "serverIp": "34.143.72.2",
+      "latency": "0.003486329s",
+      "protocol": "HTTP/1.1"
+    },
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "project_id": "tafsir-simplified",
+        "revision_name": "tafsir-backend-00138-c6d",
+        "configuration_name": "tafsir-backend",
+        "location": "us-central1",
+        "service_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:16:43.291531Z",
+    "severity": "INFO",
+    "labels": {
+      "instanceId": "0069c7a9887d1263ed04794d7b172eaf6baa318cdb18c5ad2110fdf704d662f5c62c8aad6f37dfba816a2c99d8ae2c2d9718aa83561e179e4c2922dcfa0daae407dba28765607f21d4c709028df25b"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Frequests",
+    "trace": "projects/tafsir-simplified/traces/d62af2b6cc8d2fdc3b1def21edf84223",
+    "receiveTimestamp": "2025-10-24T20:16:43.298136591Z",
+    "spanId": "f4849fa38049f60a",
+    "traceSampled": true
+  },
+  {
+    "insertId": "68fbded2000a5bdd5d8da205",
+    "httpRequest": {
+      "requestMethod": "POST",
+      "requestUrl": "https://tafsir-backend-612616741510.us-central1.run.app/tafsir",
+      "requestSize": "1852",
+      "status": 500,
+      "responseSize": "287",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+      "remoteIp": "140.209.216.34",
+      "referer": "https://tafsir-frontend-612616741510.us-central1.run.app/",
+      "serverIp": "34.143.72.2",
+      "latency": "39.218620248s",
+      "protocol": "HTTP/1.1"
+    },
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "revision_name": "tafsir-backend-00138-c6d",
+        "location": "us-central1",
+        "service_name": "tafsir-backend",
+        "project_id": "tafsir-simplified",
+        "configuration_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:16:43.458849Z",
+    "severity": "ERROR",
+    "labels": {
+      "instanceId": "0069c7a9887d1263ed04794d7b172eaf6baa318cdb18c5ad2110fdf704d662f5c62c8aad6f37dfba816a2c99d8ae2c2d9718aa83561e179e4c2922dcfa0daae407dba28765607f21d4c709028df25b"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Frequests",
+    "trace": "projects/tafsir-simplified/traces/2b650471c7f173fa3b1def21edf84a67",
+    "receiveTimestamp": "2025-10-24T20:17:22.681438428Z",
+    "spanId": "0c9d4e0496c38afb"
+  },
+  {
+    "insertId": "68fbded2000dc73507713612",
+    "httpRequest": {
+      "requestMethod": "OPTIONS",
+      "requestUrl": "https://tafsir-backend-612616741510.us-central1.run.app/query-history",
+      "requestSize": "786",
+      "status": 200,
+      "responseSize": "413",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+      "remoteIp": "140.209.216.34",
+      "referer": "https://tafsir-frontend-612616741510.us-central1.run.app/",
+      "serverIp": "34.143.72.2",
+      "latency": "0.003164118s",
+      "protocol": "HTTP/1.1"
+    },
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "revision_name": "tafsir-backend-00138-c6d",
+        "project_id": "tafsir-simplified",
+        "location": "us-central1",
+        "service_name": "tafsir-backend",
+        "configuration_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:17:22.897747Z",
+    "severity": "INFO",
+    "labels": {
+      "instanceId": "0069c7a9887d1263ed04794d7b172eaf6baa318cdb18c5ad2110fdf704d662f5c62c8aad6f37dfba816a2c99d8ae2c2d9718aa83561e179e4c2922dcfa0daae407dba28765607f21d4c709028df25b"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Frequests",
+    "trace": "projects/tafsir-simplified/traces/6b35d7483211dbbb3b1def21edf84901",
+    "receiveTimestamp": "2025-10-24T20:17:23.015604924Z",
+    "spanId": "40a58b257359a54e",
+    "traceSampled": true
+  },
+  {
+    "insertId": "68fbded300023cbf79b14d7e",
+    "httpRequest": {
+      "requestMethod": "POST",
+      "requestUrl": "https://tafsir-backend-612616741510.us-central1.run.app/query-history",
+      "requestSize": "1897",
+      "status": 201,
+      "responseSize": "295",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+      "remoteIp": "140.209.216.34",
+      "referer": "https://tafsir-frontend-612616741510.us-central1.run.app/",
+      "serverIp": "34.143.72.2",
+      "latency": "0.069115897s",
+      "protocol": "HTTP/1.1"
+    },
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "project_id": "tafsir-simplified",
+        "location": "us-central1",
+        "service_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00138-c6d",
+        "configuration_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:17:23.076047Z",
+    "severity": "INFO",
+    "labels": {
+      "instanceId": "0069c7a9887d1263ed04794d7b172eaf6baa318cdb18c5ad2110fdf704d662f5c62c8aad6f37dfba816a2c99d8ae2c2d9718aa83561e179e4c2922dcfa0daae407dba28765607f21d4c709028df25b"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Frequests",
+    "trace": "projects/tafsir-simplified/traces/dc01aad2c1b66a7c3b1def21edf8466d",
+    "receiveTimestamp": "2025-10-24T20:17:23.348748684Z",
+    "spanId": "71797c7f33eae488"
+  },
+  {
+    "insertId": "68fbdf24000803cf92ef8c35",
+    "httpRequest": {
+      "requestMethod": "OPTIONS",
+      "requestUrl": "https://tafsir-backend-612616741510.us-central1.run.app/tafsir",
+      "requestSize": "780",
+      "status": 200,
+      "responseSize": "402",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+      "remoteIp": "140.209.216.34",
+      "referer": "https://tafsir-frontend-612616741510.us-central1.run.app/",
+      "serverIp": "34.143.72.2",
+      "latency": "0.003734289s",
+      "protocol": "HTTP/1.1"
+    },
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "service_name": "tafsir-backend",
+        "project_id": "tafsir-simplified",
+        "location": "us-central1",
+        "revision_name": "tafsir-backend-00138-c6d",
+        "configuration_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:18:44.520017Z",
+    "severity": "INFO",
+    "labels": {
+      "instanceId": "0069c7a9887d1263ed04794d7b172eaf6baa318cdb18c5ad2110fdf704d662f5c62c8aad6f37dfba816a2c99d8ae2c2d9718aa83561e179e4c2922dcfa0daae407dba28765607f21d4c709028df25b"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Frequests",
+    "trace": "projects/tafsir-simplified/traces/a24894919d6c849a3b1def21edf8445e",
+    "receiveTimestamp": "2025-10-24T20:18:44.527556938Z",
+    "spanId": "092f29680fde5d82",
+    "traceSampled": true
+  },
+  {
+    "insertId": "68fbdf380001f0956c664819",
+    "httpRequest": {
+      "requestMethod": "POST",
+      "requestUrl": "https://tafsir-backend-612616741510.us-central1.run.app/tafsir",
+      "requestSize": "1842",
+      "status": 200,
+      "responseSize": "12149",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+      "remoteIp": "140.209.216.34",
+      "referer": "https://tafsir-frontend-612616741510.us-central1.run.app/",
+      "serverIp": "34.143.72.2",
+      "latency": "19.419432780s",
+      "protocol": "HTTP/1.1"
+    },
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "service_name": "tafsir-backend",
+        "project_id": "tafsir-simplified",
+        "revision_name": "tafsir-backend-00138-c6d",
+        "location": "us-central1",
+        "configuration_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:18:44.706372Z",
+    "severity": "INFO",
+    "labels": {
+      "instanceId": "0069c7a9887d1263ed04794d7b172eaf6baa318cdb18c5ad2110fdf704d662f5c62c8aad6f37dfba816a2c99d8ae2c2d9718aa83561e179e4c2922dcfa0daae407dba28765607f21d4c709028df25b"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Frequests",
+    "trace": "projects/tafsir-simplified/traces/82ea99be8cf020ea3b1def21edf84b14",
+    "receiveTimestamp": "2025-10-24T20:19:04.131882003Z",
+    "spanId": "bef69fd006dae0d5"
+  },
+  {
+    "insertId": "68fbdf3800055e89b8ba2ed2",
+    "httpRequest": {
+      "requestMethod": "OPTIONS",
+      "requestUrl": "https://tafsir-backend-612616741510.us-central1.run.app/query-history",
+      "requestSize": "787",
+      "status": 200,
+      "responseSize": "413",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+      "remoteIp": "140.209.216.34",
+      "referer": "https://tafsir-frontend-612616741510.us-central1.run.app/",
+      "serverIp": "34.143.72.2",
+      "latency": "0.002807450s",
+      "protocol": "HTTP/1.1"
+    },
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "project_id": "tafsir-simplified",
+        "revision_name": "tafsir-backend-00138-c6d",
+        "location": "us-central1",
+        "configuration_name": "tafsir-backend",
+        "service_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:19:04.347794Z",
+    "severity": "INFO",
+    "labels": {
+      "instanceId": "0069c7a9887d1263ed04794d7b172eaf6baa318cdb18c5ad2110fdf704d662f5c62c8aad6f37dfba816a2c99d8ae2c2d9718aa83561e179e4c2922dcfa0daae407dba28765607f21d4c709028df25b"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Frequests",
+    "trace": "projects/tafsir-simplified/traces/e57e8574d689575a3b1def21edf84aa0",
+    "receiveTimestamp": "2025-10-24T20:19:04.464143494Z",
+    "spanId": "9d0ea551507913fe",
+    "traceSampled": true
+  },
+  {
+    "insertId": "68fbdf38000575ed9ace5463",
+    "httpRequest": {
+      "requestMethod": "OPTIONS",
+      "requestUrl": "https://tafsir-backend-612616741510.us-central1.run.app/annotations/verse/Al-Isra/23",
+      "requestSize": "789",
+      "status": 200,
+      "responseSize": "370",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+      "remoteIp": "140.209.216.34",
+      "referer": "https://tafsir-frontend-612616741510.us-central1.run.app/",
+      "serverIp": "34.143.72.2",
+      "latency": "0.002936519s",
+      "protocol": "HTTP/1.1"
+    },
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "project_id": "tafsir-simplified",
+        "revision_name": "tafsir-backend-00138-c6d",
+        "location": "us-central1",
+        "configuration_name": "tafsir-backend",
+        "service_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:19:04.353630Z",
+    "severity": "INFO",
+    "labels": {
+      "instanceId": "0069c7a9887d1263ed04794d7b172eaf6baa318cdb18c5ad2110fdf704d662f5c62c8aad6f37dfba816a2c99d8ae2c2d9718aa83561e179e4c2922dcfa0daae407dba28765607f21d4c709028df25b"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Frequests",
+    "trace": "projects/tafsir-simplified/traces/c58576ff2b2a46123b1def21edf84156",
+    "receiveTimestamp": "2025-10-24T20:19:04.464143494Z",
+    "spanId": "372043df2a6e8636"
+  },
+  {
+    "insertId": "68fbdf3800057ab4f83daf4d",
+    "httpRequest": {
+      "requestMethod": "OPTIONS",
+      "requestUrl": "https://tafsir-backend-612616741510.us-central1.run.app/annotations/verse/Al-Isra/24",
+      "requestSize": "788",
+      "status": 200,
+      "responseSize": "370",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+      "remoteIp": "140.209.216.34",
+      "referer": "https://tafsir-frontend-612616741510.us-central1.run.app/",
+      "serverIp": "34.143.72.2",
+      "latency": "0.002694860s",
+      "protocol": "HTTP/1.1"
+    },
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "revision_name": "tafsir-backend-00138-c6d",
+        "service_name": "tafsir-backend",
+        "project_id": "tafsir-simplified",
+        "location": "us-central1",
+        "configuration_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:19:04.354883Z",
+    "severity": "INFO",
+    "labels": {
+      "instanceId": "0069c7a9887d1263ed04794d7b172eaf6baa318cdb18c5ad2110fdf704d662f5c62c8aad6f37dfba816a2c99d8ae2c2d9718aa83561e179e4c2922dcfa0daae407dba28765607f21d4c709028df25b"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Frequests",
+    "trace": "projects/tafsir-simplified/traces/a5592e867bc40ec63b1def21edf8480c",
+    "receiveTimestamp": "2025-10-24T20:19:04.464143494Z",
+    "spanId": "8e99e351c39a21e1"
+  },
+  {
+    "insertId": "68fbdf380008f3215dd4d95f",
+    "httpRequest": {
+      "requestMethod": "POST",
+      "requestUrl": "https://tafsir-backend-612616741510.us-central1.run.app/query-history",
+      "requestSize": "1885",
+      "status": 201,
+      "responseSize": "295",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+      "remoteIp": "140.209.216.34",
+      "referer": "https://tafsir-frontend-612616741510.us-central1.run.app/",
+      "serverIp": "34.143.72.2",
+      "latency": "0.063288201s",
+      "protocol": "HTTP/1.1"
+    },
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "location": "us-central1",
+        "service_name": "tafsir-backend",
+        "configuration_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00138-c6d",
+        "project_id": "tafsir-simplified"
+      }
+    },
+    "timestamp": "2025-10-24T20:19:04.521843Z",
+    "severity": "INFO",
+    "labels": {
+      "instanceId": "0069c7a9887d1263ed04794d7b172eaf6baa318cdb18c5ad2110fdf704d662f5c62c8aad6f37dfba816a2c99d8ae2c2d9718aa83561e179e4c2922dcfa0daae407dba28765607f21d4c709028df25b"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Frequests",
+    "trace": "projects/tafsir-simplified/traces/7131a1d93a83c81c3b1def21edf8421d",
+    "receiveTimestamp": "2025-10-24T20:19:04.796939380Z",
+    "spanId": "f01bd07a91f85756"
+  },
+  {
+    "insertId": "68fbdf38000a5e28b9d1d36d",
+    "httpRequest": {
+      "requestMethod": "GET",
+      "requestUrl": "https://tafsir-backend-612616741510.us-central1.run.app/annotations/verse/Al-Isra/23",
+      "requestSize": "1770",
+      "status": 200,
+      "responseSize": "279",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+      "remoteIp": "140.209.216.34",
+      "referer": "https://tafsir-frontend-612616741510.us-central1.run.app/",
+      "serverIp": "34.143.72.2",
+      "latency": "0.144802549s",
+      "protocol": "HTTP/1.1"
+    },
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "project_id": "tafsir-simplified",
+        "revision_name": "tafsir-backend-00138-c6d",
+        "configuration_name": "tafsir-backend",
+        "location": "us-central1",
+        "service_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:19:04.533489Z",
+    "severity": "INFO",
+    "labels": {
+      "instanceId": "0069c7a9887d1263ed04794d7b172eaf6baa318cdb18c5ad2110fdf704d662f5c62c8aad6f37dfba816a2c99d8ae2c2d9718aa83561e179e4c2922dcfa0daae407dba28765607f21d4c709028df25b"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Frequests",
+    "trace": "projects/tafsir-simplified/traces/cda30b899f27c0e13b1def21edf848d3",
+    "receiveTimestamp": "2025-10-24T20:19:04.796939380Z",
+    "spanId": "a1abfcd17ec13488"
+  },
+  {
+    "insertId": "68fbdf380009201efbe1bba4",
+    "httpRequest": {
+      "requestMethod": "GET",
+      "requestUrl": "https://tafsir-backend-612616741510.us-central1.run.app/annotations/verse/Al-Isra/24",
+      "requestSize": "1770",
+      "status": 200,
+      "responseSize": "279",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+      "remoteIp": "140.209.216.34",
+      "referer": "https://tafsir-frontend-612616741510.us-central1.run.app/",
+      "serverIp": "34.143.72.2",
+      "latency": "0.053418222s",
+      "protocol": "HTTP/1.1"
+    },
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "service_name": "tafsir-backend",
+        "project_id": "tafsir-simplified",
+        "revision_name": "tafsir-backend-00138-c6d",
+        "configuration_name": "tafsir-backend",
+        "location": "us-central1"
+      }
+    },
+    "timestamp": "2025-10-24T20:19:04.543284Z",
+    "severity": "INFO",
+    "labels": {
+      "instanceId": "0069c7a9887d1263ed04794d7b172eaf6baa318cdb18c5ad2110fdf704d662f5c62c8aad6f37dfba816a2c99d8ae2c2d9718aa83561e179e4c2922dcfa0daae407dba28765607f21d4c709028df25b"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Frequests",
+    "trace": "projects/tafsir-simplified/traces/18c29ca80ee507143b1def21edf84f89",
+    "receiveTimestamp": "2025-10-24T20:19:04.796939380Z",
+    "spanId": "1cb82797e5884c63"
+  },
+  {
+    "insertId": "68fbdfcd0008bdfd0b52645c",
+    "httpRequest": {
+      "requestMethod": "OPTIONS",
+      "requestUrl": "https://tafsir-backend-612616741510.us-central1.run.app/tafsir",
+      "requestSize": "780",
+      "status": 200,
+      "responseSize": "402",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+      "remoteIp": "140.209.216.34",
+      "referer": "https://tafsir-frontend-612616741510.us-central1.run.app/",
+      "serverIp": "34.143.72.2",
+      "latency": "0.012411807s",
+      "protocol": "HTTP/1.1"
+    },
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "configuration_name": "tafsir-backend",
+        "service_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00138-c6d",
+        "location": "us-central1",
+        "project_id": "tafsir-simplified"
+      }
+    },
+    "timestamp": "2025-10-24T20:21:33.558859Z",
+    "severity": "INFO",
+    "labels": {
+      "instanceId": "0069c7a9887d1263ed04794d7b172eaf6baa318cdb18c5ad2110fdf704d662f5c62c8aad6f37dfba816a2c99d8ae2c2d9718aa83561e179e4c2922dcfa0daae407dba28765607f21d4c709028df25b"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Frequests",
+    "trace": "projects/tafsir-simplified/traces/fdecee9a9d15a2e437045b1d1e0894c7",
+    "receiveTimestamp": "2025-10-24T20:21:33.576011299Z",
+    "spanId": "b5ab4295bdd59fcf",
+    "traceSampled": true
+  },
+  {
+    "insertId": "68fbdff200054092dde206ad",
+    "httpRequest": {
+      "requestMethod": "POST",
+      "requestUrl": "https://tafsir-backend-612616741510.us-central1.run.app/tafsir",
+      "requestSize": "1859",
+      "status": 500,
+      "responseSize": "287",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+      "remoteIp": "140.209.216.34",
+      "referer": "https://tafsir-frontend-612616741510.us-central1.run.app/",
+      "serverIp": "34.143.72.2",
+      "latency": "36.592501076s",
+      "protocol": "HTTP/1.1"
+    },
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "project_id": "tafsir-simplified",
+        "configuration_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00138-c6d",
+        "location": "us-central1",
+        "service_name": "tafsir-backend"
+      }
+    },
+    "timestamp": "2025-10-24T20:21:33.750154Z",
+    "severity": "ERROR",
+    "labels": {
+      "instanceId": "0069c7a9887d1263ed04794d7b172eaf6baa318cdb18c5ad2110fdf704d662f5c62c8aad6f37dfba816a2c99d8ae2c2d9718aa83561e179e4c2922dcfa0daae407dba28765607f21d4c709028df25b"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Frequests",
+    "trace": "projects/tafsir-simplified/traces/c270926b77a8ce9437045b1d1e0890be",
+    "receiveTimestamp": "2025-10-24T20:22:10.348955882Z",
+    "spanId": "57f03068b7873693"
+  },
+  {
+    "insertId": "68fbdff2000843a4cbfdade9",
+    "httpRequest": {
+      "requestMethod": "OPTIONS",
+      "requestUrl": "https://tafsir-backend-612616741510.us-central1.run.app/query-history",
+      "requestSize": "830",
+      "status": 200,
+      "responseSize": "413",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+      "remoteIp": "140.209.216.34",
+      "referer": "https://tafsir-frontend-612616741510.us-central1.run.app/",
+      "serverIp": "34.143.72.2",
+      "latency": "0.003133710s",
+      "protocol": "HTTP/1.1"
+    },
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "location": "us-central1",
+        "configuration_name": "tafsir-backend",
+        "revision_name": "tafsir-backend-00138-c6d",
+        "service_name": "tafsir-backend",
+        "project_id": "tafsir-simplified"
+      }
+    },
+    "timestamp": "2025-10-24T20:22:10.537088Z",
+    "severity": "INFO",
+    "labels": {
+      "instanceId": "0069c7a9887d1263ed04794d7b172eaf6baa318cdb18c5ad2110fdf704d662f5c62c8aad6f37dfba816a2c99d8ae2c2d9718aa83561e179e4c2922dcfa0daae407dba28765607f21d4c709028df25b"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Frequests",
+    "trace": "projects/tafsir-simplified/traces/0cc8054a38e9a80837045b1d1e089630",
+    "receiveTimestamp": "2025-10-24T20:22:10.683584045Z",
+    "spanId": "3e2c69ff9b74d820",
+    "traceSampled": true
+  },
+  {
+    "insertId": "68fbdff2000b9a113d359e00",
+    "httpRequest": {
+      "requestMethod": "POST",
+      "requestUrl": "https://tafsir-backend-612616741510.us-central1.run.app/query-history",
+      "requestSize": "1947",
+      "status": 201,
+      "responseSize": "295",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+      "remoteIp": "140.209.216.34",
+      "referer": "https://tafsir-frontend-612616741510.us-central1.run.app/",
+      "serverIp": "34.143.72.2",
+      "latency": "0.057346619s",
+      "protocol": "HTTP/1.1"
+    },
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "service_name": "tafsir-backend",
+        "configuration_name": "tafsir-backend",
+        "project_id": "tafsir-simplified",
+        "revision_name": "tafsir-backend-00138-c6d",
+        "location": "us-central1"
+      }
+    },
+    "timestamp": "2025-10-24T20:22:10.701298Z",
+    "severity": "INFO",
+    "labels": {
+      "instanceId": "0069c7a9887d1263ed04794d7b172eaf6baa318cdb18c5ad2110fdf704d662f5c62c8aad6f37dfba816a2c99d8ae2c2d9718aa83561e179e4c2922dcfa0daae407dba28765607f21d4c709028df25b"
+    },
+    "logName": "projects/tafsir-simplified/logs/run.googleapis.com%2Frequests",
+    "trace": "projects/tafsir-simplified/traces/db98d31f5f99332237045b1d1e089e2e",
+    "receiveTimestamp": "2025-10-24T20:22:11.013719806Z",
+    "spanId": "c4cd0a488b118640"
+  }
+]

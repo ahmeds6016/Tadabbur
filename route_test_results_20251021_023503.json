@@ -1,0 +1,58 @@
+[
+  {
+    "status": "HTTP_ERROR",
+    "error": "HTTP 500",
+    "duration": 0.27608609199523926,
+    "test_name": "Ayat al-Kursi (Single verse in al-Qurtubi coverage)",
+    "query": "2:255",
+    "expected_route": "ROUTE 2"
+  },
+  {
+    "status": "HTTP_ERROR",
+    "error": "HTTP 500",
+    "duration": 0.18931245803833008,
+    "test_name": "Al-Fatiha first verse (Single verse)",
+    "query": "1:1",
+    "expected_route": "ROUTE 2"
+  },
+  {
+    "status": "HTTP_ERROR",
+    "error": "HTTP 500",
+    "duration": 3.4449923038482666,
+    "test_name": "Full Al-Fatiha (Verse range)",
+    "query": "1:1-7",
+    "expected_route": "ROUTE 2"
+  },
+  {
+    "status": "HTTP_ERROR",
+    "error": "HTTP 500",
+    "duration": 3.049055814743042,
+    "test_name": "Al-Baqarah 1-5 (Verse range)",
+    "query": "2:1-5",
+    "expected_route": "ROUTE 2"
+  },
+  {
+    "status": "HTTP_ERROR",
+    "error": "HTTP 500",
+    "duration": 2.645825147628784,
+    "test_name": "Ya-Sin 1-7 (Outside al-Qurtubi)",
+    "query": "36:1-7",
+    "expected_route": "ROUTE 2"
+  },
+  {
+    "status": "HTTP_ERROR",
+    "error": "HTTP 500",
+    "duration": 2.815673351287842,
+    "test_name": "PROBLEMATIC: Surah 3:26-27",
+    "query": "3:26-27",
+    "expected_route": "ROUTE 2"
+  },
+  {
+    "status": "HTTP_ERROR",
+    "error": "HTTP 500",
+    "duration": 0.1680912971496582,
+    "test_name": "PROBLEMATIC: Surah 4:1 (Boundary)",
+    "query": "4:1",
+    "expected_route": "ROUTE 2"
+  }
+]

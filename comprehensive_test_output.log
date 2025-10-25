@@ -1,0 +1,116 @@
+
+####################################################################################################
+# COMPREHENSIVE ROUTES 1 & 2 TEST SUITE
+# Using /debug/test endpoint for full execution traces
+####################################################################################################
+
+====================================================================================================
+🧪 TEST: Ayat al-Kursi (Single verse in al-Qurtubi coverage)
+📝 QUERY: 2:255
+🎯 EXPECTED ROUTE: ROUTE 2
+====================================================================================================
+
+❌ HTTP ERROR: 500
+Response: {"actual_execution":true,"approach":"tafsir","error":"Gemini API error: 400","original_query":"2:255","processing_steps":[{"approach":"tafsir","query":"2:255","step":"1. Initial Setup","timestamp":"2025-10-21T02:34:43.950619","user_id":"debug_user"},{"cache_hit":false,"cache_key_hash":"6311456315279329","cache_size":5,"step":"2. Cache Check","timestamp":"2025-10-21T02:34:43.950710"},{"confidence":"95%","metadata_type":null,"query_type":"direct_verse","step":"3. Query Classification","timestamp":"2025-10-21T02:34:43.950794","verse_ref":"2:255"},{"has_range":true,"is_multi_verse":false,"range":"2:255-255","step":"4. Verse Range Extraction","timestamp":"2025-10-21T02:34:43.950817"},{"route":"ROUTE 2: Direct Verse Query (Direct lookup \u2192 AI formatting)","step":"5. Route Determination","timestamp":"2025-10-21T02:34:43.950824","will_use_vector_search":false},{"route":"Direct Verse Query","step":"ROUTE 2 EXECUTION START","timestamp":"2025-10-21T02:34:43.950828"},{"is_valid":true,"step":"6
+
+====================================================================================================
+🧪 TEST: Al-Fatiha first verse (Single verse)
+📝 QUERY: 1:1
+🎯 EXPECTED ROUTE: ROUTE 2
+====================================================================================================
+
+❌ HTTP ERROR: 500
+Response: {"actual_execution":true,"approach":"tafsir","error":"Gemini API error: 400","original_query":"1:1","processing_steps":[{"approach":"tafsir","query":"1:1","step":"1. Initial Setup","timestamp":"2025-10-21T02:34:45.196144","user_id":"debug_user"},{"cache_hit":false,"cache_key_hash":"235a8128018e7545","cache_size":5,"step":"2. Cache Check","timestamp":"2025-10-21T02:34:45.196222"},{"confidence":"95%","metadata_type":null,"query_type":"direct_verse","step":"3. Query Classification","timestamp":"2025-10-21T02:34:45.196281","verse_ref":"1:1"},{"has_range":true,"is_multi_verse":false,"range":"1:1-1","step":"4. Verse Range Extraction","timestamp":"2025-10-21T02:34:45.196300"},{"route":"ROUTE 2: Direct Verse Query (Direct lookup \u2192 AI formatting)","step":"5. Route Determination","timestamp":"2025-10-21T02:34:45.196305","will_use_vector_search":false},{"route":"Direct Verse Query","step":"ROUTE 2 EXECUTION START","timestamp":"2025-10-21T02:34:45.196309"},{"is_valid":true,"step":"6. Verse Va
+
+====================================================================================================
+🧪 TEST: Full Al-Fatiha (Verse range)
+📝 QUERY: 1:1-7
+🎯 EXPECTED ROUTE: ROUTE 2
+====================================================================================================
+
+❌ HTTP ERROR: 500
+Response: {"actual_execution":true,"approach":"tafsir","error":"Gemini API error: 400","original_query":"1:1-7","processing_steps":[{"approach":"tafsir","query":"1:1-7","step":"1. Initial Setup","timestamp":"2025-10-21T02:34:46.375455","user_id":"debug_user"},{"cache_hit":false,"cache_key_hash":"c37188f8516a1427","cache_size":5,"step":"2. Cache Check","timestamp":"2025-10-21T02:34:46.375517"},{"confidence":"95%","metadata_type":null,"query_type":"direct_verse","step":"3. Query Classification","timestamp":"2025-10-21T02:34:46.375583","verse_ref":"1:1"},{"has_range":true,"is_multi_verse":true,"range":"1:1-7","step":"4. Verse Range Extraction","timestamp":"2025-10-21T02:34:46.375599"},{"route":"ROUTE 2: Direct Verse Query (Direct lookup \u2192 AI formatting)","step":"5. Route Determination","timestamp":"2025-10-21T02:34:46.375605","will_use_vector_search":false},{"route":"Direct Verse Query","step":"ROUTE 2 EXECUTION START","timestamp":"2025-10-21T02:34:46.375609"},{"is_valid":true,"step":"6. Verse
+
+====================================================================================================
+🧪 TEST: Al-Baqarah 1-5 (Verse range)
+📝 QUERY: 2:1-5
+🎯 EXPECTED ROUTE: ROUTE 2
+====================================================================================================
+
+❌ HTTP ERROR: 500
+Response: {"actual_execution":true,"approach":"tafsir","error":"Gemini API error: 400","original_query":"2:1-5","processing_steps":[{"approach":"tafsir","query":"2:1-5","step":"1. Initial Setup","timestamp":"2025-10-21T02:34:50.820534","user_id":"debug_user"},{"cache_hit":false,"cache_key_hash":"71908c81234febe7","cache_size":5,"step":"2. Cache Check","timestamp":"2025-10-21T02:34:50.820602"},{"confidence":"95%","metadata_type":null,"query_type":"direct_verse","step":"3. Query Classification","timestamp":"2025-10-21T02:34:50.820658","verse_ref":"2:1"},{"has_range":true,"is_multi_verse":true,"range":"2:1-5","step":"4. Verse Range Extraction","timestamp":"2025-10-21T02:34:50.820672"},{"route":"ROUTE 2: Direct Verse Query (Direct lookup \u2192 AI formatting)","step":"5. Route Determination","timestamp":"2025-10-21T02:34:50.820677","will_use_vector_search":false},{"route":"Direct Verse Query","step":"ROUTE 2 EXECUTION START","timestamp":"2025-10-21T02:34:50.820680"},{"is_valid":true,"step":"6. Verse
+
+====================================================================================================
+🧪 TEST: Ya-Sin 1-7 (Outside al-Qurtubi)
+📝 QUERY: 36:1-7
+🎯 EXPECTED ROUTE: ROUTE 2
+====================================================================================================
+
+❌ HTTP ERROR: 500
+Response: {"actual_execution":true,"approach":"tafsir","error":"Gemini API error: 400","original_query":"36:1-7","processing_steps":[{"approach":"tafsir","query":"36:1-7","step":"1. Initial Setup","timestamp":"2025-10-21T02:34:54.870739","user_id":"debug_user"},{"cache_hit":false,"cache_key_hash":"eb62c8fd1d815b3c","cache_size":5,"step":"2. Cache Check","timestamp":"2025-10-21T02:34:54.870798"},{"confidence":"95%","metadata_type":null,"query_type":"direct_verse","step":"3. Query Classification","timestamp":"2025-10-21T02:34:54.870856","verse_ref":"36:1"},{"has_range":true,"is_multi_verse":true,"range":"36:1-7","step":"4. Verse Range Extraction","timestamp":"2025-10-21T02:34:54.870870"},{"route":"ROUTE 2: Direct Verse Query (Direct lookup \u2192 AI formatting)","step":"5. Route Determination","timestamp":"2025-10-21T02:34:54.870876","will_use_vector_search":false},{"route":"Direct Verse Query","step":"ROUTE 2 EXECUTION START","timestamp":"2025-10-21T02:34:54.870879"},{"is_valid":true,"step":"6. V
+
+====================================================================================================
+🧪 TEST: PROBLEMATIC: Surah 3:26-27
+📝 QUERY: 3:26-27
+🎯 EXPECTED ROUTE: ROUTE 2
+====================================================================================================
+
+❌ HTTP ERROR: 500
+Response: {"actual_execution":true,"approach":"tafsir","error":"Gemini API error: 400","original_query":"3:26-27","processing_steps":[{"approach":"tafsir","query":"3:26-27","step":"1. Initial Setup","timestamp":"2025-10-21T02:34:58.517034","user_id":"debug_user"},{"cache_hit":false,"cache_key_hash":"c418ebf4d09ab67e","cache_size":5,"step":"2. Cache Check","timestamp":"2025-10-21T02:34:58.517097"},{"confidence":"95%","metadata_type":null,"query_type":"direct_verse","step":"3. Query Classification","timestamp":"2025-10-21T02:34:58.517164","verse_ref":"3:26"},{"has_range":true,"is_multi_verse":true,"range":"3:26-27","step":"4. Verse Range Extraction","timestamp":"2025-10-21T02:34:58.517179"},{"route":"ROUTE 2: Direct Verse Query (Direct lookup \u2192 AI formatting)","step":"5. Route Determination","timestamp":"2025-10-21T02:34:58.517184","will_use_vector_search":false},{"route":"Direct Verse Query","step":"ROUTE 2 EXECUTION START","timestamp":"2025-10-21T02:34:58.517188"},{"is_valid":true,"step":"6
+
+====================================================================================================
+🧪 TEST: PROBLEMATIC: Surah 4:1 (Boundary)
+📝 QUERY: 4:1
+🎯 EXPECTED ROUTE: ROUTE 2
+====================================================================================================
+
+❌ HTTP ERROR: 500
+Response: {"actual_execution":true,"approach":"tafsir","error":"Gemini API error: 400","original_query":"4:1","processing_steps":[{"approach":"tafsir","query":"4:1","step":"1. Initial Setup","timestamp":"2025-10-21T02:35:02.338684","user_id":"debug_user"},{"cache_hit":false,"cache_key_hash":"901c677bb82e0ab2","cache_size":5,"step":"2. Cache Check","timestamp":"2025-10-21T02:35:02.338760"},{"confidence":"95%","metadata_type":null,"query_type":"direct_verse","step":"3. Query Classification","timestamp":"2025-10-21T02:35:02.338839","verse_ref":"4:1"},{"has_range":true,"is_multi_verse":false,"range":"4:1-1","step":"4. Verse Range Extraction","timestamp":"2025-10-21T02:35:02.338857"},{"route":"ROUTE 2: Direct Verse Query (Direct lookup \u2192 AI formatting)","step":"5. Route Determination","timestamp":"2025-10-21T02:35:02.338863","will_use_vector_search":false},{"route":"Direct Verse Query","step":"ROUTE 2 EXECUTION START","timestamp":"2025-10-21T02:35:02.338867"},{"is_valid":true,"step":"6. Verse Va
+
+
+####################################################################################################
+# SUMMARY REPORT
+####################################################################################################
+
+TOTAL TESTS: 7
+  HTTP_ERROR: 7 (100.0%)
+
+====================================================================================================
+ISSUES FOUND:
+
+  ❌ Ayat al-Kursi (Single verse in al-Qurtubi coverage)
+     Query: 2:255
+     Status: HTTP_ERROR
+     Error: HTTP 500
+
+  ❌ Al-Fatiha first verse (Single verse)
+     Query: 1:1
+     Status: HTTP_ERROR
+     Error: HTTP 500
+
+  ❌ Full Al-Fatiha (Verse range)
+     Query: 1:1-7
+     Status: HTTP_ERROR
+     Error: HTTP 500
+
+  ❌ Al-Baqarah 1-5 (Verse range)
+     Query: 2:1-5
+     Status: HTTP_ERROR
+     Error: HTTP 500
+
+  ❌ Ya-Sin 1-7 (Outside al-Qurtubi)
+     Query: 36:1-7
+     Status: HTTP_ERROR
+     Error: HTTP 500
+
+  ❌ PROBLEMATIC: Surah 3:26-27
+     Query: 3:26-27
+     Status: HTTP_ERROR
+     Error: HTTP 500
+
+  ❌ PROBLEMATIC: Surah 4:1 (Boundary)
+     Query: 4:1
+     Status: HTTP_ERROR
+     Error: HTTP 500
+
+📄 Detailed results saved to: route_test_results_20251021_023503.json
