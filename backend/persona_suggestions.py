@@ -300,12 +300,14 @@ PERSONA_SUGGESTIONS = {
             # Advanced study and metadata queries
             "Hadith narrations about verse 2:255",
             "Cross references for verse 24:35",
+            "Related verses to 2:255",
             "Legal derivations from verse 2:282",
             "Context of revelation for verse 5:3",
             "Hadith references in verse 4:36",
             "Historical context of verse 2:256",
             "Legal rulings from verse 4:3",
             "Cross references for verse 30:21",
+            "Related verses to verse 17:23 about parents",
             "Hadith about verse 49:10",
             "Circumstances of verse 60:8",
             "Scholar interpretations of verse 2:286",
@@ -523,12 +525,17 @@ PERSONA_SUGGESTIONS = {
             "Legal consensus on verse 5:5",
             "Legal disputes about verse 4:34",
 
-            # Cross-reference queries
+            # Cross-reference queries (pulls related verses)
             "Cross references for verse 2:183",
             "Related verses to 39:53",
             "Parallel passages to verse 7:157",
             "Thematic connections with verse 49:13",
             "Verses supporting 3:7 interpretation",
+            "Related verses about Tawbah to 9:104",
+            "Parallel verses to 4:82 about Quran's consistency",
+            "Thematic links to verse 16:90 about justice",
+            "Supporting verses for 2:256 on religious freedom",
+            "Connected verses to 31:13 about shirk",
 
             # Historical context queries
             "Historical context of verse 9:5",
