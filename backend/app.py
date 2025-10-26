@@ -289,73 +289,123 @@ QURAN_METADATA = {
 SURAHS_BY_NAME = {info["name"].lower(): num for num, info in QURAN_METADATA.items()}
 
 # Popular query suggestions
-# Comprehensive query suggestions bank (48 total: 16 verses, 16 themes, 16 historical)
-# Balanced to include Al-Qurtubi's range (Surahs 1-4) and beyond
-# SIMPLIFIED FORMAT: Verse refs only, 1-3 word themes, concise historical contexts
+# Simplified into 2 clear categories: Direct verse/tafsir queries vs Exploratory searches
 QUERY_SUGGESTIONS_BANK = {
-    "verse": [
-        # Al-Qurtubi range (Surahs 1-4) - 8 verses
-        "1:1-7",
-        "2:1-5",
-        "2:21-22",
-        "2:255",
-        "2:286",
-        "3:26-27",
-        "3:190-191",
-        "4:1",
-        # Beyond Al-Qurtubi (Surahs 5+) - 8 verses
-        "13:28",
-        "16:97",
-        "17:23-24",
-        "18:65-70",
-        "24:35",
-        "36:1-7",
-        "50:16",
-        "93:1-7"
+    "tafsir": [
+        # Direct verse references - Key verses from your organization
+        "1:1-7",  # Al-Fatihah: praise, guidance, mercy
+        "2:255",  # Ayatul Kursi
+        "2:256",  # No compulsion in religion
+        "2:282",  # Accountability in transactions
+        "2:286",  # No soul burdened beyond capacity
+        "3:190-200",  # Reflecting on creation and signs
+        "4:1",  # Humanity from a single soul
+        "17:23-24",  # Parents' rights and respect
+        "18:65-82",  # Khidr and Musa story
+        "24:35",  # Allah as Light
+        "30:21",  # Marriage, love, and mercy
+        "36:1-7",  # Ya-Sin opening
+        "39:53",  # Allah's boundless mercy
+        "93:1-11",  # Ad-Duha: comfort and reassurance
+        "112:1-4",  # Al-Ikhlas: Allah's oneness
+
+        # Direct tafsir requests
+        "Explain Surah Al-Fatihah",
+        "Commentary on Ayatul Kursi",
+        "Meaning of Surah Al-Ikhlas",
+        "Tafsir of verse 39:53 about Allah's mercy",
+        "Explain verse 2:256 about religious freedom",
+
+        # Metadata-specific queries for tafsir approach
+        "What hadith are mentioned in verse 2:255?",
+        "Linguistic analysis of Ayatul Kursi",
+        "Cross references for verse 30:21",
+        "Legal rulings from verse 2:282 about debt",
+        "Scholar opinions on verse 2:256",
+        "Ibn Kathir's commentary on verse 39:53",
+        "Al-Qurtubi's legal analysis of verse 2:282",
+        "Historical context of verse 9:5",
+        "Grammatical structure of verse 1:5",
+        "Prophetic narrations about Surah Al-Fatihah"
     ],
-    "thematic": [
-        "Gratitude",
-        "Patience",
-        "Anxiety",
-        "Tawakkul",
-        "Forgiveness",
-        "Prayer",
-        "Charity",
-        "Injustice",
-        "Envy",
-        "Pride",
-        "Hope",
-        "Jannah",
-        "Punishment of the grave",
-        "Day of Judgement",
-        "Anger",
-        "Humbleness"
-    ],
-    "historical": [
+    "explore": [
+        # 1. Mercy, Forgiveness, and Hope
+        "Allah's boundless mercy and forgiveness",
+        "How does the Quran describe Allah's mercy?",
+        "Verses about repentance and forgiveness",
+        "Finding hope in difficult times",
+        "Allah loves those who repent",
+
+        # 2. Reflection and Signs of Allah
+        "Signs of Allah in creation",
+        "Reflecting on the natural world",
+        "Universe as evidence of Allah's power",
+        "Signs in night and day alternation",
+
+        # 3. Guidance, Care, and Protection
+        "How does Allah guide and protect believers?",
+        "Seeking knowledge and guidance",
+        "Allah's straight path",
+        "Divine protection and care",
+
+        # 4. Creation, Life, and Human Responsibility
+        "Stages of human creation",
+        "Everything created in pairs",
+        "Human responsibility and stewardship",
+        "Purpose of life according to Quran",
+
+        # 5. Family, Social Ethics, and Relationships
+        "Parents' rights in Islam",
+        "Marriage as mercy and harmony",
+        "Justice and kindness to neighbors",
+        "Family ethics in the Quran",
+        "Social responsibility and equality",
+
+        # 6. Knowledge, Wisdom, and Accountability
+        "Elevation through knowledge",
+        "Avoiding assumptions and judging with evidence",
+        "Accountability in transactions",
+        "Knowledge vs mere hearing",
+
+        # 7. Prophets, Stories, and Lessons
+        "Story of Prophet Yusuf and patience",
+        "Prophet Ibrahim's trials",
+        "Maryam and Isa's miraculous birth",
+        "Creation of Adam and Iblis' arrogance",
+        "Prophet Musa and Khidr's journey",
+
+        # 8. Themes and Concepts
+        "What does the Quran say about patience?",
+        "Concept of Tawakkul (trust in Allah)",
+        "Dealing with anxiety and hardship",
+        "Charity and its spiritual rewards",
+        "Overcoming envy and jealousy",
+        "Warnings against pride and arrogance",
+        "Description of Paradise",
+
+        # Historical context queries
         "Context of alcohol prohibition",
-        "Asbāb al-Nuzūl of Battle of Badr",
-        "Context of Surah Al-Kawthar",
-        "Context of five daily prayers",
-        "Context of Surah Al-Fil",
-        "Asbāb al-Nuzūl of hijab verses",
-        "Context of Ayat al-Tayammum",
-        "Context of fasting in Ramadan",
-        "Context of Surah Al-Lahab",
-        "Context of migration to Madinah",
-        "Context of Surah Al-Anfal",
-        "Context of zakah becoming obligatory",
-        "Context of Treaty of Hudaybiyyah",
-        "Context of Battle of Uhud",
-        "Context of Year of Grief",
-        "Asbāb al-Nuzūl of 4 wives being permissible"
+        "When was hijab revealed?",
+        "Circumstances of major revelations",
+
+        # Metadata exploration queries
+        "Which verses have the most hadith narrations?",
+        "Linguistic miracles in the Quran",
+        "Legal principles from Quranic verses",
+        "Verses with multiple interpretations",
+        "Differences between Al-Qurtubi and Ibn Kathir",
+        "Most cited verses by classical scholars",
+        "Rhetorical devices in Meccan surahs"
     ]
 }
 
+# Keep "semantic" as an alias for "explore" for backwards compatibility
+QUERY_SUGGESTIONS_BANK["semantic"] = QUERY_SUGGESTIONS_BANK["explore"]
+
 # Legacy format for backwards compatibility
 QUERY_SUGGESTIONS = (
-    QUERY_SUGGESTIONS_BANK["verse"] +
-    QUERY_SUGGESTIONS_BANK["thematic"] +
-    QUERY_SUGGESTIONS_BANK["historical"]
+    QUERY_SUGGESTIONS_BANK["tafsir"] +
+    QUERY_SUGGESTIONS_BANK["semantic"]
 )
 
 # Verse cross-references database (simplified)
@@ -3190,25 +3240,39 @@ def format_for_export(response_data, format_type='markdown'):
 
 @app.route("/suggestions", methods=["GET"])
 def get_suggestions():
-    """Get randomized query suggestions (12 total: 4 from each category)"""
+    """Get randomized query suggestions - mix of tafsir and explore queries"""
     import random
 
-    # Randomly select 4 from each category
-    verse_suggestions = random.sample(QUERY_SUGGESTIONS_BANK["verse"], min(4, len(QUERY_SUGGESTIONS_BANK["verse"])))
-    thematic_suggestions = random.sample(QUERY_SUGGESTIONS_BANK["thematic"], min(4, len(QUERY_SUGGESTIONS_BANK["thematic"])))
-    historical_suggestions = random.sample(QUERY_SUGGESTIONS_BANK["historical"], min(4, len(QUERY_SUGGESTIONS_BANK["historical"])))
+    # Get current approach from query parameter (if provided by frontend)
+    current_approach = request.args.get('approach', 'explore').lower()
 
-    # Combine and shuffle for variety
+    # Normalize approach (historical/thematic/semantic -> explore)
+    if current_approach in ['historical', 'thematic', 'semantic']:
+        current_approach = 'explore'  # Use user-friendly name
+    elif current_approach not in ['tafsir', 'explore']:
+        current_approach = 'explore'  # Default to explore
+
+    # Select 6 suggestions from each category for a balanced mix
+    tafsir_suggestions = random.sample(
+        QUERY_SUGGESTIONS_BANK["tafsir"],
+        min(6, len(QUERY_SUGGESTIONS_BANK["tafsir"]))
+    )
+    explore_suggestions = random.sample(
+        QUERY_SUGGESTIONS_BANK["explore"],  # Use explore bank
+        min(6, len(QUERY_SUGGESTIONS_BANK["explore"]))
+    )
+
+    # Create suggestion objects with user-friendly approach labels
     all_suggestions = (
-        [{"query": s, "approach": "tafsir"} for s in verse_suggestions] +
-        [{"query": s, "approach": "thematic"} for s in thematic_suggestions] +
-        [{"query": s, "approach": "historical"} for s in historical_suggestions]
+        [{"query": s, "approach": "tafsir", "type": "verse"} for s in tafsir_suggestions] +
+        [{"query": s, "approach": "explore", "type": "concept"} for s in explore_suggestions]  # Changed to "explore"
     )
     random.shuffle(all_suggestions)
 
     return jsonify({
         "suggestions": all_suggestions,
-        "total_bank_size": len(QUERY_SUGGESTIONS)
+        "total_bank_size": len(QUERY_SUGGESTIONS),
+        "current_approach": current_approach
     }), 200
 
 @app.route("/analytics", methods=["GET"])
@@ -4125,8 +4189,9 @@ def tafsir_handler_enhanced():
 
     APPROACHES (Simplified):
     - tafsir: Classical verse-by-verse commentary (default)
-    - semantic: Themes, events, and concepts (merged historical + thematic)
-      * Frontend can send 'historical' or 'thematic' - both map to 'semantic'
+    - explore/semantic: Themes, events, and concepts (merged historical + thematic)
+      * Frontend sends 'explore', backend maps to 'semantic' internally
+      * Legacy 'historical' or 'thematic' also map to 'semantic'
 
     ROUTES:
     1. METADATA QUERIES (e.g., "hadith in 2:255")
@@ -4173,10 +4238,11 @@ def tafsir_handler_enhanced():
             return jsonify({'error': 'Query is required'}), 400
 
         # Validate and normalize approach
-        # MERGE: historical + thematic → semantic (same underlying mechanism)
-        if approach in ['historical', 'thematic']:
-            approach = 'semantic'
-            print(f"📍 Normalized approach: {data.get('approach')} → semantic")
+        # MERGE: historical + thematic + explore → semantic (same underlying mechanism)
+        if approach in ['historical', 'thematic', 'explore']:
+            original_approach = data.get('approach')
+            approach = 'semantic'  # Internal routing uses 'semantic'
+            print(f"📍 Normalized approach: {original_approach} → semantic")
         elif approach not in ['tafsir', 'semantic']:
             approach = 'tafsir'  # Default fallback
 

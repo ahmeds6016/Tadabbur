@@ -843,14 +843,18 @@ function MainApp({ user, userProfile }) {
               {suggestions.slice(0, 12).map((suggestion, index) => {
                 const displayText = typeof suggestion === 'string' ? suggestion : suggestion.query;
                 const approach = typeof suggestion === 'object' ? suggestion.approach : null;
-                const approachIcon = approach === 'tafsir' ? '📖' : approach === 'thematic' ? '🔍' : approach === 'historical' ? '📜' : '';
+                const type = typeof suggestion === 'object' ? suggestion.type : null;
+
+                // Simplified icons: 📖 for direct verse/tafsir, 🔍 for exploration
+                const approachIcon = approach === 'tafsir' || type === 'verse' ? '📖' : '🔍';
+                const approachLabel = approach === 'tafsir' ? 'Direct Commentary' : 'Explore Topics';
 
                 return (
                   <button
                     key={index}
                     onClick={() => handleSuggestionClick(suggestion)}
                     className="suggestion-chip"
-                    title={approach ? `${approachIcon} ${approach.charAt(0).toUpperCase() + approach.slice(1)} approach` : ''}
+                    title={`${approachIcon} ${approachLabel}`}
                   >
                     <span>{approachIcon && <span style={{marginRight: '4px'}}>{approachIcon}</span>}{displayText}</span>
                   </button>
@@ -863,9 +867,8 @@ function MainApp({ user, userProfile }) {
         {/* Search Form - Fixed alignment */}
         <form onSubmit={handleGetTafsir} className="tafsir-form">
           <select value={approach} onChange={(e) => setApproach(e.target.value)}>
-            <option value="tafsir">📖 Tafsir-Based Study</option>
-            <option value="thematic">🔍 Thematic Study</option>
-            <option value="historical">📜 Historical Context</option>
+            <option value="tafsir">📖 Direct Commentary</option>
+            <option value="explore">🔍 Explore Topics</option>
           </select>
 
           <input

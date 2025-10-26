@@ -347,6 +347,7 @@ a {
 
 .suggestion-chip {
   background: white;
+  color: var(--foreground);  /* Ensure text is visible */
   border: 2px solid var(--border-light);
   border-radius: 30px;
   padding: 12px 20px;
