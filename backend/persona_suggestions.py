@@ -297,11 +297,19 @@ PERSONA_SUGGESTIONS = {
             "Surah Al-Hujurat complete",
             "Surah Al-Hadid verse 1-19",
 
-            # Advanced study
+            # Advanced study and metadata queries
             "Hadith narrations about verse 2:255",
             "Cross references for verse 24:35",
             "Legal derivations from verse 2:282",
-            "Context of revelation for verse 5:3"
+            "Context of revelation for verse 5:3",
+            "Hadith references in verse 4:36",
+            "Historical context of verse 2:256",
+            "Legal rulings from verse 4:3",
+            "Cross references for verse 30:21",
+            "Hadith about verse 49:10",
+            "Circumstances of verse 60:8",
+            "Scholar interpretations of verse 2:286",
+            "Linguistic analysis of verse 1:1-7"
         ],
         "explore": [
             # Jurisprudence and practice
@@ -384,13 +392,19 @@ PERSONA_SUGGESTIONS = {
             "Surah Al-Anbiya verse 51-93",
             "Surah Al-Qasas verse 1-88",
 
-            # Analytical queries
+            # Analytical and metadata queries
             "Pedagogical methods in the Quran",
             "How parables function as teaching tools",
-            "Historical context of Surah Al-Maidah verse 3",
+            "Historical context of verse 5:3",
             "Cross references for patience theme",
             "Rhetorical questions in the Quran",
-            "Gradual revelation and its wisdom"
+            "Gradual revelation and its wisdom",
+            "Hadith explaining verse 31:14",
+            "Context of revelation for verse 96:1-5",
+            "Cross references for verse 17:23-24",
+            "Historical background of verse 2:256",
+            "Hadith about seeking knowledge",
+            "Linguistic beauty in verse 55:1-4"
         ],
         "explore": [
             # Educational methodology
@@ -475,17 +489,60 @@ PERSONA_SUGGESTIONS = {
             "16:116",     # Don't declare halal/haram
             "22:78",      # No hardship in religion
 
-            # Advanced linguistic queries
+            # Advanced metadata queries
+            "Hadith references in verse 39:73-74",
+            "Hadith references in verse 33:28-29",
+            "Hadith narrations about verse 17:79",
+            "Hadith related to verse 73:20",
+            "Hadith explaining verse 53:39-42",
+            "Prophetic traditions for verse 25:63-77",
+            "Hadith commentary on verse 48:29",
+            "Hadith about verse 59:9",
+
+            # Linguistic analysis queries
             "Linguistic analysis of verse 112:1-4",
-            "Grammatical peculiarities in verse 4:11",
-            "Rhetorical devices in Meccan surahs",
-            "Semantic fields in Surah Ar-Rahman",
+            "Linguistic peculiarities in verse 2:255",
+            "Grammatical structure of verse 4:11",
             "Morphological patterns in verse 85:1-7",
-            "Syntactic structure of verse 2:255",
-            "Qira'at variations in verse 1:6",
-            "I'jaz aspects of verse 11:13",
-            "Balagha in verse 12:1-3",
-            "Nazm theory applied to Surah Yusuf"
+            "Syntactic analysis of verse 55:1-13",
+            "Rhetorical devices in verse 36:69-70",
+            "Semantic fields in verse 24:35",
+            "Phonetic patterns in verse 54:1-55",
+            "Ellipsis usage in verse 12:31",
+            "Iltifat examples in verse 10:22",
+
+            # Legal rulings queries
+            "Legal rulings from verse 2:282-283",
+            "Legal implications of verse 4:11-12",
+            "Legal derivations from verse 5:38",
+            "Legal principles in verse 2:178-179",
+            "Legal maxims from verse 4:58",
+            "Juristic interpretations of verse 24:2",
+            "Legal methodology in verse 65:1-7",
+            "Fiqh rulings from verse 2:228-232",
+            "Legal consensus on verse 5:5",
+            "Legal disputes about verse 4:34",
+
+            # Cross-reference queries
+            "Cross references for verse 2:183",
+            "Related verses to 39:53",
+            "Parallel passages to verse 7:157",
+            "Thematic connections with verse 49:13",
+            "Verses supporting 3:7 interpretation",
+
+            # Historical context queries
+            "Historical context of verse 9:5",
+            "Circumstances of revelation for verse 24:11-26",
+            "Background of verse 33:50-52",
+            "Context when verse 8:41 was revealed",
+            "Historical setting of verse 3:121-128",
+
+            # Scholar opinions queries
+            "Scholar consensus on verse 3:7",
+            "Classical interpretations of verse 18:86",
+            "Scholarly debates on verse 4:157",
+            "Early tafsir of verse 53:1-18",
+            "Mufassir differences on verse 2:102"
         ],
         "explore": [
             # Quranic sciences ('Ulum al-Quran)
@@ -582,11 +639,21 @@ PERSONA_SUGGESTIONS = {
             "Coherence in Surah An-Nisa",
             "Rhetorical strategies in Surah Ibrahim",
 
-            # Comparative studies
+            # Comparative and metadata studies
             "Compare commentaries on verse 3:7",
             "Analyze different interpretations of verse 4:34",
             "Study variant readings of verse 2:125",
-            "Historical context of verse 9:29"
+            "Historical context of verse 9:29",
+            "Hadith references in verse 2:187",
+            "Cross references for verse 3:31",
+            "Linguistic features of verse 19:1-11",
+            "Legal principles from verse 17:32",
+            "Historical background of verse 48:1-3",
+            "Scholar consensus on verse 24:31",
+            "Rhetorical analysis of verse 14:24-26",
+            "Context of revelation for verse 66:1-5",
+            "Grammatical analysis of verse 76:1-3",
+            "Hadith explaining verse 13:11"
         ],
         "explore": [
             # Research methodologies
