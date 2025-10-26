@@ -847,7 +847,7 @@ function MainApp({ user, userProfile }) {
 
                 // Simplified icons: 📖 for direct verse/tafsir, 🔍 for exploration
                 const approachIcon = approach === 'tafsir' || type === 'verse' ? '📖' : '🔍';
-                const approachLabel = approach === 'tafsir' ? 'Direct Commentary' : 'Explore Topics';
+                const approachLabel = approach === 'tafsir' ? 'Tafsir' : 'Explore';
 
                 return (
                   <button
@@ -867,8 +867,8 @@ function MainApp({ user, userProfile }) {
         {/* Search Form - Fixed alignment */}
         <form onSubmit={handleGetTafsir} className="tafsir-form">
           <select value={approach} onChange={(e) => setApproach(e.target.value)}>
-            <option value="tafsir">📖 Direct Commentary</option>
-            <option value="explore">🔍 Explore Topics</option>
+            <option value="tafsir">📖 Tafsir</option>
+            <option value="explore">🔍 Explore</option>
           </select>
 
           <input

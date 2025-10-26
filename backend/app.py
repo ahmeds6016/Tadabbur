@@ -288,8 +288,12 @@ QURAN_METADATA = {
 
 SURAHS_BY_NAME = {info["name"].lower(): num for num, info in QURAN_METADATA.items()}
 
-# Popular query suggestions
-# Simplified into 2 clear categories: Direct verse/tafsir queries vs Exploratory searches
+# Persona-specific query suggestions
+# Each persona gets relevant suggestions based on their knowledge level and needs
+# Import persona-specific suggestions
+from persona_suggestions import PERSONA_SUGGESTIONS, DEFAULT_SUGGESTIONS
+
+# Legacy QUERY_SUGGESTIONS_BANK for backwards compatibility
 QUERY_SUGGESTIONS_BANK = {
     "tafsir": [
         # Direct verse references - Key verses from your organization
@@ -2141,6 +2145,23 @@ def firebase_auth_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+def firebase_auth_optional(f):
+    """Optional auth - sets request.user if token is valid, but doesn't require it"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        id_token = request.headers.get("Authorization", "").split("Bearer ")[-1]
+        if id_token:
+            try:
+                decoded_token = auth.verify_id_token(id_token)
+                request.user = decoded_token
+            except:
+                # Token invalid or expired, but that's OK for optional auth
+                request.user = None
+        else:
+            request.user = None
+        return f(*args, **kwargs)
+    return decorated_function
+
 # --- Comprehensive Error Handler Decorator ---
 def handle_errors(f):
     """
@@ -3239,9 +3260,24 @@ def format_for_export(response_data, format_type='markdown'):
 # ============================================================================
 
 @app.route("/suggestions", methods=["GET"])
+@firebase_auth_optional
 def get_suggestions():
-    """Get randomized query suggestions - mix of tafsir and explore queries"""
+    """Get persona-specific randomized query suggestions"""
     import random
+
+    # Get user's persona (default to practicing_muslim if not set)
+    try:
+        user_id = getattr(request, 'user', {}).get('uid', None)
+        if user_id:
+            user_profile = get_user_profile(user_id)
+            persona = user_profile.get('persona', 'practicing_muslim') if user_profile else 'practicing_muslim'
+        else:
+            persona = 'practicing_muslim'
+    except:
+        persona = 'practicing_muslim'
+
+    # Get persona-specific suggestions
+    persona_bank = PERSONA_SUGGESTIONS.get(persona, DEFAULT_SUGGESTIONS)
 
     # Get current approach from query parameter (if provided by frontend)
     current_approach = request.args.get('approach', 'explore').lower()
@@ -3252,26 +3288,28 @@ def get_suggestions():
     elif current_approach not in ['tafsir', 'explore']:
         current_approach = 'explore'  # Default to explore
 
-    # Select 6 suggestions from each category for a balanced mix
+    # Select suggestions from persona-specific bank
+    # More tafsir suggestions (8) since they're shorter, fewer explore (6) since they're detailed
     tafsir_suggestions = random.sample(
-        QUERY_SUGGESTIONS_BANK["tafsir"],
-        min(6, len(QUERY_SUGGESTIONS_BANK["tafsir"]))
+        persona_bank["tafsir"],
+        min(8, len(persona_bank["tafsir"]))
     )
     explore_suggestions = random.sample(
-        QUERY_SUGGESTIONS_BANK["explore"],  # Use explore bank
-        min(6, len(QUERY_SUGGESTIONS_BANK["explore"]))
+        persona_bank["explore"],
+        min(6, len(persona_bank["explore"]))
     )
 
     # Create suggestion objects with user-friendly approach labels
     all_suggestions = (
         [{"query": s, "approach": "tafsir", "type": "verse"} for s in tafsir_suggestions] +
-        [{"query": s, "approach": "explore", "type": "concept"} for s in explore_suggestions]  # Changed to "explore"
+        [{"query": s, "approach": "explore", "type": "concept"} for s in explore_suggestions]
     )
     random.shuffle(all_suggestions)
 
     return jsonify({
         "suggestions": all_suggestions,
-        "total_bank_size": len(QUERY_SUGGESTIONS),
+        "persona": persona,
+        "total_bank_size": len(persona_bank["tafsir"]) + len(persona_bank["explore"]),
         "current_approach": current_approach
     }), 200
 
