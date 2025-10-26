@@ -79,7 +79,7 @@ RERANKER_MODELS = [
         "max_length": 1024,  # CORRECTED: Total limit for query + document combined
         "default_threshold": 0.0,  # Jina scores typically [0, 1]
         "supports_sliding_window": True,
-        "window_overlap": 200,  # Tokens to overlap between windows
+        "window_overlap": 100,  # REDUCED from 200 - less overlap for faster processing
         "query_reserved_tokens": 150,  # Reserve tokens for query (avg query ~100 tokens)
         "max_document_tokens": 874,  # 1024 - 150 = max tokens for document per window
     },
@@ -97,12 +97,12 @@ RERANKER_MODELS = [
 # Reranker retrieval configuration
 RERANKER_CONFIG = {
     'tafsir': {
-        'num_candidates': 40,  # Increased from 20 for better recall
-        'final_chunks': 8,     # REDUCED from 15 - too many chunks causing long responses
+        'num_candidates': 20,  # REDUCED from 40 to improve reranking speed
+        'final_chunks': 5,     # REDUCED from 8 - faster response with focused content
     },
     'semantic': {
-        'num_candidates': 50,  # Increased from 30 for better recall
-        'final_chunks': 10,    # REDUCED from 20 - too many chunks causing long responses
+        'num_candidates': 20,  # REDUCED from 50 to improve reranking speed
+        'final_chunks': 5,     # REDUCED from 10 - faster response with focused content
     }
 }
 
@@ -1821,8 +1821,9 @@ def rerank_chunks(query: str, chunks: List[Dict], approach: str = 'tafsir') -> L
 
     # RERANKING PATH
     start_time = time.time()
-    MAX_RERANKING_TIME = 60  # Maximum 60 seconds for reranking (will tune based on metrics)
-    MAX_WINDOWS_PER_CHUNK = 30  # Limit windows per chunk to prevent excessive processing
+    MAX_RERANKING_TIME = 60  # Maximum 60 seconds total timeout for reranking
+    EARLY_TERMINATION_TIME = 30  # Early termination at 30s to avoid long waits
+    MAX_WINDOWS_PER_CHUNK = 5  # REDUCED from 30 - limit windows per chunk for faster processing
 
     try:
         # Get model configuration for sliding window support
@@ -1833,19 +1834,35 @@ def rerank_chunks(query: str, chunks: List[Dict], approach: str = 'tafsir') -> L
         total_windows = 0
         chunks_using_windows = 0
 
-        with reranker_lock:  # Thread-safe reranker usage
-            # Process each chunk, potentially with sliding windows
-            all_chunk_scores = []
+        # Sort chunks by distance to process most relevant first (in case of timeout)
+        chunks_sorted = sorted(chunks, key=lambda x: x.get('distance', 1.0))
 
-            for chunk_idx, chunk in enumerate(chunks):
-                # Check timeout
-                if time.time() - start_time > MAX_RERANKING_TIME:
-                    print(f"   ⚠️  Reranking timeout after {chunk_idx}/{len(chunks)} chunks, elapsed: {time.time() - start_time:.1f}s")
+        with reranker_lock:  # Thread-safe reranker usage
+            # Process each chunk in priority order (best distance first)
+            all_chunk_scores = []
+            chunk_to_score = {}  # Map original chunk to its rerank score
+
+            for chunk_idx, chunk in enumerate(chunks_sorted):
+                elapsed_time = time.time() - start_time
+
+                # Early termination at 30s (still have good chunks processed)
+                if elapsed_time > EARLY_TERMINATION_TIME and chunk_idx > 0:
+                    print(f"   ⚠️  Early termination at 30s after {chunk_idx}/{len(chunks_sorted)} chunks")
                     # Fill remaining chunks with distance-based scores
-                    for remaining_chunk in chunks[chunk_idx:]:
-                        all_chunk_scores.append(1.0 - remaining_chunk.get('distance', 0.5))
+                    for remaining_chunk in chunks_sorted[chunk_idx:]:
+                        remaining_chunk['rerank_score'] = 1.0 - remaining_chunk.get('distance', 0.5)
+                        remaining_chunk['rerank_strategy'] = 'early_termination_fallback'
+                    RERANKER_STATS['chunks_truncated'] += len(chunks_sorted) - chunk_idx
+                    break
+
+                # Hard timeout at 60s
+                if elapsed_time > MAX_RERANKING_TIME:
+                    print(f"   ⚠️  Reranking timeout after {chunk_idx}/{len(chunks_sorted)} chunks, elapsed: {elapsed_time:.1f}s")
+                    # Fill remaining chunks with distance-based scores
+                    for remaining_chunk in chunks_sorted[chunk_idx:]:
+                        remaining_chunk['rerank_score'] = 1.0 - remaining_chunk.get('distance', 0.5)
                         remaining_chunk['rerank_strategy'] = 'timeout_fallback'
-                    RERANKER_STATS['chunks_truncated'] += len(chunks) - chunk_idx
+                    RERANKER_STATS['chunks_truncated'] += len(chunks_sorted) - chunk_idx
                     break
                 chunk_text = chunk['text']
 
@@ -1870,7 +1887,8 @@ def rerank_chunks(query: str, chunks: List[Dict], approach: str = 'tafsir') -> L
 
                         # Max pooling: use highest score from any window
                         max_score = float(max(window_scores))
-                        all_chunk_scores.append(max_score)
+                        chunk['rerank_score'] = max_score
+                        chunk_to_score[id(chunk)] = max_score
 
                         # Optional: Store window details for debugging
                         chunk['window_count'] = len(windows)
@@ -1884,21 +1902,25 @@ def rerank_chunks(query: str, chunks: List[Dict], approach: str = 'tafsir') -> L
                     else:
                         # Single window - process normally
                         total_windows += 1
-                        score = RERANKER_MODEL.predict([(query, chunk_text)])[0]
-                        all_chunk_scores.append(float(score))
+                        score = float(RERANKER_MODEL.predict([(query, chunk_text)])[0])
+                        chunk['rerank_score'] = score
+                        chunk_to_score[id(chunk)] = score
                         chunk['window_count'] = 1
                         chunk['rerank_strategy'] = 'single_window'
 
                 else:
                     # No sliding window support or disabled - process normally
                     # Note: This may truncate very long chunks
-                    score = RERANKER_MODEL.predict([(query, chunk_text)])[0]
-                    all_chunk_scores.append(float(score))
+                    score = float(RERANKER_MODEL.predict([(query, chunk_text)])[0])
+                    chunk['rerank_score'] = score
+                    chunk_to_score[id(chunk)] = score
                     chunk['rerank_strategy'] = 'direct'
 
-            # Add scores to chunks
-            for chunk, score in zip(chunks, all_chunk_scores):
-                chunk['rerank_score'] = score
+            # Ensure all chunks have scores (including those skipped due to timeout)
+            for chunk in chunks:
+                if 'rerank_score' not in chunk:
+                    # Use distance-based fallback for any chunks not processed
+                    chunk['rerank_score'] = 1.0 - chunk.get('distance', 0.5)
 
             # Update sliding window statistics
             if chunks_using_windows > 0:
@@ -1963,8 +1985,9 @@ def rerank_chunks(query: str, chunks: List[Dict], approach: str = 'tafsir') -> L
         total_calls = RERANKER_STATS['total_calls']
         RERANKER_STATS['avg_latency_ms'] = ((prev_avg * (total_calls - 1)) + latency_ms) / total_calls
 
-        # Track timing for performance analysis (for tuning MAX_RERANKING_TIME)
-        print(f"   ⏱️  RERANKER TIMING: {latency_ms:.0f}ms for {len(chunks)} chunks")
+        # Track timing for performance analysis
+        chunks_processed = len([c for c in chunks if 'rerank_score' in c and c.get('rerank_strategy') not in ['timeout_fallback', 'early_termination_fallback']])
+        print(f"   ⏱️  RERANKER TIMING: {latency_ms:.0f}ms for {chunks_processed}/{len(chunks)} chunks")
 
         # Logging
         print(f"   ✨ Reranker: {len(chunks)} → {len(relevant_chunks)} relevant → {len(final_chunks)} final")
@@ -1978,9 +2001,15 @@ def rerank_chunks(query: str, chunks: List[Dict], approach: str = 'tafsir') -> L
         print(f"      Top score: {final_chunks[0]['rerank_score']:.3f}" if final_chunks else "      No chunks passed threshold")
         print(f"      Latency: {latency_ms:.1f}ms")
 
-        # Log warning for slow reranking
-        if latency_ms > 10000:  # More than 10 seconds
-            print(f"   ⚠️  SLOW RERANKING: {latency_ms:.0f}ms - consider reducing chunk count or window size")
+        # Performance metrics
+        if chunks_processed < len(chunks):
+            print(f"      ⚠️  Early termination: {chunks_processed}/{len(chunks)} chunks processed")
+
+        # Log warning for slow reranking with different thresholds
+        if latency_ms > 30000:  # More than 30 seconds
+            print(f"   🔴 CRITICAL: Reranking took {latency_ms:.0f}ms - performance severely degraded")
+        elif latency_ms > 10000:  # More than 10 seconds
+            print(f"   ⚠️  SLOW RERANKING: {latency_ms:.0f}ms - consider reducing chunk count further")
 
         return final_chunks
 
