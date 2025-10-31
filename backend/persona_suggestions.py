@@ -29,7 +29,7 @@ PERSONA_SUGGESTIONS = {
             "2:152",      # Remember Me, I'll remember you
 
             # Comfort and reassurance
-            "93:1-11",    # Ad-Duha - Morning brightness
+            "93:1-8",     # Ad-Duha - Morning brightness
             "94:1-8",     # Ash-Sharh - Expansion of chest
             "95:1-8",     # At-Tin - Honor of human creation
             "2:153",      # Seek help through patience and prayer
@@ -82,11 +82,10 @@ PERSONA_SUGGESTIONS = {
 
     "revert": {
         "tafsir": [
-            # Expanding knowledge - Full surahs
+            # Expanding knowledge
             "1:1-7",      # Al-Fatihah with deeper understanding
             "2:1-5",      # Beginning of Al-Baqarah
             "2:30-39",    # Story of Adam
-            "2:40-103",   # Children of Israel lessons
             "2:255",      # Ayatul Kursi
             "2:256",      # No compulsion in religion
             "2:261-266",  # Charity parables
@@ -94,7 +93,7 @@ PERSONA_SUGGESTIONS = {
 
             # Important passages
             "3:26-27",    # Allah's sovereignty
-            "3:190-200",  # Reflecting on creation
+            "3:190-195",  # Reflecting on creation
             "4:1",        # Creation from single soul
             "4:36",       # Worship Allah and kindness
             "5:32",       # Saving one life
@@ -103,26 +102,24 @@ PERSONA_SUGGESTIONS = {
             "7:156",      # Mercy encompasses everything
 
             # Relationship and society verses
-            "17:23-39",   # Comprehensive moral guidance
+            "17:23-24",   # Parents' rights
             "30:21",      # Marriage and mercy
-            "31:14-15",   # Parents' rights
             "49:10-13",   # Brotherhood and diversity
             "60:8",       # Justice with non-Muslims
 
             # Spiritual development
-            "23:1-11",    # Qualities of successful believers
-            "25:63-77",   # Servants of the Most Merciful
+            "23:1-10",    # Qualities of successful believers
+            "25:63-70",   # Servants of the Most Merciful
             "29:45",      # Prayer prevents evil
             "33:21",      # Prophet as example
             "39:53-54",   # Never despair of Allah's mercy
             "42:36-43",   # Forgiveness and patience
 
             # Named passages
-            "Surah Ya-Sin verse 1-40",
-            "Surah Ar-Rahman verse 1-30",
-            "Surah Al-Mulk complete",
-            "Surah Al-Waqiah verse 1-56",
-            "Surah Al-Kahf verse 1-20"
+            "Surah Ya-Sin verse 1-10",
+            "Surah Ar-Rahman verse 1-10",
+            "Surah Al-Kahf verse 1-10",
+            "Surah Al-Waqiah verse 1-10"
         ],
         "explore": [
             # Deepening faith - detailed questions
@@ -134,14 +131,17 @@ PERSONA_SUGGESTIONS = {
             "How do I develop khushu (humility) in prayer?",
             "What are the signs of a hypocrite mentioned in Quran?",
 
-            # Stories and lessons
+            # Stories and lessons from the Quran
             "What lessons can we learn from Prophet Yusuf's story?",
             "How did Prophet Ibrahim discover monotheism?",
             "What is the story of Prophet Musa and Pharaoh?",
             "Why did Prophet Yunus end up in the whale?",
             "What can we learn from the People of the Cave?",
-            "How did Prophet Muhammad treat his enemies?",
+            "What does the Quran say about Prophet Muhammad's character?",
             "What miracles are mentioned in the Quran?",
+            "What is the story of Maryam in the Quran?",
+            "What does the Quran teach about Prophet Adam's creation?",
+            "What lessons are in the story of Prophet Nuh?",
 
             # Practical Islam
             "How do I perform Istikhara prayer for decisions?",
@@ -161,13 +161,11 @@ PERSONA_SUGGESTIONS = {
             "How should neighbors be treated in Islam?",
             "What does Islam say about social justice?",
 
-            # Contemporary issues
-            "How do Muslims deal with interest in modern banking?",
-            "What is the Islamic stance on mental health treatment?",
-            "Can Muslims participate in non-Islamic celebrations?",
-            "How do I maintain Islamic identity at work?",
-            "What does Islam say about environmental protection?",
-            "How should Muslims engage with social media?"
+            # Quranic guidance
+            "What does the Quran say about mental health and healing?",
+            "How does the Quran guide maintaining Islamic identity?",
+            "What does the Quran say about respecting creation?",
+            "How does the Quran guide social interactions?"
         ]
     },
 
@@ -208,12 +206,12 @@ PERSONA_SUGGESTIONS = {
             "47:24",      # Do they not ponder the Quran
             "51:20-21",   # Signs within yourselves
 
-            # Complete surahs for meditation
-            "Surah Ar-Rahman complete",
-            "Surah Al-Mulk complete",
-            "Surah Ya-Sin complete",
-            "Surah Ad-Duha complete",
-            "Surah Al-Inshirah complete"
+            # Passages for meditation
+            "Surah Ar-Rahman verse 1-10",
+            "Surah Al-Mulk verse 1-10",
+            "Surah Ya-Sin verse 1-10",
+            "93:1-8",     # Ad-Duha
+            "94:1-8"      # Ash-Sharh/Al-Inshirah
         ],
         "explore": [
             # Deep spiritual questions
@@ -243,71 +241,74 @@ PERSONA_SUGGESTIONS = {
             "How does night prayer transform the soul?",
             "What are the signs of Allah's love for a servant?",
 
-            # Nature and creation
+            # Nature and creation in the Quran
             "How does the Quran use nature as signs for seekers?",
             "What can we learn from observing the natural world?",
-            "What is the spiritual significance of celestial bodies?",
+            "What is the spiritual significance of celestial bodies in the Quran?",
             "How does the cycle of life and death point to resurrection?",
-            "What do the parables of light and darkness mean?",
+            "What do the parables of light and darkness mean in the Quran?",
             "How is water used as a spiritual metaphor in the Quran?",
             "What lessons are in the creation of the heavens and earth?",
+            "What does the Quran say about the sun and moon?",
+            "How does the Quran describe mountains and their purpose?",
+            "What spiritual meanings are in Quranic references to rain?",
 
-            # Wisdom traditions
+            # Wisdom traditions in the Quran
             "What spiritual wisdom did Luqman teach his son?",
             "How do the stories of prophets guide spiritual seekers?",
-            "What is the significance of dreams and visions in Islam?",
+            "What is the significance of dreams in the Quran?",
             "How does the Quran describe the straight path?",
             "What are the veils between humanity and divine truth?",
-            "How can one develop spiritual insight and wisdom?"
+            "How can one develop spiritual insight and wisdom?",
+            "What does the Quran say about patience and perseverance?",
+            "How does the Quran define true success?",
+            "What are the characteristics of the righteous in the Quran?"
         ]
     },
 
     "practicing_muslim": {
         "tafsir": [
-            # Comprehensive passages
-            "2:1-20",     # Opening of Baqarah
+            # Key passages
+            "2:1-10",     # Opening of Baqarah
             "2:21-29",    # Call to worship
-            "2:40-123",   # Lessons from Bani Israel
-            "2:124-141",  # Abraham's legacy
-            "2:142-152",  # Change of Qiblah
-            "2:153-177",  # Patience and righteousness
-            "2:178-203",  # Legal ordinances
-            "2:204-242",  # Social guidance
-            "2:243-283",  # Fighting, charity, transactions
+            "2:30-39",    # Story of Adam
+            "2:255",      # Ayatul Kursi
+            "2:256",      # No compulsion in religion
             "2:284-286",  # Final verses of Baqarah
 
-            # Key thematic passages
-            "3:130-200",  # Usury, Uhud, and taqwa
-            "4:1-35",     # Women's rights and family law
-            "5:1-11",     # Contracts and purification
-            "6:141-144",  # Dietary laws
+            # Important verses
+            "3:26-27",    # Allah's sovereignty
+            "4:1",        # Creation from single soul
+            "4:36",       # Worship Allah and kindness
+            "5:1-8",      # Contracts and purification
+            "6:151-153",  # Commandments
             "9:60",       # Zakat distribution
-            "17:23-39",   # Comprehensive commandments
             "24:27-31",   # Social etiquette
-            "24:58-64",   # Privacy rules
-            "25:63-77",   # Qualities of true servants
-            "49:1-18",    # Social ethics
+            "30:21",      # Marriage and mercy
+            "49:10-13",   # Brotherhood and diversity
 
-            # Complete important surahs
-            "Surah Al-Kahf complete",
-            "Surah Maryam complete",
-            "Surah Luqman complete",
-            "Surah As-Sajdah complete",
-            "Surah Al-Ahzab verse 1-40",
-            "Surah Al-Hujurat complete",
-            "Surah Al-Hadid verse 1-19",
+            # Spiritual development
+            "17:23-24",   # Parents' rights
+            "23:1-10",    # Qualities of successful believers
+            "25:63-70",   # Servants of the Most Merciful
+            "31:12-19",   # Luqman's wisdom
+            "33:21",      # Prophet as example
+            "39:53-54",   # Never despair of Allah's mercy
+            "42:36-43",   # Forgiveness and patience
 
-            # Advanced study and metadata queries
+            # Important passages
+            "Surah Al-Kahf verse 1-10",
+            "Surah Maryam verse 1-10",
+            "Surah As-Sajdah verse 1-9",
+            "Surah Al-Hujurat verse 10-13",
+            "Surah Al-Hadid verse 1-10",
+            "Surah Al-Waqi'ah verse 1-10",
+
+            # Study topics
             "Hadith narrations about verse 2:255",
-            "Cross references for verse 24:35",
-            "Related verses to 2:255",
-            "Legal derivations from verse 2:282",
             "Context of revelation for verse 5:3",
             "Hadith references in verse 4:36",
             "Historical context of verse 2:256",
-            "Legal rulings from verse 4:3",
-            "Cross references for verse 30:21",
-            "Related verses to verse 17:23 about parents",
             "Hadith about verse 49:10",
             "Circumstances of verse 60:8",
             "Scholar interpretations of verse 2:286",
@@ -351,14 +352,15 @@ PERSONA_SUGGESTIONS = {
             "How does Islam view adoption and fostering?",
             "What are the etiquettes of seeking marriage?",
 
-            # Contemporary challenges
-            "How do scholars derive rulings for new issues?",
-            "What is the Islamic perspective on medical ethics?",
-            "How should Muslims navigate secular legal systems?",
-            "What are the guidelines for Islamic finance and banking?",
-            "How does Islam address environmental conservation?",
-            "What is the ruling on digital assets and cryptocurrency?",
-            "How should Muslims approach political participation?"
+            # Quranic principles
+            "How do scholars derive rulings from Quranic verses?",
+            "What does the Quran say about justice in society?",
+            "How does the Quran guide community leadership?",
+            "What are Quranic principles for social responsibility?",
+            "What does the Quran say about wealth and charity?",
+            "How does the Quran address family responsibilities?",
+            "What are Quranic principles for ethical business?",
+            "How does the Quran guide conflict resolution?"
         ]
     },
 
@@ -378,7 +380,7 @@ PERSONA_SUGGESTIONS = {
             "16:43-44",   # Ask people of knowledge
             "16:89",      # Book explaining all things
             "16:125",     # Call with wisdom
-            "18:65-82",   # Musa and Khidr - learning journey
+            "18:60-69",   # Musa and Khidr - learning journey
             "20:113-114", # Quran in Arabic, seeking knowledge
             "29:43",      # Examples for those who understand
             "30:22",      # Signs for those with knowledge
@@ -387,23 +389,21 @@ PERSONA_SUGGESTIONS = {
             "47:24",      # Do they not ponder
 
             # Stories for teaching
-            "Surah Yusuf complete",
-            "Surah Al-Kahf complete",
-            "Surah Maryam complete",
-            "Surah Ta-Ha verse 1-99",
-            "Surah Al-Anbiya verse 51-93",
-            "Surah Al-Qasas verse 1-88",
+            "12:1-10",    # Opening of Surah Yusuf
+            "18:1-10",    # Opening of Surah Kahf
+            "19:1-10",    # Opening of Surah Maryam
+            "20:1-10",    # Opening of Surah Ta-Ha
+            "21:51-60",   # Ibrahim and idols
+            "28:1-10",    # Opening of Surah Qasas
 
-            # Analytical and metadata queries
-            "Pedagogical methods in the Quran",
-            "How parables function as teaching tools",
+            # Teaching methods in Quran
+            "What are pedagogical methods in the Quran?",
+            "How do parables function as teaching tools?",
+            "What is the wisdom of gradual revelation?",
+            "How do rhetorical questions teach in the Quran?",
             "Historical context of verse 5:3",
-            "Cross references for patience theme",
-            "Rhetorical questions in the Quran",
-            "Gradual revelation and its wisdom",
             "Hadith explaining verse 31:14",
             "Context of revelation for verse 96:1-5",
-            "Cross references for verse 17:23-24",
             "Historical background of verse 2:256",
             "Hadith about seeking knowledge",
             "Linguistic beauty in verse 55:1-4"
@@ -427,14 +427,12 @@ PERSONA_SUGGESTIONS = {
             "What are effective methods for Quran memorization?",
             "How can critical thinking be developed through Quranic study?",
 
-            # Addressing modern challenges
-            "How to address scientific theories using Quranic guidance?",
-            "What approach should be taken for controversial topics?",
-            "How can Islamic values be taught in secular contexts?",
-            "What are strategies for teaching Islam to non-Muslims?",
+            # Teaching challenges
+            "How does the Quran address controversial topics?",
+            "What are Quranic strategies for teaching truth?",
             "How should teachers handle questions about other religions?",
-            "What is the best way to address extremism and misconceptions?",
-            "How can technology be integrated into Islamic education?",
+            "What Quranic guidance addresses misconceptions?",
+            "How can Quranic stories be made accessible to all learners?",
 
             # Character development
             "How does the Quran build moral character?",
@@ -445,13 +443,13 @@ PERSONA_SUGGESTIONS = {
             "What builds confidence in young Muslims?",
             "How can community service be integrated into learning?",
 
-            # Special considerations
+            # Teaching diverse audiences
             "How to teach Islam to children of mixed-faith families?",
-            "What accommodations should be made for different learners?",
-            "How can trauma-informed teaching apply to Islamic education?",
-            "What are best practices for online Islamic education?",
-            "How should women's Islamic education be approached?",
-            "What are effective methods for adult Islamic education?"
+            "What Quranic principles guide accommodating different learners?",
+            "How does the Quran address healing and comfort in teaching?",
+            "What are the Quran's principles for women's education?",
+            "How does the Quran encourage lifelong learning?",
+            "What Quranic examples show teaching methods for adults?"
         ]
     },
 
@@ -491,60 +489,35 @@ PERSONA_SUGGESTIONS = {
             "16:116",     # Don't declare halal/haram
             "22:78",      # No hardship in religion
 
-            # Advanced metadata queries
+            # Hadith references
             "Hadith references in verse 39:73-74",
-            "Hadith references in verse 33:28-29",
             "Hadith narrations about verse 17:79",
-            "Hadith related to verse 73:20",
             "Hadith explaining verse 53:39-42",
-            "Prophetic traditions for verse 25:63-77",
-            "Hadith commentary on verse 48:29",
             "Hadith about verse 59:9",
 
-            # Linguistic analysis queries
+            # Linguistic analysis
             "Linguistic analysis of verse 112:1-4",
             "Linguistic peculiarities in verse 2:255",
             "Grammatical structure of verse 4:11",
-            "Morphological patterns in verse 85:1-7",
-            "Syntactic analysis of verse 55:1-13",
             "Rhetorical devices in verse 36:69-70",
             "Semantic fields in verse 24:35",
-            "Phonetic patterns in verse 54:1-55",
-            "Ellipsis usage in verse 12:31",
             "Iltifat examples in verse 10:22",
 
-            # Legal rulings queries
+            # Legal methodology
             "Legal rulings from verse 2:282-283",
             "Legal implications of verse 4:11-12",
-            "Legal derivations from verse 5:38",
             "Legal principles in verse 2:178-179",
-            "Legal maxims from verse 4:58",
             "Juristic interpretations of verse 24:2",
-            "Legal methodology in verse 65:1-7",
-            "Fiqh rulings from verse 2:228-232",
             "Legal consensus on verse 5:5",
             "Legal disputes about verse 4:34",
 
-            # Cross-reference queries (pulls related verses)
-            "Cross references for verse 2:183",
-            "Related verses to 39:53",
-            "Parallel passages to verse 7:157",
-            "Thematic connections with verse 49:13",
-            "Verses supporting 3:7 interpretation",
-            "Related verses about Tawbah to 9:104",
-            "Parallel verses to 4:82 about Quran's consistency",
-            "Thematic links to verse 16:90 about justice",
-            "Supporting verses for 2:256 on religious freedom",
-            "Connected verses to 31:13 about shirk",
-
-            # Historical context queries
+            # Historical context
             "Historical context of verse 9:5",
             "Circumstances of revelation for verse 24:11-26",
-            "Background of verse 33:50-52",
             "Context when verse 8:41 was revealed",
             "Historical setting of verse 3:121-128",
 
-            # Scholar opinions queries
+            # Scholar opinions
             "Scholar consensus on verse 3:7",
             "Classical interpretations of verse 18:86",
             "Scholarly debates on verse 4:157",
@@ -618,48 +591,46 @@ PERSONA_SUGGESTIONS = {
         "tafsir": [
             # Structured study passages
             "1:1-7",      # Al-Fatihah deep analysis
-            "2:1-141",    # First juz comprehensive
+            "2:1-10",     # Opening of Baqarah
             "2:255",      # Ayatul Kursi study
             "3:1-9",      # Opening of Al-Imran
             "4:1-10",     # Opening themes
-            "6:1-12",     # Creation arguments
+            "6:1-10",     # Creation arguments
             "7:1-10",     # Warning and creation
             "10:1-10",    # Signs and revelation
-            "12:1-111",   # Complete Surah Yusuf
-            "18:1-110",   # Complete Surah Kahf
-            "19:1-98",    # Complete Surah Maryam
-            "20:1-135",   # Complete Surah Ta-Ha
+            "12:1-10",    # Opening of Surah Yusuf
+            "18:1-10",    # Opening of Surah Kahf
+            "19:1-10",    # Opening of Surah Maryam
+            "20:1-10",    # Opening of Surah Ta-Ha
             "24:35",      # Light verse analysis
-            "31:1-34",    # Complete Surah Luqman
-            "36:1-83",    # Complete Surah Ya-Sin
-            "55:1-78",    # Complete Surah Rahman
-            "56:1-96",    # Complete Surah Waqiah
-            "67:1-30",    # Complete Surah Mulk
+            "31:12-19",   # Luqman's wisdom
+            "36:1-10",    # Opening of Ya-Sin
+            "55:1-10",    # Opening of Rahman
+            "56:1-10",    # Opening of Waqiah
+            "67:1-10",    # Opening of Mulk
 
             # Research topics
-            "Thematic structure of Surah Baqarah",
-            "Ring composition in Surah Yusuf",
-            "Chronological order of revelation",
-            "Makkan vs Medinan characteristics",
-            "Historical context of Surah Anfal",
-            "Literary analysis of Surah Kahf stories",
-            "Coherence in Surah An-Nisa",
-            "Rhetorical strategies in Surah Ibrahim",
+            "What is the thematic structure of Surah Baqarah?",
+            "How does ring composition work in Surah Yusuf?",
+            "What is the chronological order of revelation?",
+            "What are Makkan vs Medinan characteristics?",
+            "What is the historical context of Surah Anfal?",
+            "How do literary devices function in Surah Kahf?",
+            "What is the coherence in Surah An-Nisa?",
+            "What are rhetorical strategies in Surah Ibrahim?",
 
-            # Comparative and metadata studies
+            # Analytical studies
             "Compare commentaries on verse 3:7",
             "Analyze different interpretations of verse 4:34",
             "Study variant readings of verse 2:125",
             "Historical context of verse 9:29",
             "Hadith references in verse 2:187",
-            "Cross references for verse 3:31",
             "Linguistic features of verse 19:1-11",
             "Legal principles from verse 17:32",
             "Historical background of verse 48:1-3",
             "Scholar consensus on verse 24:31",
             "Rhetorical analysis of verse 14:24-26",
             "Context of revelation for verse 66:1-5",
-            "Grammatical analysis of verse 76:1-3",
             "Hadith explaining verse 13:11"
         ],
         "explore": [

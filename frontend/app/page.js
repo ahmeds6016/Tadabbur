@@ -457,6 +457,21 @@ function OnboardingComponent({ user, onProfileComplete }) {
         {/* Step 2: Knowledge Level (Only for Variable Personas) */}
         {step === 2 && !isDeterministicPersona && (
           <div>
+            <button
+              onClick={() => setStep(1)}
+              style={{
+                marginBottom: '20px',
+                padding: '8px 16px',
+                background: 'transparent',
+                border: '1px solid var(--primary-teal)',
+                borderRadius: '8px',
+                color: 'var(--primary-teal)',
+                cursor: 'pointer',
+                fontSize: '14px'
+              }}
+            >
+              ← Back to Profile Selection
+            </button>
             <h2 style={{ textAlign: 'center', color: 'var(--primary-teal)', marginBottom: '24px' }}>
               2. What is your knowledge level?
             </h2>
@@ -492,6 +507,21 @@ function OnboardingComponent({ user, onProfileComplete }) {
         {/* Step 3: Learning Goal */}
         {step === 3 && (
           <div>
+            <button
+              onClick={() => setStep(isDeterministicPersona ? 1 : 2)}
+              style={{
+                marginBottom: '20px',
+                padding: '8px 16px',
+                background: 'transparent',
+                border: '1px solid var(--primary-teal)',
+                borderRadius: '8px',
+                color: 'var(--primary-teal)',
+                cursor: 'pointer',
+                fontSize: '14px'
+              }}
+            >
+              ← Back to {isDeterministicPersona ? 'Profile Selection' : 'Knowledge Level'}
+            </button>
             <h2 style={{ textAlign: 'center', color: 'var(--primary-teal)', marginBottom: '24px' }}>
               {isDeterministicPersona ? '2' : '3'}. What is your learning goal?
             </h2>
@@ -709,36 +739,51 @@ function MainApp({ user, userProfile }) {
     }
   };
 
-  const handleExport = async (format) => {
+  const handleCopyToClipboard = async (event) => {
     if (!response) return;
-    
+
     try {
-      const token = await user.getIdToken();
-      const res = await fetch(`${BACKEND_URL}/export/${format}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ response_data: response })
-      });
-      
-      if (res.ok) {
-        const data = await res.json();
-        const blob = new Blob([data.content], { 
-          type: format === 'json' ? 'application/json' : 'text/markdown' 
-        });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = data.filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }
+      // Format the response for clipboard
+      const formattedText = `📖 ${query}\n\n${response.answer || response.response || ''}\n\n---\nGenerated with Tafsir Simplified`;
+      await navigator.clipboard.writeText(formattedText);
+
+      // Show success notification
+      const button = event.currentTarget;
+      const originalText = button.innerHTML;
+      button.innerHTML = '✅ Copied!';
+      button.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+
+      setTimeout(() => {
+        button.innerHTML = originalText;
+        button.style.background = 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)';
+      }, 2000);
     } catch (err) {
-      console.error('Export failed:', err);
+      console.error('Failed to copy:', err);
+      setError('Failed to copy to clipboard');
+    }
+  };
+
+  const handleShareLink = async (event) => {
+    if (!response) return;
+
+    try {
+      // Create a shareable link with query parameter
+      const shareUrl = `${window.location.origin}/?q=${encodeURIComponent(query)}`;
+      await navigator.clipboard.writeText(shareUrl);
+
+      // Show success notification
+      const button = event.currentTarget;
+      const originalText = button.innerHTML;
+      button.innerHTML = '✅ Link Copied!';
+      button.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+
+      setTimeout(() => {
+        button.innerHTML = originalText;
+        button.style.background = 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)';
+      }, 2000);
+    } catch (err) {
+      console.error('Failed to create share link:', err);
+      setError('Failed to create share link');
     }
   };
 
@@ -906,53 +951,53 @@ function MainApp({ user, userProfile }) {
               borderRadius: '12px',
               boxShadow: '0 2px 8px rgba(14, 165, 233, 0.15)'
             }}>
-              <h3 style={{ marginTop: 0, marginBottom: '12px', color: '#0369a1' }}>Save & Export</h3>
               <div className="export-controls" style={{
                 display: 'flex',
                 gap: '12px',
-                flexWrap: 'wrap'
+                flexWrap: 'wrap',
+                alignItems: 'center'
               }}>
                 <button onClick={handleSaveSearch} className="export-btn" style={{
                   padding: '10px 20px',
-                  background: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
+                  background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
                   border: 'none',
                   borderRadius: '8px',
                   cursor: 'pointer',
-                  fontWeight: '700',
+                  fontWeight: '600',
                   color: '#fff',
                   fontSize: '0.9rem',
-                  boxShadow: '0 2px 6px rgba(14, 165, 233, 0.3)',
+                  boxShadow: '0 2px 6px rgba(245, 158, 11, 0.3)',
                   transition: 'all 0.3s ease'
                 }}>
-                  ⭐ Save this Answer
+                  ⭐ Save
                 </button>
-                <button onClick={() => handleExport('markdown')} className="export-btn" style={{
+                <button onClick={handleCopyToClipboard} className="export-btn" style={{
                   padding: '10px 20px',
                   background: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
                   border: 'none',
                   borderRadius: '8px',
                   cursor: 'pointer',
-                  fontWeight: '700',
+                  fontWeight: '600',
                   color: '#fff',
                   fontSize: '0.9rem',
                   boxShadow: '0 2px 6px rgba(14, 165, 233, 0.3)',
                   transition: 'all 0.3s ease'
                 }}>
-                  📄 Export as Markdown
+                  📋 Copy
                 </button>
-                <button onClick={() => handleExport('json')} className="export-btn" style={{
+                <button onClick={handleShareLink} className="export-btn" style={{
                   padding: '10px 20px',
-                  background: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
+                  background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
                   border: 'none',
                   borderRadius: '8px',
                   cursor: 'pointer',
-                  fontWeight: '700',
+                  fontWeight: '600',
                   color: '#fff',
                   fontSize: '0.9rem',
-                  boxShadow: '0 2px 6px rgba(14, 165, 233, 0.3)',
+                  boxShadow: '0 2px 6px rgba(139, 92, 246, 0.3)',
                   transition: 'all 0.3s ease'
                 }}>
-                  📋 Export as JSON
+                  🔗 Share Link
                 </button>
               </div>
             </div>

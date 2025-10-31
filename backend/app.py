@@ -97,12 +97,12 @@ RERANKER_MODELS = [
 # Reranker retrieval configuration
 RERANKER_CONFIG = {
     'tafsir': {
-        'num_candidates': 20,  # REDUCED from 40 to improve reranking speed
-        'final_chunks': 5,     # REDUCED from 8 - faster response with focused content
+        'num_candidates': 10,  # CRITICAL: Reduced from 20 - reranker taking 7-9s per chunk
+        'final_chunks': 5,     # Keep focused output
     },
     'semantic': {
-        'num_candidates': 20,  # REDUCED from 50 to improve reranking speed
-        'final_chunks': 5,     # REDUCED from 10 - faster response with focused content
+        'num_candidates': 12,  # CRITICAL: Reduced from 20 - early termination at 4/20 chunks
+        'final_chunks': 5,     # Keep focused output
     }
 }
 
@@ -951,17 +951,17 @@ def detect_query_intent(query: str) -> dict:
     # Priority 1: Check for historical keywords (timeline, revelation context, events)
     if any(re.search(pattern, query_lower) for pattern in historical_patterns):
         return {
-            'suggested_approach': 'historical',
+            'suggested_approach': 'explore',  # Changed from 'historical'
             'confidence': 'high',
-            'reason': 'Your query asks about revelation context, timeline, or historical events'
+            'reason': 'Your query asks about revelation context, timeline, or historical events - use Explore mode'
         }
 
     # Priority 2: Check for thematic keywords (cross-verse concepts, holistic understanding)
     if any(re.search(pattern, query_lower) for pattern in thematic_patterns):
         return {
-            'suggested_approach': 'thematic',
+            'suggested_approach': 'explore',  # Changed from 'thematic'
             'confidence': 'high',
-            'reason': 'Your query explores a concept across multiple verses or surahs'
+            'reason': 'Your query explores a concept across multiple verses - use Explore mode'
         }
 
     # Priority 3: Check for tafsir-specific patterns (detailed commentary, classical scholars)
@@ -1876,8 +1876,8 @@ def rerank_chunks(query: str, chunks: List[Dict], approach: str = 'tafsir') -> L
     # RERANKING PATH
     start_time = time.time()
     MAX_RERANKING_TIME = 60  # Maximum 60 seconds total timeout for reranking
-    EARLY_TERMINATION_TIME = 30  # Early termination at 30s to avoid long waits
-    MAX_WINDOWS_PER_CHUNK = 5  # REDUCED from 30 - limit windows per chunk for faster processing
+    EARLY_TERMINATION_TIME = 20  # CRITICAL: Reduced from 30s - need faster responses
+    MAX_WINDOWS_PER_CHUNK = 3  # CRITICAL: Reduced from 5 - chunks with 5-6 windows taking too long
 
     try:
         # Get model configuration for sliding window support
@@ -4274,6 +4274,25 @@ def tafsir_handler_enhanced():
 
         if not query:
             return jsonify({'error': 'Query is required'}), 400
+
+        # VERSE RANGE VALIDATION - Block overly large ranges
+        verse_range = extract_verse_range(query)
+        if verse_range:
+            surah, start_verse, end_verse = verse_range
+            verse_count = end_verse - start_verse + 1
+
+            # Maximum 10 verses per query
+            if verse_count > 10:
+                return jsonify({
+                    'error': 'verse_range_too_large',
+                    'message': f'📚 Please narrow your range to 10 verses or less.\n\nYou requested {verse_count} verses ({surah}:{start_verse}-{end_verse}).\n\nTry breaking it into smaller ranges like:\n• {surah}:{start_verse}-{start_verse+9}\n• {surah}:{start_verse+10}-{start_verse+19}',
+                    'requested_verses': verse_count,
+                    'max_verses': 10,
+                    'suggestions': [
+                        f'{surah}:{start_verse}-{min(start_verse+9, end_verse)}',
+                        f'{surah}:{min(start_verse+10, end_verse)}-{min(start_verse+19, end_verse)}' if verse_count > 10 else None
+                    ]
+                }), 400
 
         # Validate and normalize approach
         # MERGE: historical + thematic + explore → semantic (same underlying mechanism)
