@@ -744,7 +744,9 @@ function MainApp({ user, userProfile }) {
 
     const button = event.currentTarget;
     const originalText = button.innerHTML;
-    const formattedText = `📖 ${query}\n\n${response.answer || response.response || ''}\n\n---\nGenerated with Tafsir Simplified`;
+
+    // Copy the complete response object as JSON
+    const formattedText = JSON.stringify(response, null, 2);
 
     // ALWAYS use fallback method - most reliable across browsers
     const textArea = document.createElement('textarea');
