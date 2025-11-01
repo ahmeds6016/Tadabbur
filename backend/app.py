@@ -564,10 +564,37 @@ def extract_verse_range(query: str) -> Optional[Tuple[int, int, int]]:
     Extract verse RANGE from query.
     Returns (surah, start_verse, end_verse) or None.
     Examples: "3:190-191" -> (3, 190, 191), "2:255" -> (2, 255, 255)
+              "As-Sajdah 1-9" -> (32, 1, 9), "Surah Al-Baqarah verse 255-257" -> (2, 255, 257)
     """
     query_normalized = normalize_query_text(query)
 
-    # Pattern for ranges: 3:190-191
+    # Strategy 1: Surah name + verse range (e.g., "As-Sajdah 1-9", "Surah Al-Baqarah verse 1-5")
+    for surah_name, surah_num in SURAHS_BY_NAME.items():
+        if surah_name in query_normalized:
+            # Try various patterns for verse ranges with surah names
+            patterns = [
+                rf'{re.escape(surah_name)}[^\d]*(\d{{1,3}})\s*-\s*(\d{{1,3}})',  # "As-Sajdah 1-9"
+                rf'{re.escape(surah_name)}[^\d]*verse[s]?\s+(\d{{1,3}})\s*-\s*(\d{{1,3}})',  # "As-Sajdah verse 1-9"
+                rf'{re.escape(surah_name)}[^\d]*ayah[s]?\s+(\d{{1,3}})\s*-\s*(\d{{1,3}})',  # "As-Sajdah ayah 1-9"
+            ]
+
+            for pattern in patterns:
+                match = re.search(pattern, query_normalized)
+                if match:
+                    try:
+                        start_verse = int(match.group(1))
+                        end_verse = int(match.group(2))
+
+                        # Validate both verses
+                        is_valid_start, _ = validate_verse_reference(surah_num, start_verse)
+                        is_valid_end, _ = validate_verse_reference(surah_num, end_verse)
+
+                        if is_valid_start and is_valid_end and start_verse <= end_verse:
+                            return (surah_num, start_verse, end_verse)
+                    except (ValueError, IndexError):
+                        continue
+
+    # Strategy 2: Numeric pattern with colon (e.g., "3:190-191")
     range_pattern = r'\b(\d{1,3}):(\d{1,3})-(\d{1,3})\b'
     match = re.search(range_pattern, query_normalized)
 
@@ -586,7 +613,7 @@ def extract_verse_range(query: str) -> Optional[Tuple[int, int, int]]:
         except (ValueError, IndexError):
             pass
 
-    # If no range found, check for single verse and return as range
+    # Strategy 3: If no range found, check for single verse and return as range
     verse_ref = extract_verse_reference_enhanced(query)
     if verse_ref:
         surah, verse = verse_ref

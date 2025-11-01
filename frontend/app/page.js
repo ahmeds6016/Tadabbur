@@ -739,51 +739,101 @@ function MainApp({ user, userProfile }) {
     }
   };
 
-  const handleCopyToClipboard = async (event) => {
+  const handleCopyToClipboard = (event) => {
     if (!response) return;
 
-    try {
-      // Format the response for clipboard
-      const formattedText = `📖 ${query}\n\n${response.answer || response.response || ''}\n\n---\nGenerated with Tafsir Simplified`;
-      await navigator.clipboard.writeText(formattedText);
+    const button = event.currentTarget;
+    const originalText = button.innerHTML;
+    const formattedText = `📖 ${query}\n\n${response.answer || response.response || ''}\n\n---\nGenerated with Tafsir Simplified`;
 
-      // Show success notification
-      const button = event.currentTarget;
-      const originalText = button.innerHTML;
-      button.innerHTML = '✅ Copied!';
-      button.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+    // ALWAYS use fallback method - most reliable across browsers
+    const textArea = document.createElement('textarea');
+    textArea.value = formattedText;
+    textArea.style.position = 'absolute';
+    textArea.style.left = '-9999px';
+    textArea.style.top = '0';
+    document.body.appendChild(textArea);
+
+    try {
+      textArea.select();
+      textArea.setSelectionRange(0, 99999); // For mobile devices
+
+      const successful = document.execCommand('copy');
+      document.body.removeChild(textArea);
+
+      if (successful) {
+        // Show success notification
+        button.innerHTML = '✅ Copied!';
+        button.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+
+        setTimeout(() => {
+          button.innerHTML = originalText;
+          button.style.background = 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)';
+        }, 2000);
+      } else {
+        throw new Error('Copy command failed');
+      }
+    } catch (err) {
+      console.error('Copy failed:', err);
+      document.body.removeChild(textArea);
+
+      // Show error in button
+      button.innerHTML = '❌ Copy Failed';
+      button.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
 
       setTimeout(() => {
         button.innerHTML = originalText;
         button.style.background = 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)';
       }, 2000);
-    } catch (err) {
-      console.error('Failed to copy:', err);
-      setError('Failed to copy to clipboard');
     }
   };
 
-  const handleShareLink = async (event) => {
+  const handleShareLink = (event) => {
     if (!response) return;
 
-    try {
-      // Create a shareable link with query parameter
-      const shareUrl = `${window.location.origin}/?q=${encodeURIComponent(query)}`;
-      await navigator.clipboard.writeText(shareUrl);
+    const button = event.currentTarget;
+    const originalText = button.innerHTML;
+    const shareUrl = `${window.location.origin}/?q=${encodeURIComponent(query)}`;
 
-      // Show success notification
-      const button = event.currentTarget;
-      const originalText = button.innerHTML;
-      button.innerHTML = '✅ Link Copied!';
-      button.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+    // ALWAYS use fallback method - most reliable across browsers
+    const textArea = document.createElement('textarea');
+    textArea.value = shareUrl;
+    textArea.style.position = 'absolute';
+    textArea.style.left = '-9999px';
+    textArea.style.top = '0';
+    document.body.appendChild(textArea);
+
+    try {
+      textArea.select();
+      textArea.setSelectionRange(0, 99999); // For mobile devices
+
+      const successful = document.execCommand('copy');
+      document.body.removeChild(textArea);
+
+      if (successful) {
+        // Show success notification
+        button.innerHTML = '✅ Link Copied!';
+        button.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+
+        setTimeout(() => {
+          button.innerHTML = originalText;
+          button.style.background = 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)';
+        }, 2000);
+      } else {
+        throw new Error('Copy command failed');
+      }
+    } catch (err) {
+      console.error('Share link failed:', err);
+      document.body.removeChild(textArea);
+
+      // Show error in button
+      button.innerHTML = '❌ Share Failed';
+      button.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
 
       setTimeout(() => {
         button.innerHTML = originalText;
         button.style.background = 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)';
       }, 2000);
-    } catch (err) {
-      console.error('Failed to create share link:', err);
-      setError('Failed to create share link');
     }
   };
 
