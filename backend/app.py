@@ -505,12 +505,20 @@ METADATA_KEYWORDS = {
 def normalize_query_text(query: str) -> str:
     """Normalize query for better matching"""
     query = query.lower().strip()
+
+    # Normalize apostrophes (curly quotes to straight quotes)
+    query = query.replace("'", "'").replace("'", "'").replace("`", "'")
+
+    # Use word boundaries to avoid double replacements (e.g., "surah" becoming "surahh")
     replacements = {
-        'sura': 'surah', 'ayat': 'ayah', 'verses': 'verse',
-        'cited by': 'cited', 'mentions': 'mentioned'
+        r'\bsura\b': 'surah',  # Only replace standalone "sura", not "surah"
+        r'\bayat\b': 'ayah',
+        r'\bverses\b': 'verse',
+        'cited by': 'cited',
+        'mentions': 'mentioned'
     }
-    for old, new in replacements.items():
-        query = query.replace(old, new)
+    for pattern, replacement in replacements.items():
+        query = re.sub(pattern, replacement, query)
     return query
 
 def extract_verse_reference_enhanced(query: str) -> Optional[Tuple[int, int]]:
@@ -569,7 +577,8 @@ def extract_verse_range(query: str) -> Optional[Tuple[int, int, int]]:
     query_normalized = normalize_query_text(query)
 
     # Strategy 1: Surah name + verse range (e.g., "As-Sajdah 1-9", "Surah Al-Baqarah verse 1-5")
-    for surah_name, surah_num in SURAHS_BY_NAME.items():
+    # Sort by length (longest first) to avoid substring matching issues
+    for surah_name, surah_num in sorted(SURAHS_BY_NAME.items(), key=lambda x: len(x[0]), reverse=True):
         if surah_name in query_normalized:
             # Try various patterns for verse ranges with surah names
             patterns = [
