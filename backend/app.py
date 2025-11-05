@@ -4322,14 +4322,49 @@ def tafsir_handler_enhanced():
 
         perf_metrics['approach'] = approach
 
-        # TAFSIR MODE VALIDATION - Must have valid verse reference
+        # TAFSIR MODE VALIDATION - Help user format query correctly
         if approach == 'tafsir':
             verse_ref = extract_verse_reference_enhanced(query)
             if not verse_ref:
-                return jsonify({
-                    'error': 'invalid_verse_reference',
-                    'message': '📖 Tafsir mode requires a valid verse reference.\n\nPlease use one of these formats:\n• Numeric: "2:255" or "35:6"\n• With name: "Surah Al-Baqarah 255" or "Surah Fatir, Verse 6"\n• Named verses: "Ayat al Kursi"\n\nTip: For broader topics, try switching to 🔍 Explore mode instead!'
-                }), 400
+                # Try to help user fix their query with fuzzy matching
+                query_lower = query.lower()
+                has_number = bool(re.search(r'\d+', query))
+
+                # Extract potential surah name from query
+                suggestions = []
+
+                # Try fuzzy matching surah names
+                query_words = query_lower.split()
+                for word in query_words:
+                    if len(word) > 3:  # Only check words longer than 3 chars
+                        for surah_name, surah_num in SURAHS_BY_NAME.items():
+                            # Simple similarity: check if word is similar to surah name
+                            if word in surah_name or surah_name.replace('-', '') in word or word.replace('-', '') in surah_name:
+                                # Extract verse number if present
+                                verse_match = re.search(r'\d+', query)
+                                if verse_match:
+                                    verse_num = verse_match.group()
+                                    suggestions.append(f"{surah_num}:{verse_num}")
+                                    suggestions.append(f"Surah {QURAN_METADATA[surah_num]['name']} verse {verse_num}")
+                                break
+
+                # Remove duplicates while preserving order
+                suggestions = list(dict.fromkeys(suggestions[:4]))  # Limit to 4 suggestions
+
+                response_data = {
+                    'needs_clarification': True,
+                    'original_query': query,
+                    'message': '🤔 I couldn\'t find that verse. Let me help you format it correctly.',
+                    'suggestions': suggestions if suggestions else [
+                        '2:255 (Ayat al-Kursi)',
+                        'Surah Al-Fatihah verse 1',
+                        '35:6',
+                        'Surah Fatir, Verse 6'
+                    ],
+                    'help_text': 'Try one of these formats:\n• Numeric: "2:255"\n• Named: "Surah Al-Baqarah 255"\n\n💡 For topics like "patience", use 🔍 Explore mode!'
+                }
+
+                return jsonify(response_data), 200  # Return 200, not error
 
         # VERSE RANGE VALIDATION - Block overly large ranges
         verse_range = extract_verse_range(query)

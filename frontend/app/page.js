@@ -653,13 +653,19 @@ function MainApp({ user, userProfile }) {
       });
       
       const data = await res.json();
-      
+
       if (res.status === 429) {
         setRateLimitWarning('You have reached your query limit. Please try again later.');
         return;
       }
-      
+
       if (!res.ok) throw new Error(data.error || 'Unknown error fetching Tafsir.');
+
+      // Check if backend needs clarification (fuzzy match suggestions)
+      if (data.needs_clarification) {
+        setResponse(data);  // Show suggestions in response area
+        return;
+      }
 
       setResponse(data);
 
@@ -992,7 +998,64 @@ function MainApp({ user, userProfile }) {
           <div className="loading-spinner"></div>
         )}
 
-        {response && (
+        {response && response.needs_clarification && (
+          <div style={{
+            background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+            border: '2px solid #f59e0b',
+            borderRadius: '12px',
+            padding: '24px',
+            marginBottom: '20px'
+          }}>
+            <h3 style={{ color: '#92400e', marginBottom: '12px', fontSize: '1.1rem' }}>
+              {response.message}
+            </h3>
+            <p style={{ color: '#78350f', marginBottom: '16px', fontSize: '0.95rem' }}>
+              {response.help_text}
+            </p>
+            {response.suggestions && response.suggestions.length > 0 && (
+              <>
+                <p style={{ fontWeight: '600', color: '#92400e', marginBottom: '10px' }}>
+                  Did you mean:
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {response.suggestions.map((suggestion, index) => (
+                    <button
+                      key={index}
+                      onClick={() => {
+                        setQuery(suggestion);
+                        setResponse(null);
+                      }}
+                      style={{
+                        padding: '12px 16px',
+                        background: 'white',
+                        border: '2px solid #f59e0b',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        fontSize: '0.95rem',
+                        color: '#78350f',
+                        fontWeight: '500',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = '#fef3c7';
+                        e.currentTarget.style.transform = 'translateX(4px)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'white';
+                        e.currentTarget.style.transform = 'translateX(0)';
+                      }}
+                    >
+                      → {suggestion}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {response && !response.needs_clarification && (
           <>
             {/* Save & Export Section - Moved to top for better accessibility */}
             <div className="export-section" style={{
