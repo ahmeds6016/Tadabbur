@@ -4311,6 +4311,26 @@ def tafsir_handler_enhanced():
         if not query:
             return jsonify({'error': 'Query is required'}), 400
 
+        # Validate and normalize approach FIRST (before validation)
+        # MERGE: historical + thematic + explore → semantic (same underlying mechanism)
+        if approach in ['historical', 'thematic', 'explore']:
+            original_approach = data.get('approach')
+            approach = 'semantic'  # Internal routing uses 'semantic'
+            print(f"📍 Normalized approach: {original_approach} → semantic")
+        elif approach not in ['tafsir', 'semantic']:
+            approach = 'tafsir'  # Default fallback
+
+        perf_metrics['approach'] = approach
+
+        # TAFSIR MODE VALIDATION - Must have valid verse reference
+        if approach == 'tafsir':
+            verse_ref = extract_verse_reference_enhanced(query)
+            if not verse_ref:
+                return jsonify({
+                    'error': 'invalid_verse_reference',
+                    'message': '📖 Tafsir mode requires a valid verse reference.\n\nPlease use one of these formats:\n• Numeric: "2:255" or "35:6"\n• With name: "Surah Al-Baqarah 255" or "Surah Fatir, Verse 6"\n• Named verses: "Ayat al Kursi"\n\nTip: For broader topics, try switching to 🔍 Explore mode instead!'
+                }), 400
+
         # VERSE RANGE VALIDATION - Block overly large ranges
         verse_range = extract_verse_range(query)
         if verse_range:
@@ -4329,17 +4349,6 @@ def tafsir_handler_enhanced():
                         f'{surah}:{min(start_verse+10, end_verse)}-{min(start_verse+19, end_verse)}' if verse_count > 10 else None
                     ]
                 }), 400
-
-        # Validate and normalize approach
-        # MERGE: historical + thematic + explore → semantic (same underlying mechanism)
-        if approach in ['historical', 'thematic', 'explore']:
-            original_approach = data.get('approach')
-            approach = 'semantic'  # Internal routing uses 'semantic'
-            print(f"📍 Normalized approach: {original_approach} → semantic")
-        elif approach not in ['tafsir', 'semantic']:
-            approach = 'tafsir'  # Default fallback
-
-        perf_metrics['approach'] = approach
 
         # Rate limiting
         if is_rate_limited(user_id):
