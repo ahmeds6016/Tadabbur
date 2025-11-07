@@ -796,22 +796,45 @@ function MainApp({ user, userProfile }) {
     }
   };
 
-  const handleShareLink = (event) => {
+  const handleShareLink = async (event) => {
     if (!response) return;
 
     const button = event.currentTarget;
     const originalText = button.innerHTML;
-    const shareUrl = `${window.location.origin}/?q=${encodeURIComponent(query)}`;
 
-    // ALWAYS use fallback method - most reliable across browsers
-    const textArea = document.createElement('textarea');
-    textArea.value = shareUrl;
-    textArea.style.position = 'absolute';
-    textArea.style.left = '-9999px';
-    textArea.style.top = '0';
-    document.body.appendChild(textArea);
+    // Show loading state
+    button.innerHTML = '⏳ Creating link...';
+    button.disabled = true;
 
     try {
+      // Create shareable link via backend
+      const res = await fetch(`${BACKEND_URL}/share`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          query: query,
+          approach: approach,
+          response: response
+        })
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to create shareable link');
+      }
+
+      const data = await res.json();
+      const shareUrl = `${window.location.origin}/shared/${data.share_id}`;
+
+      // Copy to clipboard using fallback method - most reliable across browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = shareUrl;
+      textArea.style.position = 'absolute';
+      textArea.style.left = '-9999px';
+      textArea.style.top = '0';
+      document.body.appendChild(textArea);
+
       textArea.select();
       textArea.setSelectionRange(0, 99999); // For mobile devices
 
@@ -826,13 +849,13 @@ function MainApp({ user, userProfile }) {
         setTimeout(() => {
           button.innerHTML = originalText;
           button.style.background = 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)';
+          button.disabled = false;
         }, 2000);
       } else {
         throw new Error('Copy command failed');
       }
     } catch (err) {
       console.error('Share link failed:', err);
-      document.body.removeChild(textArea);
 
       // Show error in button
       button.innerHTML = '❌ Share Failed';
@@ -841,6 +864,7 @@ function MainApp({ user, userProfile }) {
       setTimeout(() => {
         button.innerHTML = originalText;
         button.style.background = 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)';
+        button.disabled = false;
       }, 2000);
     }
   };
@@ -1085,20 +1109,6 @@ function MainApp({ user, userProfile }) {
                   transition: 'all 0.3s ease'
                 }}>
                   ⭐ Save
-                </button>
-                <button onClick={handleCopyToClipboard} className="export-btn" style={{
-                  padding: '10px 20px',
-                  background: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontWeight: '600',
-                  color: '#fff',
-                  fontSize: '0.9rem',
-                  boxShadow: '0 2px 6px rgba(14, 165, 233, 0.3)',
-                  transition: 'all 0.3s ease'
-                }}>
-                  📋 Copy
                 </button>
                 <button onClick={handleShareLink} className="export-btn" style={{
                   padding: '10px 20px',
@@ -1751,13 +1761,14 @@ function EnhancedResultsDisplay({ data, user }) {
           }}
           className="unified-add-note-btn"
         >
-          📝 Add Note to Response
+          ✨ Capture Your Reflection
         </button>
       </div>
 
       {/* Unified Annotation Form */}
       {inlineAnnotationVerse === 'unified' && (
         <AnnotationPanel
+          isOpen={true}
           verse={data?.verses?.[0] || {}}
           user={user}
           onClose={() => setInlineAnnotationVerse(null)}

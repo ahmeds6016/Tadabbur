@@ -7344,6 +7344,94 @@ def check_verse_metadata(surah, verse):
             "traceback": traceback.format_exc()
         }), 500
 
+# ============================================================================
+# SHAREABLE LINKS
+# ============================================================================
+
+@app.route('/share', methods=['POST'])
+def create_share():
+    """
+    Create a shareable link for a tafsir response.
+    Request body: {
+        "query": str,
+        "approach": str,
+        "response": dict (the tafsir response data)
+    }
+    Returns: { "share_id": str, "share_url": str }
+    """
+    try:
+        data = request.get_json()
+        query = data.get('query', '')
+        approach = data.get('approach', 'tafsir')
+        response = data.get('response', {})
+
+        if not query or not response:
+            return jsonify({"error": "Query and response are required"}), 400
+
+        # Generate a unique share ID using timestamp and hash
+        timestamp = int(time.time() * 1000)
+        content_hash = hashlib.sha256(f"{query}{json.dumps(response)}".encode()).hexdigest()[:8]
+        share_id = f"{timestamp}_{content_hash}"
+
+        # Create the shared content document
+        share_doc = {
+            "share_id": share_id,
+            "query": query,
+            "approach": approach,
+            "response": response,
+            "created_at": firestore.SERVER_TIMESTAMP,
+            "view_count": 0
+        }
+
+        # Save to Firestore in quran_db (public collection)
+        quran_db.collection('shared_content').document(share_id).set(share_doc)
+
+        # Return the share ID and full URL
+        share_url = f"/shared/{share_id}"
+
+        return jsonify({
+            "share_id": share_id,
+            "share_url": share_url
+        }), 201
+
+    except Exception as e:
+        print(f"Error creating share: {e}")
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/share/<share_id>', methods=['GET'])
+def get_shared_content(share_id):
+    """
+    Retrieve shared content by ID.
+    Returns the original query, approach, and response data.
+    """
+    try:
+        # Get the shared content from Firestore
+        doc_ref = quran_db.collection('shared_content').document(share_id)
+        doc = doc_ref.get()
+
+        if not doc.exists:
+            return jsonify({"error": "Shared content not found"}), 404
+
+        share_data = doc.to_dict()
+
+        # Increment view count
+        doc_ref.update({"view_count": firestore.Increment(1)})
+
+        # Return the shared content
+        return jsonify({
+            "query": share_data.get('query'),
+            "approach": share_data.get('approach'),
+            "response": share_data.get('response'),
+            "created_at": share_data.get('created_at'),
+            "view_count": share_data.get('view_count', 0) + 1
+        }), 200
+
+    except Exception as e:
+        print(f"Error retrieving shared content: {e}")
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
 # --- Main ---
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
