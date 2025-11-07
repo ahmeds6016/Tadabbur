@@ -24,7 +24,32 @@ const ANNOTATION_TYPE_CONFIG = {
   question: { icon: '❓', label: 'Question', color: '#8B5CF6' },
   application: { icon: '✅', label: 'Application', color: '#059669' },
   memory: { icon: '💭', label: 'Memory', color: '#3B82F6' },
-  connection: { icon: '🔗', label: 'Connection', color: '#D97706' }
+  connection: { icon: '🔗', label: 'Connection', color: '#D97706' },
+  dua: { icon: '🤲', label: 'Dua/Prayer', color: '#10B981' },
+  gratitude: { icon: '🙏', label: 'Gratitude', color: '#F59E0B' },
+  reminder: { icon: '⏰', label: 'Reminder', color: '#EF4444' },
+  story: { icon: '📚', label: 'Story', color: '#6366F1' },
+  linguistic: { icon: '📝', label: 'Linguistic', color: '#84CC16' },
+  historical: { icon: '📜', label: 'Historical', color: '#A78BFA' },
+  scientific: { icon: '🔬', label: 'Scientific', color: '#06B6D4' },
+  personal_experience: { icon: '💭', label: 'Experience', color: '#EC4899' },
+  teaching_point: { icon: '👨‍🏫', label: 'Teaching', color: '#F97316' },
+  warning: { icon: '⚠️', label: 'Warning', color: '#DC2626' },
+  goal: { icon: '🎯', label: 'Goal', color: '#059669' },
+  contemplation: { icon: '🤔', label: 'Contemplation', color: '#7C3AED' }
+};
+
+// Helper function to get config for any type (including custom ones)
+const getTypeConfig = (type) => {
+  if (ANNOTATION_TYPE_CONFIG[type]) {
+    return ANNOTATION_TYPE_CONFIG[type];
+  }
+  // For custom types, use default styling
+  return {
+    icon: '✨',
+    label: type ? type.charAt(0).toUpperCase() + type.slice(1).replace(/_/g, ' ') : 'Custom',
+    color: '#6B7280'
+  };
 };
 
 export default function MyReflectionsPage() {
@@ -36,6 +61,9 @@ export default function MyReflectionsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [expandedId, setExpandedId] = useState(null);
+  const [sortBy, setSortBy] = useState('newest');
+  const [dateRange, setDateRange] = useState({ start: '', end: '' });
+  const [showStats, setShowStats] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -135,6 +163,85 @@ export default function MyReflectionsPage() {
     } catch {
       return 'Recently';
     }
+  };
+
+  // Sort annotations based on selected criteria
+  const sortAnnotations = (annotationsList) => {
+    const sorted = [...annotationsList];
+    switch(sortBy) {
+      case 'newest':
+        return sorted.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+      case 'oldest':
+        return sorted.sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
+      case 'surah':
+        return sorted.sort((a, b) => {
+          if (a.surah === b.surah) return a.verse - b.verse;
+          return a.surah - b.surah;
+        });
+      case 'type':
+        return sorted.sort((a, b) => (a.type || '').localeCompare(b.type || ''));
+      default:
+        return sorted;
+    }
+  };
+
+  // Filter by date range
+  const filterByDateRange = (annotationsList) => {
+    if (!dateRange.start && !dateRange.end) return annotationsList;
+
+    return annotationsList.filter(annotation => {
+      if (!annotation.createdAt?.seconds) return false;
+      const annotationDate = new Date(annotation.createdAt.seconds * 1000);
+
+      if (dateRange.start) {
+        const startDate = new Date(dateRange.start);
+        if (annotationDate < startDate) return false;
+      }
+
+      if (dateRange.end) {
+        const endDate = new Date(dateRange.end);
+        endDate.setHours(23, 59, 59, 999); // Include full day
+        if (annotationDate > endDate) return false;
+      }
+
+      return true;
+    });
+  };
+
+
+  // Calculate statistics
+  const calculateStats = () => {
+    const stats = {
+      totalReflections: annotations.length,
+      byType: {},
+      bySurah: {},
+      recentDays: 0,
+      averageLength: 0
+    };
+
+    const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+    let totalLength = 0;
+
+    annotations.forEach(annotation => {
+      // By type
+      stats.byType[annotation.type] = (stats.byType[annotation.type] || 0) + 1;
+
+      // By surah
+      const surahKey = `Surah ${annotation.surah}`;
+      stats.bySurah[surahKey] = (stats.bySurah[surahKey] || 0) + 1;
+
+      // Recent activity
+      if (annotation.createdAt?.seconds && annotation.createdAt.seconds * 1000 > thirtyDaysAgo) {
+        stats.recentDays++;
+      }
+
+      // Average length
+      totalLength += annotation.content?.length || 0;
+    });
+
+    stats.averageLength = annotations.length > 0 ? Math.round(totalLength / annotations.length) : 0;
+
+    return stats;
   };
 
   if (isLoading) {
@@ -321,7 +428,7 @@ export default function MyReflectionsPage() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {annotations.map(annotation => {
-              const typeConfig = ANNOTATION_TYPE_CONFIG[annotation.type] || ANNOTATION_TYPE_CONFIG.personal_insight;
+              const typeConfig = getTypeConfig(annotation.type);
               const isExpanded = expandedId === annotation.id;
 
               return (

@@ -1232,6 +1232,7 @@ function MainApp({ user, userProfile }) {
 function InlineAnnotationForm({ verse, user, onSaved, onCancel }) {
   const [content, setContent] = useState('');
   const [type, setType] = useState('personal_insight');
+  const [customType, setCustomType] = useState('');
   const [tags, setTags] = useState([]);
   const [tagInput, setTagInput] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -1242,7 +1243,20 @@ function InlineAnnotationForm({ verse, user, onSaved, onCancel }) {
     { value: 'question', label: '❓ Question', icon: '❓' },
     { value: 'application', label: '✅ Application', icon: '✅' },
     { value: 'memory', label: '💭 Memory', icon: '💭' },
-    { value: 'connection', label: '🔗 Connection', icon: '🔗' }
+    { value: 'connection', label: '🔗 Connection', icon: '🔗' },
+    { value: 'dua', label: '🤲 Dua/Prayer', icon: '🤲' },
+    { value: 'gratitude', label: '🙏 Gratitude', icon: '🙏' },
+    { value: 'reminder', label: '⏰ Reminder', icon: '⏰' },
+    { value: 'story', label: '📚 Story/Example', icon: '📚' },
+    { value: 'linguistic', label: '📝 Linguistic Note', icon: '📝' },
+    { value: 'historical', label: '📜 Historical Context', icon: '📜' },
+    { value: 'scientific', label: '🔬 Scientific Reflection', icon: '🔬' },
+    { value: 'personal_experience', label: '💭 Personal Experience', icon: '💭' },
+    { value: 'teaching_point', label: '👨‍🏫 Teaching Point', icon: '👨‍🏫' },
+    { value: 'warning', label: '⚠️ Warning/Caution', icon: '⚠️' },
+    { value: 'goal', label: '🎯 Goal/Action Item', icon: '🎯' },
+    { value: 'contemplation', label: '🤔 Deep Contemplation', icon: '🤔' },
+    { value: 'custom', label: '✨ Custom', icon: '✨' }
   ];
 
   const handleSave = async () => {
@@ -1266,7 +1280,7 @@ function InlineAnnotationForm({ verse, user, onSaved, onCancel }) {
           surah: verse.surah,
           verse: verse.verse_number,
           content,
-          type,
+          type: type === 'custom' ? customType : type,
           tags
         })
       });
@@ -1336,6 +1350,28 @@ function InlineAnnotationForm({ verse, user, onSaved, onCancel }) {
           ))}
         </div>
       </div>
+
+      {/* Custom Type Input */}
+      {type === 'custom' && (
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{ display: 'block', fontWeight: '700', marginBottom: '8px', color: 'var(--primary-teal)', fontSize: '0.9rem' }}>
+            Custom Type Name
+          </label>
+          <input
+            type="text"
+            value={customType}
+            onChange={(e) => setCustomType(e.target.value)}
+            placeholder="Enter your custom annotation type..."
+            style={{
+              width: '100%',
+              padding: '10px 12px',
+              border: '2px solid var(--border-medium)',
+              borderRadius: '8px',
+              fontSize: '0.9rem'
+            }}
+          />
+        </div>
+      )}
 
       {/* Content Textarea */}
       <div style={{ marginBottom: '16px' }}>
@@ -1609,6 +1645,56 @@ function EnhancedResultsDisplay({ data, user }) {
 
   return (
     <div className="results-container">
+      {/* Unified Add Note Button */}
+      <div style={{
+        position: 'sticky',
+        top: '20px',
+        zIndex: 100,
+        display: 'flex',
+        justifyContent: 'flex-end',
+        marginBottom: '20px',
+        paddingRight: '20px'
+      }}>
+        <button
+          onClick={() => setInlineAnnotationVerse('unified')}
+          style={{
+            background: 'var(--gradient-teal-gold)',
+            border: 'none',
+            color: 'white',
+            padding: '12px 24px',
+            borderRadius: '24px',
+            cursor: 'pointer',
+            fontSize: '1rem',
+            fontWeight: '700',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            boxShadow: 'var(--shadow-medium)',
+            transition: 'all 0.3s ease'
+          }}
+          className="unified-add-note-btn"
+        >
+          📝 Add Note to Response
+        </button>
+      </div>
+
+      {/* Unified Annotation Form */}
+      {inlineAnnotationVerse === 'unified' && (
+        <UnifiedAnnotationForm
+          response={data}
+          user={user}
+          onSaved={() => {
+            setInlineAnnotationVerse(null);
+            // Refresh annotations
+            Object.keys(annotations).forEach(key => {
+              const [surah, verse] = key.split(':');
+              fetchVerseAnnotations(surah, verse);
+            });
+          }}
+          onCancel={() => setInlineAnnotationVerse(null)}
+        />
+      )}
+
       {/* Annotation Panel */}
       {currentVerse && (
         <AnnotationPanel
@@ -1631,30 +1717,10 @@ function EnhancedResultsDisplay({ data, user }) {
             return (
               <div key={index} style={{ marginBottom: '32px' }}>
                 <div className="verse-card enhanced">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                  <div style={{ marginBottom: '16px' }}>
                     <p className="verse-ref" style={{ margin: 0 }}>
                       <strong>{verse.surah_name ? `${verse.surah_name} ` : `Surah ${verse.surah}, `}Verse {verse.verse_number}</strong>
                     </p>
-                    <button
-                      onClick={() => handleAddAnnotation(verse)}
-                      style={{
-                        background: 'var(--gradient-teal-gold)',
-                        border: 'none',
-                        color: 'white',
-                        padding: '8px 16px',
-                        borderRadius: '20px',
-                        cursor: 'pointer',
-                        fontSize: '0.85rem',
-                        fontWeight: '700',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        transition: 'all 0.3s ease'
-                      }}
-                      className="add-annotation-btn"
-                    >
-                      📝 Add Note
-                    </button>
                   </div>
                   {verse.arabic_text && verse.arabic_text !== 'Not available' && (
                     <p className="arabic-text" dir="rtl">{verse.arabic_text}</p>
