@@ -4477,6 +4477,16 @@ def get_verse_annotations(surah, verse):
             annotations = []
             for doc in query.stream():
                 data = doc.to_dict()
+
+                # Convert Firestore timestamp to serializable format
+                created_at = data.get('createdAt')
+                if created_at and hasattr(created_at, 'timestamp'):
+                    created_at = {'seconds': int(created_at.timestamp())}
+
+                updated_at = data.get('updatedAt')
+                if updated_at and hasattr(updated_at, 'timestamp'):
+                    updated_at = {'seconds': int(updated_at.timestamp())}
+
                 annotations.append({
                     'id': doc.id,
                     'surah': data.get('surah'),
@@ -4485,8 +4495,8 @@ def get_verse_annotations(surah, verse):
                     'content': data.get('content', ''),
                     'tags': data.get('tags', []),
                     'linkedVerses': data.get('linkedVerses', []),
-                    'createdAt': data.get('createdAt'),
-                    'updatedAt': data.get('updatedAt'),
+                    'createdAt': created_at,
+                    'updatedAt': updated_at,
                     'isPrivate': data.get('isPrivate', True)
                 })
 
@@ -4522,6 +4532,15 @@ def get_user_annotations():
             if annotation_type and data.get('type') != annotation_type:
                 continue
 
+            # Convert Firestore timestamp to serializable format
+            created_at = data.get('createdAt')
+            if created_at and hasattr(created_at, 'timestamp'):
+                created_at = {'seconds': int(created_at.timestamp())}
+
+            updated_at = data.get('updatedAt')
+            if updated_at and hasattr(updated_at, 'timestamp'):
+                updated_at = {'seconds': int(updated_at.timestamp())}
+
             annotations.append({
                 'id': doc.id,
                 'surah': data.get('surah'),
@@ -4531,8 +4550,8 @@ def get_user_annotations():
                 'content': data.get('content', ''),
                 'tags': data.get('tags', []),
                 'linkedVerses': data.get('linkedVerses', []),
-                'createdAt': data.get('createdAt'),
-                'updatedAt': data.get('updatedAt')
+                'createdAt': created_at,
+                'updatedAt': updated_at
             })
 
         return jsonify({'annotations': annotations, 'count': len(annotations)}), 200
@@ -4684,6 +4703,11 @@ def search_annotations():
                 match = False
 
             if match:
+                # Convert Firestore timestamp to serializable format
+                created_at = data.get('createdAt')
+                if created_at and hasattr(created_at, 'timestamp'):
+                    created_at = {'seconds': int(created_at.timestamp())}
+
                 results.append({
                     'id': doc.id,
                     'surah': data.get('surah'),
@@ -4692,7 +4716,7 @@ def search_annotations():
                     'type': data.get('type'),
                     'content': data.get('content'),
                     'tags': data.get('tags', []),
-                    'createdAt': data.get('createdAt')
+                    'createdAt': created_at
                 })
 
         return jsonify({'results': results, 'count': len(results)}), 200
