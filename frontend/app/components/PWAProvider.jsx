@@ -85,7 +85,7 @@ export default function PWAProvider({ children }) {
       {/* Premium Islamic-themed Install Banner */}
       {isInstallable && !isInstalled && (
         <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96
-                        z-50 animate-[slideUp_0.5s_ease-out]"
+                        z-50 animate-slide-up"
              style={{
                background: 'linear-gradient(135deg, #0D9488 0%, #1E3A5F 100%)',
                boxShadow: '0 8px 32px rgba(30, 58, 95, 0.25)',
@@ -150,19 +150,6 @@ export default function PWAProvider({ children }) {
         </div>
       )}
 
-      {/* Add animation keyframes */}
-      <style jsx>{`
-        @keyframes slideUp {
-          from {
-            transform: translateY(100%);
-            opacity: 0;
-          }
-          to {
-            transform: translateY(0);
-            opacity: 1;
-          }
-        }
-      `}</style>
     </>
   );
 }

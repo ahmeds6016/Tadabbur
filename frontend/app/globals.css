@@ -1468,14 +1468,33 @@ summary:focus-visible {
   button {
     display: none !important;
   }
-  
+
   .card {
     box-shadow: none;
     border: 1px solid #ccc;
   }
-  
+
   .result-section {
     break-inside: avoid;
     page-break-inside: avoid;
   }
+}
+
+/* ============================================================================
+   PWA ANIMATIONS
+   ============================================================================ */
+
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.5s ease-out;
 }
