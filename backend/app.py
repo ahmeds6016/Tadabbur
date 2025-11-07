@@ -3951,6 +3951,487 @@ def get_analytics():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# ============================================================================
+# TAFSIR CACHING SYSTEM - Dedicated Endpoints
+# ============================================================================
+
+@app.route("/cache/lookup", methods=["POST"])
+def cache_lookup():
+    """
+    Check if a tafsir query is cached.
+    Returns cached response if available.
+    """
+    try:
+        data = request.json
+        query = data.get('query', '').strip()
+        user_profile = data.get('user_profile', {})
+        approach = data.get('approach', 'tafsir')
+
+        if not query:
+            return jsonify({'cached': False, 'error': 'Query required'}), 400
+
+        # Normalize the query for better matching
+        normalized_query = normalize_verse_query(query)
+
+        # Check Firestore cache
+        cached_response = get_cached_tafsir_response(query, user_profile, approach)
+
+        if cached_response:
+            return jsonify({
+                'cached': True,
+                'response': cached_response,
+                'cache_info': {
+                    'normalized_query': normalized_query,
+                    'source': 'firestore',
+                    'persona': user_profile.get('persona', 'unknown')
+                }
+            }), 200
+        else:
+            return jsonify({
+                'cached': False,
+                'normalized_query': normalized_query,
+                'message': 'No cache found'
+            }), 200
+
+    except Exception as e:
+        print(f"❌ Cache lookup error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route("/cache/store", methods=["POST"])
+def cache_store():
+    """
+    Store a tafsir response in cache.
+    Called after AI generation for future reuse.
+    """
+    try:
+        data = request.json
+        query = data.get('query', '').strip()
+        user_profile = data.get('user_profile', {})
+        response = data.get('response', {})
+        approach = data.get('approach', 'tafsir')
+
+        if not query or not response:
+            return jsonify({'error': 'Query and response required'}), 400
+
+        # Store in Firestore cache
+        store_tafsir_cache(query, user_profile, response, approach)
+
+        return jsonify({
+            'success': True,
+            'message': 'Response cached successfully',
+            'normalized_query': normalize_verse_query(query)
+        }), 200
+
+    except Exception as e:
+        print(f"❌ Cache store error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route("/cache/analytics", methods=["GET"])
+def cache_analytics():
+    """
+    Get comprehensive cache analytics and statistics.
+    """
+    try:
+        analytics = get_cache_analytics()
+
+        return jsonify({
+            'success': True,
+            'analytics': analytics,
+            'timestamp': datetime.now().isoformat()
+        }), 200
+
+    except Exception as e:
+        print(f"❌ Cache analytics error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route("/cache/popular", methods=["GET"])
+def get_popular_queries():
+    """
+    Get most popular queries for cache pre-warming.
+    """
+    try:
+        limit = request.args.get('limit', 20, type=int)
+        persona = request.args.get('persona', None)
+
+        query = quran_db.collection('popular_queries').order_by('count', direction=firestore.Query.DESCENDING)
+
+        if persona:
+            query = query.where('persona', '==', persona)
+
+        query = query.limit(limit)
+
+        popular = []
+        for doc in query.stream():
+            data = doc.to_dict()
+            popular.append({
+                'query': data.get('query'),
+                'count': data.get('count'),
+                'persona': data.get('persona'),
+                'last_queried': data.get('last_queried').isoformat() if data.get('last_queried') else None
+            })
+
+        return jsonify({
+            'success': True,
+            'popular_queries': popular,
+            'total': len(popular)
+        }), 200
+
+    except Exception as e:
+        print(f"❌ Popular queries error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route("/cache/prewarm", methods=["POST"])
+def prewarm_cache():
+    """
+    Pre-generate cache for popular or specified queries.
+    This can be called by a scheduled job or manually.
+    """
+    try:
+        data = request.json
+        queries = data.get('queries', [])
+        personas = data.get('personas', ['practicing_muslim', 'scholar', 'new_revert'])
+
+        if not queries:
+            # Get top popular queries if none specified
+            pop_docs = quran_db.collection('popular_queries').order_by('count', direction=firestore.Query.DESCENDING).limit(10).stream()
+            queries = [doc.to_dict().get('query') for doc in pop_docs]
+
+        results = []
+        for query in queries:
+            for persona in personas:
+                # Check if already cached
+                profile = {
+                    'persona': persona,
+                    'knowledge_level': 'intermediate',
+                    'learning_goal': 'balanced'
+                }
+
+                cached = get_cached_tafsir_response(query, profile, 'tafsir')
+                if cached:
+                    results.append({
+                        'query': query,
+                        'persona': persona,
+                        'status': 'already_cached'
+                    })
+                else:
+                    results.append({
+                        'query': query,
+                        'persona': persona,
+                        'status': 'queued_for_generation'
+                    })
+                    # TODO: Queue for background generation
+
+        return jsonify({
+            'success': True,
+            'results': results,
+            'message': f'Pre-warming {len(results)} query-persona combinations'
+        }), 200
+
+    except Exception as e:
+        print(f"❌ Cache pre-warm error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route("/cache/invalidate", methods=["POST"])
+def invalidate_cache():
+    """
+    Invalidate cache entries based on criteria.
+    Useful when tafsir database is updated.
+    """
+    try:
+        data = request.json
+        invalidate_type = data.get('type', 'all')  # all, query, persona, age
+
+        if invalidate_type == 'query':
+            query = data.get('query')
+            if not query:
+                return jsonify({'error': 'Query required for query-based invalidation'}), 400
+
+            normalized = normalize_verse_query(query)
+            # Delete all cache entries for this query
+            cache_docs = quran_db.collection('tafsir_cache').where('query_normalized', '==', normalized).stream()
+            count = 0
+            for doc in cache_docs:
+                doc.reference.delete()
+                count += 1
+
+            return jsonify({
+                'success': True,
+                'message': f'Invalidated {count} cache entries for query: {normalized}'
+            }), 200
+
+        elif invalidate_type == 'age':
+            # Invalidate entries older than X hours
+            max_age_hours = data.get('max_age_hours', 24)
+            cutoff_time = datetime.now() - timedelta(hours=max_age_hours)
+
+            cache_docs = quran_db.collection('tafsir_cache').where('created_at', '<', cutoff_time).stream()
+            count = 0
+            for doc in cache_docs:
+                doc.reference.delete()
+                count += 1
+
+            return jsonify({
+                'success': True,
+                'message': f'Invalidated {count} cache entries older than {max_age_hours} hours'
+            }), 200
+
+        elif invalidate_type == 'all':
+            # Clear entire cache (use with caution!)
+            if not data.get('confirm', False):
+                return jsonify({'error': 'Confirmation required to clear all cache'}), 400
+
+            cache_docs = quran_db.collection('tafsir_cache').stream()
+            count = 0
+            for doc in cache_docs:
+                doc.reference.delete()
+                count += 1
+
+            return jsonify({
+                'success': True,
+                'message': f'Cleared entire cache ({count} entries)'
+            }), 200
+
+        else:
+            return jsonify({'error': f'Unknown invalidation type: {invalidate_type}'}), 400
+
+    except Exception as e:
+        print(f"❌ Cache invalidation error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+# Cache utility functions (to be added before the endpoints)
+def normalize_verse_query(query: str) -> str:
+    """
+    Normalize verse queries for better cache matching.
+    Examples:
+    - "2:3" -> "2:3"
+    - "surah 2 verse 3" -> "2:3"
+    - "Al-Baqarah 3" -> "2:3"
+    - "2:3-5" -> "2:3-5"
+    """
+    query_lower = query.lower().strip()
+
+    # Extract verse reference if present
+    verse_ref = extract_verse_reference_enhanced(query)
+    if verse_ref:
+        surah, start_verse = verse_ref
+        # Check if it's a range
+        range_match = re.search(r'(\d+)[:\s]+(\d+)\s*[-–]\s*(\d+)', query)
+        if range_match:
+            return f"{surah}:{start_verse}-{range_match.group(3)}"
+        return f"{surah}:{start_verse}"
+
+    return query_lower
+
+def get_firestore_cache_key(query: str, user_profile: dict, approach: str = "tafsir") -> dict:
+    """
+    Generate a structured cache key for Firestore storage.
+    Returns dict with normalized components for better querying.
+    """
+    normalized_query = normalize_verse_query(query)
+
+    # Extract key profile attributes that affect response
+    profile_key = {
+        'persona': user_profile.get('persona', 'practicing_muslim'),
+        'knowledge_level': user_profile.get('knowledge_level', 'intermediate'),
+        'learning_goal': user_profile.get('learning_goal', 'balanced'),
+        'include_arabic': user_profile.get('include_arabic', True),
+    }
+
+    return {
+        'query_normalized': normalized_query,
+        'query_original': query,
+        'approach': approach,
+        'profile_hash': hashlib.md5(json.dumps(profile_key, sort_keys=True).encode()).hexdigest(),
+        'profile_details': profile_key,
+        'cache_key': hashlib.md5(f"{normalized_query}_{approach}_{json.dumps(profile_key, sort_keys=True)}".encode()).hexdigest()
+    }
+
+def get_cached_tafsir_response(query: str, user_profile: dict, approach: str = "tafsir") -> Optional[dict]:
+    """
+    Retrieve cached tafsir response from Firestore.
+    Returns cached response or None if not found/expired.
+    """
+    try:
+        cache_info = get_firestore_cache_key(query, user_profile, approach)
+        cache_key = cache_info['cache_key']
+
+        # Try Firestore first
+        cache_ref = quran_db.collection('tafsir_cache').document(cache_key)
+        cache_doc = cache_ref.get()
+
+        if cache_doc.exists:
+            cache_data = cache_doc.to_dict()
+
+            # Check if cache is still valid (7 days TTL for tafsir)
+            created_at = cache_data.get('created_at')
+            if created_at:
+                age_days = (datetime.now() - created_at).total_seconds() / 86400
+                if age_days > 7:  # Cache expired after 7 days
+                    print(f"💾 Cache expired for key {cache_key[:8]}... (age: {age_days:.1f} days)")
+                    return None
+
+            # Increment hit count
+            cache_ref.update({
+                'hit_count': firestore.Increment(1),
+                'last_accessed': datetime.now()
+            })
+
+            print(f"💾 Firestore cache HIT for query: {cache_info['query_normalized']}")
+            print(f"   Profile: {cache_info['profile_details']}")
+            print(f"   Hit count: {cache_data.get('hit_count', 0) + 1}")
+
+            # Decompress response if compressed
+            response_data = cache_data.get('response')
+            if cache_data.get('compressed', False) and response_data:
+                import gzip
+                import base64
+                response_data = json.loads(gzip.decompress(base64.b64decode(response_data)))
+
+            return response_data
+
+    except Exception as e:
+        print(f"⚠️ Cache retrieval error: {e}")
+
+    return None
+
+def store_tafsir_cache(query: str, user_profile: dict, response: dict, approach: str = "tafsir"):
+    """
+    Store tafsir response in Firestore cache with compression and metadata.
+    """
+    try:
+        cache_info = get_firestore_cache_key(query, user_profile, approach)
+        cache_key = cache_info['cache_key']
+
+        # Compress large responses
+        response_str = json.dumps(response)
+        compressed = False
+        stored_response = response
+
+        if len(response_str) > 10000:  # Compress if > 10KB
+            import gzip
+            import base64
+            compressed_data = gzip.compress(response_str.encode())
+            stored_response = base64.b64encode(compressed_data).decode()
+            compressed = True
+            print(f"   Compressed response: {len(response_str)} -> {len(stored_response)} bytes")
+
+        # Store in Firestore with metadata
+        cache_doc = {
+            'cache_key': cache_key,
+            'query_normalized': cache_info['query_normalized'],
+            'query_original': query,
+            'approach': approach,
+            'profile': cache_info['profile_details'],
+            'response': stored_response,
+            'compressed': compressed,
+            'created_at': datetime.now(),
+            'last_accessed': datetime.now(),
+            'hit_count': 0,
+            'response_size': len(response_str),
+            'version': '1.0',  # For cache invalidation when tafsir DB updates
+            'tokens_saved': count_tokens_approximate(response.get('response', ''))
+        }
+
+        # Extract verse info for analytics
+        verse_ref = extract_verse_reference_enhanced(query)
+        if verse_ref:
+            cache_doc['surah'] = verse_ref[0]
+            cache_doc['verse'] = verse_ref[1]
+
+        quran_db.collection('tafsir_cache').document(cache_key).set(cache_doc)
+
+        print(f"💾 Cached tafsir response: {cache_info['query_normalized']}")
+        print(f"   Cache key: {cache_key[:8]}...")
+        print(f"   Size: {len(response_str)} bytes (compressed: {compressed})")
+
+        # Track popular queries for pre-warming
+        track_popular_query(cache_info['query_normalized'], cache_info['profile_details'])
+
+    except Exception as e:
+        print(f"⚠️ Cache storage error: {e}")
+
+def track_popular_query(normalized_query: str, profile: dict):
+    """
+    Track popular queries for cache pre-warming.
+    """
+    try:
+        # Create a popularity key combining query and persona
+        popularity_key = f"{normalized_query}_{profile.get('persona', 'default')}"
+
+        pop_ref = quran_db.collection('popular_queries').document(popularity_key)
+        pop_doc = pop_ref.get()
+
+        if pop_doc.exists:
+            pop_ref.update({
+                'count': firestore.Increment(1),
+                'last_queried': datetime.now()
+            })
+        else:
+            pop_ref.set({
+                'query': normalized_query,
+                'persona': profile.get('persona'),
+                'count': 1,
+                'created_at': datetime.now(),
+                'last_queried': datetime.now()
+            })
+    except Exception as e:
+        print(f"⚠️ Popular query tracking error: {e}")
+
+def get_cache_analytics() -> dict:
+    """
+    Get comprehensive cache analytics.
+    """
+    try:
+        # Get cache stats from Firestore
+        cache_collection = quran_db.collection('tafsir_cache')
+
+        # Total cached responses
+        total_cached = len(cache_collection.limit(10000).get())
+
+        # Get hit counts and sizes
+        total_hits = 0
+        total_size = 0
+        total_tokens_saved = 0
+        cache_by_persona = defaultdict(int)
+
+        for doc in cache_collection.limit(500).stream():
+            data = doc.to_dict()
+            total_hits += data.get('hit_count', 0)
+            total_size += data.get('response_size', 0)
+            total_tokens_saved += data.get('tokens_saved', 0) * data.get('hit_count', 0)
+            persona = data.get('profile', {}).get('persona', 'unknown')
+            cache_by_persona[persona] += 1
+
+        # Get popular queries
+        popular_queries = []
+        pop_collection = quran_db.collection('popular_queries').order_by('count', direction=firestore.Query.DESCENDING).limit(10)
+        for doc in pop_collection.stream():
+            data = doc.to_dict()
+            popular_queries.append({
+                'query': data.get('query'),
+                'count': data.get('count'),
+                'persona': data.get('persona')
+            })
+
+        # Calculate cost savings (rough estimate)
+        # Gemini pricing: ~$0.00025 per 1K input tokens, ~$0.001 per 1K output tokens
+        estimated_cost_saved = (total_tokens_saved / 1000) * 0.001
+
+        return {
+            'total_cached_responses': total_cached,
+            'total_cache_hits': total_hits,
+            'total_cache_size_mb': round(total_size / (1024 * 1024), 2),
+            'cache_by_persona': dict(cache_by_persona),
+            'popular_queries': popular_queries,
+            'total_tokens_saved': total_tokens_saved,
+            'estimated_cost_saved': f"${estimated_cost_saved:.2f}",
+            'average_hit_rate': round(total_hits / max(total_cached, 1), 2)
+        }
+
+    except Exception as e:
+        print(f"⚠️ Cache analytics error: {e}")
+        return {}
+
 @app.route("/export/<format_type>", methods=["POST"])
 @firebase_auth_required
 def export_response(format_type):
@@ -5007,12 +5488,23 @@ def tafsir_handler_enhanced():
 
         # Check cache BEFORE any processing (applies to ALL routes)
         stage_start = time.time()
+
+        # For tafsir queries with verse references, check Firestore cache first
+        if approach == 'tafsir' and extract_verse_reference_enhanced(query):
+            firestore_cached = get_cached_tafsir_response(query, user_profile, approach)
+            if firestore_cached:
+                perf_metrics['stages']['cache_check'] = (time.time() - stage_start) * 1000
+                print(f"💾 FIRESTORE cache hit for tafsir query")
+                print(f"   ⏱️  PERFORMANCE: Firestore cache hit in {perf_metrics['stages']['cache_check']:.0f}ms")
+                return jsonify(firestore_cached), 200
+
+        # Check in-memory cache as fallback
         cache_key = get_cache_key(query, user_profile, approach)
         with cache_lock:
             if cache_key in RESPONSE_CACHE:
                 perf_metrics['stages']['cache_check'] = (time.time() - stage_start) * 1000
-                print(f"💾 Cache hit for query (approach: {approach})")
-                print(f"   ⏱️  PERFORMANCE: Cache hit in {perf_metrics['stages']['cache_check']:.0f}ms")
+                print(f"💾 Memory cache hit for query (approach: {approach})")
+                print(f"   ⏱️  PERFORMANCE: Memory cache hit in {perf_metrics['stages']['cache_check']:.0f}ms")
                 return jsonify(RESPONSE_CACHE[cache_key]), 200
         perf_metrics['stages']['cache_check'] = (time.time() - stage_start) * 1000
 
@@ -5245,6 +5737,11 @@ def tafsir_handler_enhanced():
                             keys_to_remove = list(RESPONSE_CACHE.keys())[:200]
                             for key in keys_to_remove:
                                 RESPONSE_CACHE.pop(key, None)
+
+                    # Store in Firestore cache for tafsir queries with verse references
+                    if approach == 'tafsir' and extract_verse_reference_enhanced(query):
+                        store_tafsir_cache(query, user_profile, final_json, approach)
+                        print(f"💾 Stored tafsir response in Firestore cache")
 
                     print(f"✅ Metadata formatted by AI from {len(verse_metadata_list)} source(s)")
                     return jsonify(final_json), 200
@@ -5493,6 +5990,11 @@ def tafsir_handler_enhanced():
                                 keys_to_remove = list(RESPONSE_CACHE.keys())[:200]
                                 for key in keys_to_remove:
                                     RESPONSE_CACHE.pop(key, None)
+
+                        # Store in Firestore cache for tafsir queries
+                        if approach == 'tafsir':
+                            store_tafsir_cache(query, user_profile, final_json, approach)
+                            print(f"💾 Stored direct verse response in Firestore cache")
 
                         print(f"✅ Direct verse formatted by AI from {len(verse_metadata_list)} source(s)")
                         return jsonify(final_json), 200
