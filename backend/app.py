@@ -288,6 +288,417 @@ QURAN_METADATA = {
 
 SURAHS_BY_NAME = {info["name"].lower(): num for num, info in QURAN_METADATA.items()}
 
+# SURAH_NAME_ALIASES: Handle common misspellings and variations
+SURAH_NAME_ALIASES = {
+    # Common misspellings and variations
+    'fatiha': 'al-fatihah',
+    'fatihah': 'al-fatihah',
+    'al-fatiha': 'al-fatihah',
+    'opening': 'al-fatihah',
+
+    'baqara': 'al-baqarah',
+    'baqarah': 'al-baqarah',
+    'cow': 'al-baqarah',
+    'the cow': 'al-baqarah',
+
+    'imran': 'ali imran',
+    'al-imran': 'ali imran',
+    'aal imran': 'ali imran',
+    'aal-imran': 'ali imran',
+    'family of imran': 'ali imran',
+
+    'nisa': 'an-nisa',
+    'women': 'an-nisa',
+    'the women': 'an-nisa',
+
+    'maida': 'al-ma\'idah',
+    'maidah': 'al-ma\'idah',
+    'table': 'al-ma\'idah',
+    'table spread': 'al-ma\'idah',
+
+    'anam': 'al-an\'am',
+    'cattle': 'al-an\'am',
+    'livestock': 'al-an\'am',
+
+    'araf': 'al-a\'raf',
+    'heights': 'al-a\'raf',
+
+    'anfal': 'al-anfal',
+    'spoils': 'al-anfal',
+    'spoils of war': 'al-anfal',
+
+    'tawba': 'at-tawbah',
+    'taubah': 'at-tawbah',
+    'repentance': 'at-tawbah',
+    'baraat': 'at-tawbah',
+
+    'yunus': 'yunus',
+    'jonah': 'yunus',
+
+    'hud': 'hud',
+
+    'yusuf': 'yusuf',
+    'joseph': 'yusuf',
+
+    'rad': 'ar-ra\'d',
+    'thunder': 'ar-ra\'d',
+
+    'ibrahim': 'ibrahim',
+    'abraham': 'ibrahim',
+
+    'hijr': 'al-hijr',
+    'rocky tract': 'al-hijr',
+
+    'nahl': 'an-nahl',
+    'bee': 'an-nahl',
+    'bees': 'an-nahl',
+
+    'isra': 'al-isra',
+    'night journey': 'al-isra',
+    'bani israel': 'al-isra',
+    'children of israel': 'al-isra',
+
+    'kahf': 'al-kahf',
+    'cave': 'al-kahf',
+
+    'maryam': 'maryam',
+    'mary': 'maryam',
+
+    'taha': 'ta-ha',
+
+    'anbiya': 'al-anbya',
+    'prophets': 'al-anbya',
+
+    'hajj': 'al-hajj',
+    'pilgrimage': 'al-hajj',
+
+    'muminun': 'al-mu\'minun',
+    'believers': 'al-mu\'minun',
+
+    'nur': 'an-nur',
+    'light': 'an-nur',
+
+    'furqan': 'al-furqan',
+    'criterion': 'al-furqan',
+
+    'shuara': 'ash-shu\'ara',
+    'poets': 'ash-shu\'ara',
+
+    'naml': 'an-naml',
+    'ant': 'an-naml',
+    'ants': 'an-naml',
+
+    'qasas': 'al-qasas',
+    'stories': 'al-qasas',
+    'narration': 'al-qasas',
+
+    'ankabut': 'al-\'ankabut',
+    'spider': 'al-\'ankabut',
+
+    'rum': 'ar-rum',
+    'romans': 'ar-rum',
+    'rome': 'ar-rum',
+
+    'luqman': 'luqman',
+
+    'sajda': 'as-sajdah',
+    'sajdah': 'as-sajdah',
+    'prostration': 'as-sajdah',
+
+    'ahzab': 'al-ahzab',
+    'confederates': 'al-ahzab',
+    'clans': 'al-ahzab',
+
+    'saba': 'saba',
+    'sheba': 'saba',
+
+    'fatir': 'fatir',
+    'originator': 'fatir',
+    'creator': 'fatir',
+
+    'yasin': 'ya-sin',
+    'yaseen': 'ya-sin',
+
+    'saffat': 'as-saffat',
+    'ranks': 'as-saffat',
+
+    'sad': 'sad',
+
+    'zumar': 'az-zumar',
+    'groups': 'az-zumar',
+    'crowds': 'az-zumar',
+
+    'ghafir': 'ghafir',
+    'forgiver': 'ghafir',
+    'mumin': 'ghafir',
+    'believer': 'ghafir',
+
+    'fussilat': 'fussilat',
+    'explained': 'fussilat',
+    'ha mim': 'fussilat',
+
+    'shura': 'ash-shura',
+    'consultation': 'ash-shura',
+
+    'zukhruf': 'az-zukhruf',
+    'ornaments': 'az-zukhruf',
+    'gold': 'az-zukhruf',
+
+    'dukhan': 'ad-dukhan',
+    'smoke': 'ad-dukhan',
+
+    'jathiya': 'al-jathiyah',
+    'jathiyah': 'al-jathiyah',
+    'kneeling': 'al-jathiyah',
+
+    'ahqaf': 'al-ahqaf',
+    'dunes': 'al-ahqaf',
+
+    'muhammad': 'muhammad',
+    'qital': 'muhammad',
+    'fighting': 'muhammad',
+
+    'fath': 'al-fath',
+    'victory': 'al-fath',
+    'conquest': 'al-fath',
+
+    'hujurat': 'al-hujurat',
+    'rooms': 'al-hujurat',
+    'chambers': 'al-hujurat',
+
+    'qaf': 'qaf',
+
+    'dhariyat': 'adh-dhariyat',
+    'winds': 'adh-dhariyat',
+
+    'tur': 'at-tur',
+    'mount': 'at-tur',
+
+    'najm': 'an-najm',
+    'star': 'an-najm',
+
+    'qamar': 'al-qamar',
+    'moon': 'al-qamar',
+
+    'rahman': 'ar-rahman',
+    'merciful': 'ar-rahman',
+    'beneficent': 'ar-rahman',
+
+    'waqiah': 'al-waqi\'ah',
+    'event': 'al-waqi\'ah',
+    'inevitable': 'al-waqi\'ah',
+
+    'hadid': 'al-hadid',
+    'iron': 'al-hadid',
+
+    'mujadila': 'al-mujadila',
+    'mujadilah': 'al-mujadila',
+    'disputation': 'al-mujadila',
+
+    'hashr': 'al-hashr',
+    'gathering': 'al-hashr',
+    'exile': 'al-hashr',
+
+    'mumtahina': 'al-mumtahanah',
+    'mumtahanah': 'al-mumtahanah',
+    'examined': 'al-mumtahanah',
+
+    'saff': 'as-saff',
+    'row': 'as-saff',
+    'ranks': 'as-saff',
+
+    'jumuah': 'al-jumu\'ah',
+    'friday': 'al-jumu\'ah',
+    'congregation': 'al-jumu\'ah',
+
+    'munafiqun': 'al-munafiqun',
+    'hypocrites': 'al-munafiqun',
+
+    'taghabun': 'at-taghabun',
+    'loss and gain': 'at-taghabun',
+
+    'talaq': 'at-talaq',
+    'divorce': 'at-talaq',
+
+    'tahrim': 'at-tahrim',
+    'prohibition': 'at-tahrim',
+
+    'mulk': 'al-mulk',
+    'dominion': 'al-mulk',
+    'sovereignty': 'al-mulk',
+
+    'qalam': 'al-qalam',
+    'pen': 'al-qalam',
+
+    'haqqah': 'al-haqqah',
+    'reality': 'al-haqqah',
+    'inevitable': 'al-haqqah',
+
+    'maarij': 'al-ma\'arij',
+    'ascending': 'al-ma\'arij',
+
+    'nuh': 'nuh',
+    'noah': 'nuh',
+
+    'jinn': 'al-jinn',
+
+    'muzzammil': 'al-muzzammil',
+    'wrapped': 'al-muzzammil',
+    'enshrouded': 'al-muzzammil',
+
+    'muddathir': 'al-muddaththir',
+    'muddaththir': 'al-muddaththir',
+    'cloaked': 'al-muddaththir',
+
+    'qiyama': 'al-qiyamah',
+    'qiyamah': 'al-qiyamah',
+    'resurrection': 'al-qiyamah',
+
+    'insan': 'al-insan',
+    'dahr': 'al-insan',
+    'man': 'al-insan',
+    'time': 'al-insan',
+
+    'mursalat': 'al-mursalat',
+    'sent forth': 'al-mursalat',
+
+    'naba': 'an-naba',
+    'tidings': 'an-naba',
+    'announcement': 'an-naba',
+
+    'naziat': 'an-nazi\'at',
+    'pluckers': 'an-nazi\'at',
+
+    'abasa': '\'abasa',
+    'frowned': '\'abasa',
+
+    'takwir': 'at-takwir',
+    'folding': 'at-takwir',
+
+    'infitar': 'al-infitar',
+    'cleaving': 'al-infitar',
+
+    'mutaffifin': 'al-mutaffifin',
+    'defrauders': 'al-mutaffifin',
+
+    'inshiqaq': 'al-inshiqaq',
+    'splitting': 'al-inshiqaq',
+
+    'buruj': 'al-buruj',
+    'constellations': 'al-buruj',
+
+    'tariq': 'at-tariq',
+    'nightcomer': 'at-tariq',
+
+    'ala': 'al-a\'la',
+    'most high': 'al-a\'la',
+
+    'ghashiya': 'al-ghashiyah',
+    'ghashiyah': 'al-ghashiyah',
+    'overwhelming': 'al-ghashiyah',
+
+    'fajr': 'al-fajr',
+    'dawn': 'al-fajr',
+
+    'balad': 'al-balad',
+    'city': 'al-balad',
+
+    'shams': 'ash-shams',
+    'sun': 'ash-shams',
+
+    'layl': 'al-layl',
+    'lail': 'al-layl',
+    'night': 'al-layl',
+
+    'duha': 'ad-duha',
+    'forenoon': 'ad-duha',
+    'morning': 'ad-duha',
+
+    'sharh': 'ash-sharh',
+    'inshirah': 'ash-sharh',
+    'expansion': 'ash-sharh',
+
+    'tin': 'at-tin',
+    'fig': 'at-tin',
+
+    'alaq': 'al-\'alaq',
+    'clot': 'al-\'alaq',
+    'clinging': 'al-\'alaq',
+
+    'qadr': 'al-qadr',
+    'power': 'al-qadr',
+    'decree': 'al-qadr',
+
+    'bayyina': 'al-bayyinah',
+    'bayyinah': 'al-bayyinah',
+    'evidence': 'al-bayyinah',
+
+    'zalzalah': 'az-zalzalah',
+    'zalzala': 'az-zalzalah',
+    'earthquake': 'az-zalzalah',
+
+    'adiyat': 'al-\'adiyat',
+    'chargers': 'al-\'adiyat',
+
+    'qariah': 'al-qari\'ah',
+    'calamity': 'al-qari\'ah',
+
+    'takathur': 'at-takathur',
+    'competition': 'at-takathur',
+
+    'asr': 'al-\'asr',
+    'time': 'al-\'asr',
+    'epoch': 'al-\'asr',
+
+    'humazah': 'al-humazah',
+    'slanderer': 'al-humazah',
+
+    'fil': 'al-fil',
+    'feel': 'al-fil',
+    'elephant': 'al-fil',
+
+    'quraysh': 'quraysh',
+    'quraish': 'quraysh',
+
+    'maun': 'al-ma\'un',
+    'assistance': 'al-ma\'un',
+
+    'kawthar': 'al-kawthar',
+    'kauther': 'al-kawthar',
+    'abundance': 'al-kawthar',
+
+    'kafirun': 'al-kafirun',
+    'disbelievers': 'al-kafirun',
+
+    'nasr': 'an-nasr',
+    'help': 'an-nasr',
+    'victory': 'an-nasr',
+
+    'masad': 'al-masad',
+    'lahab': 'al-masad',
+    'palm fiber': 'al-masad',
+
+    'ikhlas': 'al-ikhlas',
+    'sincerity': 'al-ikhlas',
+    'purity': 'al-ikhlas',
+
+    'falaq': 'al-falaq',
+    'daybreak': 'al-falaq',
+
+    'nas': 'an-nas',
+    'mankind': 'an-nas',
+    'people': 'an-nas',
+}
+
+# Apply aliases to create expanded SURAHS_BY_NAME
+SURAHS_BY_NAME_WITH_ALIASES = dict(SURAHS_BY_NAME)
+for alias, actual_name in SURAH_NAME_ALIASES.items():
+    if actual_name in SURAHS_BY_NAME:
+        SURAHS_BY_NAME_WITH_ALIASES[alias] = SURAHS_BY_NAME[actual_name]
+
+# Update the main dictionary to include aliases
+SURAHS_BY_NAME.update(SURAHS_BY_NAME_WITH_ALIASES)
+
 # Persona-specific query suggestions
 # Each persona gets relevant suggestions based on their knowledge level and needs
 # Import persona-specific suggestions
@@ -432,22 +843,96 @@ SOURCE_WEIGHTS = {
 # NEW: ENHANCED QUERY CLASSIFICATION SYSTEM
 # ============================================================================
 
-# Named verses mapping (common references)
+# Named verses mapping (common references) - EXPANDED
 NAMED_VERSES = {
+    # Ayat al-Kursi variations
     'ayat al-kursi': (2, 255),
-    'ayat al kursi': (2, 255),  # Without hyphen
-    'ayah al-kursi': (2, 255),  # After normalization
-    'ayah al kursi': (2, 255),  # After normalization, without hyphen
+    'ayat al kursi': (2, 255),
+    'ayah al-kursi': (2, 255),
+    'ayah al kursi': (2, 255),
     'ayatul kursi': (2, 255),
     'throne verse': (2, 255),
     'verse of the throne': (2, 255),
+    'greatest verse': (2, 255),
+
+    # Light verse variations
     'light verse': (24, 35),
+    'verse of light': (24, 35),
     'ayat an-nur': (24, 35),
-    'ayah an-nur': (24, 35),  # After normalization
+    'ayah an-nur': (24, 35),
+    'ayat al-nur': (24, 35),
+    'ayah al-nur': (24, 35),
+    'ayatul nur': (24, 35),
+
+    # Financial/Legal verses
     'debt verse': (2, 282),
+    'longest verse': (2, 282),  # It's the longest verse in the Quran
+    'verse of debt': (2, 282),
+    'riba verse': (2, 275),
+    'usury verse': (2, 275),
+    'inheritance verse': (4, 11),
+    'verse of inheritance': (4, 11),
+
+    # Opening and closing
     'bismillah': (1, 1),
     'basmala': (1, 1),
     'fatiha': (1, 1),
+    'al-fatiha': (1, 1),
+    'opening': (1, 1),
+    'last verse': (110, 3),  # Last verse of last complete surah
+    'verse of refuge': (113, 1),  # Al-Falaq
+    'verse of mankind': (114, 1),  # An-Nas
+
+    # Verses about specific topics
+    'hijab verse': (24, 31),
+    'veil verse': (24, 31),
+    'modesty verse': (24, 31),
+    'sword verse': (9, 5),
+    'verse of the sword': (9, 5),
+    'patience verse': (2, 153),
+    'verse of patience': (2, 153),
+
+    # Verses about prophets
+    'verse of jesus': (3, 45),
+    'verse of mary': (3, 42),
+    'verse of moses': (28, 7),
+    'verse of abraham': (2, 124),
+    'verse of noah': (71, 1),
+
+    # Important theological verses
+    'tawhid verse': (112, 1),
+    'verse of oneness': (112, 1),
+    'no compulsion verse': (2, 256),
+    'verse of no compulsion': (2, 256),
+    'freedom of religion': (2, 256),
+
+    # Verses about worship
+    'qibla verse': (2, 144),
+    'verse of qibla': (2, 144),
+    'fasting verse': (2, 183),
+    'verse of fasting': (2, 183),
+    'hajj verse': (3, 97),
+    'verse of hajj': (3, 97),
+    'zakat verse': (2, 43),
+    'verse of zakat': (2, 43),
+
+    # Night journey
+    'isra verse': (17, 1),
+    'night journey verse': (17, 1),
+    'verse of night journey': (17, 1),
+
+    # End times
+    'verse of the hour': (7, 187),
+    'judgment verse': (82, 1),
+    'verse of judgment': (82, 1),
+
+    # Miracles and signs
+    'spider verse': (29, 41),
+    'verse of spider': (29, 41),
+    'bee verse': (16, 68),
+    'verse of bee': (16, 68),
+    'ant verse': (27, 18),
+    'verse of ant': (27, 18),
 }
 
 # Metadata type keywords - COMPREHENSIVE COVERAGE
@@ -503,23 +988,58 @@ METADATA_KEYWORDS = {
 }
 
 def normalize_query_text(query: str) -> str:
-    """Normalize query for better matching"""
+    """Normalize query for comprehensive pattern matching"""
     query = query.lower().strip()
 
     # Normalize apostrophes (curly quotes to straight quotes)
     query = query.replace("'", "'").replace("'", "'").replace("`", "'")
 
-    # Use word boundaries to avoid double replacements (e.g., "surah" becoming "surahh")
+    # PHASE 1: Strip natural language prefixes (do this first)
+    natural_prefixes = [
+        r'^(show me|give me|tell me about|tell me|explain|what is|what does|what are)\s+',
+        r'^(i want to read|i want to see|i want|please show|please|can you show|can you)\s+',
+        r'^(display|get|fetch|find|search for|look up|lookup)\s+',
+    ]
+    for prefix in natural_prefixes:
+        query = re.sub(prefix, '', query, flags=re.IGNORECASE)
+
+    # PHASE 2: Comprehensive word replacements
     replacements = {
-        r'\bsura\b': 'surah',  # Only replace standalone "sura", not "surah"
+        # Surah variations
+        r'\bsura\b': 'surah',
+        r'\bsurat\b': 'surah',
+        r'\bsoorah\b': 'surah',
+        r'\bchapter\b': 'surah',
+        r'\bch\b\.?(?=\s*\d)': 'surah',  # ch2 or ch. 2 -> surah 2
+
+        # Verse variations
         r'\bayat\b': 'ayah',
+        r'\bayaat\b': 'ayah',
+        r'\baya\b': 'ayah',
+        r'\bayet\b': 'ayah',  # Turkish variant
         r'\bverses\b': 'verse',
+        r'\bayahs\b': 'ayah',
+        r'\bv\.?(?=\s*\d)': 'verse',  # v255 or v. 255 -> verse 255
+
+        # Range connectors (normalize to hyphen)
+        r'\s+to\s+': '-',
+        r'\s+through\s+': '-',
+        r'\s+till\s+': '-',
+        r'\s+until\s+': '-',
+        r'\s+thru\s+': '-',
+        r'\s+and\s+': '-',  # for "255 and 256" -> "255-256"
+
+        # Other normalizations
         'cited by': 'cited',
-        'mentions': 'mentioned'
+        'mentions': 'mentioned',
+
+        # Remove trailing punctuation
+        r'[.!?]+$': '',
     }
     for pattern, replacement in replacements.items():
-        query = re.sub(pattern, replacement, query)
-    return query
+        query = re.sub(pattern, replacement, query, flags=re.IGNORECASE)
+
+    return query.strip()
 
 def extract_verse_reference_enhanced(query: str) -> Optional[Tuple[int, int]]:
     """
@@ -535,35 +1055,77 @@ def extract_verse_reference_enhanced(query: str) -> Optional[Tuple[int, int]]:
         if name in query_normalized:
             return ref
 
-    # Strategy 2: Numeric patterns (including ranges)
+    # Strategy 2: Numeric patterns (including ranges and various separators)
     patterns = [
-        r'\b(\d{1,3}):(\d{1,3})(?:-\d{1,3})?\b',  # 2:255 or 2:255-256 (capture first verse)
+        # Colon patterns
+        r'\b(\d{1,3}):(\d{1,3})(?:-\d{1,3})?\b',  # 2:255 or 2:255-256
         r'\b(\d{1,3})\s*:\s*(\d{1,3})(?:\s*-\s*\d{1,3})?\b',  # 2 : 255 or 2 : 255 - 256
-        r'surah\s+(\d{1,3})\s+(?:verse|ayah|ayat|verses)\s+(\d{1,3})',  # surah 2 verse 255
+
+        # Period and dot patterns
+        r'\b(\d{1,3})\.(\d{1,3})(?:-\d{1,3})?\b',  # 2.255 or 2.255-256
+        r'\b(\d{1,3})\s*\.\s*(\d{1,3})(?:\s*-\s*\d{1,3})?\b',  # 2 . 255
+
+        # Slash patterns
+        r'\b(\d{1,3})/(\d{1,3})(?:-\d{1,3})?\b',  # 2/255
+
+        # Explicit surah/verse patterns
+        r'surah\s+(\d{1,3})\s+(?:verse|ayah|ayat|verses?)\s+(\d{1,3})',  # surah 2 verse 255
+        r's(\d{1,3})v(\d{1,3})\b',  # s2v255 (abbreviated)
+        r'ch(?:apter)?\s*(\d{1,3})\s*v(?:erse)?\s*(\d{1,3})',  # ch2v255 or chapter 2 verse 255
+
+        # Reversed patterns (verse X of surah Y)
+        r'(?:verse|ayah|ayat)\s+(\d{1,3})\s+(?:of|from|in)\s+surah\s+(\d{1,3})',  # verse 255 of surah 2
     ]
 
     for pattern in patterns:
         match = re.search(pattern, query_normalized)
         if match:
             try:
-                surah = int(match.group(1))
-                verse = int(match.group(2))
+                # Handle reversed pattern (last pattern has verse first, surah second)
+                if 'of|from|in' in pattern:
+                    verse = int(match.group(1))
+                    surah = int(match.group(2))
+                else:
+                    surah = int(match.group(1))
+                    verse = int(match.group(2))
+
                 is_valid, _ = validate_verse_reference(surah, verse)
                 if is_valid:
                     return (surah, verse)
             except (ValueError, IndexError):
                 continue
 
-    # Strategy 3: Surah name + number
-    for surah_name, surah_num in SURAHS_BY_NAME.items():
+    # Strategy 3: Surah name patterns with various formats
+    for surah_name, surah_num in sorted(SURAHS_BY_NAME.items(), key=lambda x: len(x[0]), reverse=True):
         if surah_name in query_normalized:
-            pattern = rf'{re.escape(surah_name)}[^\d]*(\d{{1,3}})'
-            match = re.search(pattern, query_normalized)
-            if match:
-                verse_num = int(match.group(1))
-                is_valid, _ = validate_verse_reference(surah_num, verse_num)
-                if is_valid:
-                    return (surah_num, verse_num)
+            # Multiple patterns for surah name + verse
+            patterns = [
+                # Standard patterns
+                rf'{re.escape(surah_name)}[^\d]*(\d{{1,3}})',  # Al-Baqarah 255
+                rf'{re.escape(surah_name)}[,\s]+(?:verse|ayah|ayat|v\.?)\s*(\d{{1,3}})',  # Al-Baqarah, verse 255
+
+                # Comma-separated pattern (the one that was failing)
+                rf'{re.escape(surah_name)}\s*,\s*(?:verse|ayah|ayat|v\.?)?\s*(\d{{1,3}})',  # Al-Baqarah, 255 or Al-Baqarah, Verse 6
+
+                # Reversed patterns
+                rf'(?:verse|ayah|ayat|v\.?)\s+(\d{{1,3}})\s+(?:of|from|in)\s+{re.escape(surah_name)}',  # verse 255 of Al-Baqarah
+                rf'(\d{{1,3}})\s+(?:of|from|in)\s+{re.escape(surah_name)}',  # 255 of Al-Baqarah
+
+                # Parenthetical patterns
+                rf'{re.escape(surah_name)}\s*\((\d{{1,3}})\)',  # Al-Baqarah (255)
+                rf'{re.escape(surah_name)}\s*\[(\d{{1,3}})\]',  # Al-Baqarah [255]
+            ]
+
+            for pattern in patterns:
+                match = re.search(pattern, query_normalized)
+                if match:
+                    try:
+                        verse_num = int(match.group(1))
+                        is_valid, _ = validate_verse_reference(surah_num, verse_num)
+                        if is_valid:
+                            return (surah_num, verse_num)
+                    except (ValueError, IndexError):
+                        continue
 
     return None
 
@@ -582,9 +1144,17 @@ def extract_verse_range(query: str) -> Optional[Tuple[int, int, int]]:
         if surah_name in query_normalized:
             # Try various patterns for verse ranges with surah names
             patterns = [
+                # Standard range patterns
                 rf'{re.escape(surah_name)}[^\d]*(\d{{1,3}})\s*-\s*(\d{{1,3}})',  # "As-Sajdah 1-9"
                 rf'{re.escape(surah_name)}[^\d]*verse[s]?\s+(\d{{1,3}})\s*-\s*(\d{{1,3}})',  # "As-Sajdah verse 1-9"
                 rf'{re.escape(surah_name)}[^\d]*ayah[s]?\s+(\d{{1,3}})\s*-\s*(\d{{1,3}})',  # "As-Sajdah ayah 1-9"
+
+                # Comma-separated ranges
+                rf'{re.escape(surah_name)}\s*,\s*(?:verse[s]?|ayah[s]?)?\s*(\d{{1,3}})\s*-\s*(\d{{1,3}})',  # "As-Sajdah, verses 1-9"
+
+                # Reversed patterns with ranges
+                rf'verse[s]?\s+(\d{{1,3}})\s*-\s*(\d{{1,3}})\s+(?:of|from|in)\s+{re.escape(surah_name)}',  # "verses 1-9 of As-Sajdah"
+                rf'ayah[s]?\s+(\d{{1,3}})\s*-\s*(\d{{1,3}})\s+(?:of|from|in)\s+{re.escape(surah_name)}',  # "ayahs 1-9 from As-Sajdah"
             ]
 
             for pattern in patterns:
@@ -603,24 +1173,40 @@ def extract_verse_range(query: str) -> Optional[Tuple[int, int, int]]:
                     except (ValueError, IndexError):
                         continue
 
-    # Strategy 2: Numeric pattern with colon (e.g., "3:190-191")
-    range_pattern = r'\b(\d{1,3}):(\d{1,3})-(\d{1,3})\b'
-    match = re.search(range_pattern, query_normalized)
+    # Strategy 2: Numeric patterns with various separators
+    range_patterns = [
+        # Colon patterns
+        r'\b(\d{1,3}):(\d{1,3})-(\d{1,3})\b',  # 3:190-191
+        r'\b(\d{1,3})\s*:\s*(\d{1,3})\s*-\s*(\d{1,3})\b',  # 3 : 190 - 191
 
-    if match:
-        try:
-            surah = int(match.group(1))
-            start_verse = int(match.group(2))
-            end_verse = int(match.group(3))
+        # Period/dot patterns
+        r'\b(\d{1,3})\.(\d{1,3})-(\d{1,3})\b',  # 3.190-191
+        r'\b(\d{1,3})\s*\.\s*(\d{1,3})\s*-\s*(\d{1,3})\b',  # 3 . 190 - 191
 
-            # Validate both verses
-            is_valid_start, _ = validate_verse_reference(surah, start_verse)
-            is_valid_end, _ = validate_verse_reference(surah, end_verse)
+        # Slash patterns
+        r'\b(\d{1,3})/(\d{1,3})-(\d{1,3})\b',  # 3/190-191
 
-            if is_valid_start and is_valid_end and start_verse <= end_verse:
-                return (surah, start_verse, end_verse)
-        except (ValueError, IndexError):
-            pass
+        # Explicit surah/verse range patterns
+        r'surah\s+(\d{1,3})\s+(?:verse[s]?|ayah[s]?)\s+(\d{1,3})\s*-\s*(\d{1,3})',  # surah 3 verses 190-191
+        r'ch(?:apter)?\s*(\d{1,3})\s*v(?:erse[s]?)?\s*(\d{1,3})\s*-\s*(\d{1,3})',  # ch3v190-191 or chapter 3 verses 190-191
+    ]
+
+    for range_pattern in range_patterns:
+        match = re.search(range_pattern, query_normalized)
+        if match:
+            try:
+                surah = int(match.group(1))
+                start_verse = int(match.group(2))
+                end_verse = int(match.group(3))
+
+                # Validate both verses
+                is_valid_start, _ = validate_verse_reference(surah, start_verse)
+                is_valid_end, _ = validate_verse_reference(surah, end_verse)
+
+                if is_valid_start and is_valid_end and start_verse <= end_verse:
+                    return (surah, start_verse, end_verse)
+            except (ValueError, IndexError):
+                continue
 
     # Strategy 3: If no range found, check for single verse and return as range
     verse_ref = extract_verse_reference_enhanced(query)
