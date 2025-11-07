@@ -796,6 +796,34 @@ def get_verse_from_firestore(surah_num, verse_num):
                     'transliteration': verse_data.get('en_transliteration', '')
                 }
 
+    except Exception as e:
+        print(f"Error fetching verse {surah_num}:{verse_num} from Firestore: {e}")
+    return None
+
+def get_verses_range_from_firestore(surah_num, start_verse, end_verse):
+    """Retrieve multiple verses from tafsir-db database"""
+    try:
+        doc_ref = quran_db.collection('quran_texts').document(f'surah_{surah_num}')
+        doc = doc_ref.get()
+
+        if doc.exists:
+            verses_dict = doc.to_dict().get('verses', {})
+            surah_name = QURAN_METADATA[surah_num]["name"]
+
+            result = []
+            for v in range(start_verse, end_verse + 1):
+                verse_data = verses_dict.get(str(v))
+                if verse_data:
+                    result.append({
+                        'surah_number': surah_num,
+                        'verse_number': v,
+                        'surah_name': surah_name,
+                        'arabic': verse_data.get('arabic', ''),
+                        'english': verse_data.get('en_sahih', ''),
+                        'transliteration': verse_data.get('en_transliteration', '')
+                    })
+            return result if result else None
+
         return None
     except Exception as e:
         print(f"Firestore lookup error: {e}")
@@ -2940,10 +2968,26 @@ Focus on COMPREHENSIVE EXPLORATION of themes, events, and concepts.
 
     approach_instruction = approach_instructions.get(approach, approach_instructions['tafsir'])
 
-    # Add verse information if available
+    # Add verse information if available (handles both single verse and list of verses)
     verse_info = ""
     if verse_data:
-        verse_info = f"""
+        if isinstance(verse_data, list):
+            # Multiple verses in a range
+            verse_info = "\n--- VERSE DETAILS (PROVIDED BY BACKEND) ---\n"
+            verse_info += f"Surah: {verse_data[0]['surah_number']} ({verse_data[0]['surah_name']})\n"
+            verse_info += f"Verse Range: {verse_data[0]['verse_number']}-{verse_data[-1]['verse_number']}\n\n"
+
+            for v in verse_data:
+                verse_info += f"**Verse {v['verse_number']}:**\n"
+                verse_info += f"Arabic: {v['arabic']}\n"
+                verse_info += f"English Translation (Saheeh International): {v['english']}\n"
+                verse_info += f"Transliteration: {v['transliteration']}\n\n"
+
+            verse_info += "IMPORTANT: These verse texts are already provided by our backend.\n"
+            verse_info += "You do NOT need to provide verse translations - focus on explaining the TAFSIR (commentary).\n"
+        else:
+            # Single verse
+            verse_info = f"""
 --- VERSE DETAILS (PROVIDED BY BACKEND) ---
 Surah: {verse_data['surah_number']} ({verse_data['surah_name']})
 Verse: {verse_data['verse_number']}
@@ -4659,10 +4703,18 @@ def tafsir_handler_enhanced():
                 start_verse = verse
                 end_verse = verse
 
-            # Get verse text from Firestore (for now, just get first verse)
-            verse_data = get_verse_from_firestore(surah, start_verse)
+            # Get verse text(s) from Firestore
+            if start_verse != end_verse:
+                # Fetch all verses in the range
+                verses_data_list = get_verses_range_from_firestore(surah, start_verse, end_verse)
+                verse_data = verses_data_list[0] if verses_data_list else None  # Use first verse for backward compatibility checks
+            else:
+                # Single verse - use existing function
+                verses_data_list = None
+                verse_data = get_verse_from_firestore(surah, start_verse)
+
             if not verse_data:
-                print(f"⚠️  Verse not found in Firestore, trying semantic search")
+                print(f"⚠️  Verse(s) not found in Firestore, trying semantic search")
                 query_type = 'semantic'  # Fallback
             else:
                 # CRITICAL LOGGING: Verify we're getting the correct verse data
@@ -4757,8 +4809,10 @@ def tafsir_handler_enhanced():
                         elif first_item.get('metadata'):
                             cross_refs = first_item['metadata'].get('cross_references', [])
 
+                    # Pass verses_data_list if we have a range, otherwise pass single verse_data
+                    verses_for_prompt = verses_data_list if verses_data_list else verse_data
                     prompt = build_enhanced_prompt(query, context_by_source, user_profile,
-                                                 arabic_text, cross_refs, 'direct_verse', verse_data, approach)
+                                                 arabic_text, cross_refs, 'direct_verse', verses_for_prompt, approach)
 
                     # CRITICAL LOGGING: Verify verse_data being passed to Gemini
                     print(f"🔍 About to call Gemini with verse_data: {verse_data.get('surah_number')}:{verse_data.get('verse_number')} ({verse_data.get('surah_name')})")
