@@ -271,6 +271,11 @@ a {
    ANNOTATION BUTTON
    ============================================================================ */
 
+.add-annotation-btn {
+  position: relative;
+  z-index: 10;
+}
+
 .add-annotation-btn:hover {
   transform: translateY(-2px) scale(1.05);
   box-shadow: var(--shadow-medium);
@@ -1324,23 +1329,27 @@ button:hover:not(:disabled) {
 
 @media (max-width: 768px) {
   .container {
-    padding: 16px;
+    padding: 12px 8px; /* Reduced padding to use more screen width */
+    max-width: 100%; /* Remove max-width constraint on mobile */
   }
 
   .card {
-    padding: 24px;
-    margin-bottom: 20px;
+    padding: 20px 16px; /* Reduced internal padding */
+    margin-bottom: 16px;
+    border-radius: 16px; /* Slightly smaller radius for mobile */
   }
 
   .main-app {
-    padding: 24px;
+    padding: 16px 12px; /* Much less padding on mobile */
+    min-height: 100vh; /* Ensure full height usage */
   }
 
   .header {
     flex-direction: column;
-    gap: 20px;
+    gap: 16px;
     text-align: center;
-    padding: 24px;
+    padding: 20px 16px; /* Reduced header padding */
+    margin-bottom: 20px;
   }
 
   .header h1 {
@@ -1355,7 +1364,8 @@ button:hover:not(:disabled) {
   .tafsir-form {
     flex-direction: column;
     gap: 12px;
-    padding: 36px 20px 24px 20px; /* Better mobile spacing */
+    padding: 28px 16px 20px 16px; /* Less horizontal padding */
+    margin: 0 -4px; /* Negative margin to use more width */
   }
 
   .tafsir-form::before {
@@ -1366,21 +1376,26 @@ button:hover:not(:disabled) {
   .tafsir-form input {
     min-width: auto;
     font-size: 16px; /* Prevents iOS zoom on focus */
+    padding: 14px 16px; /* Better touch targets */
   }
 
   .tafsir-form select {
     font-size: 16px; /* Prevents iOS zoom on focus */
     min-width: auto;
+    padding: 14px 16px;
   }
 
   .tafsir-form button {
     width: 100%; /* Full width button on mobile */
+    padding: 14px 20px;
+    font-size: 1rem;
   }
 
   .suggestions-grid {
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-    gap: 8px;
-    padding: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); /* Wider minimum */
+    gap: 10px;
+    padding: 16px 12px;
+    margin: 0 -4px; /* Use more available width */
   }
 
   /* Hide decorative Islamic symbol on mobile */
@@ -1391,6 +1406,7 @@ button:hover:not(:disabled) {
   .level-buttons {
     grid-template-columns: 1fr;
     gap: 12px;
+    padding: 0 8px;
   }
 
   .export-controls {
@@ -1399,12 +1415,14 @@ button:hover:not(:disabled) {
 
   .arabic-text {
     font-size: 1.8rem;
-    padding: 24px 16px;
+    padding: 20px 12px; /* Less horizontal padding */
+    margin: 0 -8px; /* Expand into available space */
   }
 
   .result-section {
-    padding: 24px;
-    padding-top: 32px; /* Add extra top padding since we're removing the symbol */
+    padding: 20px 16px; /* Reduced padding */
+    padding-top: 28px; /* Add extra top padding since we're removing the symbol */
+    margin: 0 -4px; /* Slight negative margin for width */
   }
 
   /* Hide the crescent moon symbol on mobile to prevent overlap */
@@ -1416,6 +1434,8 @@ button:hover:not(:disabled) {
   .result-section h2 {
     position: relative;
     padding-top: 8px;
+    font-size: 1.3rem; /* Slightly smaller on mobile */
+    margin-bottom: 16px;
   }
 
   /* Keep the small ornament before h2 but make it inline */
@@ -1425,19 +1445,85 @@ button:hover:not(:disabled) {
   }
 
   .verse-card {
-    padding: 20px;
+    padding: 16px 14px; /* Less padding */
     position: relative; /* Ensure proper positioning context */
+    margin: 0 -4px 16px -4px; /* Use more width */
+  }
+
+  /* Fix Add Note button positioning on mobile */
+  .add-annotation-btn {
+    position: relative !important;
+    z-index: 10 !important;
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+
+  /* Adjust explanation content padding */
+  .explanation-content {
+    padding: 20px 16px;
+  }
+
+  /* Tafsir details mobile optimization */
+  .tafsir-details {
+    margin: 0 -4px 20px -4px; /* Use more width */
+  }
+
+  .tafsir-details summary {
+    padding: 20px 16px;
+    font-size: 1.05rem;
+  }
+
+  /* Lessons list optimization */
+  .lesson-item {
+    padding: 14px 16px 14px 40px; /* Less padding */
+    margin-bottom: 10px;
+  }
+
+  /* Export section mobile */
+  .export-section {
+    padding: 24px 16px;
+    margin: 32px -8px 0 -8px; /* Expand width */
   }
 }
 
 @media (max-width: 480px) {
+  .container {
+    padding: 8px 4px; /* Minimal padding on small screens */
+  }
+
+  .main-app {
+    padding: 12px 8px; /* Very minimal padding */
+  }
+
+  .header {
+    padding: 16px 12px;
+  }
+
   .header h1 {
-    font-size: 1.8rem;
+    font-size: 1.75rem;
+    line-height: 1.2;
+  }
+
+  .card {
+    padding: 16px 12px;
+    margin-bottom: 12px;
+  }
+
+  .tafsir-form {
+    padding: 24px 12px 16px 12px;
+    margin: 0 -6px; /* More negative margin for width */
+  }
+
+  .suggestions-grid {
+    padding: 12px 8px;
+    gap: 8px;
+    margin: 0 -6px;
   }
 
   .result-section {
-    padding: 20px;
-    padding-top: 28px; /* Ensure proper spacing */
+    padding: 16px 12px;
+    padding-top: 24px; /* Ensure proper spacing */
+    margin: 0 -6px; /* More width usage */
   }
 
   /* Extra insurance - hide all decorative absolute positioned elements */
@@ -1447,22 +1533,25 @@ button:hover:not(:disabled) {
   }
 
   .verse-card {
-    padding: 16px;
+    padding: 14px 12px;
+    margin: 0 -6px 12px -6px;
   }
 
   .arabic-text {
     font-size: 1.5rem;
     line-height: 2;
+    padding: 16px 10px;
+    margin: 0 -10px;
   }
 
   .translation {
     font-size: 1rem;
-    padding: 16px;
+    padding: 14px 12px;
   }
 
   .suggestion-chip {
     font-size: 0.85rem;
-    padding: 10px 16px;
+    padding: 10px 14px;
   }
 
   /* Ensure h2 titles are not overlapped */
@@ -1471,6 +1560,7 @@ button:hover:not(:disabled) {
     padding-top: 0;
     z-index: 1;
     position: relative;
+    font-size: 1.2rem;
   }
 
   /* Make the decorative diamond inline on small screens */
@@ -1479,6 +1569,49 @@ button:hover:not(:disabled) {
     position: static !important;
     display: inline-block;
     margin-right: 8px;
+  }
+
+  /* Tafsir details on small screens */
+  .tafsir-details {
+    margin: 0 -6px 16px -6px;
+  }
+
+  .tafsir-details summary {
+    padding: 16px 12px;
+    font-size: 1rem;
+  }
+
+  .explanation-content {
+    padding: 16px 12px;
+    font-size: 0.95rem;
+  }
+
+  /* Lesson items on small screens */
+  .lesson-item {
+    padding: 12px 14px 12px 36px;
+    font-size: 0.95rem;
+  }
+
+  .lesson-item::before {
+    left: 12px;
+    width: 20px;
+    height: 20px;
+    font-size: 10px;
+  }
+
+  /* Export section on small screens */
+  .export-section {
+    padding: 20px 12px;
+    margin: 24px -10px 0 -10px;
+  }
+
+  .export-section h3 {
+    font-size: 1.2rem;
+  }
+
+  .export-btn {
+    padding: 12px 20px;
+    font-size: 0.9rem;
   }
 }
 

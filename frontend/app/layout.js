@@ -29,11 +29,11 @@ export const metadata = {
   title: "Tafsir Simplified - تفسير مبسط | AI-Powered Islamic Commentary",
   description: "Explore authentic classical Islamic tafsir with AI-powered semantic search. Access insights from Ibn Kathir, al-Qurtubi, and other renowned scholars. Personalized Quranic commentary for every knowledge level - from new Muslims to advanced scholars.",
   keywords: [
-    "tafsir", 
-    "quran", 
-    "islamic studies", 
-    "quranic commentary", 
-    "ibn kathir", 
+    "tafsir",
+    "quran",
+    "islamic studies",
+    "quranic commentary",
+    "ibn kathir",
     "al-qurtubi",
     "tafsir ibn kathir",
     "islamic learning",
@@ -49,7 +49,7 @@ export const metadata = {
   authors: [{ name: "Tafsir Simplified Team" }],
   creator: "Tafsir Simplified",
   publisher: "Tafsir Simplified",
-  
+
   openGraph: {
     title: "Tafsir Simplified - تفسير مبسط",
     description: "AI-powered access to classical Islamic tafsir from Ibn Kathir, al-Qurtubi, and renowned scholars",
@@ -58,26 +58,13 @@ export const metadata = {
     alternateLocale: ["ar_SA"],
     siteName: "Tafsir Simplified",
   },
-  
+
   twitter: {
     card: "summary_large_image",
     title: "Tafsir Simplified - Islamic Commentary Platform",
     description: "AI-Powered Classical Quranic Commentary for Modern Learners",
   },
-  
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 5,
-    userScalable: "yes",
-    viewportFit: "cover", // For iPhone notch support
-  },
-  
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#FDFBF7" },
-    { media: "(prefers-color-scheme: dark)", color: "#0F1419" },
-  ],
-  
+
   robots: {
     index: true,
     follow: true,
@@ -89,7 +76,7 @@ export const metadata = {
       'max-snippet': -1,
     },
   },
-  
+
   icons: {
     icon: [
       { url: '/favicon.ico' },
@@ -101,10 +88,22 @@ export const metadata = {
       { url: '/icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
     ],
   },
-  
+
   manifest: '/manifest.json',
-  
+
   category: 'education',
+};
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+  viewportFit: 'cover', // For iPhone notch support
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#FDFBF7" },
+    { media: "(prefers-color-scheme: dark)", color: "#0F1419" },
+  ],
 };
 
 export default function RootLayout({ children }) {
