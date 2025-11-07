@@ -1,5 +1,6 @@
 import { Geist, Geist_Mono, Amiri } from "next/font/google";
 import "./globals.css";
+import PWAProvider from "./components/PWAProvider";
 
 // Modern sans-serif font
 const geistSans = Geist({
@@ -90,15 +91,16 @@ export const metadata = {
   icons: {
     icon: [
       { url: '/favicon.ico' },
-      { url: '/icon-16x16.png', sizes: '16x16', type: 'image/png' },
-      { url: '/icon-32x32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/icons/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/icons/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
     ],
     apple: [
-      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+      { url: '/icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
     ],
   },
   
-  manifest: '/site.webmanifest',
+  manifest: '/manifest.json',
   
   category: 'education',
 };
@@ -123,10 +125,14 @@ export default function RootLayout({ children }) {
         {/* Meta tags for Islamic content */}
         <meta name="format-detection" content="telephone=no" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-title" content="Tafsir" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="mobile-web-app-capable" content="yes" />
       </head>
       <body suppressHydrationWarning>
-        {children}
+        <PWAProvider>
+          {children}
+        </PWAProvider>
       </body>
     </html>
   );
