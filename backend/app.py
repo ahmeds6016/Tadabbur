@@ -670,6 +670,18 @@ def classify_query_enhanced(query: str) -> Dict[str, Any]:
         # Has verse reference, check if it's direct or semantic
         word_count = len(query_normalized.split())
 
+        # CRITICAL FIX: Also check for verse ranges even if not pure numeric
+        # This catches "Surah Al-Kahf verse 1-10" type queries
+        verse_range = extract_verse_range(query)
+        if verse_range:
+            # Query has a verse range, classify as direct_verse
+            return {
+                'query_type': 'direct_verse',
+                'confidence': 0.95,
+                'verse_ref': verse_ref,
+                'metadata_type': None
+            }
+
         # Pure reference like "2:255" or verse range like "2:255-256"
         if re.fullmatch(r'\d{1,3}:\d{1,3}(?:-\d{1,3})?', query_normalized.strip()):
             return {
@@ -4467,6 +4479,10 @@ def tafsir_handler_enhanced():
         print(f"🎯 Type: {query_type} (confidence: {confidence:.0%})")
         if verse_ref:
             print(f"   Verse: {verse_ref[0]}:{verse_ref[1]}")
+        # Add logging for verse ranges
+        verse_range = extract_verse_range(query)
+        if verse_range:
+            print(f"   📖 Verse Range Detected: {verse_range[0]}:{verse_range[1]}-{verse_range[2]}")
         if metadata_type:
             print(f"   Metadata: {metadata_type}")
 
