@@ -1310,6 +1310,36 @@ function InlineAnnotationForm({ verse, user, onSaved, onCancel }) {
     setTags(tags.filter(t => t !== tagToRemove));
   };
 
+  // Get smart tag suggestions based on content
+  const getSuggestedTags = () => {
+    const suggestions = [];
+    const lowerContent = content.toLowerCase();
+
+    // Islamic concept tags
+    if (lowerContent.includes('allah')) suggestions.push('tawheed');
+    if (lowerContent.includes('prophet') || lowerContent.includes('muhammad')) suggestions.push('seerah');
+    if (lowerContent.includes('prayer') || lowerContent.includes('salah')) suggestions.push('ibadah');
+    if (lowerContent.includes('patience') || lowerContent.includes('sabr')) suggestions.push('character');
+    if (lowerContent.includes('grateful') || lowerContent.includes('shukr')) suggestions.push('gratitude');
+    if (lowerContent.includes('parent')) suggestions.push('family');
+    if (lowerContent.includes('forgive')) suggestions.push('repentance');
+    if (lowerContent.includes('mercy') || lowerContent.includes('rahman')) suggestions.push('mercy');
+    if (lowerContent.includes('faith') || lowerContent.includes('iman')) suggestions.push('faith');
+    if (lowerContent.includes('knowledge') || lowerContent.includes('ilm')) suggestions.push('knowledge');
+
+    // Emotion/mood tags
+    if (lowerContent.includes('happy') || lowerContent.includes('joy')) suggestions.push('joy');
+    if (lowerContent.includes('sad') || lowerContent.includes('difficult')) suggestions.push('trial');
+    if (lowerContent.includes('hope')) suggestions.push('hope');
+    if (lowerContent.includes('fear')) suggestions.push('khawf');
+    if (lowerContent.includes('peace')) suggestions.push('peace');
+
+    // Remove duplicates and already added tags
+    return [...new Set(suggestions)].filter(tag => !tags.includes(tag));
+  };
+
+  const suggestedTags = content.length > 20 ? getSuggestedTags() : [];
+
   return (
     <div style={{
       marginTop: '16px',
@@ -1469,6 +1499,53 @@ function InlineAnnotationForm({ verse, user, onSaved, onCancel }) {
             Add
           </button>
         </div>
+
+        {/* Smart Tag Suggestions */}
+        {suggestedTags.length > 0 && (
+          <div style={{ marginTop: '8px' }}>
+            <div style={{
+              fontSize: '0.75rem',
+              color: '#666',
+              marginBottom: '6px',
+              fontWeight: '600'
+            }}>
+              💡 Suggested tags based on your reflection:
+            </div>
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              {suggestedTags.map(tag => (
+                <button
+                  key={tag}
+                  onClick={() => {
+                    if (!tags.includes(tag)) {
+                      setTags([...tags, tag]);
+                    }
+                  }}
+                  style={{
+                    padding: '4px 10px',
+                    background: 'rgba(13, 148, 136, 0.1)',
+                    color: 'var(--primary-teal)',
+                    border: '1px solid var(--primary-teal)',
+                    borderRadius: '12px',
+                    fontSize: '0.75rem',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.background = 'var(--primary-teal)';
+                    e.target.style.color = 'white';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.background = 'rgba(13, 148, 136, 0.1)';
+                    e.target.style.color = 'var(--primary-teal)';
+                  }}
+                >
+                  + {tag}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {error && (
