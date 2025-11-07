@@ -1757,9 +1757,10 @@ function EnhancedResultsDisplay({ data, user }) {
 
       {/* Unified Annotation Form */}
       {inlineAnnotationVerse === 'unified' && (
-        <UnifiedAnnotationForm
-          response={data}
+        <AnnotationPanel
+          verse={data?.verses?.[0] || {}}
           user={user}
+          onClose={() => setInlineAnnotationVerse(null)}
           onSaved={() => {
             setInlineAnnotationVerse(null);
             // Refresh annotations
@@ -1768,7 +1769,6 @@ function EnhancedResultsDisplay({ data, user }) {
               fetchVerseAnnotations(surah, verse);
             });
           }}
-          onCancel={() => setInlineAnnotationVerse(null)}
         />
       )}
 
