@@ -1326,83 +1326,107 @@ button:hover:not(:disabled) {
   .container {
     padding: 16px;
   }
-  
+
   .card {
     padding: 24px;
     margin-bottom: 20px;
   }
-  
+
   .main-app {
     padding: 24px;
   }
-  
+
   .header {
     flex-direction: column;
     gap: 20px;
     text-align: center;
     padding: 24px;
   }
-  
+
   .header h1 {
     font-size: 2rem;
   }
-  
+
   .header h1::after {
     font-size: 0.9rem;
   }
-  
+
   /* ENHANCED: Better mobile form styling */
   .tafsir-form {
     flex-direction: column;
     gap: 12px;
     padding: 36px 20px 24px 20px; /* Better mobile spacing */
   }
-  
+
   .tafsir-form::before {
     top: -12px;
     font-size: 1.5rem;
   }
-  
+
   .tafsir-form input {
     min-width: auto;
     font-size: 16px; /* Prevents iOS zoom on focus */
   }
-  
+
   .tafsir-form select {
     font-size: 16px; /* Prevents iOS zoom on focus */
     min-width: auto;
   }
-  
+
   .tafsir-form button {
     width: 100%; /* Full width button on mobile */
   }
-  
+
   .suggestions-grid {
     grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
     gap: 8px;
     padding: 20px;
   }
-  
+
+  /* Hide decorative Islamic symbol on mobile */
+  .suggestions-grid::before {
+    display: none;
+  }
+
   .level-buttons {
     grid-template-columns: 1fr;
     gap: 12px;
   }
-  
+
   .export-controls {
     flex-direction: column;
   }
-  
+
   .arabic-text {
     font-size: 1.8rem;
     padding: 24px 16px;
   }
-  
+
   .result-section {
     padding: 24px;
+    padding-top: 32px; /* Add extra top padding since we're removing the symbol */
   }
-  
+
+  /* Hide the crescent moon symbol on mobile to prevent overlap */
+  .result-section::after {
+    display: none;
+  }
+
+  /* Adjust h2 positioning to prevent overlap issues */
+  .result-section h2 {
+    position: relative;
+    padding-top: 8px;
+  }
+
+  /* Keep the small ornament before h2 but make it inline */
+  .result-section h2::before {
+    position: static;
+    display: inline-block;
+  }
+
   .verse-card {
     padding: 20px;
+    position: relative; /* Ensure proper positioning context */
   }
 }
 
@@ -1410,28 +1434,51 @@ button:hover:not(:disabled) {
   .header h1 {
     font-size: 1.8rem;
   }
-  
+
   .result-section {
     padding: 20px;
+    padding-top: 28px; /* Ensure proper spacing */
   }
-  
+
+  /* Extra insurance - hide all decorative absolute positioned elements */
+  .result-section::after,
+  .result-section::before {
+    display: none !important;
+  }
+
   .verse-card {
     padding: 16px;
   }
-  
+
   .arabic-text {
     font-size: 1.5rem;
     line-height: 2;
   }
-  
+
   .translation {
     font-size: 1rem;
     padding: 16px;
   }
-  
+
   .suggestion-chip {
     font-size: 0.85rem;
     padding: 10px 16px;
+  }
+
+  /* Ensure h2 titles are not overlapped */
+  .result-section h2 {
+    margin-top: 0;
+    padding-top: 0;
+    z-index: 1;
+    position: relative;
+  }
+
+  /* Make the decorative diamond inline on small screens */
+  .result-section h2::before {
+    content: '◈';
+    position: static !important;
+    display: inline-block;
+    margin-right: 8px;
   }
 }
 
