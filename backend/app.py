@@ -759,7 +759,6 @@ QUERY_SUGGESTIONS_BANK = {
         "Scholar opinions on verse 2:256",
         "Ibn Kathir's commentary on verse 39:53",
         "Al-Qurtubi's legal analysis of verse 2:282",
-        "Historical context of verse 9:5",
         "Grammatical structure of verse 1:5",
         "Prophetic narrations about Surah Al-Fatihah"
     ],
@@ -817,11 +816,6 @@ QUERY_SUGGESTIONS_BANK = {
         "Overcoming envy and jealousy",
         "Warnings against pride and arrogance",
         "Description of Paradise",
-
-        # Historical context queries
-        "Context of alcohol prohibition",
-        "When was hijab revealed?",
-        "Circumstances of major revelations",
 
         # Metadata exploration queries
         "Which verses have the most hadith narrations?",
@@ -5565,17 +5559,33 @@ def tafsir_handler_enhanced():
                 # Remove duplicates while preserving order
                 suggestions = list(dict.fromkeys(suggestions[:4]))  # Limit to 4 suggestions
 
-                response_data = {
-                    'needs_clarification': True,
-                    'original_query': query,
-                    'message': '🤔 I couldn\'t find that verse. Let me help you format it correctly.',
-                    'suggestions': suggestions if suggestions else [
+                # Provide approach-specific help and examples
+                if approach == 'tafsir':
+                    help_message = '🤔 I couldn\'t find that verse. Let me help you format it correctly.'
+                    help_text = 'Try one of these formats:\n• Numeric: "2:255"\n• Named: "Surah Al-Baqarah 255"\n\n💡 For topics and themes, use 🔍 Explore mode instead!'
+                    example_suggestions = [
                         '2:255 (Ayat al-Kursi)',
                         'Surah Al-Fatihah verse 1',
                         '35:6',
                         'Surah Fatir, Verse 6'
-                    ],
-                    'help_text': 'Try one of these formats:\n• Numeric: "2:255"\n• Named: "Surah Al-Baqarah 255"\n\n💡 For topics like "patience", use 🔍 Explore mode!'
+                    ] if not suggestions else suggestions
+                else:  # explore mode
+                    help_message = '🔍 It looks like you\'re trying to find a specific verse, but you\'re in Explore mode.'
+                    help_text = 'Explore mode is for topics and themes across the Quran.\n\n📖 Switch to Tafsir mode for specific verses like "2:255"\n\n🔍 Or ask about topics like:\n• "What does the Quran say about patience?"\n• "Quranic principles for ethical business"\n• "Verses about gratitude"'
+                    # Provide topic-based examples instead of verse references
+                    example_suggestions = [
+                        'What does the Quran say about patience?',
+                        'Quranic principles for ethical business',
+                        'Verses about gratitude',
+                        'Islamic guidance on family relationships'
+                    ]
+
+                response_data = {
+                    'needs_clarification': True,
+                    'original_query': query,
+                    'message': help_message,
+                    'suggestions': example_suggestions,
+                    'help_text': help_text
                 }
 
                 return jsonify(response_data), 200  # Return 200, not error
