@@ -254,7 +254,7 @@ export default function AnnotationPanel({
         </div>
 
         {/* Content - Scrollable */}
-        <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '24px' }}>
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', padding: '24px' }}>
           {/* Context Display */}
           {(reflectionType === 'verse' && verse?.text_saheeh_international) && (
             <div

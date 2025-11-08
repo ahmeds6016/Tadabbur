@@ -7,7 +7,7 @@ import hashlib
 import threading
 from functools import wraps
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Tuple, Optional, Dict, List, Any
 
 from flask import Flask, request, jsonify
@@ -2796,7 +2796,7 @@ def execute_direct_retrieval(plan):
     cross_refs = []
     if plan.get('include_cross_references'):
         for verse in all_verse_data[:5]:
-            refs = get_cross_references(f"{verse['surah']}:{verse['verse_number']}")
+            refs = get_cross_references(f"{verse['surah_number']}:{verse['verse_number']}")
             cross_refs.extend(refs)
 
     # 4. Organize by source for context building
@@ -4531,13 +4531,19 @@ def format_for_export(response_data, format_type='markdown'):
     if response_data.get('verses'):
         content += "## Relevant Verses\n\n"
         for verse in response_data['verses']:
-            if verse.get('arabic_text') and verse['arabic_text'] != 'Not available':
-                content += f"**{verse['surah']}, Verse {verse['verse_number']}**\n\n"
-                content += f"{verse['arabic_text']}\n\n"
-                content += f"*{verse['text_saheeh_international']}*\n\n"
+            # Handle both old (surah) and new (surah_number) field names
+            surah = verse.get('surah_number') or verse.get('surah')
+            verse_num = verse.get('verse_number')
+            arabic = verse.get('arabic') or verse.get('arabic_text')
+            english = verse.get('english') or verse.get('text_saheeh_international')
+
+            if arabic and arabic != 'Not available':
+                content += f"**Surah {surah}, Verse {verse_num}**\n\n"
+                content += f"{arabic}\n\n"
+                content += f"*{english}*\n\n"
             else:
-                content += f"**{verse['surah']}, Verse {verse['verse_number']}**\n\n"
-                content += f"*{verse['text_saheeh_international']}*\n\n"
+                content += f"**Surah {surah}, Verse {verse_num}**\n\n"
+                content += f"*{english}*\n\n"
 
     # Tafsir explanations
     if response_data.get('tafsir_explanations'):
@@ -4958,7 +4964,7 @@ def get_cached_tafsir_response(query: str, user_profile: dict, approach: str = "
             # Check if cache is still valid (7 days TTL for tafsir)
             created_at = cache_data.get('created_at')
             if created_at:
-                age_days = (datetime.now() - created_at).total_seconds() / 86400
+                age_days = (datetime.now(timezone.utc) - created_at).total_seconds() / 86400
                 if age_days > 7:  # Cache expired after 7 days
                     print(f"💾 Cache expired for key {cache_key[:8]}... (age: {age_days:.1f} days)")
                     return None
@@ -4966,7 +4972,7 @@ def get_cached_tafsir_response(query: str, user_profile: dict, approach: str = "
             # Increment hit count
             cache_ref.update({
                 'hit_count': firestore.Increment(1),
-                'last_accessed': datetime.now()
+                'last_accessed': datetime.now(timezone.utc)
             })
 
             print(f"💾 Firestore cache HIT for query: {cache_info['query_normalized']}")
@@ -5017,8 +5023,8 @@ def store_tafsir_cache(query: str, user_profile: dict, response: dict, approach:
             'profile': cache_info['profile_details'],
             'response': stored_response,
             'compressed': compressed,
-            'created_at': datetime.now(),
-            'last_accessed': datetime.now(),
+            'created_at': datetime.now(timezone.utc),
+            'last_accessed': datetime.now(timezone.utc),
             'hit_count': 0,
             'response_size': len(response_str),
             'version': '1.0',  # For cache invalidation when tafsir DB updates
@@ -6811,7 +6817,7 @@ def tafsir_handler_enhanced():
                     if retrieved_data['verses']:
                         first_verse = retrieved_data['verses'][0]
                         verse_data = first_verse
-                        arabic_text = first_verse.get('arabic_text')
+                        arabic_text = first_verse.get('arabic')
 
                     print(f"   ✅ LLM-orchestrated retrieval: {len(retrieved_data['verses'])} verses, {len(retrieved_data.get('tafsir_chunks', []))} chunks")
                     print(f"   ⏱️  Planning: {perf_metrics['stages']['llm_planning']:.0f}ms, Retrieval: {perf_metrics['stages']['direct_retrieval']:.0f}ms")
