@@ -2197,6 +2197,633 @@ def build_direct_verse_response(verse_data: Dict, verse_metadata_list: List[Dict
     return response
 
 
+# ============================================================================
+# LLM-ORCHESTRATED DIRECT RETRIEVAL (No Vector Search RAG)
+# ============================================================================
+
+# Analytics logging for missing tafsir
+MISSING_TAFSIR_LOG = []
+
+DB_SCHEMA_OVERVIEW = """
+PRECISE DATABASE STRUCTURE FOR TAFSIR SIMPLIFIED:
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. VERSE COLLECTION (Firestore: quran_db)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Primary key: (surah: int 1-114, verse_number: int)
+Fields:
+  - arabic_text: string (Arabic Quran text)
+  - text_saheeh_international: string (English translation)
+  - surah_name: string (e.g., "Al-Baqarah")
+  - verse_number: int
+
+Access: get_verse_from_firestore(surah, verse)
+
+Example: get_verse_from_firestore(2, 222) returns verse data
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2. TAFSIR CHUNKS (In-memory: TAFSIR_CHUNKS dict)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Key format: "{source}:{surah}:{verse}"
+  - source: "ibn-kathir" or "al-qurtubi"
+  - Examples: "ibn-kathir:2:222", "al-qurtubi:2:187"
+
+Value: string (unstructured tafsir commentary text)
+  - Plain text tafsir commentary
+  - May mention hadith, scholars, legal rulings within text
+  - NOT structured as separate metadata fields
+
+CRITICAL CONSTRAINTS:
+- Ibn Kathir: ALL surahs (1-114), ALL verses - COMPLETE COVERAGE
+- Al-Qurtubi: ONLY Surahs 1-4, ONLY up to verse 4:22 - LIMITED COVERAGE
+  * For verse 4:23+: Al-Qurtubi DOES NOT EXIST
+  * For Surahs 5-114: Al-Qurtubi DOES NOT EXIST
+
+Access: TAFSIR_CHUNKS.get(f"ibn-kathir:{surah}:{verse}")
+
+IMPORTANT: Tafsir text is UNSTRUCTURED. Generation LLM extracts:
+- Legal rulings, hadith references, scholar citations from text
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+3. TOPICAL INDEX (Pre-built verse lists)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Topics mapped to verse references:
+- patience/sabr: (2,153), (2,155), (2,177), (3,200), (16,127), (39,10)
+- marriage: (2,187), (2,221), (2,232), (4,1), (4,19), (4,34), (30,21)
+- sexual_ethics: (2,222), (2,223), (4,19), (17,32), (24,30), (24,31)
+- prayer/salah: (2,238), (4,103), (20,14), (29,45)
+- charity/zakat: (2,43), (2,110), (2,177), (9,60), (24,56)
+- justice: (4,58), (4,135), (5,8), (16,90), (57,25)
+- fasting: (2,183), (2,184), (2,185), (2,187)
+- hajj: (2,196), (2,197), (3,97), (5,95), (22,27)
+- wealth: (2,188), (2,275), (4,29), (17,35)
+- family: (4,36), (17,23), (17,24), (31,14)
+- women_rights: (2,228), (4,19), (4,34), (33,35)
+- knowledge: (20,114), (35,28), (39,9), (58,11), (96,1)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+RETRIEVAL LIMITS:
+- Maximum 10 verses total per response
+- Prioritize quality over quantity
+- Prefer verses with both Ibn Kathir AND Al-Qurtubi when possible
+"""
+
+PLANNING_FEW_SHOT_EXAMPLES = """
+EXAMPLE 1 - Specific Verse Query:
+Query: "Explain verse 2:255"
+{
+  "query_intent": "Detailed explanation of Ayat al-Kursi",
+  "primary_verses": [{"surah": 2, "verse": 255, "reason": "requested verse"}],
+  "contextual_verses": [],
+  "tafsir_sources": ["Ibn Kathir", "Al-Qurtubi"],
+  "include_cross_references": true
+}
+
+EXAMPLE 2 - Fiqh Query:
+Query: "what are the prohibitions within lawful marital intercourse"
+{
+  "query_intent": "Quranic prohibitions in halal intimacy",
+  "primary_verses": [
+    {"surah": 2, "verse": 222, "reason": "menstruation prohibition"},
+    {"surah": 2, "verse": 223, "reason": "lawful boundaries"}
+  ],
+  "contextual_verses": [
+    {"surah": 2, "verse": 187, "reason": "mutual respect"},
+    {"surah": 4, "verse": 19, "reason": "no harm principle"}
+  ],
+  "tafsir_sources": ["Ibn Kathir", "Al-Qurtubi"],
+  "include_cross_references": true
+}
+
+EXAMPLE 3 - Thematic Query:
+Query: "What does Quran say about patience?"
+{
+  "query_intent": "Quranic guidance on sabr",
+  "primary_verses": [
+    {"surah": 2, "verse": 153, "reason": "seek help via patience"},
+    {"surah": 2, "verse": 155, "reason": "testing believers"}
+  ],
+  "contextual_verses": [
+    {"surah": 3, "verse": 200, "reason": "persevere steadfastly"},
+    {"surah": 16, "verse": 127, "reason": "Allah with patient"}
+  ],
+  "tafsir_sources": ["Ibn Kathir"],
+  "include_cross_references": true
+}
+
+EXAMPLE 4 - Al-Qurtubi Constraint (CORRECT):
+Query: "Explain Surah Al-Maidah verse 1"
+{
+  "query_intent": "Explanation of Surah 5:1",
+  "primary_verses": [{"surah": 5, "verse": 1, "reason": "requested verse"}],
+  "contextual_verses": [],
+  "tafsir_sources": ["Ibn Kathir"],
+  "include_cross_references": true
+}
+NOTE: Only Ibn Kathir for Surah 5 (beyond Al-Qurtubi coverage)
+
+EXAMPLE 5 - Avoiding Hallucinations:
+Query: "Surah Al-Baqarah verse 500"
+WRONG: {"primary_verses": [{"surah": 2, "verse": 500}]}
+REASON: Al-Baqarah only has 286 verses - this is hallucination!
+"""
+
+def is_valid_verse_reference(surah, verse):
+    """
+    Validate verse reference exists in Quran using QURAN_METADATA
+
+    Returns: (is_valid: bool, error_message: str)
+    """
+    if not (1 <= surah <= 114):
+        return False, f"Invalid surah {surah} (must be 1-114)"
+
+    max_verses = QURAN_METADATA.get(surah, {}).get('verses', 0)
+    if not (1 <= verse <= max_verses):
+        return False, f"Invalid verse {verse} for Surah {surah} (max: {max_verses})"
+
+    return True, ""
+
+def normalize_source_key(source):
+    """
+    Normalize source name to standardized key format
+    Handles: "Ibn Kathir", "ibn kathir", "Al-Qurtubi", etc.
+    """
+    normalized = source.lower().strip()
+    normalized = normalized.replace("'", '')  # Remove apostrophes
+    normalized = normalized.replace(' ', '-')  # Spaces to hyphens
+
+    # Standardize variations
+    mappings = {
+        'ibn-kathir': 'ibn-kathir',
+        'ibnkathir': 'ibn-kathir',
+        'kathir': 'ibn-kathir',
+        'al-qurtubi': 'al-qurtubi',
+        'qurtubi': 'al-qurtubi',
+        'alqurtubi': 'al-qurtubi'
+    }
+
+    return mappings.get(normalized, normalized)
+
+def log_missing_tafsir(source, surah, verse):
+    """Log missing tafsir for analytics"""
+    global MISSING_TAFSIR_LOG
+    MISSING_TAFSIR_LOG.append({
+        'timestamp': time.time(),
+        'source': source,
+        'surah': surah,
+        'verse': verse
+    })
+
+    # Keep only last 100 entries
+    if len(MISSING_TAFSIR_LOG) > 100:
+        MISSING_TAFSIR_LOG.pop(0)
+
+def fuzzy_lookup_tafsir(source_key, surah, verse):
+    """
+    Fuzzy fallback: Look for sliding window segments
+    Example: ibn-kathir:2:222_0, ibn-kathir:2:222_1
+    """
+    chunks = []
+    segment_idx = 0
+    max_segments = 10
+
+    while segment_idx < max_segments:
+        segment_key = f"{source_key}:{surah}:{verse}_{segment_idx}"
+        chunk_text = TAFSIR_CHUNKS.get(segment_key)
+
+        if chunk_text:
+            chunks.append({
+                'text': chunk_text,
+                'source': source_key,
+                'surah': surah,
+                'verse': verse,
+                'chunk_id': segment_key,
+                'distance': 0.0,
+                'retrieval_method': 'fuzzy_segment_match'
+            })
+            segment_idx += 1
+        else:
+            break
+
+    return chunks
+
+def get_tafsir_for_verse(surah, verse, sources=['Ibn Kathir']):
+    """
+    Direct lookup of tafsir chunks with normalization and fuzzy fallback
+
+    Args:
+        surah: Surah number (1-114)
+        verse: Verse number
+        sources: List of tafsir sources
+
+    Returns:
+        list: Tafsir chunks
+    """
+    chunks = []
+
+    for source in sources:
+        # Al-Qurtubi constraint
+        if source == 'Al-Qurtubi' and (surah > 4 or (surah == 4 and verse > 22)):
+            continue
+
+        # Normalize source name
+        source_key = normalize_source_key(source)
+        chunk_key = f"{source_key}:{surah}:{verse}"
+
+        # Primary lookup
+        chunk_text = TAFSIR_CHUNKS.get(chunk_key)
+
+        if chunk_text:
+            chunks.append({
+                'text': chunk_text,
+                'source': source,
+                'surah': surah,
+                'verse': verse,
+                'chunk_id': chunk_key,
+                'distance': 0.0,
+                'retrieval_method': 'direct_lookup'
+            })
+        else:
+            # Fuzzy fallback: Check for segments
+            fuzzy_chunks = fuzzy_lookup_tafsir(source_key, surah, verse)
+            if fuzzy_chunks:
+                chunks.extend(fuzzy_chunks)
+            else:
+                log_missing_tafsir(source, surah, verse)
+
+    return chunks
+
+def get_verses_by_topic(topic, max_verses=5):
+    """
+    Get verses tagged with specific topic
+
+    Args:
+        topic: Topic name (e.g., "patience", "marriage")
+        max_verses: Maximum verses to return
+
+    Returns:
+        list: List of (surah, verse) tuples
+    """
+    TOPIC_INDEX = {
+        'patience': [(2, 153), (2, 155), (2, 177), (3, 200), (16, 127), (39, 10)],
+        'sabr': [(2, 153), (2, 155), (2, 177), (3, 200), (16, 127), (39, 10)],
+        'marriage': [(2, 187), (2, 221), (2, 232), (4, 1), (4, 19), (30, 21), (4, 34)],
+        'sexual_ethics': [(2, 222), (2, 223), (4, 19), (17, 32), (24, 30), (24, 31), (65, 4)],
+        'prayer': [(2, 238), (4, 103), (20, 14), (29, 45), (107, 4)],
+        'salah': [(2, 238), (4, 103), (20, 14), (29, 45), (107, 4)],
+        'charity': [(2, 43), (2, 110), (2, 177), (9, 60), (24, 56), (70, 24)],
+        'zakat': [(2, 43), (2, 110), (2, 177), (9, 60), (24, 56), (70, 24)],
+        'justice': [(4, 58), (4, 135), (5, 8), (16, 90), (57, 25)],
+        'fasting': [(2, 183), (2, 184), (2, 185), (2, 187), (5, 95)],
+        'hajj': [(2, 196), (2, 197), (2, 198), (3, 97), (5, 95), (22, 27)],
+        'wealth': [(2, 188), (2, 275), (2, 276), (4, 29), (17, 35)],
+        'family': [(4, 36), (17, 23), (17, 24), (31, 14), (31, 15)],
+        'women': [(2, 228), (4, 19), (4, 34), (33, 35), (49, 13)],
+        'women_rights': [(2, 228), (4, 19), (4, 34), (33, 35), (49, 13)],
+        'war': [(2, 190), (2, 191), (2, 193), (8, 60), (8, 61), (9, 5)],
+        'knowledge': [(20, 114), (35, 28), (39, 9), (58, 11), (96, 1)],
+    }
+
+    topic_lower = topic.lower().replace('_', ' ').replace('-', ' ')
+
+    # Try exact match
+    verses = TOPIC_INDEX.get(topic_lower, TOPIC_INDEX.get(topic.lower(), []))
+
+    return verses[:max_verses]
+
+def validate_and_sanitize_plan(plan):
+    """
+    Validate and sanitize LLM's retrieval plan
+
+    - Checks verse references exist
+    - Validates Al-Qurtubi constraints
+    - Enforces max verse limits
+    - Rejects hallucinated verses
+
+    Returns: validated plan dict or None if invalid
+    """
+    if not plan:
+        return None
+
+    validated_primary = []
+    for v in plan.get('primary_verses', []):
+        surah, verse = v.get('surah'), v.get('verse')
+        if not surah or not verse:
+            continue
+
+        is_valid, error_msg = is_valid_verse_reference(surah, verse)
+
+        if is_valid:
+            validated_primary.append(v)
+        else:
+            print(f"   ⚠️  Rejected hallucinated verse: {surah}:{verse} - {error_msg}")
+
+    validated_contextual = []
+    for v in plan.get('contextual_verses', []):
+        surah, verse = v.get('surah'), v.get('verse')
+        if not surah or not verse:
+            continue
+
+        is_valid, error_msg = is_valid_verse_reference(surah, verse)
+
+        if is_valid:
+            validated_contextual.append(v)
+        else:
+            print(f"   ⚠️  Rejected hallucinated verse: {surah}:{verse} - {error_msg}")
+
+    # If all verses rejected, return None
+    if not validated_primary and not validated_contextual:
+        print("   ❌ All verses rejected - LLM hallucinated non-existent references")
+        return None
+
+    # Enforce max 10 verses
+    total_verses = len(validated_primary) + len(validated_contextual)
+    if total_verses > 10:
+        trim_amount = total_verses - 10
+        validated_contextual = validated_contextual[:-trim_amount] if trim_amount < len(validated_contextual) else []
+
+    # Validate Al-Qurtubi constraint
+    all_verses = validated_primary + validated_contextual
+    can_use_qurtubi = all(
+        v['surah'] <= 4 and (v['surah'] < 4 or v['verse'] <= 22)
+        for v in all_verses
+    )
+
+    tafsir_sources = plan.get('tafsir_sources', ['Ibn Kathir'])
+    if 'Al-Qurtubi' in tafsir_sources and not can_use_qurtubi:
+        print("   ⚠️  Removed Al-Qurtubi (verses beyond coverage)")
+        tafsir_sources = ['Ibn Kathir']
+
+    return {
+        'query_intent': plan.get('query_intent', ''),
+        'primary_verses': validated_primary,
+        'contextual_verses': validated_contextual,
+        'tafsir_sources': tafsir_sources,
+        'include_cross_references': plan.get('include_cross_references', True)
+    }
+
+def llm_plan_direct_retrieval(user_query, approach='explore'):
+    """
+    Use Gemini 2.5 Flash to create precise retrieval plan
+    Ultra-low temperature (0.05) for deterministic, precise planning
+
+    Args:
+        user_query: User's natural language question
+        approach: 'tafsir' or 'explore'/'semantic'
+
+    Returns:
+        dict: Structured retrieval plan or None if failed
+    """
+
+    planning_prompt = f"""{DB_SCHEMA_OVERVIEW}
+
+USER QUERY: "{user_query}"
+APPROACH: {approach}
+
+TASK: Create MINIMAL, PRECISE retrieval plan.
+
+CRITICAL CONSTRAINTS:
+1. Maximum 6-8 verses total (primary + contextual)
+2. ONLY verses that DIRECTLY answer query
+3. Al-Qurtubi: ONLY if verse in Surahs 1-4 AND verse ≤ 22
+4. DO NOT hallucinate - only real verse references
+5. Quality > Quantity - fewer high-quality verses better
+6. DO NOT over-retrieve
+
+OUTPUT (strict JSON):
+{{
+  "query_intent": "<max 15 words>",
+  "primary_verses": [
+    {{"surah": <int>, "verse": <int>, "reason": "<max 10 words>"}}
+  ],
+  "contextual_verses": [
+    {{"surah": <int>, "verse": <int>, "reason": "<max 10 words>"}}
+  ],
+  "tafsir_sources": ["Ibn Kathir"],
+  "include_cross_references": <boolean>
+}}
+
+RULES:
+- primary_verses: 2-4 MAX directly answering query
+- contextual_verses: 2-4 MAX for principles/framework
+- Total: 4-8 verses MAX
+- Single verse query: ONLY retrieve that verse
+- DO NOT add Al-Qurtubi if ANY verse beyond 4:22
+
+{PLANNING_FEW_SHOT_EXAMPLES}
+
+Create plan for: "{user_query}"
+
+REMINDER: Be MINIMAL. Max 8 verses. Quality > Quantity.
+"""
+
+    try:
+        credentials, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
+        auth_req = GoogleRequest()
+        credentials.refresh(auth_req)
+        token = credentials.token
+
+        VERTEX_ENDPOINT = f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/{GCP_INFRASTRUCTURE_PROJECT}/locations/{LOCATION}/publishers/google/models/{GEMINI_MODEL_ID}:generateContent"
+
+        body = {
+            "contents": [{"role": "user", "parts": [{"text": planning_prompt}]}],
+            "generation_config": {
+                "response_mime_type": "application/json",
+                "temperature": 0.05,  # Ultra-low for deterministic planning
+                "top_k": 10,  # Limit vocabulary
+                "top_p": 0.8,  # Focus on probable tokens
+                "maxOutputTokens": 2048
+            }
+        }
+
+        response = requests.post(
+            VERTEX_ENDPOINT,
+            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+            json=body,
+            timeout=30
+        )
+        response.raise_for_status()
+
+        raw_response = response.json()
+        generated_text = safe_get_nested(raw_response, "candidates", 0, "content", "parts", 0, "text")
+
+        if not generated_text:
+            print(f"   ⚠️  LLM planning returned empty response")
+            return None
+
+        plan = json.loads(generated_text)
+
+        print(f"📋 LLM RETRIEVAL PLAN:")
+        print(f"   Intent: {plan.get('query_intent', 'N/A')}")
+        print(f"   Primary: {len(plan.get('primary_verses', []))} verses")
+        print(f"   Contextual: {len(plan.get('contextual_verses', []))} verses")
+
+        return plan
+
+    except Exception as e:
+        print(f"   ⚠️  LLM planning failed: {type(e).__name__}: {str(e)}")
+        return None
+
+def create_heuristic_fallback_plan(user_query, approach):
+    """
+    Heuristic fallback when LLM planning fails
+    Uses pattern matching and topic detection
+    """
+    query_lower = user_query.lower()
+
+    # Check for explicit verse reference
+    verse_ref = extract_verse_reference_enhanced(user_query)
+    if verse_ref:
+        surah, verse = verse_ref
+        return {
+            'query_intent': f'Retrieve verse {surah}:{verse}',
+            'primary_verses': [{'surah': surah, 'verse': verse, 'reason': 'explicitly requested'}],
+            'contextual_verses': [],
+            'tafsir_sources': ['Ibn Kathir', 'Al-Qurtubi'] if surah <= 4 else ['Ibn Kathir'],
+            'include_cross_references': True
+        }
+
+    # Topic-based heuristic
+    topic_keywords = {
+        'patience': ['patience', 'sabr', 'persever', 'endur'],
+        'marriage': ['marriage', 'spouse', 'wife', 'wives', 'husband', 'marital'],
+        'prayer': ['prayer', 'salah', 'salat', 'pray'],
+        'charity': ['charity', 'zakat', 'sadaqah', 'give', 'spend'],
+    }
+
+    for topic, keywords in topic_keywords.items():
+        if any(kw in query_lower for kw in keywords):
+            verses = get_verses_by_topic(topic, max_verses=5)
+            if verses:
+                return {
+                    'query_intent': f'Topic query about {topic}',
+                    'primary_verses': [{'surah': s, 'verse': v, 'reason': f'{topic} topic'} for s, v in verses[:3]],
+                    'contextual_verses': [{'surah': s, 'verse': v, 'reason': f'{topic} related'} for s, v in verses[3:5]],
+                    'tafsir_sources': ['Ibn Kathir'],
+                    'include_cross_references': True
+                }
+
+    return None
+
+def llm_plan_direct_retrieval_with_validation(user_query, approach='explore', max_retries=2):
+    """
+    LLM planning with retry logic and validation
+    """
+    for attempt in range(max_retries):
+        try:
+            plan = llm_plan_direct_retrieval(user_query, approach)
+
+            if not plan:
+                continue
+
+            validated_plan = validate_and_sanitize_plan(plan)
+
+            if validated_plan and (validated_plan['primary_verses'] or validated_plan['contextual_verses']):
+                return validated_plan
+            else:
+                print(f"   ⚠️  Plan validation failed, retry {attempt + 1}/{max_retries}")
+
+        except json.JSONDecodeError as e:
+            print(f"   ❌ JSON parsing error, retry {attempt + 1}/{max_retries}")
+        except Exception as e:
+            print(f"   ❌ Planning error: {e}, retry {attempt + 1}/{max_retries}")
+
+    # Heuristic fallback
+    print("   🔄 LLM planning failed, using heuristic fallback")
+    return create_heuristic_fallback_plan(user_query, approach)
+
+def execute_direct_retrieval(plan):
+    """
+    Execute direct database lookups based on LLM's plan
+    NO vector search - just direct Firestore/dict queries
+
+    Args:
+        plan: Validated retrieval plan from LLM
+
+    Returns:
+        dict: Retrieved verses, tafsir chunks, metadata
+    """
+    if not plan:
+        return None
+
+    all_verse_data = []
+    all_tafsir_chunks = []
+    verse_seen = set()
+
+    # 1. Fetch primary verses
+    primary_verses = plan.get('primary_verses', [])
+    if primary_verses:
+        print(f"   🎯 Fetching {len(primary_verses)} primary verses...")
+    for v in primary_verses:
+        surah, verse = v['surah'], v['verse']
+        reason = v.get('reason', '')
+
+        if (surah, verse) in verse_seen:
+            continue
+        verse_seen.add((surah, verse))
+
+        verse_data = get_verse_from_firestore(surah, verse)
+        if verse_data:
+            verse_data['retrieval_reason'] = reason
+            verse_data['priority'] = 'primary'
+            all_verse_data.append(verse_data)
+
+        tafsir_chunks = get_tafsir_for_verse(surah, verse, plan.get('tafsir_sources', ['Ibn Kathir']))
+        all_tafsir_chunks.extend(tafsir_chunks)
+
+    # 2. Fetch contextual verses
+    contextual_verses = plan.get('contextual_verses', [])
+    if contextual_verses:
+        print(f"   📚 Fetching {len(contextual_verses)} contextual verses...")
+    for v in contextual_verses:
+        surah, verse = v['surah'], v['verse']
+        reason = v.get('reason', '')
+
+        if (surah, verse) in verse_seen:
+            continue
+        verse_seen.add((surah, verse))
+
+        verse_data = get_verse_from_firestore(surah, verse)
+        if verse_data:
+            verse_data['retrieval_reason'] = reason
+            verse_data['priority'] = 'contextual'
+            all_verse_data.append(verse_data)
+
+        tafsir_chunks = get_tafsir_for_verse(surah, verse, plan.get('tafsir_sources', ['Ibn Kathir']))
+        all_tafsir_chunks.extend(tafsir_chunks)
+
+    # 3. Get cross-references if requested
+    cross_refs = []
+    if plan.get('include_cross_references'):
+        for verse in all_verse_data[:5]:
+            refs = get_cross_references(f"{verse['surah']}:{verse['verse_number']}")
+            cross_refs.extend(refs)
+
+    # 4. Organize by source for context building
+    context_by_source = {}
+    for chunk in all_tafsir_chunks:
+        source = chunk.get('source', 'Unknown')
+        if source not in context_by_source:
+            context_by_source[source] = []
+        context_by_source[source].append(chunk['text'])
+
+    print(f"   ✅ Retrieved: {len(all_verse_data)} verses, {len(all_tafsir_chunks)} tafsir chunks (direct DB lookups)")
+    if context_by_source:
+        print(f"   📊 Sources: {', '.join(context_by_source.keys())}")
+
+    return {
+        'verses': all_verse_data,
+        'tafsir_chunks': all_tafsir_chunks,
+        'context_by_source': context_by_source,
+        'cross_references': cross_refs,
+        'retrieval_plan': plan
+    }
+
+# ============================================================================
+# END OF LLM-ORCHESTRATED DIRECT RETRIEVAL
+# ============================================================================
+
+
 def retrieve_chunks_from_neighbors(neighbors, distance_threshold=0.6):
     """
     Retrieve chunks from TAFSIR_CHUNKS based on neighbor IDs with relevance filtering.
@@ -6140,78 +6767,103 @@ def tafsir_handler_enhanced():
                         return jsonify(response), 200
 
         # ===================================================================
-        # ROUTE 3: SEMANTIC SEARCH (Full RAG pipeline)
+        # ROUTE 3: LLM-ORCHESTRATED DIRECT RETRIEVAL (No Vector Search)
         # ===================================================================
         if query_type == 'semantic':
-            print("🚀 ROUTE 3: Semantic Search (Full RAG)")
+            print("🚀 ROUTE 3: LLM-Orchestrated Direct Retrieval")
 
             # NOTE: user_profile and cache_key already set at top of function
             # No need to check cache again - already checked above
 
-            # Prepare query
-            # CRITICAL FIX: Don't duplicate verse info in rag_query - causes expansion to truncate verse numbers
-            # The original query already contains verse references, adding "Surah X verse Y" prefix creates confusion
-            if verse_ref:
-                surah_num, verse_num = verse_ref
-                verse_data = get_verse_from_firestore(surah_num, verse_num)
-                if verse_data:
-                    arabic_text = get_arabic_text_from_verse_data(verse_data)
-                else:
-                    verse_data = None
-                    arabic_text = None
-            else:
-                verse_data = None
-                arabic_text = None
-
-            # Use original query for RAG - it preserves verse ranges correctly
-            rag_query = query
-
-            # Classify for RAG
-            rag_query_type = "default" # Simplified; classification is now primary
-            cross_refs = get_cross_references(rag_query)
-
-            # Get auth token (needed for Gemini generation, not for retrieval)
+            # Get auth token (needed for both LLM planning and generation)
             credentials, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
             auth_req = GoogleRequest()
             credentials.refresh(auth_req)
             token = credentials.token
 
             # ================================================================
-            # QUERY EXPANSION REMOVED (Reranker handles semantic matching)
+            # STEP 1: LLM Planning - What to Retrieve
             # ================================================================
-            # OLD APPROACH (Setup 2): LLM expansion before retrieval
-            #   - Added 100-300ms latency
-            #   - Produced "garbage" for semantic queries
-            #   - Cost: Extra LLM call
-            #
-            # NEW APPROACH (Setup 1): CrossEncoder reranking after retrieval
-            #   - No expansion needed
-            #   - Reranker understands semantic nuance natively
-            #   - Faster and more accurate
+            stage_start = time.time()
+            retrieval_plan = llm_plan_direct_retrieval_with_validation(query, approach, max_retries=2)
+            perf_metrics['stages']['llm_planning'] = (time.time() - stage_start) * 1000
+
+            retrieved_data = None
+            context_by_source = {}
+            verse_data = None
+            arabic_text = None
+            cross_refs = []
+
+            if retrieval_plan:
+                # ================================================================
+                # STEP 2: Execute Direct DB Retrieval
+                # ================================================================
+                stage_start = time.time()
+                retrieved_data = execute_direct_retrieval(retrieval_plan)
+                perf_metrics['stages']['direct_retrieval'] = (time.time() - stage_start) * 1000
+
+                if retrieved_data and len(retrieved_data.get('verses', [])) > 0:
+                    # Success: Use LLM-planned retrieval
+                    context_by_source = retrieved_data['context_by_source']
+                    cross_refs = retrieved_data.get('cross_references', [])
+
+                    # Get verse data for first verse if available
+                    if retrieved_data['verses']:
+                        first_verse = retrieved_data['verses'][0]
+                        verse_data = first_verse
+                        arabic_text = first_verse.get('arabic_text')
+
+                    print(f"   ✅ LLM-orchestrated retrieval: {len(retrieved_data['verses'])} verses, {len(retrieved_data.get('tafsir_chunks', []))} chunks")
+                    print(f"   ⏱️  Planning: {perf_metrics['stages']['llm_planning']:.0f}ms, Retrieval: {perf_metrics['stages']['direct_retrieval']:.0f}ms")
+                else:
+                    # LLM plan retrieved nothing - fallback to vector search
+                    print("   ⚠️  LLM-orchestrated retrieval returned no results, falling back to vector search")
+                    retrieval_plan = None
+
+            if not retrieval_plan or not retrieved_data:
+                # ================================================================
+                # FALLBACK: Vector Search RAG (if LLM planning fails)
+                # ================================================================
+                print("   🔄 Fallback: Using vector search RAG")
+
+                # Prepare query
+                if verse_ref:
+                    surah_num, verse_num = verse_ref
+                    verse_data = get_verse_from_firestore(surah_num, verse_num)
+                    if verse_data:
+                        arabic_text = get_arabic_text_from_verse_data(verse_data)
+                else:
+                    verse_data = None
+                    arabic_text = None
+
+                rag_query = query
+                rag_query_type = "default"
+                cross_refs = get_cross_references(rag_query)
+
+                # Initialize vector search models
+                stage_start = time.time()
+                embedding_model = TextEmbeddingModel.from_pretrained(EMBEDDING_MODEL)
+                endpoint_resource_name = f"projects/{GCP_INFRASTRUCTURE_PROJECT}/locations/{LOCATION}/indexEndpoints/{INDEX_ENDPOINT_ID}"
+                index_endpoint = aiplatform.MatchingEngineIndexEndpoint(index_endpoint_name=endpoint_resource_name)
+                perf_metrics['stages']['model_init'] = (time.time() - stage_start) * 1000
+
+                # Vector search
+                stage_start = time.time()
+                selected_chunks, context_by_source = perform_diversified_rag_search(
+                    rag_query, rag_query, embedding_model, index_endpoint, rag_query_type, approach
+                )
+                perf_metrics['stages']['rag_search'] = (time.time() - stage_start) * 1000
+                perf_metrics['chunks_retrieved'] = len(selected_chunks)
+
+                print(f"   Retrieved {len(selected_chunks)} chunks (fallback RAG) in {perf_metrics['stages']['rag_search']:.0f}ms")
+
             # ================================================================
-
-            # Initialize models
-            stage_start = time.time()
-            embedding_model = TextEmbeddingModel.from_pretrained(EMBEDDING_MODEL)
-            endpoint_resource_name = f"projects/{GCP_INFRASTRUCTURE_PROJECT}/locations/{LOCATION}/indexEndpoints/{INDEX_ENDPOINT_ID}"
-            index_endpoint = aiplatform.MatchingEngineIndexEndpoint(index_endpoint_name=endpoint_resource_name)
-            perf_metrics['stages']['model_init'] = (time.time() - stage_start) * 1000
-
-            # Perform two-stage Retriever-Reranker search
-            # Stage 1: Fast vector retrieval (high recall)
-            # Stage 2: CrossEncoder reranking (high precision)
-            stage_start = time.time()
-            selected_chunks, context_by_source = perform_diversified_rag_search(
-                rag_query, rag_query, embedding_model, index_endpoint, rag_query_type, approach
-            )
-            perf_metrics['stages']['rag_search'] = (time.time() - stage_start) * 1000
-            perf_metrics['chunks_retrieved'] = len(selected_chunks)
-
-            print(f"   Retrieved {len(selected_chunks)} chunks (approach: {approach}) in {perf_metrics['stages']['rag_search']:.0f}ms")
-
+            # STEP 3: Build Prompt and Generate Response
+            # ================================================================
             # Build prompt (approach-aware)
             stage_start = time.time()
-            prompt = build_enhanced_prompt(rag_query, context_by_source, user_profile,
+            rag_query_type = "default"
+            prompt = build_enhanced_prompt(query, context_by_source, user_profile,
                                          arabic_text, cross_refs, rag_query_type, verse_data, approach)
             perf_metrics['stages']['prompt_building'] = (time.time() - stage_start) * 1000
 
