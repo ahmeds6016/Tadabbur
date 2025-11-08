@@ -513,7 +513,10 @@ export default function AnnotationPanel({
             borderTop: '2px solid var(--border-light)',
             display: 'flex',
             gap: '12px',
-            background: 'var(--cream)'
+            background: 'var(--cream)',
+            position: 'sticky',
+            bottom: 0,
+            zIndex: 10
           }}
         >
           <button

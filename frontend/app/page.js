@@ -828,32 +828,52 @@ function MainApp({ user, userProfile }) {
       const data = await res.json();
       const shareUrl = `${window.location.origin}/shared/${data.share_id}`;
 
-      // Copy to clipboard using fallback method - most reliable across browsers
-      const textArea = document.createElement('textarea');
-      textArea.value = shareUrl;
-      textArea.style.position = 'absolute';
-      textArea.style.left = '-9999px';
-      textArea.style.top = '0';
-      document.body.appendChild(textArea);
+      // Try modern Clipboard API first (works in PWAs and modern browsers)
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        try {
+          await navigator.clipboard.writeText(shareUrl);
 
-      textArea.select();
-      textArea.setSelectionRange(0, 99999); // For mobile devices
+          // Show success notification
+          button.innerHTML = '✅ Link Copied!';
+          button.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
 
-      const successful = document.execCommand('copy');
-      document.body.removeChild(textArea);
-
-      if (successful) {
-        // Show success notification
-        button.innerHTML = '✅ Link Copied!';
-        button.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
-
-        setTimeout(() => {
-          button.innerHTML = originalText;
-          button.style.background = 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)';
-          button.disabled = false;
-        }, 2000);
+          setTimeout(() => {
+            button.innerHTML = originalText;
+            button.style.background = 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)';
+            button.disabled = false;
+          }, 2000);
+        } catch (clipboardErr) {
+          // If clipboard API fails, try fallback
+          throw new Error('Clipboard API failed');
+        }
       } else {
-        throw new Error('Copy command failed');
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = shareUrl;
+        textArea.style.position = 'absolute';
+        textArea.style.left = '-9999px';
+        textArea.style.top = '0';
+        document.body.appendChild(textArea);
+
+        textArea.select();
+        textArea.setSelectionRange(0, 99999); // For mobile devices
+
+        const successful = document.execCommand('copy');
+        document.body.removeChild(textArea);
+
+        if (successful) {
+          // Show success notification
+          button.innerHTML = '✅ Link Copied!';
+          button.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+
+          setTimeout(() => {
+            button.innerHTML = originalText;
+            button.style.background = 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)';
+            button.disabled = false;
+          }, 2000);
+        } else {
+          throw new Error('Copy command failed');
+        }
       }
     } catch (err) {
       console.error('Share link failed:', err);
@@ -1149,9 +1169,7 @@ function MainApp({ user, userProfile }) {
                   <div style={{ color: '#856404', fontSize: '0.95rem', lineHeight: '1.5' }}>
                     {response.approach_suggestion.reason}. Try the{' '}
                     <strong>
-                      {response.approach_suggestion.suggested === 'tafsir' ? '📖 Tafsir-Based' :
-                       response.approach_suggestion.suggested === 'thematic' ? '🔍 Thematic' :
-                       '📜 Historical Context'}
+                      {response.approach_suggestion.suggested === 'tafsir' ? '📖 Tafsir-Based' : '🔍 Explore'}
                     </strong> approach instead.
                   </div>
                 </div>

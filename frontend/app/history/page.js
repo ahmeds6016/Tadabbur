@@ -148,7 +148,7 @@ export default function QueryHistoryPage() {
                       {item.query}
                     </div>
                     <div style={{ fontSize: '0.9rem', color: '#666', marginBottom: '4px' }}>
-                      <span style={{ fontWeight: '600' }}>Approach:</span> {item.approach === 'tafsir' ? '📖 Tafsir-Based' : item.approach === 'thematic' ? '🔍 Thematic' : '📜 Historical'}
+                      <span style={{ fontWeight: '600' }}>Approach:</span> {item.approach === 'tafsir' ? '📖 Tafsir-Based' : '🔍 Explore'}
                     </div>
                     <div style={{ fontSize: '0.85rem', color: '#999' }}>
                       {formatTimestamp(item.timestamp)}
