@@ -204,7 +204,8 @@ export default function AnnotationPanel({
           zIndex: 1000,
           display: 'flex',
           flexDirection: 'column',
-          animation: 'slideInRight 0.3s ease'
+          animation: 'slideInRight 0.3s ease',
+          overflow: 'hidden'
         }}
       >
         {/* Header */}
@@ -215,7 +216,8 @@ export default function AnnotationPanel({
             color: 'white',
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'center'
+            alignItems: 'center',
+            flexShrink: 0
           }}
         >
           <div>
@@ -251,8 +253,8 @@ export default function AnnotationPanel({
           </button>
         </div>
 
-        {/* Content */}
-        <div style={{ flex: 1, overflow: 'auto', padding: '24px' }}>
+        {/* Content - Scrollable */}
+        <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '24px' }}>
           {/* Context Display */}
           {(reflectionType === 'verse' && verse?.text_saheeh_international) && (
             <div
@@ -506,7 +508,7 @@ export default function AnnotationPanel({
           )}
         </div>
 
-        {/* Footer */}
+        {/* Footer - Fixed at bottom */}
         <div
           style={{
             padding: '24px',
@@ -514,9 +516,7 @@ export default function AnnotationPanel({
             display: 'flex',
             gap: '12px',
             background: 'var(--cream)',
-            position: 'sticky',
-            bottom: 0,
-            zIndex: 10
+            flexShrink: 0
           }}
         >
           <button

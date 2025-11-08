@@ -828,12 +828,37 @@ function MainApp({ user, userProfile }) {
       const data = await res.json();
       const shareUrl = `${window.location.origin}/shared/${data.share_id}`;
 
-      // Try modern Clipboard API first (works in PWAs and modern browsers)
+      // PWA-compatible clipboard: Use Web Share API first on mobile
+      if (navigator.share && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+        try {
+          await navigator.share({
+            title: 'Tafsir Simplified Response',
+            text: 'Check out this Islamic Q&A response',
+            url: shareUrl
+          });
+
+          button.innerHTML = '✅ Shared!';
+          button.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+
+          setTimeout(() => {
+            button.innerHTML = originalText;
+            button.style.background = 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)';
+            button.disabled = false;
+          }, 2000);
+          return;
+        } catch (shareErr) {
+          // User cancelled or share failed, fall through to clipboard
+          if (shareErr.name !== 'AbortError') {
+            console.log('Share API failed, using clipboard:', shareErr);
+          }
+        }
+      }
+
+      // Clipboard API for PWA (works in secure context with user gesture)
       if (navigator.clipboard && navigator.clipboard.writeText) {
         try {
           await navigator.clipboard.writeText(shareUrl);
 
-          // Show success notification
           button.innerHTML = '✅ Link Copied!';
           button.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
 
@@ -843,50 +868,54 @@ function MainApp({ user, userProfile }) {
             button.disabled = false;
           }, 2000);
         } catch (clipboardErr) {
-          // If clipboard API fails, try fallback
+          console.error('Clipboard API error:', clipboardErr);
+          // Fallback to textarea method
           throw new Error('Clipboard API failed');
         }
       } else {
-        // Fallback for older browsers
+        // Fallback: textarea method for older browsers
         const textArea = document.createElement('textarea');
         textArea.value = shareUrl;
-        textArea.style.position = 'absolute';
-        textArea.style.left = '-9999px';
-        textArea.style.top = '0';
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
         document.body.appendChild(textArea);
-
+        textArea.focus();
         textArea.select();
-        textArea.setSelectionRange(0, 99999); // For mobile devices
 
-        const successful = document.execCommand('copy');
-        document.body.removeChild(textArea);
+        try {
+          const successful = document.execCommand('copy');
+          document.body.removeChild(textArea);
 
-        if (successful) {
-          // Show success notification
-          button.innerHTML = '✅ Link Copied!';
-          button.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+          if (successful) {
+            button.innerHTML = '✅ Link Copied!';
+            button.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
 
-          setTimeout(() => {
-            button.innerHTML = originalText;
-            button.style.background = 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)';
-            button.disabled = false;
-          }, 2000);
-        } else {
-          throw new Error('Copy command failed');
+            setTimeout(() => {
+              button.innerHTML = originalText;
+              button.style.background = 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)';
+              button.disabled = false;
+            }, 2000);
+          } else {
+            throw new Error('Copy command failed');
+          }
+        } catch (e) {
+          document.body.removeChild(textArea);
+          throw e;
         }
       }
     } catch (err) {
       console.error('Share link failed:', err);
 
       // Show error in button
-      button.innerHTML = '❌ Share Failed';
+      button.innerHTML = '❌ Share Failed - Tap to retry';
       button.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
 
       setTimeout(() => {
         button.innerHTML = originalText;
         button.style.background = 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)';
         button.disabled = false;
-      }, 2000);
+      }, 3000);
     }
   };
 
