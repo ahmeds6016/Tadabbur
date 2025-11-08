@@ -1676,6 +1676,46 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
     }
   }, [verses, user, fetchVerseAnnotations]);
 
+  // Ensure we have a share_id for linking reflections back to responses
+  const ensureShareId = useCallback(async () => {
+    if (currentShareId) return currentShareId;
+
+    try {
+      const res = await fetch(`${BACKEND_URL}/share`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          query: query,
+          approach: approach,
+          response: data
+        })
+      });
+
+      if (!res.ok) {
+        console.error('Failed to create share link for annotation');
+        return null;
+      }
+
+      const shareData = await res.json();
+      setCurrentShareId(shareData.share_id);
+      return shareData.share_id;
+    } catch (err) {
+      console.error('Error creating share link:', err);
+      return null;
+    }
+  }, [currentShareId, query, approach, data]);
+
+  const handleTextHighlight = useCallback(async (highlightedText) => {
+    await ensureShareId();
+    setCurrentVerse({
+      reflectionType: 'highlight',
+      highlightedText,
+      queryContext: data?.verses?.[0] ? `${data.verses[0].surah}:${data.verses[0].verse_number}` : 'Response'
+    });
+  }, [ensureShareId, data]);
+
   // Early return after all hooks
   if (!data) return <div className="results-container"><p>No results to display.</p></div>;
 
@@ -1721,46 +1761,6 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
       setInlineAnnotationVerse(null); // Close inline form after saving
     }
   };
-
-  // Ensure we have a share_id for linking reflections back to responses
-  const ensureShareId = useCallback(async () => {
-    if (currentShareId) return currentShareId;
-
-    try {
-      const res = await fetch(`${BACKEND_URL}/share`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          query: query,
-          approach: approach,
-          response: data
-        })
-      });
-
-      if (!res.ok) {
-        console.error('Failed to create share link for annotation');
-        return null;
-      }
-
-      const shareData = await res.json();
-      setCurrentShareId(shareData.share_id);
-      return shareData.share_id;
-    } catch (err) {
-      console.error('Error creating share link:', err);
-      return null;
-    }
-  }, [currentShareId, query, approach, data]);
-
-  const handleTextHighlight = useCallback(async (highlightedText) => {
-    await ensureShareId();
-    setCurrentVerse({
-      reflectionType: 'highlight',
-      highlightedText,
-      queryContext: data?.verses?.[0] ? `${data.verses[0].surah}:${data.verses[0].verse_number}` : 'Response'
-    });
-  }, [ensureShareId, data]);
 
   if (verses.length === 0 && tafsir_explanations.length === 0 && lessons_practical_applications.length === 0) {
     return (
