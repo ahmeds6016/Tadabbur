@@ -4986,55 +4986,82 @@ def get_user_annotations():
 @app.route("/annotations", methods=["POST"])
 @firebase_auth_required
 def create_annotation():
-    """Create a new annotation"""
+    """Create a new annotation - supports verse, section, general, and highlight reflections"""
     try:
         uid = request.user['uid']
         data = request.get_json()
 
-        surah = data.get('surah')
-        verse = data.get('verse')
+        # Get common fields
         annotation_type = data.get('type', 'personal_insight')
         content = data.get('content', '')
         tags = data.get('tags', [])
-        linked_verses = data.get('linkedVerses', [])
-
-        if not surah or not verse:
-            return jsonify({"error": "Surah and verse are required"}), 400
+        reflection_type = data.get('reflection_type', 'verse')  # verse, section, general, highlight
 
         if not content:
             return jsonify({"error": "Content is required"}), 400
 
-        # Convert surah name to number if needed
-        surah_num, error = surah_name_to_number(surah)
-        if error:
-            return jsonify({"error": error}), 400
-
-        # Convert verse to int if string
-        if isinstance(verse, str):
-            try:
-                verse = int(verse)
-            except ValueError:
-                return jsonify({"error": f"Invalid verse number: '{verse}'"}), 400
-
-        # Validate verse reference
-        is_valid, msg = validate_verse_reference(surah_num, verse)
-        if not is_valid:
-            return jsonify({"error": msg}), 400
-
         annotations_ref = users_db.collection('users').document(uid).collection('annotations')
         doc_ref = annotations_ref.document()
 
+        # Base annotation data
         annotation_data = {
-            'surah': surah_num,  # Store as integer
-            'verse': verse,      # Store as integer
             'type': annotation_type,
             'content': content,
             'tags': tags,
-            'linkedVerses': linked_verses,
+            'reflection_type': reflection_type,
             'isPrivate': data.get('isPrivate', True),
             'createdAt': firestore.SERVER_TIMESTAMP,
             'updatedAt': firestore.SERVER_TIMESTAMP
         }
+
+        # Handle verse-specific reflections
+        if reflection_type == 'verse':
+            surah = data.get('surah')
+            verse = data.get('verse')
+
+            if not surah or not verse:
+                return jsonify({"error": "Surah and verse are required for verse reflections"}), 400
+
+            # Convert surah name to number if needed
+            surah_num, error = surah_name_to_number(surah)
+            if error:
+                return jsonify({"error": error}), 400
+
+            # Convert verse to int if string
+            if isinstance(verse, str):
+                try:
+                    verse = int(verse)
+                except ValueError:
+                    return jsonify({"error": f"Invalid verse number: '{verse}'"}), 400
+
+            # Validate verse reference
+            is_valid, msg = validate_verse_reference(surah_num, verse)
+            if not is_valid:
+                return jsonify({"error": msg}), 400
+
+            annotation_data['surah'] = surah_num
+            annotation_data['verse'] = verse
+            annotation_data['linkedVerses'] = data.get('linkedVerses', [])
+
+        # Handle section-specific reflections
+        elif reflection_type == 'section':
+            section_name = data.get('section_name')
+            if not section_name:
+                return jsonify({"error": "Section name is required for section reflections"}), 400
+            annotation_data['section_name'] = section_name
+            annotation_data['query_context'] = data.get('query_context', '')
+
+        # Handle general reflections
+        elif reflection_type == 'general':
+            annotation_data['query_context'] = data.get('query_context', '')
+
+        # Handle highlighted text reflections
+        elif reflection_type == 'highlight':
+            highlighted_text = data.get('highlighted_text')
+            if not highlighted_text:
+                return jsonify({"error": "Highlighted text is required for highlight reflections"}), 400
+            annotation_data['highlighted_text'] = highlighted_text
+            annotation_data['query_context'] = data.get('query_context', '')
 
         doc_ref.set(annotation_data)
 
@@ -5045,6 +5072,7 @@ def create_annotation():
 
     except Exception as e:
         print(f"ERROR in POST /annotations: {type(e).__name__} - {e}")
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
 @app.route("/annotations/<annotation_id>", methods=["PUT"])

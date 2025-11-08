@@ -11,6 +11,7 @@ import {
 } from 'firebase/auth';
 import AnnotationPanel from './components/AnnotationPanel';
 import AnnotationDisplay from './components/AnnotationDisplay';
+import TextHighlighter from './components/TextHighlighter';
 import onboardingConfig from '../config/onboarding-messages.json';
 
 // Firebase Configuration
@@ -1730,9 +1731,18 @@ function EnhancedResultsDisplay({ data, user }) {
     );
   }
 
+  const handleTextHighlight = (highlightedText) => {
+    setCurrentVerse({
+      reflectionType: 'highlight',
+      highlightedText,
+      queryContext: data?.verses?.[0] ? `${data.verses[0].surah}:${data.verses[0].verse_number}` : 'Response'
+    });
+  };
+
   return (
-    <div className="results-container">
-      {/* Unified Add Note Button */}
+    <TextHighlighter onHighlight={handleTextHighlight} enabled={true}>
+      <div className="results-container">
+        {/* General Reflection Button */}
       <div style={{
         position: 'sticky',
         top: '20px',
@@ -1743,7 +1753,7 @@ function EnhancedResultsDisplay({ data, user }) {
         paddingRight: '20px'
       }}>
         <button
-          onClick={() => setInlineAnnotationVerse('unified')}
+          onClick={() => setCurrentVerse({ reflectionType: 'general', queryContext: query })}
           style={{
             background: 'var(--gradient-teal-gold)',
             border: 'none',
@@ -1760,20 +1770,24 @@ function EnhancedResultsDisplay({ data, user }) {
             transition: 'all 0.3s ease'
           }}
           className="unified-add-note-btn"
+          onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+          onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
         >
-          ✨ Capture Your Reflection
+          ✨ Reflect on Entire Response
         </button>
       </div>
 
-      {/* Unified Annotation Form */}
-      {inlineAnnotationVerse === 'unified' && (
+      {/* General Annotation Panel */}
+      {currentVerse?.reflectionType === 'general' && (
         <AnnotationPanel
           isOpen={true}
-          verse={data?.verses?.[0] || {}}
+          verse={{}}
           user={user}
-          onClose={() => setInlineAnnotationVerse(null)}
+          reflectionType="general"
+          queryContext={currentVerse.queryContext}
+          onClose={() => setCurrentVerse(null)}
           onSaved={() => {
-            setInlineAnnotationVerse(null);
+            setCurrentVerse(null);
             // Refresh annotations
             Object.keys(annotations).forEach(key => {
               const [surah, verse] = key.split(':');
@@ -1783,8 +1797,8 @@ function EnhancedResultsDisplay({ data, user }) {
         />
       )}
 
-      {/* Annotation Panel */}
-      {currentVerse && (
+      {/* Annotation Panel for verses */}
+      {currentVerse && currentVerse.surah && (
         <AnnotationPanel
           isOpen={annotationPanelOpen}
           onClose={() => setAnnotationPanelOpen(false)}
@@ -1792,6 +1806,39 @@ function EnhancedResultsDisplay({ data, user }) {
           user={user}
           existingAnnotation={editingAnnotation}
           onSaved={handleAnnotationSaved}
+          reflectionType="verse"
+        />
+      )}
+
+      {/* Annotation Panel for sections */}
+      {currentVerse && currentVerse.reflectionType === 'section' && (
+        <AnnotationPanel
+          isOpen={true}
+          onClose={() => setCurrentVerse(null)}
+          verse={{}}
+          user={user}
+          reflectionType="section"
+          sectionName={currentVerse.sectionName}
+          queryContext={currentVerse.queryContext}
+          onSaved={() => {
+            setCurrentVerse(null);
+          }}
+        />
+      )}
+
+      {/* Annotation Panel for highlighted text */}
+      {currentVerse && currentVerse.reflectionType === 'highlight' && (
+        <AnnotationPanel
+          isOpen={true}
+          onClose={() => setCurrentVerse(null)}
+          verse={{}}
+          user={user}
+          reflectionType="highlight"
+          highlightedText={currentVerse.highlightedText}
+          queryContext={currentVerse.queryContext}
+          onSaved={() => {
+            setCurrentVerse(null);
+          }}
         />
       )}
 
@@ -1844,7 +1891,27 @@ function EnhancedResultsDisplay({ data, user }) {
 
       {tafsir_explanations.length > 0 && (
         <div className="result-section">
-          <h2>Tafsir Explanations</h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <h2 style={{ margin: 0 }}>Tafsir Explanations</h2>
+            <button
+              onClick={() => setCurrentVerse({ reflectionType: 'section', sectionName: 'Tafsir Explanations', queryContext: query })}
+              style={{
+                padding: '8px 16px',
+                background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                border: 'none',
+                borderRadius: '8px',
+                color: 'white',
+                fontSize: '0.85rem',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+              onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+            >
+              💭 Reflect
+            </button>
+          </div>
           {tafsir_explanations.map((tafsir, index) => (
             <details key={index} className="tafsir-details enhanced" open>
               <summary>
@@ -1865,7 +1932,27 @@ function EnhancedResultsDisplay({ data, user }) {
 
       {cross_references.length > 0 && (
         <div className="result-section">
-          <h2>Related Verses</h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <h2 style={{ margin: 0 }}>Related Verses</h2>
+            <button
+              onClick={() => setCurrentVerse({ reflectionType: 'section', sectionName: 'Related Verses', queryContext: query })}
+              style={{
+                padding: '8px 16px',
+                background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                border: 'none',
+                borderRadius: '8px',
+                color: 'white',
+                fontSize: '0.85rem',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+              onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+            >
+              💭 Reflect
+            </button>
+          </div>
           <div className="cross-references">
             {cross_references.map((ref, index) => (
               <div key={index} className="cross-ref-item">
@@ -1878,7 +1965,27 @@ function EnhancedResultsDisplay({ data, user }) {
 
       {lessons_practical_applications.length > 0 && (
         <div className="result-section">
-          <h2>Lessons &amp; Practical Applications</h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <h2 style={{ margin: 0 }}>Lessons &amp; Practical Applications</h2>
+            <button
+              onClick={() => setCurrentVerse({ reflectionType: 'section', sectionName: 'Lessons & Practical Applications', queryContext: query })}
+              style={{
+                padding: '8px 16px',
+                background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                border: 'none',
+                borderRadius: '8px',
+                color: 'white',
+                fontSize: '0.85rem',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+              onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+            >
+              💭 Reflect
+            </button>
+          </div>
           <ul className="lessons-list">
             {lessons_practical_applications.map((lesson, index) => (
               <li key={index} className="lesson-item">{lesson.point}</li>
@@ -1889,12 +1996,33 @@ function EnhancedResultsDisplay({ data, user }) {
 
       {summary && (
         <div className="result-section">
-          <h2>Summary</h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <h2 style={{ margin: 0 }}>Summary</h2>
+            <button
+              onClick={() => setCurrentVerse({ reflectionType: 'section', sectionName: 'Summary', queryContext: query })}
+              style={{
+                padding: '8px 16px',
+                background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                border: 'none',
+                borderRadius: '8px',
+                color: 'white',
+                fontSize: '0.85rem',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+              onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+            >
+              💭 Reflect
+            </button>
+          </div>
           <div className="summary-content">
             <p>{summary}</p>
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </TextHighlighter>
   );
 }

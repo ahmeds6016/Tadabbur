@@ -17,7 +17,11 @@ export default function AnnotationPanel({
   verse,
   user,
   existingAnnotation = null,
-  onSaved
+  onSaved,
+  reflectionType = 'verse', // 'verse', 'section', 'general', 'highlight'
+  sectionName = null, // e.g., 'Summary', 'Cross References'
+  highlightedText = null, // For text highlighting feature
+  queryContext = null // The original query for context
 }) {
   const [content, setContent] = useState('');
   const [type, setType] = useState('personal_insight');
@@ -82,12 +86,33 @@ export default function AnnotationPanel({
       const body = {
         content,
         type,
-        tags
+        tags,
+        reflection_type: reflectionType
       };
 
       if (!existingAnnotation) {
-        body.surah = verse.surah;
-        body.verse = verse.verse_number;
+        // For verse-specific reflections
+        if (reflectionType === 'verse' && verse?.surah && verse?.verse_number) {
+          body.surah = verse.surah;
+          body.verse = verse.verse_number;
+        }
+
+        // For section-specific reflections
+        if (reflectionType === 'section') {
+          body.section_name = sectionName;
+          body.query_context = queryContext;
+        }
+
+        // For general reflections
+        if (reflectionType === 'general') {
+          body.query_context = queryContext;
+        }
+
+        // For highlighted text reflections
+        if (reflectionType === 'highlight') {
+          body.highlighted_text = highlightedText;
+          body.query_context = queryContext;
+        }
       }
 
       const res = await fetch(url, {
@@ -189,10 +214,15 @@ export default function AnnotationPanel({
         >
           <div>
             <h2 style={{ margin: 0, fontSize: '1.5rem' }}>
-              📝 {existingAnnotation ? 'Edit' : 'Add'} Annotation
+              📝 {existingAnnotation ? 'Edit' : 'Add'} Reflection
             </h2>
             <p style={{ margin: '4px 0 0 0', fontSize: '0.9rem', opacity: 0.9 }}>
-              {verse.surah_name ? `${verse.surah_name} (${verse.surah}:${verse.verse_number})` : `${verse.surah}:${verse.verse_number}`}
+              {reflectionType === 'verse' && verse?.surah && verse?.verse_number && (
+                verse.surah_name ? `${verse.surah_name} (${verse.surah}:${verse.verse_number})` : `${verse.surah}:${verse.verse_number}`
+              )}
+              {reflectionType === 'section' && sectionName && `On: ${sectionName}`}
+              {reflectionType === 'general' && queryContext && `On: ${queryContext}`}
+              {reflectionType === 'highlight' && 'On: Selected Text'}
             </p>
           </div>
           <button
@@ -217,20 +247,76 @@ export default function AnnotationPanel({
 
         {/* Content */}
         <div style={{ flex: 1, overflow: 'auto', padding: '24px' }}>
-          {/* Verse Display */}
-          <div
-            style={{
-              padding: '16px',
-              background: 'var(--cream)',
-              borderRadius: '12px',
-              marginBottom: '24px',
-              border: '2px solid var(--border-light)'
-            }}
-          >
-            <p style={{ fontStyle: 'italic', color: 'var(--deep-blue)', margin: 0 }}>
-              "{verse.text_saheeh_international}"
-            </p>
-          </div>
+          {/* Context Display */}
+          {(reflectionType === 'verse' && verse?.text_saheeh_international) && (
+            <div
+              style={{
+                padding: '16px',
+                background: 'var(--cream)',
+                borderRadius: '12px',
+                marginBottom: '24px',
+                border: '2px solid var(--border-light)'
+              }}
+            >
+              <p style={{ fontStyle: 'italic', color: 'var(--deep-blue)', margin: 0 }}>
+                "{verse.text_saheeh_international}"
+              </p>
+            </div>
+          )}
+
+          {reflectionType === 'highlight' && highlightedText && (
+            <div
+              style={{
+                padding: '16px',
+                background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+                borderRadius: '12px',
+                marginBottom: '24px',
+                border: '2px solid var(--gold)'
+              }}
+            >
+              <p style={{ fontSize: '0.85rem', fontWeight: '600', color: '#92400e', marginBottom: '8px' }}>
+                Selected Text:
+              </p>
+              <p style={{ fontStyle: 'italic', color: '#78350f', margin: 0 }}>
+                "{highlightedText}"
+              </p>
+            </div>
+          )}
+
+          {reflectionType === 'section' && sectionName && (
+            <div
+              style={{
+                padding: '16px',
+                background: 'linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%)',
+                borderRadius: '12px',
+                marginBottom: '24px',
+                border: '2px solid var(--primary-teal)'
+              }}
+            >
+              <p style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--primary-teal)', margin: 0 }}>
+                Reflecting on: {sectionName}
+              </p>
+            </div>
+          )}
+
+          {reflectionType === 'general' && queryContext && (
+            <div
+              style={{
+                padding: '16px',
+                background: 'linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%)',
+                borderRadius: '12px',
+                marginBottom: '24px',
+                border: '2px solid #a855f7'
+              }}
+            >
+              <p style={{ fontSize: '0.85rem', fontWeight: '600', color: '#7c3aed', marginBottom: '4px' }}>
+                General Reflection on Query:
+              </p>
+              <p style={{ fontStyle: 'italic', color: '#6b21a8', margin: 0 }}>
+                "{queryContext}"
+              </p>
+            </div>
+          )}
 
           {/* Annotation Type */}
           <div style={{ marginBottom: '24px' }}>
