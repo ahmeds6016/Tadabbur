@@ -30,10 +30,11 @@ from google.cloud import aiplatform
 from google.cloud import storage
 
 # Imports for Reranking (Setup 1: Retriever-Reranker pattern)
+# DISABLED: Testing pure RAG optimization for latency and quality
 try:
     from sentence_transformers import CrossEncoder
     from transformers import AutoTokenizer
-    RERANKER_AVAILABLE = True
+    RERANKER_AVAILABLE = False  # DISABLED: Forcing RAG-only mode for testing
 except ImportError:
     print("⚠️  WARNING: sentence-transformers not installed. Reranking will be disabled.")
     print("   Install with: pip install sentence-transformers transformers")
@@ -94,7 +95,7 @@ RERANKER_MODELS = [
     }
 ]
 
-# Reranker retrieval configuration
+# Reranker retrieval configuration (DISABLED - kept for comparison)
 RERANKER_CONFIG = {
     'tafsir': {
         'num_candidates': 15,  # Increased back since batch processing is fast
@@ -103,6 +104,25 @@ RERANKER_CONFIG = {
     'semantic': {
         'num_candidates': 20,  # Can handle more with batch processing
         'final_chunks': 5,     # Keep focused output
+    }
+}
+
+# OPTIMIZED RAG-ONLY CONFIGURATION (Active)
+# Tuned for quality + latency without reranking
+RAG_OPTIMIZED_CONFIG = {
+    'tafsir': {
+        'num_neighbors': 8,           # Retrieve more for better coverage (was 15 for reranking)
+        'distance_threshold': 0.7,    # Filter out low-quality matches (cosine similarity)
+        'min_chunks': 3,              # Minimum chunks to return
+        'max_chunks': 6,              # Maximum chunks to avoid overwhelming
+        'deduplicate': True,          # Remove duplicate verse references
+    },
+    'semantic': {
+        'num_neighbors': 10,          # More for exploratory queries
+        'distance_threshold': 0.65,   # Slightly more permissive for exploration
+        'min_chunks': 3,
+        'max_chunks': 8,
+        'deduplicate': True,
     }
 }
 
@@ -3300,12 +3320,18 @@ def perform_diversified_rag_search(query, expanded_query, embedding_model, index
     print(f"   ⏱️  Query embedding: {embedding_time:.0f}ms")
 
     # Increased candidate count for better recall (reranker will filter)
-    config = RERANKER_CONFIG.get(approach, RERANKER_CONFIG['tafsir'])
-    num_neighbors = config['num_candidates']
+    # OPTIMIZED: Use RAG_OPTIMIZED_CONFIG when reranker is disabled
+    if RERANKER_AVAILABLE:
+        config = RERANKER_CONFIG.get(approach, RERANKER_CONFIG['tafsir'])
+        num_neighbors = config['num_candidates']
+        print(f"   Mode: RERANKER (candidates: {num_neighbors})")
+    else:
+        config = RAG_OPTIMIZED_CONFIG.get(approach, RAG_OPTIMIZED_CONFIG['tafsir'])
+        num_neighbors = config['num_neighbors']
+        print(f"   Mode: OPTIMIZED RAG-ONLY (neighbors: {num_neighbors}, threshold: {config['distance_threshold']})")
 
     print(f"   Query: {query[:100]}..." if len(query) > 100 else f"   Query: {query}")
     print(f"   Approach: {approach}")
-    print(f"   Candidates to retrieve: {num_neighbors} (increased for reranking)")
     print(f"   Embedding dimension: {len(query_embedding)}")
 
     try:
@@ -3321,31 +3347,70 @@ def perform_diversified_rag_search(query, expanded_query, embedding_model, index
         print(f"   ❌ Vector search failed: {e}")
         neighbors_result = [[]]
 
-    # Retrieve ALL chunks without distance filtering (reranker will filter)
-    # CHANGED: Remove distance threshold - let reranker decide relevance
+    # Retrieve chunks with appropriate filtering based on mode
     retrieval_start = time.time()
-    retrieved_chunks = retrieve_chunks_from_neighbors(
-        neighbors_result[0],
-        distance_threshold=1.0  # Accept everything - reranker will filter
-    )
-    retrieval_time = (time.time() - retrieval_start) * 1000
+    if RERANKER_AVAILABLE:
+        # Reranker mode: Accept all candidates for reranking
+        retrieved_chunks = retrieve_chunks_from_neighbors(
+            neighbors_result[0],
+            distance_threshold=1.0  # Accept everything - reranker will filter
+        )
+        print(f"   Retrieved: {len(retrieved_chunks)} chunks for reranking in {(time.time() - retrieval_start) * 1000:.0f}ms")
+    else:
+        # RAG-only mode: Use distance threshold for quality filtering
+        distance_threshold = config['distance_threshold']
+        retrieved_chunks = retrieve_chunks_from_neighbors(
+            neighbors_result[0],
+            distance_threshold=distance_threshold
+        )
+        print(f"   Retrieved: {len(retrieved_chunks)} chunks (filtered by distance >= {distance_threshold}) in {(time.time() - retrieval_start) * 1000:.0f}ms")
 
-    print(f"   Retrieved: {len(retrieved_chunks)} chunks for reranking in {retrieval_time:.0f}ms")
     print(f"   ⏱️  STAGE 1 TOTAL: {(time.time() - perf_start) * 1000:.0f}ms")
 
     # ========================================================================
-    # STAGE 2: PRECISE RERANKER (High Precision)
+    # STAGE 2: PRECISION OPTIMIZATION
     # ========================================================================
     stage2_start = time.time()
-    print(f"\n✨ STAGE 2: CrossEncoder Reranking (High Precision)")
 
-    # Rerank all retrieved chunks using CrossEncoder
-    rerank_start = time.time()
-    reranked_chunks = rerank_chunks(query, retrieved_chunks, approach)
-    rerank_time = (time.time() - rerank_start) * 1000
+    if RERANKER_AVAILABLE:
+        print(f"\n✨ STAGE 2: CrossEncoder Reranking (High Precision)")
+        # Rerank all retrieved chunks using CrossEncoder
+        rerank_start = time.time()
+        reranked_chunks = rerank_chunks(query, retrieved_chunks, approach)
+        rerank_time = (time.time() - rerank_start) * 1000
+        print(f"   Final chunks after reranking: {len(reranked_chunks)}")
+        print(f"   ⏱️  STAGE 2 TOTAL: {rerank_time:.0f}ms")
+    else:
+        print(f"\n✨ STAGE 2: RAG Optimization (Deduplication + Capping)")
+        # RAG-only mode: Deduplicate and cap results
 
-    print(f"   Final chunks after reranking: {len(reranked_chunks)}")
-    print(f"   ⏱️  STAGE 2 TOTAL: {rerank_time:.0f}ms")
+        # Deduplicate by verse reference
+        if config.get('deduplicate', False):
+            seen_verses = set()
+            deduplicated = []
+            for chunk in retrieved_chunks:
+                verse_key = f"{chunk.get('surah', '')}:{chunk.get('verse', '')}"
+                if verse_key not in seen_verses:
+                    seen_verses.add(verse_key)
+                    deduplicated.append(chunk)
+            print(f"   Deduplicated: {len(retrieved_chunks)} → {len(deduplicated)} chunks")
+            retrieved_chunks = deduplicated
+
+        # Cap to max_chunks
+        max_chunks = config.get('max_chunks', 8)
+        min_chunks = config.get('min_chunks', 3)
+
+        if len(retrieved_chunks) > max_chunks:
+            reranked_chunks = retrieved_chunks[:max_chunks]
+            print(f"   Capped to max: {max_chunks} chunks")
+        elif len(retrieved_chunks) < min_chunks:
+            reranked_chunks = retrieved_chunks
+            print(f"   ⚠️  Only {len(retrieved_chunks)} chunks (min: {min_chunks})")
+        else:
+            reranked_chunks = retrieved_chunks
+            print(f"   Using all {len(retrieved_chunks)} chunks")
+
+        print(f"   ⏱️  STAGE 2 TOTAL: {(time.time() - stage2_start) * 1000:.0f}ms")
 
     # ========================================================================
     # STAGE 3: SOURCE DIVERSIFICATION (Rerank Score-Based Weighting)
@@ -3367,8 +3432,8 @@ def perform_diversified_rag_search(query, expanded_query, embedding_model, index
     ibn_kathir_chunks = [c for c in reranked_chunks if c['source'] == 'Ibn Kathir']
     qurtubi_chunks = [c for c in reranked_chunks if c['source'] == 'al-Qurtubi']
 
-    # UPDATED: Calculate dynamic weights based on RERANK SCORES (not distances)
-    # Rerank scores are more reliable indicators of semantic relevance
+    # Calculate dynamic weights based on quality scores
+    # RERANKER mode: Use rerank_score | RAG mode: Use distance
     if len(qurtubi_chunks) == 0:
         # al-Qurtubi has NO relevant chunks (content not in Surahs 1-4)
         weights = {'Ibn Kathir': 1.0, 'al-Qurtubi': 0.0}
@@ -3380,29 +3445,36 @@ def perform_diversified_rag_search(query, expanded_query, embedding_model, index
         print(f"   ✅ Dynamic weights: Ibn Kathir has no chunks → al-Qurtubi 100%")
 
     else:
-        # BOTH sources have chunks - compare RERANK SCORE quality
-        avg_score_ik = sum(c['rerank_score'] for c in ibn_kathir_chunks) / len(ibn_kathir_chunks)
-        avg_score_q = sum(c['rerank_score'] for c in qurtubi_chunks) / len(qurtubi_chunks)
-
-        score_diff = abs(avg_score_ik - avg_score_q)
-
-        # Threshold depends on model (Jina scores [0,1], MS-MARCO scores [-10,10])
-        similarity_threshold = 0.1 if 'jina' in (RERANKER_MODEL_NAME or '') else 1.0
+        # BOTH sources have chunks - compare quality scores
+        if RERANKER_AVAILABLE:
+            # Use rerank scores for comparison
+            avg_score_ik = sum(c['rerank_score'] for c in ibn_kathir_chunks) / len(ibn_kathir_chunks)
+            avg_score_q = sum(c['rerank_score'] for c in qurtubi_chunks) / len(qurtubi_chunks)
+            score_diff = abs(avg_score_ik - avg_score_q)
+            similarity_threshold = 0.1 if 'jina' in (RERANKER_MODEL_NAME or '') else 1.0
+            metric_name = "rerank score"
+        else:
+            # Use distance scores for comparison (higher is better)
+            avg_score_ik = sum(c.get('distance', 0) for c in ibn_kathir_chunks) / len(ibn_kathir_chunks)
+            avg_score_q = sum(c.get('distance', 0) for c in qurtubi_chunks) / len(qurtubi_chunks)
+            score_diff = abs(avg_score_ik - avg_score_q)
+            similarity_threshold = 0.05  # 5% difference in cosine similarity
+            metric_name = "distance"
 
         if score_diff < similarity_threshold:
             # Scores similar → Use 50/50 balanced mix
             weights = {'Ibn Kathir': 0.5, 'al-Qurtubi': 0.5}
-            print(f"   ✅ Dynamic weights: Similar quality (IK:{avg_score_ik:.2f}, Q:{avg_score_q:.2f}) → 50%/50%")
+            print(f"   ✅ Dynamic weights: Similar quality (IK:{avg_score_ik:.2f}, Q:{avg_score_q:.2f} {metric_name}) → 50%/50%")
 
         elif avg_score_ik > avg_score_q:
             # Ibn Kathir has better matches → Favor it 70/30
             weights = {'Ibn Kathir': 0.7, 'al-Qurtubi': 0.3}
-            print(f"   ✅ Dynamic weights: IK better (IK:{avg_score_ik:.2f} > Q:{avg_score_q:.2f}) → 70%/30%")
+            print(f"   ✅ Dynamic weights: IK better (IK:{avg_score_ik:.2f} > Q:{avg_score_q:.2f} {metric_name}) → 70%/30%")
 
         else:
             # al-Qurtubi has better matches → Favor it 30/70
             weights = {'Ibn Kathir': 0.3, 'al-Qurtubi': 0.7}
-            print(f"   ✅ Dynamic weights: Q better (Q:{avg_score_q:.2f} > IK:{avg_score_ik:.2f}) → 30%/70%")
+            print(f"   ✅ Dynamic weights: Q better (Q:{avg_score_q:.2f} > IK:{avg_score_ik:.2f} {metric_name}) → 30%/70%")
 
     # Build final context by source
     context_by_source = {}
