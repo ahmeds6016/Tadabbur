@@ -1753,6 +1753,15 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
     }
   }, [currentShareId, query, approach, data]);
 
+  const handleTextHighlight = useCallback(async (highlightedText) => {
+    await ensureShareId();
+    setCurrentVerse({
+      reflectionType: 'highlight',
+      highlightedText,
+      queryContext: data?.verses?.[0] ? `${data.verses[0].surah}:${data.verses[0].verse_number}` : 'Response'
+    });
+  }, [ensureShareId, data]);
+
   if (verses.length === 0 && tafsir_explanations.length === 0 && lessons_practical_applications.length === 0) {
     return (
       <div className="results-container">
@@ -1762,15 +1771,6 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
       </div>
     );
   }
-
-  const handleTextHighlight = async (highlightedText) => {
-    await ensureShareId();
-    setCurrentVerse({
-      reflectionType: 'highlight',
-      highlightedText,
-      queryContext: data?.verses?.[0] ? `${data.verses[0].surah}:${data.verses[0].verse_number}` : 'Response'
-    });
-  };
 
   return (
     <TextHighlighter onHighlight={handleTextHighlight} enabled={true}>
