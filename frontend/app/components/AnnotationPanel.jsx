@@ -21,7 +21,8 @@ export default function AnnotationPanel({
   reflectionType = 'verse', // 'verse', 'section', 'general', 'highlight'
   sectionName = null, // e.g., 'Summary', 'Cross References'
   highlightedText = null, // For text highlighting feature
-  queryContext = null // The original query for context
+  queryContext = null, // The original query for context
+  shareId = null // Link back to the original response
 }) {
   const [content, setContent] = useState('');
   const [type, setType] = useState('personal_insight');
@@ -89,6 +90,11 @@ export default function AnnotationPanel({
         tags,
         reflection_type: reflectionType
       };
+
+      // Add share_id to link back to original response
+      if (shareId) {
+        body.share_id = shareId;
+      }
 
       if (!existingAnnotation) {
         // For verse-specific reflections

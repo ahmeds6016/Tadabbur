@@ -5036,18 +5036,39 @@ def get_user_annotations():
             if updated_at and hasattr(updated_at, 'timestamp'):
                 updated_at = {'seconds': int(updated_at.timestamp())}
 
-            annotations.append({
+            annotation_obj = {
                 'id': doc.id,
-                'surah': data.get('surah'),
-                'verse': data.get('verse'),
-                'verseRef': f"{data.get('surah')}:{data.get('verse')}",
                 'type': data.get('type', 'personal_insight'),
                 'content': data.get('content', ''),
                 'tags': data.get('tags', []),
-                'linkedVerses': data.get('linkedVerses', []),
                 'createdAt': created_at,
-                'updatedAt': updated_at
-            })
+                'updatedAt': updated_at,
+                'reflection_type': data.get('reflection_type', 'verse'),
+                'share_id': data.get('share_id')
+            }
+
+            # Add verse-specific fields
+            if data.get('surah') and data.get('verse'):
+                annotation_obj['surah'] = data.get('surah')
+                annotation_obj['verse'] = data.get('verse')
+                annotation_obj['verseRef'] = f"{data.get('surah')}:{data.get('verse')}"
+                annotation_obj['linkedVerses'] = data.get('linkedVerses', [])
+
+            # Add section-specific fields
+            if data.get('section_name'):
+                annotation_obj['section_name'] = data.get('section_name')
+                annotation_obj['query_context'] = data.get('query_context', '')
+
+            # Add general reflection fields
+            if data.get('reflection_type') == 'general':
+                annotation_obj['query_context'] = data.get('query_context', '')
+
+            # Add highlight reflection fields
+            if data.get('highlighted_text'):
+                annotation_obj['highlighted_text'] = data.get('highlighted_text')
+                annotation_obj['query_context'] = data.get('query_context', '')
+
+            annotations.append(annotation_obj)
 
         return jsonify({'annotations': annotations, 'count': len(annotations)}), 200
 
@@ -5085,6 +5106,10 @@ def create_annotation():
             'createdAt': firestore.SERVER_TIMESTAMP,
             'updatedAt': firestore.SERVER_TIMESTAMP
         }
+
+        # Store share_id to link back to original response
+        if data.get('share_id'):
+            annotation_data['share_id'] = data.get('share_id')
 
         # Handle verse-specific reflections
         if reflection_type == 'verse':

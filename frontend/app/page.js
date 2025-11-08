@@ -1228,7 +1228,7 @@ function MainApp({ user, userProfile }) {
               </div>
             )}
 
-            <EnhancedResultsDisplay data={response} user={user} />
+            <EnhancedResultsDisplay data={response} user={user} query={query} approach={approach} />
           </>
         )}
       </div>
@@ -1631,12 +1631,13 @@ function InlineAnnotationForm({ verse, user, onSaved, onCancel }) {
 // RESULTS DISPLAY COMPONENT WITH ANNOTATIONS
 // ============================================================================
 
-function EnhancedResultsDisplay({ data, user }) {
+function EnhancedResultsDisplay({ data, user, query, approach }) {
   const [annotations, setAnnotations] = useState({});
   const [annotationPanelOpen, setAnnotationPanelOpen] = useState(false);
   const [currentVerse, setCurrentVerse] = useState(null);
   const [editingAnnotation, setEditingAnnotation] = useState(null);
   const [inlineAnnotationVerse, setInlineAnnotationVerse] = useState(null);
+  const [currentShareId, setCurrentShareId] = useState(null);
 
   const fetchVerseAnnotations = useCallback(async (surah, verse) => {
     try {
@@ -1721,6 +1722,37 @@ function EnhancedResultsDisplay({ data, user }) {
     }
   };
 
+  // Ensure we have a share_id for linking reflections back to responses
+  const ensureShareId = useCallback(async () => {
+    if (currentShareId) return currentShareId;
+
+    try {
+      const res = await fetch(`${BACKEND_URL}/share`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          query: query,
+          approach: approach,
+          response: data
+        })
+      });
+
+      if (!res.ok) {
+        console.error('Failed to create share link for annotation');
+        return null;
+      }
+
+      const shareData = await res.json();
+      setCurrentShareId(shareData.share_id);
+      return shareData.share_id;
+    } catch (err) {
+      console.error('Error creating share link:', err);
+      return null;
+    }
+  }, [currentShareId, query, approach, data]);
+
   if (verses.length === 0 && tafsir_explanations.length === 0 && lessons_practical_applications.length === 0) {
     return (
       <div className="results-container">
@@ -1731,7 +1763,8 @@ function EnhancedResultsDisplay({ data, user }) {
     );
   }
 
-  const handleTextHighlight = (highlightedText) => {
+  const handleTextHighlight = async (highlightedText) => {
+    await ensureShareId();
     setCurrentVerse({
       reflectionType: 'highlight',
       highlightedText,
@@ -1743,39 +1776,44 @@ function EnhancedResultsDisplay({ data, user }) {
     <TextHighlighter onHighlight={handleTextHighlight} enabled={true}>
       <div className="results-container">
         {/* General Reflection Button */}
-      <div style={{
-        position: 'sticky',
-        top: '20px',
-        zIndex: 100,
-        display: 'flex',
-        justifyContent: 'flex-end',
-        marginBottom: '20px',
-        paddingRight: '20px'
-      }}>
-        <button
-          onClick={() => setCurrentVerse({ reflectionType: 'general', queryContext: query })}
-          style={{
-            background: 'var(--gradient-teal-gold)',
-            border: 'none',
-            color: 'white',
-            padding: '12px 24px',
-            borderRadius: '24px',
-            cursor: 'pointer',
-            fontSize: '1rem',
-            fontWeight: '700',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            boxShadow: 'var(--shadow-medium)',
-            transition: 'all 0.3s ease'
-          }}
-          className="unified-add-note-btn"
-          onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-          onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-        >
-          ✨ Reflect on Entire Response
-        </button>
-      </div>
+      {user && (
+        <div style={{
+          position: 'sticky',
+          top: '20px',
+          zIndex: 100,
+          display: 'flex',
+          justifyContent: 'flex-end',
+          marginBottom: '20px',
+          paddingRight: '20px'
+        }}>
+          <button
+            onClick={async () => {
+              await ensureShareId();
+              setCurrentVerse({ reflectionType: 'general', queryContext: query });
+            }}
+            style={{
+              background: 'var(--gradient-teal-gold)',
+              border: 'none',
+              color: 'white',
+              padding: '12px 24px',
+              borderRadius: '24px',
+              cursor: 'pointer',
+              fontSize: '1rem',
+              fontWeight: '700',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              boxShadow: 'var(--shadow-medium)',
+              transition: 'all 0.3s ease'
+            }}
+            className="unified-add-note-btn"
+            onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+            onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+          >
+            ✨ Reflect on Entire Response
+          </button>
+        </div>
+      )}
 
       {/* General Annotation Panel */}
       {currentVerse?.reflectionType === 'general' && (
@@ -1785,6 +1823,7 @@ function EnhancedResultsDisplay({ data, user }) {
           user={user}
           reflectionType="general"
           queryContext={currentVerse.queryContext}
+          shareId={currentShareId}
           onClose={() => setCurrentVerse(null)}
           onSaved={() => {
             setCurrentVerse(null);
@@ -1807,6 +1846,7 @@ function EnhancedResultsDisplay({ data, user }) {
           existingAnnotation={editingAnnotation}
           onSaved={handleAnnotationSaved}
           reflectionType="verse"
+          shareId={currentShareId}
         />
       )}
 
@@ -1820,6 +1860,7 @@ function EnhancedResultsDisplay({ data, user }) {
           reflectionType="section"
           sectionName={currentVerse.sectionName}
           queryContext={currentVerse.queryContext}
+          shareId={currentShareId}
           onSaved={() => {
             setCurrentVerse(null);
           }}
@@ -1836,6 +1877,7 @@ function EnhancedResultsDisplay({ data, user }) {
           reflectionType="highlight"
           highlightedText={currentVerse.highlightedText}
           queryContext={currentVerse.queryContext}
+          shareId={currentShareId}
           onSaved={() => {
             setCurrentVerse(null);
           }}
@@ -1893,24 +1935,29 @@ function EnhancedResultsDisplay({ data, user }) {
         <div className="result-section">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <h2 style={{ margin: 0 }}>Tafsir Explanations</h2>
-            <button
-              onClick={() => setCurrentVerse({ reflectionType: 'section', sectionName: 'Tafsir Explanations', queryContext: query })}
-              style={{
-                padding: '8px 16px',
-                background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
-                border: 'none',
-                borderRadius: '8px',
-                color: 'white',
-                fontSize: '0.85rem',
-                fontWeight: '600',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-              onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-            >
-              💭 Reflect
-            </button>
+            {user && (
+              <button
+                onClick={async () => {
+                  await ensureShareId();
+                  setCurrentVerse({ reflectionType: 'section', sectionName: 'Tafsir Explanations', queryContext: query });
+                }}
+                style={{
+                  padding: '8px 16px',
+                  background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                  border: 'none',
+                  borderRadius: '8px',
+                  color: 'white',
+                  fontSize: '0.85rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+              >
+                💭 Reflect
+              </button>
+            )}
           </div>
           {tafsir_explanations.map((tafsir, index) => (
             <details key={index} className="tafsir-details enhanced" open>
@@ -1934,24 +1981,29 @@ function EnhancedResultsDisplay({ data, user }) {
         <div className="result-section">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <h2 style={{ margin: 0 }}>Related Verses</h2>
-            <button
-              onClick={() => setCurrentVerse({ reflectionType: 'section', sectionName: 'Related Verses', queryContext: query })}
-              style={{
-                padding: '8px 16px',
-                background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
-                border: 'none',
-                borderRadius: '8px',
-                color: 'white',
-                fontSize: '0.85rem',
-                fontWeight: '600',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-              onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-            >
-              💭 Reflect
-            </button>
+            {user && (
+              <button
+                onClick={async () => {
+                  await ensureShareId();
+                  setCurrentVerse({ reflectionType: 'section', sectionName: 'Related Verses', queryContext: query });
+                }}
+                style={{
+                  padding: '8px 16px',
+                  background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                  border: 'none',
+                  borderRadius: '8px',
+                  color: 'white',
+                  fontSize: '0.85rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+              >
+                💭 Reflect
+              </button>
+            )}
           </div>
           <div className="cross-references">
             {cross_references.map((ref, index) => (
@@ -1967,24 +2019,29 @@ function EnhancedResultsDisplay({ data, user }) {
         <div className="result-section">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <h2 style={{ margin: 0 }}>Lessons &amp; Practical Applications</h2>
-            <button
-              onClick={() => setCurrentVerse({ reflectionType: 'section', sectionName: 'Lessons & Practical Applications', queryContext: query })}
-              style={{
-                padding: '8px 16px',
-                background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
-                border: 'none',
-                borderRadius: '8px',
-                color: 'white',
-                fontSize: '0.85rem',
-                fontWeight: '600',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-              onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-            >
-              💭 Reflect
-            </button>
+            {user && (
+              <button
+                onClick={async () => {
+                  await ensureShareId();
+                  setCurrentVerse({ reflectionType: 'section', sectionName: 'Lessons & Practical Applications', queryContext: query });
+                }}
+                style={{
+                  padding: '8px 16px',
+                  background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                  border: 'none',
+                  borderRadius: '8px',
+                  color: 'white',
+                  fontSize: '0.85rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+              >
+                💭 Reflect
+              </button>
+            )}
           </div>
           <ul className="lessons-list">
             {lessons_practical_applications.map((lesson, index) => (
@@ -1998,24 +2055,29 @@ function EnhancedResultsDisplay({ data, user }) {
         <div className="result-section">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <h2 style={{ margin: 0 }}>Summary</h2>
-            <button
-              onClick={() => setCurrentVerse({ reflectionType: 'section', sectionName: 'Summary', queryContext: query })}
-              style={{
-                padding: '8px 16px',
-                background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
-                border: 'none',
-                borderRadius: '8px',
-                color: 'white',
-                fontSize: '0.85rem',
-                fontWeight: '600',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-              onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-            >
-              💭 Reflect
-            </button>
+            {user && (
+              <button
+                onClick={async () => {
+                  await ensureShareId();
+                  setCurrentVerse({ reflectionType: 'section', sectionName: 'Summary', queryContext: query });
+                }}
+                style={{
+                  padding: '8px 16px',
+                  background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                  border: 'none',
+                  borderRadius: '8px',
+                  color: 'white',
+                  fontSize: '0.85rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+              >
+                💭 Reflect
+              </button>
+            )}
           </div>
           <div className="summary-content">
             <p>{summary}</p>

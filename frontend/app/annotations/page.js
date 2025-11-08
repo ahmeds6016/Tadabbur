@@ -1132,19 +1132,25 @@ export default function MyReflectionsPage() {
               return (
                 <div
                   key={annotation.id}
+                  onClick={() => {
+                    if (annotation.share_id) {
+                      window.location.href = `/shared/${annotation.share_id}`;
+                    }
+                  }}
                   style={{
                     padding: '20px',
                     background: 'white',
                     borderRadius: '16px',
                     border: '2px solid var(--border-light)',
                     borderLeft: `6px solid ${typeConfig.color}`,
-                    transition: 'all 0.3s ease'
+                    transition: 'all 0.3s ease',
+                    cursor: annotation.share_id ? 'pointer' : 'default'
                   }}
                   className="annotation-card"
                 >
                   {/* Header */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                    <div>
+                    <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                         <span style={{ fontSize: '1.4rem' }}>{typeConfig.icon}</span>
                         <span
@@ -1161,12 +1167,83 @@ export default function MyReflectionsPage() {
                           {typeConfig.label}
                         </span>
                       </div>
-                      <div style={{ fontWeight: '700', fontSize: '1.1rem', color: 'var(--primary-teal)' }}>
-                        📖 {annotation.verseRef}
-                      </div>
+
+                      {/* Context based on reflection type */}
+                      {annotation.reflection_type === 'verse' && annotation.verseRef && (
+                        <div style={{ fontWeight: '700', fontSize: '1.1rem', color: 'var(--primary-teal)' }}>
+                          📖 Verse {annotation.verseRef}
+                        </div>
+                      )}
+
+                      {annotation.reflection_type === 'section' && (
+                        <div>
+                          <div style={{ fontWeight: '700', fontSize: '1.1rem', color: '#8b5cf6', marginBottom: '4px' }}>
+                            📑 Section: {annotation.section_name}
+                          </div>
+                          {annotation.query_context && (
+                            <div style={{ fontSize: '0.9rem', color: '#666', fontStyle: 'italic' }}>
+                              Query: &quot;{annotation.query_context}&quot;
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {annotation.reflection_type === 'general' && (
+                        <div>
+                          <div style={{ fontWeight: '700', fontSize: '1.1rem', color: '#10b981', marginBottom: '4px' }}>
+                            🌟 General Reflection
+                          </div>
+                          {annotation.query_context && (
+                            <div style={{ fontSize: '0.9rem', color: '#666', fontStyle: 'italic' }}>
+                              Query: &quot;{annotation.query_context}&quot;
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {annotation.reflection_type === 'highlight' && (
+                        <div>
+                          <div style={{ fontWeight: '700', fontSize: '1.1rem', color: '#f59e0b', marginBottom: '4px' }}>
+                            ✨ Highlighted Text
+                          </div>
+                          {annotation.highlighted_text && (
+                            <div style={{
+                              fontSize: '0.9rem',
+                              color: '#666',
+                              fontStyle: 'italic',
+                              background: 'rgba(245, 158, 11, 0.1)',
+                              padding: '8px 12px',
+                              borderRadius: '8px',
+                              borderLeft: '3px solid #f59e0b',
+                              marginTop: '8px'
+                            }}>
+                              &quot;{annotation.highlighted_text}&quot;
+                            </div>
+                          )}
+                          {annotation.query_context && (
+                            <div style={{ fontSize: '0.85rem', color: '#999', marginTop: '4px' }}>
+                              From query: &quot;{annotation.query_context}&quot;
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <div style={{ fontSize: '0.85rem', color: '#999' }}>
-                      {formatDate(annotation.createdAt)}
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', marginLeft: '16px' }}>
+                      <div style={{ fontSize: '0.85rem', color: '#999' }}>
+                        {formatDate(annotation.createdAt)}
+                      </div>
+                      {annotation.share_id && (
+                        <div style={{
+                          fontSize: '0.75rem',
+                          color: '#8b5cf6',
+                          fontWeight: '600',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}>
+                          🔗 View Response
+                        </div>
+                      )}
                     </div>
                   </div>
 
