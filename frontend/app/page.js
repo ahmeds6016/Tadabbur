@@ -1690,7 +1690,10 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
   const scrollPositionRef = useRef(0);
 
   useEffect(() => {
-    if (annotationPanelOpen) {
+    // Panel is open if annotationPanelOpen OR currentVerse exists (for highlight/section annotations)
+    const isPanelOpen = annotationPanelOpen || currentVerse !== null;
+
+    if (isPanelOpen) {
       // Save current scroll position in ref
       scrollPositionRef.current = window.scrollY;
 
@@ -1710,7 +1713,7 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
         window.scrollTo(0, scrollY);
       };
     }
-  }, [annotationPanelOpen]);
+  }, [annotationPanelOpen, currentVerse]);
 
   const fetchVerseAnnotations = useCallback(async (surah, verse) => {
     try {
@@ -1787,7 +1790,7 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
       highlightedText,
       queryContext: data?.verses?.[0] ? `${data.verses[0].surah}:${data.verses[0].verse_number}` : 'Response'
     });
-    setAnnotationPanelOpen(true);
+    // Note: Panel opens automatically when currentVerse.reflectionType === 'highlight'
   }, [ensureShareId, data]);
 
   // Early return after all hooks
