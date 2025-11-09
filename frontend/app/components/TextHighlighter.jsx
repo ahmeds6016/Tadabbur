@@ -4,12 +4,19 @@ import { useState, useEffect, useRef } from 'react';
 export default function TextHighlighter({ children, onHighlight, enabled = true }) {
   const [selection, setSelection] = useState(null);
   const [menuPosition, setMenuPosition] = useState(null);
+
   const menuRef = useRef(null);
+  const isAnnotatingRef = useRef(false);
 
   useEffect(() => {
     if (!enabled) return;
 
-    const updateMenu = () => {
+    const handleMouseUp = (e) => {
+      // Don't process if clicking the menu
+      if (menuRef.current && menuRef.current.contains(e.target)) {
+        return;
+      }
+
       const selectedText = window.getSelection()?.toString().trim();
 
       if (selectedText && selectedText.length > 0) {
@@ -18,47 +25,38 @@ export default function TextHighlighter({ children, onHighlight, enabled = true 
 
         if (rect) {
           setSelection(selectedText);
-
-          // Position button BELOW the selection with spacing
           setMenuPosition({
             x: rect.left + rect.width / 2,
-            y: rect.bottom + 10  // 10px below selection
+            y: rect.top - 10
           });
         }
       } else {
-        // Clear immediately when no selection (user deselected)
+        // Only clear if we're not in the middle of annotating
+        if (!isAnnotatingRef.current) {
+          setSelection(null);
+          setMenuPosition(null);
+        }
+      }
+    };
+
+    const handleClickOutside = (e) => {
+      // Don't close if clicking the menu or if we're annotating
+      if (isAnnotatingRef.current || (menuRef.current && menuRef.current.contains(e.target))) {
+        return;
+      }
+
+      if (!e.target.closest('.highlight-menu')) {
         setSelection(null);
         setMenuPosition(null);
       }
     };
 
-    const hideMenu = (e) => {
-      // Don't hide if clicking the menu button itself
-      if (menuRef.current && menuRef.current.contains(e.target)) {
-        return;
-      }
-
-      // If clicking anywhere else, check if there's still a selection
-      // This will be handled by updateMenu on the next selectionchange
-    };
-
-    // Update menu position as selection changes (real-time)
-    document.addEventListener('selectionchange', updateMenu);
-
-    // Also update on mouse/touch events for immediate feedback
-    document.addEventListener('mouseup', updateMenu);
-    document.addEventListener('touchend', updateMenu);
-
-    // Only hide menu if clicking outside (but let selectionchange handle clearing)
-    document.addEventListener('mousedown', hideMenu, true);
-    document.addEventListener('touchstart', hideMenu, true);
+    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener('mousedown', handleClickOutside, true);
 
     return () => {
-      document.removeEventListener('selectionchange', updateMenu);
-      document.removeEventListener('mouseup', updateMenu);
-      document.removeEventListener('touchend', updateMenu);
-      document.removeEventListener('mousedown', hideMenu, true);
-      document.removeEventListener('touchstart', hideMenu, true);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('mousedown', handleClickOutside, true);
     };
   }, [enabled]);
 
@@ -67,12 +65,16 @@ export default function TextHighlighter({ children, onHighlight, enabled = true 
     e.stopPropagation();
 
     if (selection && onHighlight) {
+      isAnnotatingRef.current = true;
       onHighlight(selection);
 
-      // Immediate cleanup
-      setSelection(null);
-      setMenuPosition(null);
-      window.getSelection()?.removeAllRanges();
+      // Clean up after a short delay
+      setTimeout(() => {
+        setSelection(null);
+        setMenuPosition(null);
+        window.getSelection()?.removeAllRanges();
+        isAnnotatingRef.current = false;
+      }, 100);
     }
   };
 
@@ -88,43 +90,36 @@ export default function TextHighlighter({ children, onHighlight, enabled = true 
             position: 'fixed',
             left: `${menuPosition.x}px`,
             top: `${menuPosition.y}px`,
-            transform: 'translate(-50%, 0)',  // Center horizontally, no vertical offset
-            zIndex: 10000,  // Very high z-index to ensure it's always on top
-            animation: 'fadeIn 0.2s ease',
-            pointerEvents: 'auto'  // Ensure it's clickable
+            transform: 'translate(-50%, -100%)',
+            zIndex: 1000,
+            animation: 'fadeIn 0.2s ease'
           }}
         >
           <button
             onMouseDown={handleAnnotate}
-            onTouchStart={handleAnnotate}  // Touch support for mobile
             style={{
-              padding: '10px 18px',
+              padding: '8px 16px',
               background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
               border: 'none',
               borderRadius: '8px',
               color: 'white',
-              fontSize: '0.9rem',
+              fontSize: '0.85rem',
               fontWeight: '700',
               cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(245, 158, 11, 0.5)',
+              boxShadow: '0 4px 12px rgba(245, 158, 11, 0.4)',
               display: 'flex',
               alignItems: 'center',
-              gap: '8px',
+              gap: '6px',
               whiteSpace: 'nowrap',
-              transition: 'all 0.2s ease',
-              userSelect: 'none',  // Prevent text selection on button
-              WebkitUserSelect: 'none',  // Safari
-              MozUserSelect: 'none',  // Firefox
-              msUserSelect: 'none',  // IE/Edge
-              WebkitTapHighlightColor: 'transparent'  // Remove tap highlight on mobile
+              transition: 'all 0.2s ease'
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'scale(1.05)';
-              e.currentTarget.style.boxShadow = '0 6px 16px rgba(245, 158, 11, 0.6)';
+              e.target.style.transform = 'scale(1.05)';
+              e.target.style.boxShadow = '0 6px 16px rgba(245, 158, 11, 0.5)';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'scale(1)';
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(245, 158, 11, 0.5)';
+              e.target.style.transform = 'scale(1)';
+              e.target.style.boxShadow = '0 4px 12px rgba(245, 158, 11, 0.4)';
             }}
           >
             <span style={{ fontSize: '1.1rem' }}>✨</span>
@@ -137,21 +132,12 @@ export default function TextHighlighter({ children, onHighlight, enabled = true 
         @keyframes fadeIn {
           from {
             opacity: 0;
-            transform: translate(-50%, 0) scale(0.95);
+            transform: translate(-50%, -100%) scale(0.9);
           }
           to {
             opacity: 1;
-            transform: translate(-50%, 0) scale(1);
+            transform: translate(-50%, -100%) scale(1);
           }
-        }
-
-        .highlight-menu {
-          -webkit-touch-callout: none;
-          -webkit-user-select: none;
-          -khtml-user-select: none;
-          -moz-user-select: none;
-          -ms-user-select: none;
-          user-select: none;
         }
       `}</style>
     </>

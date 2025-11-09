@@ -1698,12 +1698,15 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
     dataRef.current = data;
   }, [data]);
 
+  // Improved scroll-locking that preserves scroll position
   useEffect(() => {
     const isPanelOpen = annotationPanelOpen || currentVerse !== null;
 
     if (isPanelOpen) {
+      // Save current scroll position BEFORE any DOM changes
       scrollPositionRef.current = window.pageYOffset || document.documentElement.scrollTop;
 
+      // Lock scroll using position fixed to prevent any scroll changes
       const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
       document.body.style.overflow = 'hidden';
       document.body.style.position = 'fixed';
@@ -1712,17 +1715,17 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
       document.body.style.paddingRight = `${scrollbarWidth}px`;
 
       return () => {
-        // Save position before removing styles
-        const savedPosition = scrollPositionRef.current;
-
+        // Restore all styles
         document.body.style.overflow = '';
         document.body.style.position = '';
         document.body.style.top = '';
         document.body.style.width = '';
         document.body.style.paddingRight = '';
 
-        // Restore scroll immediately (no requestAnimationFrame delay)
-        window.scrollTo(0, savedPosition);
+        // Restore scroll position after a tiny delay to ensure DOM is ready
+        requestAnimationFrame(() => {
+          window.scrollTo(0, scrollPositionRef.current);
+        });
       };
     }
   }, [annotationPanelOpen, currentVerse]);
