@@ -1256,14 +1256,22 @@ export default function MyReflectionsPage() {
                         fontSize: '0.95rem',
                         lineHeight: '1.6',
                         whiteSpace: 'pre-wrap',
-                        maxHeight: isExpanded ? '1000px' : '60px',
+                        maxHeight: isExpanded ? 'none' : '4.8em', // ~3 lines (1.6 line-height * 3)
                         overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        transition: 'max-height 0.3s ease'
+                        transition: 'max-height 0.3s ease',
+                        position: 'relative'
                       }}
                     >
                       {annotation.content}
                     </p>
+                    {!isExpanded && annotation.content && annotation.content.split('\n').length > 3 && (
+                      <div style={{
+                        background: 'linear-gradient(to bottom, transparent, var(--cream))',
+                        height: '20px',
+                        marginTop: '-20px',
+                        position: 'relative'
+                      }} />
+                    )}
                   </div>
 
                   {/* Tags */}

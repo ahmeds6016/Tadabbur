@@ -1,6 +1,6 @@
 'use client';
 import ReactMarkdown from 'react-markdown';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { initializeApp, getApps } from 'firebase/app';
 import {
   getAuth,
@@ -1687,19 +1687,22 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
   const [currentShareId, setCurrentShareId] = useState(null);
 
   // Scroll-locking: Prevent page from jumping to top when AnnotationPanel opens
+  const scrollPositionRef = useRef(0);
+
   useEffect(() => {
     if (annotationPanelOpen) {
-      // Save current scroll position
-      const scrollY = window.scrollY;
+      // Save current scroll position in ref
+      scrollPositionRef.current = window.scrollY;
 
       // Lock the body at current scroll position
       document.body.style.position = 'fixed';
-      document.body.style.top = `-${scrollY}px`;
+      document.body.style.top = `-${scrollPositionRef.current}px`;
       document.body.style.width = '100%';
       document.body.style.overflow = 'hidden';
 
       // Cleanup: Restore scroll when panel closes
       return () => {
+        const scrollY = scrollPositionRef.current;
         document.body.style.position = '';
         document.body.style.top = '';
         document.body.style.width = '';
@@ -1784,6 +1787,7 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
       highlightedText,
       queryContext: data?.verses?.[0] ? `${data.verses[0].surah}:${data.verses[0].verse_number}` : 'Response'
     });
+    setAnnotationPanelOpen(true);
   }, [ensureShareId, data]);
 
   // Early return after all hooks

@@ -11,28 +11,90 @@ const ANNOTATION_TYPES = [
   { value: 'connection', label: '🔗 Connection', icon: '🔗' }
 ];
 
-// Smart tag suggestion helper
+// Comprehensive smart tag suggestion helper
 const getSuggestedTags = (content) => {
   const suggestions = [];
   const lowerContent = content.toLowerCase();
 
-  // Islamic concept tags
-  if (lowerContent.includes('allah')) suggestions.push('tawheed');
-  if (lowerContent.includes('prophet') || lowerContent.includes('muhammad')) suggestions.push('seerah');
-  if (lowerContent.includes('prayer') || lowerContent.includes('salah')) suggestions.push('ibadah');
-  if (lowerContent.includes('patience') || lowerContent.includes('sabr')) suggestions.push('character');
-  if (lowerContent.includes('grateful') || lowerContent.includes('shukr')) suggestions.push('gratitude');
-  if (lowerContent.includes('parent')) suggestions.push('family');
-  if (lowerContent.includes('forgive')) suggestions.push('repentance');
+  // Core Islamic concepts (Aqeedah)
+  if (lowerContent.match(/\b(allah|god|creator|lord)\b/)) suggestions.push('tawheed');
+  if (lowerContent.match(/\b(prophet|muhammad|messenger|rasul|nabi)\b/)) suggestions.push('seerah');
+  if (lowerContent.match(/\b(quran|qur'an|revelation|book)\b/)) suggestions.push('quran');
+  if (lowerContent.match(/\b(angel|angels|jibril|gabriel)\b/)) suggestions.push('angels');
+  if (lowerContent.match(/\b(judgment|hereafter|afterlife|akhirah)\b/)) suggestions.push('akhirah');
+  if (lowerContent.match(/\b(paradise|jannah|heaven)\b/)) suggestions.push('jannah');
+  if (lowerContent.match(/\b(hell|jahannam|fire)\b/)) suggestions.push('jahannam');
 
-  // Emotion/mood tags
-  if (lowerContent.includes('happy') || lowerContent.includes('joy')) suggestions.push('joy');
-  if (lowerContent.includes('sad') || lowerContent.includes('difficult')) suggestions.push('trial');
-  if (lowerContent.includes('hope')) suggestions.push('hope');
-  if (lowerContent.includes('fear')) suggestions.push('khawf');
+  // Worship & Practice (Ibadah)
+  if (lowerContent.match(/\b(prayer|salah|salat|pray|praying)\b/)) suggestions.push('salah');
+  if (lowerContent.match(/\b(fast|fasting|ramadan|sawm)\b/)) suggestions.push('fasting');
+  if (lowerContent.match(/\b(charity|zakat|sadaqah|give|giving)\b/)) suggestions.push('charity');
+  if (lowerContent.match(/\b(hajj|pilgrimage|makkah|mecca|kaaba)\b/)) suggestions.push('hajj');
+  if (lowerContent.match(/\b(dua|supplication|asking|invoke)\b/)) suggestions.push('dua');
+  if (lowerContent.match(/\b(dhikr|remembrance|remember)\b/)) suggestions.push('dhikr');
+  if (lowerContent.match(/\b(worship|ibadah|devotion)\b/)) suggestions.push('ibadah');
 
-  // Remove duplicates
-  return [...new Set(suggestions)];
+  // Character & Morality (Akhlaq)
+  if (lowerContent.match(/\b(patient|patience|sabr|endure|persever)\b/)) suggestions.push('sabr');
+  if (lowerContent.match(/\b(grateful|gratitude|shukr|thank|appreciate)\b/)) suggestions.push('shukr');
+  if (lowerContent.match(/\b(humble|humility|modest)\b/)) suggestions.push('humility');
+  if (lowerContent.match(/\b(honest|honesty|truth|truthful)\b/)) suggestions.push('honesty');
+  if (lowerContent.match(/\b(kind|kindness|compassion|mercy|rahma)\b/)) suggestions.push('kindness');
+  if (lowerContent.match(/\b(forgive|forgiveness|pardon)\b/)) suggestions.push('forgiveness');
+  if (lowerContent.match(/\b(trust|tawakkul|reliance|rely)\b/)) suggestions.push('tawakkul');
+  if (lowerContent.match(/\b(sincer|ikhlas|pure|intention)\b/)) suggestions.push('sincerity');
+
+  // Relationships & Social
+  if (lowerContent.match(/\b(parent|mother|father|family)\b/)) suggestions.push('family');
+  if (lowerContent.match(/\b(marriage|spouse|husband|wife)\b/)) suggestions.push('marriage');
+  if (lowerContent.match(/\b(children|child|kids|parenting)\b/)) suggestions.push('parenting');
+  if (lowerContent.match(/\b(friend|friendship|companion)\b/)) suggestions.push('friendship');
+  if (lowerContent.match(/\b(community|ummah|brotherhood|sisterhood)\b/)) suggestions.push('community');
+  if (lowerContent.match(/\b(neighbor|neighbour)\b/)) suggestions.push('neighbors');
+
+  // Trials & Challenges
+  if (lowerContent.match(/\b(trial|test|difficulty|hardship|struggle)\b/)) suggestions.push('trial');
+  if (lowerContent.match(/\b(sad|grief|sorrow|loss)\b/)) suggestions.push('grief');
+  if (lowerContent.match(/\b(anxiety|worry|stress|concern)\b/)) suggestions.push('anxiety');
+  if (lowerContent.match(/\b(fear|afraid|scared|khawf)\b/)) suggestions.push('fear');
+  if (lowerContent.match(/\b(anger|angry|frustrat)\b/)) suggestions.push('anger');
+  if (lowerContent.match(/\b(doubt|uncertain|confusion)\b/)) suggestions.push('doubt');
+
+  // Positive States & Growth
+  if (lowerContent.match(/\b(hope|optimis|positive)\b/)) suggestions.push('hope');
+  if (lowerContent.match(/\b(joy|happy|happiness|delight)\b/)) suggestions.push('joy');
+  if (lowerContent.match(/\b(peace|tranquil|calm|serenity)\b/)) suggestions.push('peace');
+  if (lowerContent.match(/\b(guidance|hidayah|guided)\b/)) suggestions.push('guidance');
+  if (lowerContent.match(/\b(growth|improve|better|progress)\b/)) suggestions.push('growth');
+  if (lowerContent.match(/\b(reflection|contemplate|ponder|think)\b/)) suggestions.push('reflection');
+
+  // Knowledge & Learning
+  if (lowerContent.match(/\b(knowledge|learn|study|ilm)\b/)) suggestions.push('knowledge');
+  if (lowerContent.match(/\b(wisdom|wise|hikma)\b/)) suggestions.push('wisdom');
+  if (lowerContent.match(/\b(understand|comprehend|grasp)\b/)) suggestions.push('understanding');
+  if (lowerContent.match(/\b(question|ask|curious|wonder)\b/)) suggestions.push('questions');
+
+  // Spiritual States
+  if (lowerContent.match(/\b(repent|tawbah|regret|sorry)\b/)) suggestions.push('repentance');
+  if (lowerContent.match(/\b(rememb|aware|conscious|mindful)\b/)) suggestions.push('mindfulness');
+  if (lowerContent.match(/\b(love|loving|beloved|mahabbah)\b/)) suggestions.push('love');
+  if (lowerContent.match(/\b(fear.*allah|taqwa|conscious|pious)\b/)) suggestions.push('taqwa');
+
+  // Life Areas
+  if (lowerContent.match(/\b(work|job|career|profession)\b/)) suggestions.push('work');
+  if (lowerContent.match(/\b(money|wealth|finance|rizq)\b/)) suggestions.push('wealth');
+  if (lowerContent.match(/\b(health|sick|illness|disease)\b/)) suggestions.push('health');
+  if (lowerContent.match(/\b(death|dying|passed)\b/)) suggestions.push('death');
+  if (lowerContent.match(/\b(justice|fair|rights|oppression)\b/)) suggestions.push('justice');
+
+  // Personal Development
+  if (lowerContent.match(/\b(habit|routine|practice|discipline)\b/)) suggestions.push('habits');
+  if (lowerContent.match(/\b(goal|aim|objective|target)\b/)) suggestions.push('goals');
+  if (lowerContent.match(/\b(change|transform|different)\b/)) suggestions.push('change');
+  if (lowerContent.match(/\b(remind|reminder|memory)\b/)) suggestions.push('reminder');
+
+  // Remove duplicates and return max 8 suggestions (prioritize first matches)
+  return [...new Set(suggestions)].slice(0, 8);
 };
 
 export default function AnnotationPanel({
