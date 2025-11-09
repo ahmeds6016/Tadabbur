@@ -300,7 +300,7 @@ export default function AnnotationPanel({
           position: 'fixed',
           top: 0,
           right: 0,
-          height: '100vh', // <-- ADD THIS LINE
+          bottom: 0,
           width: '100%',
           maxWidth: '600px',
           background: 'linear-gradient(135deg, #ffffff 0%, rgba(250, 246, 240, 1) 100%)',

@@ -1689,6 +1689,15 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
   // Scroll-locking: Prevent page scroll when AnnotationPanel opens
   const scrollPositionRef = useRef(0);
 
+  // Track pending share ID request to prevent duplicates
+  const pendingShareRequest = useRef(null);
+
+  // Use ref for data to stabilize handleTextHighlight callback
+  const dataRef = useRef(data);
+  useEffect(() => {
+    dataRef.current = data;
+  }, [data]);
+
   useEffect(() => {
     const isPanelOpen = annotationPanelOpen || currentVerse !== null;
 
@@ -1703,15 +1712,17 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
       document.body.style.paddingRight = `${scrollbarWidth}px`;
 
       return () => {
+        // Save position before removing styles
+        const savedPosition = scrollPositionRef.current;
+
         document.body.style.overflow = '';
         document.body.style.position = '';
         document.body.style.top = '';
         document.body.style.width = '';
         document.body.style.paddingRight = '';
 
-        requestAnimationFrame(() => {
-          window.scrollTo(0, scrollPositionRef.current);
-        });
+        // Restore scroll immediately (no requestAnimationFrame delay)
+        window.scrollTo(0, savedPosition);
       };
     }
   }, [annotationPanelOpen, currentVerse]);
@@ -1757,8 +1768,13 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
   const ensureShareId = useCallback(async () => {
     if (currentShareId) return currentShareId;
 
+    // Prevent duplicate requests - reuse in-flight promise
+    if (pendingShareRequest.current) {
+      return pendingShareRequest.current;
+    }
+
     try {
-      const res = await fetch(`${BACKEND_URL}/share`, {
+      const promise = fetch(`${BACKEND_URL}/share`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -1768,30 +1784,41 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
           approach: approach,
           response: data
         })
+      }).then(async (res) => {
+        if (!res.ok) {
+          console.error('Failed to create share link for annotation');
+          return null;
+        }
+        const shareData = await res.json();
+        setCurrentShareId(shareData.share_id);
+        return shareData.share_id;
       });
 
-      if (!res.ok) {
-        console.error('Failed to create share link for annotation');
-        return null;
-      }
-
-      const shareData = await res.json();
-      setCurrentShareId(shareData.share_id);
-      return shareData.share_id;
+      pendingShareRequest.current = promise;
+      const result = await promise;
+      pendingShareRequest.current = null;
+      return result;
     } catch (err) {
+      pendingShareRequest.current = null;
       console.error('Error creating share link:', err);
       return null;
     }
   }, [currentShareId, query, approach, data]);
 
-  const handleTextHighlight = useCallback(async (highlightedText) => {
-    await ensureShareId();
+  const handleTextHighlight = useCallback((highlightedText) => {
+    // Use ref to access current data value (stabilizes callback)
+    const currentData = dataRef.current;
+
+    // Open panel immediately for instant UX (don't await)
     setCurrentVerse({
       reflectionType: 'highlight',
       highlightedText,
-      queryContext: data?.verses?.[0] ? `${data.verses[0].surah}:${data.verses[0].verse_number}` : 'Response'
+      queryContext: currentData?.verses?.[0] ? `${currentData.verses[0].surah}:${currentData.verses[0].verse_number}` : 'Response'
     });
-  }, [ensureShareId, data]);
+
+    // Ensure share ID in background (non-blocking)
+    ensureShareId().catch(err => console.error('Failed to create share link:', err));
+  }, [ensureShareId]);
 
   // Early return after all hooks
   if (!data) return <div className="results-container"><p>No results to display.</p></div>;
@@ -1864,9 +1891,9 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
           paddingRight: '20px'
         }}>
           <button
-            onClick={async () => {
-              await ensureShareId();
+            onClick={() => {
               setCurrentVerse({ reflectionType: 'general', queryContext: query });
+              ensureShareId().catch(err => console.error('Failed to create share link:', err));
             }}
             style={{
               background: 'var(--gradient-teal-gold)',
@@ -2014,9 +2041,9 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
             <h2 style={{ margin: 0 }}>Tafsir Explanations</h2>
             {user && (
               <button
-                onClick={async () => {
-                  await ensureShareId();
+                onClick={() => {
                   setCurrentVerse({ reflectionType: 'section', sectionName: 'Tafsir Explanations', queryContext: query });
+                  ensureShareId().catch(err => console.error('Failed to create share link:', err));
                 }}
                 style={{
                   padding: '8px 16px',
@@ -2060,9 +2087,9 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
             <h2 style={{ margin: 0 }}>Related Verses</h2>
             {user && (
               <button
-                onClick={async () => {
-                  await ensureShareId();
+                onClick={() => {
                   setCurrentVerse({ reflectionType: 'section', sectionName: 'Related Verses', queryContext: query });
+                  ensureShareId().catch(err => console.error('Failed to create share link:', err));
                 }}
                 style={{
                   padding: '8px 16px',
@@ -2098,9 +2125,9 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
             <h2 style={{ margin: 0 }}>Lessons &amp; Practical Applications</h2>
             {user && (
               <button
-                onClick={async () => {
-                  await ensureShareId();
+                onClick={() => {
                   setCurrentVerse({ reflectionType: 'section', sectionName: 'Lessons & Practical Applications', queryContext: query });
+                  ensureShareId().catch(err => console.error('Failed to create share link:', err));
                 }}
                 style={{
                   padding: '8px 16px',
@@ -2134,9 +2161,9 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
             <h2 style={{ margin: 0 }}>Summary</h2>
             {user && (
               <button
-                onClick={async () => {
-                  await ensureShareId();
+                onClick={() => {
                   setCurrentVerse({ reflectionType: 'section', sectionName: 'Summary', queryContext: query });
+                  ensureShareId().catch(err => console.error('Failed to create share link:', err));
                 }}
                 style={{
                   padding: '8px 16px',
