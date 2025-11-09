@@ -1687,25 +1687,31 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
   const [currentShareId, setCurrentShareId] = useState(null);
 
   // Scroll-locking: Prevent page scroll when AnnotationPanel opens
+  const scrollPositionRef = useRef(0);
+
   useEffect(() => {
-    // Panel is open if annotationPanelOpen OR currentVerse exists (for highlight/section annotations)
     const isPanelOpen = annotationPanelOpen || currentVerse !== null;
-    console.log('🔒 Scroll-lock check:', { annotationPanelOpen, currentVerse: currentVerse?.reflectionType, isPanelOpen });
 
     if (isPanelOpen) {
-      console.log('🔒 Applying scroll-lock');
-      // Simple scroll lock: just prevent scrolling without position changes
-      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-      document.documentElement.style.overflow = 'hidden';
-      document.body.style.overflow = 'hidden';
-      document.body.style.paddingRight = `${scrollbarWidth}px`; // Prevent layout shift
+      scrollPositionRef.current = window.pageYOffset || document.documentElement.scrollTop;
 
-      // Cleanup: Restore scroll when panel closes
+      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollPositionRef.current}px`;
+      document.body.style.width = '100%';
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
+
       return () => {
-        console.log('🔒 Removing scroll-lock');
-        document.documentElement.style.overflow = '';
         document.body.style.overflow = '';
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.width = '';
         document.body.style.paddingRight = '';
+
+        requestAnimationFrame(() => {
+          window.scrollTo(0, scrollPositionRef.current);
+        });
       };
     }
   }, [annotationPanelOpen, currentVerse]);
@@ -1779,15 +1785,12 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
   }, [currentShareId, query, approach, data]);
 
   const handleTextHighlight = useCallback(async (highlightedText) => {
-    console.log('🎨 handleTextHighlight called with:', highlightedText);
     await ensureShareId();
-    console.log('🎨 ensureShareId completed, setting currentVerse');
     setCurrentVerse({
       reflectionType: 'highlight',
       highlightedText,
       queryContext: data?.verses?.[0] ? `${data.verses[0].surah}:${data.verses[0].verse_number}` : 'Response'
     });
-    console.log('🎨 currentVerse set - panel should open automatically');
   }, [ensureShareId, data]);
 
   // Early return after all hooks

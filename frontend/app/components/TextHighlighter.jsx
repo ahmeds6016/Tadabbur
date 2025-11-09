@@ -1,14 +1,23 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 export default function TextHighlighter({ children, onHighlight, enabled = true }) {
   const [selection, setSelection] = useState(null);
   const [menuPosition, setMenuPosition] = useState(null);
 
+  // Refs for menu and annotation state tracking
+  const menuRef = useRef(null);
+  const isAnnotatingRef = useRef(false);
+
   useEffect(() => {
     if (!enabled) return;
 
-    const handleMouseUp = () => {
+    const handleMouseUp = (e) => {
+      // Don't process if clicking the menu
+      if (menuRef.current && menuRef.current.contains(e.target)) {
+        return;
+      }
+
       const selectedText = window.getSelection()?.toString().trim();
 
       if (selectedText && selectedText.length > 0) {
@@ -23,12 +32,20 @@ export default function TextHighlighter({ children, onHighlight, enabled = true 
           });
         }
       } else {
-        setSelection(null);
-        setMenuPosition(null);
+        // Only clear if we're not in the middle of annotating
+        if (!isAnnotatingRef.current) {
+          setSelection(null);
+          setMenuPosition(null);
+        }
       }
     };
 
     const handleClickOutside = (e) => {
+      // Don't close if clicking the menu or if we're annotating
+      if (isAnnotatingRef.current || (menuRef.current && menuRef.current.contains(e.target))) {
+        return;
+      }
+
       if (!e.target.closest('.highlight-menu')) {
         setSelection(null);
         setMenuPosition(null);
@@ -36,20 +53,29 @@ export default function TextHighlighter({ children, onHighlight, enabled = true 
     };
 
     document.addEventListener('mouseup', handleMouseUp);
-    document.addEventListener('click', handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside, true);
 
     return () => {
       document.removeEventListener('mouseup', handleMouseUp);
-      document.removeEventListener('click', handleClickOutside);
+      document.removeEventListener('mousedown', handleClickOutside, true);
     };
   }, [enabled]);
 
-  const handleAnnotate = () => {
+  const handleAnnotate = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
     if (selection && onHighlight) {
+      isAnnotatingRef.current = true;
       onHighlight(selection);
-      setSelection(null);
-      setMenuPosition(null);
-      window.getSelection()?.removeAllRanges();
+
+      // Clean up after a short delay
+      setTimeout(() => {
+        setSelection(null);
+        setMenuPosition(null);
+        window.getSelection()?.removeAllRanges();
+        isAnnotatingRef.current = false;
+      }, 100);
     }
   };
 
@@ -59,6 +85,7 @@ export default function TextHighlighter({ children, onHighlight, enabled = true 
 
       {selection && menuPosition && (
         <div
+          ref={menuRef}
           className="highlight-menu"
           style={{
             position: 'fixed',
@@ -70,7 +97,7 @@ export default function TextHighlighter({ children, onHighlight, enabled = true 
           }}
         >
           <button
-            onClick={handleAnnotate}
+            onMouseDown={handleAnnotate}
             style={{
               padding: '8px 16px',
               background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
