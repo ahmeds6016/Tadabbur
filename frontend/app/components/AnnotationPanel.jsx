@@ -11,6 +11,30 @@ const ANNOTATION_TYPES = [
   { value: 'connection', label: '🔗 Connection', icon: '🔗' }
 ];
 
+// Smart tag suggestion helper
+const getSuggestedTags = (content) => {
+  const suggestions = [];
+  const lowerContent = content.toLowerCase();
+
+  // Islamic concept tags
+  if (lowerContent.includes('allah')) suggestions.push('tawheed');
+  if (lowerContent.includes('prophet') || lowerContent.includes('muhammad')) suggestions.push('seerah');
+  if (lowerContent.includes('prayer') || lowerContent.includes('salah')) suggestions.push('ibadah');
+  if (lowerContent.includes('patience') || lowerContent.includes('sabr')) suggestions.push('character');
+  if (lowerContent.includes('grateful') || lowerContent.includes('shukr')) suggestions.push('gratitude');
+  if (lowerContent.includes('parent')) suggestions.push('family');
+  if (lowerContent.includes('forgive')) suggestions.push('repentance');
+
+  // Emotion/mood tags
+  if (lowerContent.includes('happy') || lowerContent.includes('joy')) suggestions.push('joy');
+  if (lowerContent.includes('sad') || lowerContent.includes('difficult')) suggestions.push('trial');
+  if (lowerContent.includes('hope')) suggestions.push('hope');
+  if (lowerContent.includes('fear')) suggestions.push('khawf');
+
+  // Remove duplicates
+  return [...new Set(suggestions)];
+};
+
 export default function AnnotationPanel({
   isOpen,
   onClose,
@@ -32,6 +56,7 @@ export default function AnnotationPanel({
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
   const [showTagSuggestions, setShowTagSuggestions] = useState(false);
+  const [suggestedTags, setSuggestedTags] = useState([]);
 
   useEffect(() => {
     if (existingAnnotation) {
@@ -50,6 +75,23 @@ export default function AnnotationPanel({
       fetchAllTags();
     }
   }, [isOpen, user]);
+
+  // Smart tag suggestions with debouncing
+  useEffect(() => {
+    if (!content || content.length < 10) {
+      setSuggestedTags([]);
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      const suggestions = getSuggestedTags(content);
+      // Filter out tags that are already added
+      const newSuggestions = suggestions.filter(tag => !tags.includes(tag));
+      setSuggestedTags(newSuggestions);
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [content, tags]);
 
   const fetchAllTags = async () => {
     try {
@@ -388,6 +430,45 @@ export default function AnnotationPanel({
             <label style={{ display: 'block', fontWeight: '700', marginBottom: '8px', color: 'var(--primary-teal)' }}>
               Tags
             </label>
+
+            {/* Smart Tag Suggestions */}
+            {suggestedTags.length > 0 && (
+              <div style={{ marginBottom: '12px' }}>
+                <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginBottom: '8px' }}>
+                  ✨ Suggested tags:
+                </p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                  {suggestedTags.map(tag => (
+                    <button
+                      key={tag}
+                      onClick={() => handleAddTag(tag)}
+                      style={{
+                        background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
+                        color: 'var(--primary-teal)',
+                        padding: '6px 12px',
+                        borderRadius: '20px',
+                        fontSize: '0.85rem',
+                        fontWeight: '600',
+                        border: '1px dashed var(--primary-teal)',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.background = 'var(--primary-teal)';
+                        e.target.style.color = 'white';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.background = 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)';
+                        e.target.style.color = 'var(--primary-teal)';
+                      }}
+                    >
+                      + {tag}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div
               style={{
                 display: 'flex',
@@ -491,21 +572,6 @@ export default function AnnotationPanel({
             )}
           </div>
 
-          {error && (
-            <div
-              style={{
-                padding: '12px',
-                background: 'rgba(220, 38, 38, 0.1)',
-                border: '2px solid var(--error-color)',
-                borderRadius: '8px',
-                color: 'var(--error-color)',
-                marginBottom: '16px',
-                fontWeight: '600'
-              }}
-            >
-              {error}
-            </div>
-          )}
         </div>
 
         {/* Footer - Fixed at bottom */}
@@ -514,11 +580,31 @@ export default function AnnotationPanel({
             padding: '24px',
             borderTop: '2px solid var(--border-light)',
             display: 'flex',
+            flexDirection: 'column',
             gap: '12px',
             background: 'var(--cream)',
             flexShrink: 0
           }}
         >
+          {/* Error message - always visible in footer */}
+          {error && (
+            <div
+              style={{
+                padding: '12px',
+                background: 'rgba(220, 38, 38, 0.1)',
+                border: '2px solid var(--error-color)',
+                borderRadius: '8px',
+                color: 'var(--error-color)',
+                fontWeight: '600',
+                textAlign: 'center'
+              }}
+            >
+              {error}
+            </div>
+          )}
+
+          {/* Buttons */}
+          <div style={{ display: 'flex', gap: '12px' }}>
           <button
             onClick={onClose}
             style={{
@@ -552,6 +638,7 @@ export default function AnnotationPanel({
           >
             {isSaving ? 'Saving...' : existingAnnotation ? 'Update' : 'Save'}
           </button>
+          </div>
         </div>
       </div>
 

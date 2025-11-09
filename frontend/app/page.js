@@ -1686,6 +1686,29 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
   const [inlineAnnotationVerse, setInlineAnnotationVerse] = useState(null);
   const [currentShareId, setCurrentShareId] = useState(null);
 
+  // Scroll-locking: Prevent page from jumping to top when AnnotationPanel opens
+  useEffect(() => {
+    if (annotationPanelOpen) {
+      // Save current scroll position
+      const scrollY = window.scrollY;
+
+      // Lock the body at current scroll position
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = '100%';
+      document.body.style.overflow = 'hidden';
+
+      // Cleanup: Restore scroll when panel closes
+      return () => {
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.width = '';
+        document.body.style.overflow = '';
+        window.scrollTo(0, scrollY);
+      };
+    }
+  }, [annotationPanelOpen]);
+
   const fetchVerseAnnotations = useCallback(async (surah, verse) => {
     try {
       const token = await user.getIdToken();

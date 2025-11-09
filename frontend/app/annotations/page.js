@@ -1255,9 +1255,11 @@ export default function MyReflectionsPage() {
                         color: 'var(--foreground)',
                         fontSize: '0.95rem',
                         lineHeight: '1.6',
-                        whiteSpace: isExpanded ? 'pre-wrap' : 'nowrap',
-                        overflow: isExpanded ? 'visible' : 'hidden',
-                        textOverflow: 'ellipsis'
+                        whiteSpace: 'pre-wrap',
+                        maxHeight: isExpanded ? '1000px' : '60px',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        transition: 'max-height 0.3s ease'
                       }}
                     >
                       {annotation.content}
