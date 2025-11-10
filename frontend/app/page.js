@@ -11,7 +11,7 @@ import {
 } from 'firebase/auth';
 import AnnotationPanel from './components/AnnotationPanel';
 import AnnotationDisplay from './components/AnnotationDisplay';
-import TextHighlighter from './components/TextHighlighter';
+import iOS18TextHighlighter from './components/iOS18TextHighlighter';
 import onboardingConfig from '../config/onboarding-messages.json';
 
 // Firebase Configuration
@@ -1686,15 +1686,6 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
   const [inlineAnnotationVerse, setInlineAnnotationVerse] = useState(null);
   const [currentShareId, setCurrentShareId] = useState(null);
 
-  // ═══════════════════════════════════════════════════════════════════
-  // iOS-STYLE SCROLL LOCK SYSTEM
-  // ═══════════════════════════════════════════════════════════════════
-  // When annotation panel opens, freeze the page exactly where user is
-  // iOS behavior: background is completely locked, no scroll, no jump
-
-  const scrollPositionRef = useRef(0);
-  const scrollLockActiveRef = useRef(false);
-
   // Track pending share ID request to prevent duplicates
   const pendingShareRequest = useRef(null);
 
@@ -1703,84 +1694,6 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
   useEffect(() => {
     dataRef.current = data;
   }, [data]);
-
-  // iOS-style scroll lock: Freeze page at exact position
-  useEffect(() => {
-    const isPanelOpen = annotationPanelOpen || currentVerse !== null;
-
-    if (isPanelOpen && !scrollLockActiveRef.current) {
-      // ─────────────────────────────────────────────────────────────
-      // LOCK PHASE: Freeze the page
-      // ─────────────────────────────────────────────────────────────
-
-      // 1. Capture exact scroll position
-      const scrollY = window.pageYOffset || document.documentElement.scrollTop;
-      const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
-      scrollPositionRef.current = { x: scrollX, y: scrollY };
-
-      // 2. Calculate scrollbar width to prevent layout shift
-      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-
-      // 3. Apply iOS-style freeze using position: fixed
-      // This prevents ANY scroll events from firing
-      const body = document.body;
-      const html = document.documentElement;
-
-      // Store original styles to restore later
-      const originalBodyStyles = {
-        position: body.style.position,
-        top: body.style.top,
-        left: body.style.left,
-        width: body.style.width,
-        overflow: body.style.overflow,
-        paddingRight: body.style.paddingRight,
-      };
-
-      const originalHtmlStyles = {
-        overflow: html.style.overflow,
-        scrollBehavior: html.style.scrollBehavior,
-      };
-
-      // Apply freeze styles
-      html.style.overflow = 'hidden';
-      html.style.scrollBehavior = 'auto';  // Disable smooth scrolling during lock
-
-      body.style.position = 'fixed';
-      body.style.top = `-${scrollY}px`;
-      body.style.left = `-${scrollX}px`;
-      body.style.width = '100%';
-      body.style.overflow = 'hidden';
-      body.style.paddingRight = `${scrollbarWidth}px`;
-
-      scrollLockActiveRef.current = true;
-
-      // ─────────────────────────────────────────────────────────────
-      // CLEANUP: Unfreeze and restore position
-      // ─────────────────────────────────────────────────────────────
-      return () => {
-        if (!scrollLockActiveRef.current) return;
-
-        // 1. Restore original styles
-        Object.assign(body.style, originalBodyStyles);
-        Object.assign(html.style, originalHtmlStyles);
-
-        // 2. Restore scroll position
-        // Use both methods for maximum compatibility
-        const savedPosition = scrollPositionRef.current;
-
-        // Method 1: Direct scroll
-        window.scrollTo(savedPosition.x, savedPosition.y);
-
-        // Method 2: Also set scrollTop/scrollLeft as fallback
-        document.documentElement.scrollTop = savedPosition.y;
-        document.documentElement.scrollLeft = savedPosition.x;
-        document.body.scrollTop = savedPosition.y;
-        document.body.scrollLeft = savedPosition.x;
-
-        scrollLockActiveRef.current = false;
-      };
-    }
-  }, [annotationPanelOpen, currentVerse]);
 
   const fetchVerseAnnotations = useCallback(async (surah, verse) => {
     try {
@@ -1932,7 +1845,7 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
   }
 
   return (
-    <TextHighlighter onHighlight={handleTextHighlight} enabled={true}>
+    <iOS18TextHighlighter onHighlight={handleTextHighlight} enabled={true}>
       <div className="results-container">
         {/* General Reflection Button */}
       {user && (
@@ -2244,6 +2157,6 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
         </div>
       )}
       </div>
-    </TextHighlighter>
+    </iOS18TextHighlighter>
   );
 }
