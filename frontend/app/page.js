@@ -1689,6 +1689,9 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
   // Track pending share ID request to prevent duplicates
   const pendingShareRequest = useRef(null);
 
+  // Ref for clearing text selection (releases scroll lock)
+  const clearSelectionRef = useRef(null);
+
   // Use ref for data to stabilize handleTextHighlight callback
   const dataRef = useRef(data);
   useEffect(() => {
@@ -1845,7 +1848,11 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
   }
 
   return (
-    <iOS18TextHighlighter onHighlight={handleTextHighlight} enabled={true}>
+    <iOS18TextHighlighter
+      onHighlight={handleTextHighlight}
+      onClearSelection={clearSelectionRef}
+      enabled={true}
+    >
       <div className="results-container">
         {/* General Reflection Button */}
       {user && (
@@ -1896,9 +1903,13 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
           reflectionType="general"
           queryContext={currentVerse.queryContext}
           shareId={currentShareId}
-          onClose={() => setCurrentVerse(null)}
+          onClose={() => {
+            setCurrentVerse(null);
+            clearSelectionRef.current?.(); // ✅ Release scroll lock
+          }}
           onSaved={() => {
             setCurrentVerse(null);
+            clearSelectionRef.current?.(); // ✅ Release scroll lock
             // Refresh annotations
             Object.keys(annotations).forEach(key => {
               const [surah, verse] = key.split(':');
@@ -1926,7 +1937,10 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
       {currentVerse && currentVerse.reflectionType === 'section' && (
         <AnnotationPanel
           isOpen={true}
-          onClose={() => setCurrentVerse(null)}
+          onClose={() => {
+            setCurrentVerse(null);
+            clearSelectionRef.current?.(); // ✅ Release scroll lock
+          }}
           verse={{}}
           user={user}
           reflectionType="section"
@@ -1935,6 +1949,7 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
           shareId={currentShareId}
           onSaved={() => {
             setCurrentVerse(null);
+            clearSelectionRef.current?.(); // ✅ Release scroll lock
           }}
         />
       )}
@@ -1943,7 +1958,10 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
       {currentVerse && currentVerse.reflectionType === 'highlight' && (
         <AnnotationPanel
           isOpen={true}
-          onClose={() => setCurrentVerse(null)}
+          onClose={() => {
+            setCurrentVerse(null);
+            clearSelectionRef.current?.(); // ✅ Release scroll lock
+          }}
           verse={{}}
           user={user}
           reflectionType="highlight"
@@ -1952,6 +1970,7 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
           shareId={currentShareId}
           onSaved={() => {
             setCurrentVerse(null);
+            clearSelectionRef.current?.(); // ✅ Release scroll lock
           }}
         />
       )}

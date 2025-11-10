@@ -26,7 +26,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 
 const MIN_SELECTION_LENGTH = 3; // Minimum characters to show button
 
-export default function iOS18TextHighlighter({ children, onHighlight, enabled = true }) {
+export default function iOS18TextHighlighter({ children, onHighlight, onClearSelection, enabled = true }) {
   // ═══════════════════════════════════════════════════════════════
   // STATE MANAGEMENT - Keep it minimal and clean
   // ═══════════════════════════════════════════════════════════════
@@ -37,6 +37,17 @@ export default function iOS18TextHighlighter({ children, onHighlight, enabled = 
   const calloutRef = useRef(null);
   const isInteractingRef = useRef(false);
   const scrollPositionRef = useRef(0);
+
+  // Expose clear function to parent via ref callback
+  useEffect(() => {
+    if (onClearSelection) {
+      onClearSelection.current = () => {
+        console.log('🧹 Parent requested selection clear');
+        setSelectionState(null);
+        window.getSelection()?.removeAllRanges();
+      };
+    }
+  }, [onClearSelection]);
 
   // ═══════════════════════════════════════════════════════════════
   // SCROLL LOCK SYSTEM - iOS 18 Style (Zero Movement)
@@ -165,14 +176,18 @@ export default function iOS18TextHighlighter({ children, onHighlight, enabled = 
     console.log('🎯 Reflect button clicked');
     isInteractingRef.current = true;
 
-    // Trigger the highlight callback
+    // Trigger the highlight callback (parent will open panel)
     if (onHighlight) {
       onHighlight(selectionState.text);
     }
 
-    // Clear browser selection
+    // Clear browser selection visually (but keep state for scroll lock)
     window.getSelection()?.removeAllRanges();
-    setSelectionState(null);
+
+    // ✅ NOTE: We deliberately DON'T call setSelectionState(null) here!
+    // The parent component must clear it when annotation panel closes.
+    // This maintains scroll lock throughout the entire annotation flow.
+    // Parent calls: clearSelectionRef.current() to release scroll lock.
 
     // Reset interaction flag after a short delay
     setTimeout(() => {
