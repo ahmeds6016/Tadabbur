@@ -17,7 +17,14 @@ import { useState, useEffect, useRef, useCallback } from 'react';
  * - Tap outside → dismisses cleanly
  * - Page scroll completely locked when callout visible
  * - Smooth, native-feeling animations
+ *
+ * FIXES:
+ * 1. Changed position: 'absolute' → 'fixed' (matches coordinate calculations)
+ * 2. Added MIN_SELECTION_LENGTH to prevent single-character triggers
+ * 3. Better debug logging to diagnose issues
  */
+
+const MIN_SELECTION_LENGTH = 3; // Minimum characters to show button
 
 export default function iOS18TextHighlighter({ children, onHighlight, enabled = true }) {
   // ═══════════════════════════════════════════════════════════════
@@ -37,6 +44,8 @@ export default function iOS18TextHighlighter({ children, onHighlight, enabled = 
 
   useEffect(() => {
     if (!selectionState) return;
+
+    console.log('🔒 Scroll lock activated');
 
     // Capture current scroll position
     const scrollY = window.pageYOffset;
@@ -67,6 +76,7 @@ export default function iOS18TextHighlighter({ children, onHighlight, enabled = 
 
     // Cleanup: restore everything
     return () => {
+      console.log('🔓 Scroll lock released');
       body.style.overflow = originalBodyOverflow;
       body.style.position = originalBodyPosition;
       body.style.top = originalBodyTop;
@@ -89,29 +99,51 @@ export default function iOS18TextHighlighter({ children, onHighlight, enabled = 
     const selection = window.getSelection();
     const selectedText = selection?.toString().trim();
 
-    // User selected some text
-    if (selectedText && selectedText.length > 0) {
+    // Debug logging
+    if (selectedText) {
+      console.log('📝 Text selected:', selectedText, `(${selectedText.length} chars)`);
+    }
+
+    // User selected some text (with minimum length check)
+    if (selectedText && selectedText.length >= MIN_SELECTION_LENGTH) {
       const range = selection.getRangeAt(0);
       const rect = range.getBoundingClientRect();
 
       // Valid selection with visible bounds
       if (rect.width > 0 && rect.height > 0) {
+        console.log('✅ Showing reflect button at:', {
+          left: rect.left,
+          top: rect.top,
+          width: rect.width,
+          height: rect.height
+        });
+
         setSelectionState({
           text: selectedText,
           rect: rect,
           range: range.cloneRange() // Clone to preserve
         });
+      } else {
+        console.log('❌ Selection rect invalid:', rect);
       }
     }
-    // No selection - clear state
+    // No selection or too short - clear state
     else if (!isInteractingRef.current) {
+      if (selectedText && selectedText.length < MIN_SELECTION_LENGTH) {
+        console.log(`⚠️ Selection too short (${selectedText.length} < ${MIN_SELECTION_LENGTH})`);
+      }
       setSelectionState(null);
     }
   }, [enabled]);
 
   // Listen to selection changes
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled) {
+      console.log('❌ iOS18TextHighlighter is disabled');
+      return;
+    }
+
+    console.log('✅ iOS18TextHighlighter enabled, listening for selections...');
 
     document.addEventListener('selectionchange', handleSelectionChange);
 
@@ -130,6 +162,7 @@ export default function iOS18TextHighlighter({ children, onHighlight, enabled = 
 
     if (!selectionState) return;
 
+    console.log('🎯 Reflect button clicked');
     isInteractingRef.current = true;
 
     // Trigger the highlight callback
@@ -137,7 +170,7 @@ export default function iOS18TextHighlighter({ children, onHighlight, enabled = 
       onHighlight(selectionState.text);
     }
 
-    // Clear selection and dismiss
+    // Clear browser selection
     window.getSelection()?.removeAllRanges();
     setSelectionState(null);
 
@@ -152,6 +185,8 @@ export default function iOS18TextHighlighter({ children, onHighlight, enabled = 
     if (calloutRef.current && calloutRef.current.contains(e.target)) {
       return;
     }
+
+    console.log('👆 Clicked outside - dismissing');
 
     // Clear selection
     window.getSelection()?.removeAllRanges();
@@ -182,14 +217,15 @@ export default function iOS18TextHighlighter({ children, onHighlight, enabled = 
     const { rect } = selectionState;
 
     // Position callout above selection, centered horizontally
-    // Account for scroll position since we're using fixed positioning
-    const scrollY = window.pageYOffset;
-    const scrollX = window.pageXOffset;
-
-    return {
-      left: rect.left + scrollX + (rect.width / 2),
-      top: rect.top + scrollY - 8, // 8px gap above selection
+    // Use viewport coordinates (fixed positioning - no scroll offset needed)
+    const position = {
+      left: rect.left + (rect.width / 2), // Center horizontally
+      top: rect.top - 8, // 8px gap above selection
     };
+
+    console.log('📍 Callout position (viewport coords):', position);
+
+    return position;
   };
 
   const calloutPosition = getCalloutPosition();
@@ -207,11 +243,11 @@ export default function iOS18TextHighlighter({ children, onHighlight, enabled = 
         <div
           ref={calloutRef}
           style={{
-            position: 'absolute',
+            position: 'fixed', // ✅ FIXED - Changed from 'absolute'
             left: `${calloutPosition.left}px`,
             top: `${calloutPosition.top}px`,
             transform: 'translate(-50%, -100%)',
-            zIndex: 999999,
+            zIndex: 999999, // Very high to ensure visibility
             pointerEvents: 'auto',
             animation: 'ios-callout-appear 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
           }}
