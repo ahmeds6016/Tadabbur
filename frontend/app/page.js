@@ -1686,8 +1686,14 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
   const [inlineAnnotationVerse, setInlineAnnotationVerse] = useState(null);
   const [currentShareId, setCurrentShareId] = useState(null);
 
-  // Scroll-locking: Prevent page scroll when AnnotationPanel opens
+  // ═══════════════════════════════════════════════════════════════════
+  // iOS-STYLE SCROLL LOCK SYSTEM
+  // ═══════════════════════════════════════════════════════════════════
+  // When annotation panel opens, freeze the page exactly where user is
+  // iOS behavior: background is completely locked, no scroll, no jump
+
   const scrollPositionRef = useRef(0);
+  const scrollLockActiveRef = useRef(false);
 
   // Track pending share ID request to prevent duplicates
   const pendingShareRequest = useRef(null);
@@ -1698,34 +1704,80 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
     dataRef.current = data;
   }, [data]);
 
-  // Improved scroll-locking that preserves scroll position
+  // iOS-style scroll lock: Freeze page at exact position
   useEffect(() => {
     const isPanelOpen = annotationPanelOpen || currentVerse !== null;
 
-    if (isPanelOpen) {
-      // Save current scroll position BEFORE any DOM changes
-      scrollPositionRef.current = window.pageYOffset || document.documentElement.scrollTop;
+    if (isPanelOpen && !scrollLockActiveRef.current) {
+      // ─────────────────────────────────────────────────────────────
+      // LOCK PHASE: Freeze the page
+      // ─────────────────────────────────────────────────────────────
 
-      // Lock scroll using position fixed to prevent any scroll changes
+      // 1. Capture exact scroll position
+      const scrollY = window.pageYOffset || document.documentElement.scrollTop;
+      const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
+      scrollPositionRef.current = { x: scrollX, y: scrollY };
+
+      // 2. Calculate scrollbar width to prevent layout shift
       const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-      document.body.style.overflow = 'hidden';
-      document.body.style.position = 'fixed';
-      document.body.style.top = `-${scrollPositionRef.current}px`;
-      document.body.style.width = '100%';
-      document.body.style.paddingRight = `${scrollbarWidth}px`;
 
+      // 3. Apply iOS-style freeze using position: fixed
+      // This prevents ANY scroll events from firing
+      const body = document.body;
+      const html = document.documentElement;
+
+      // Store original styles to restore later
+      const originalBodyStyles = {
+        position: body.style.position,
+        top: body.style.top,
+        left: body.style.left,
+        width: body.style.width,
+        overflow: body.style.overflow,
+        paddingRight: body.style.paddingRight,
+      };
+
+      const originalHtmlStyles = {
+        overflow: html.style.overflow,
+        scrollBehavior: html.style.scrollBehavior,
+      };
+
+      // Apply freeze styles
+      html.style.overflow = 'hidden';
+      html.style.scrollBehavior = 'auto';  // Disable smooth scrolling during lock
+
+      body.style.position = 'fixed';
+      body.style.top = `-${scrollY}px`;
+      body.style.left = `-${scrollX}px`;
+      body.style.width = '100%';
+      body.style.overflow = 'hidden';
+      body.style.paddingRight = `${scrollbarWidth}px`;
+
+      scrollLockActiveRef.current = true;
+
+      // ─────────────────────────────────────────────────────────────
+      // CLEANUP: Unfreeze and restore position
+      // ─────────────────────────────────────────────────────────────
       return () => {
-        // Restore all styles
-        document.body.style.overflow = '';
-        document.body.style.position = '';
-        document.body.style.top = '';
-        document.body.style.width = '';
-        document.body.style.paddingRight = '';
+        if (!scrollLockActiveRef.current) return;
 
-        // Restore scroll position after a tiny delay to ensure DOM is ready
-        requestAnimationFrame(() => {
-          window.scrollTo(0, scrollPositionRef.current);
-        });
+        // 1. Restore original styles
+        Object.assign(body.style, originalBodyStyles);
+        Object.assign(html.style, originalHtmlStyles);
+
+        // 2. Restore scroll position
+        // Use both methods for maximum compatibility
+        const savedPosition = scrollPositionRef.current;
+
+        // Method 1: Direct scroll
+        window.scrollTo(savedPosition.x, savedPosition.y);
+
+        // Method 2: Also set scrollTop/scrollLeft as fallback
+        document.documentElement.scrollTop = savedPosition.y;
+        document.documentElement.scrollLeft = savedPosition.x;
+        document.body.scrollTop = savedPosition.y;
+        document.body.scrollLeft = savedPosition.x;
+
+        scrollLockActiveRef.current = false;
       };
     }
   }, [annotationPanelOpen, currentVerse]);
