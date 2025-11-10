@@ -39,15 +39,17 @@ export default function iOS18TextHighlighter({ children, onHighlight, onClearSel
   const scrollPositionRef = useRef(0);
 
   // Expose clear function to parent via ref callback
+  // Using empty dependency array since refs and setState are stable
   useEffect(() => {
     if (onClearSelection) {
       onClearSelection.current = () => {
         console.log('🧹 Parent requested selection clear');
+        // Always safe to call these (no-op if already cleared)
         setSelectionState(null);
         window.getSelection()?.removeAllRanges();
       };
     }
-  }, [onClearSelection]);
+  }, []); // ✅ Empty array - runs once on mount
 
   // ═══════════════════════════════════════════════════════════════
   // SCROLL LOCK SYSTEM - iOS 18 Style (Zero Movement)

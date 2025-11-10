@@ -1835,6 +1835,8 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
       fetchVerseAnnotations(currentVerse.surah, currentVerse.verse_number);
       setInlineAnnotationVerse(null); // Close inline form after saving
     }
+    // Release scroll lock if there's an active text selection
+    clearSelectionRef.current?.(); // ✅ Release scroll lock
   };
 
   if (verses.length === 0 && tafsir_explanations.length === 0 && lessons_practical_applications.length === 0) {
@@ -1923,7 +1925,10 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
       {currentVerse && currentVerse.surah && (
         <AnnotationPanel
           isOpen={annotationPanelOpen}
-          onClose={() => setAnnotationPanelOpen(false)}
+          onClose={() => {
+            setAnnotationPanelOpen(false);
+            clearSelectionRef.current?.(); // ✅ Release scroll lock
+          }}
           verse={currentVerse}
           user={user}
           existingAnnotation={editingAnnotation}
