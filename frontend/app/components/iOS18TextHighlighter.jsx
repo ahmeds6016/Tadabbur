@@ -36,7 +36,7 @@ export default function iOS18TextHighlighter({ children, onHighlight, onClearSel
 
   const calloutRef = useRef(null);
   const isInteractingRef = useRef(false);
-  const scrollPositionRef = useRef(0);
+  const scrollPositionRef = useRef({ x: 0, y: 0 }); // ✅ Initialize as object, not number
 
   // Expose clear function to parent via ref callback
   // Using empty dependency array since refs and setState are stable
@@ -60,10 +60,12 @@ export default function iOS18TextHighlighter({ children, onHighlight, onClearSel
 
     console.log('🔒 Scroll lock activated');
 
-    // Capture current scroll position
+    // Capture current scroll position BEFORE applying any styles
     const scrollY = window.pageYOffset;
     const scrollX = window.pageXOffset;
     scrollPositionRef.current = { x: scrollX, y: scrollY };
+
+    console.log('📸 Captured scroll position:', scrollPositionRef.current);
 
     // Store original styles
     const body = document.body;
@@ -97,8 +99,14 @@ export default function iOS18TextHighlighter({ children, onHighlight, onClearSel
       body.style.width = originalBodyWidth;
       html.style.overflow = originalHtmlOverflow;
 
-      // Restore scroll position
-      window.scrollTo(scrollPositionRef.current.x, scrollPositionRef.current.y);
+      // Restore scroll position with defensive checks
+      const savedPosition = scrollPositionRef.current;
+      if (savedPosition && typeof savedPosition.x === 'number' && typeof savedPosition.y === 'number') {
+        console.log('📜 Restoring scroll to:', savedPosition);
+        window.scrollTo(savedPosition.x, savedPosition.y);
+      } else {
+        console.warn('⚠️ Invalid scroll position in ref:', savedPosition);
+      }
     };
   }, [selectionState]);
 

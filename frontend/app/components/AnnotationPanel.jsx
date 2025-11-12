@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 const BACKEND_URL = 'https://tafsir-backend-612616741510.us-central1.run.app';
 
@@ -119,6 +119,17 @@ export default function AnnotationPanel({
   const [error, setError] = useState('');
   const [showTagSuggestions, setShowTagSuggestions] = useState(false);
   const [suggestedTags, setSuggestedTags] = useState([]);
+
+  // Ref for textarea to focus without scrolling
+  const textareaRef = useRef(null);
+
+  // Focus textarea when panel opens, without scrolling the page
+  useEffect(() => {
+    if (isOpen && textareaRef.current) {
+      // Use preventScroll to avoid page jumping
+      textareaRef.current.focus({ preventScroll: true });
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (existingAnnotation) {
@@ -469,6 +480,7 @@ export default function AnnotationPanel({
               Your Reflection
             </label>
             <textarea
+              ref={textareaRef}
               value={content}
               onChange={(e) => setContent(e.target.value)}
               placeholder="Write your thoughts, insights, or questions about this verse..."
@@ -483,7 +495,6 @@ export default function AnnotationPanel({
                 resize: 'vertical',
                 background: 'white'
               }}
-              autoFocus
             />
           </div>
 
