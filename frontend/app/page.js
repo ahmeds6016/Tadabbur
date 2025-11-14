@@ -9,9 +9,9 @@ import {
   signInWithEmailAndPassword,
   signOut
 } from 'firebase/auth';
-import AnnotationPanel from './components/AnnotationPanel';
+import AnnotationDialog from './components/AnnotationDialog';
 import AnnotationDisplay from './components/AnnotationDisplay';
-import iOS18TextHighlighter from './components/iOS18TextHighlighter';
+import useTextSelection from './hooks/useTextSelection';
 import onboardingConfig from '../config/onboarding-messages.json';
 
 // Firebase Configuration
@@ -1679,7 +1679,7 @@ function InlineAnnotationForm({ verse, user, onSaved, onCancel }) {
 
 function EnhancedResultsDisplay({ data, user, query, approach }) {
   const [annotations, setAnnotations] = useState({});
-  const [annotationPanelOpen, setAnnotationPanelOpen] = useState(false);
+  const [annotationDialogOpen, setAnnotationDialogOpen] = useState(false);
   const [currentVerse, setCurrentVerse] = useState(null);
   const [editingAnnotation, setEditingAnnotation] = useState(null);
   const [inlineAnnotationVerse, setInlineAnnotationVerse] = useState(null);
@@ -1688,14 +1688,24 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
   // Track pending share ID request to prevent duplicates
   const pendingShareRequest = useRef(null);
 
-  // Ref for clearing text selection (releases scroll lock)
-  const clearSelectionRef = useRef(null);
+  // Use the new text selection hook
+  const { selectedText, clearSelection } = useTextSelection({
+    enabled: true,
+    minLength: 3
+  });
 
-  // Use ref for data to stabilize handleTextHighlight callback
-  const dataRef = useRef(data);
+  // Open annotation dialog when text is selected
   useEffect(() => {
-    dataRef.current = data;
-  }, [data]);
+    if (selectedText && user) {
+      setCurrentVerse({
+        reflectionType: 'highlight',
+        highlightedText: selectedText,
+        queryContext: data?.verses?.[0] ? `${data.verses[0].surah}:${data.verses[0].verse_number}` : 'Response'
+      });
+      setAnnotationDialogOpen(true);
+      ensureShareId().catch(err => console.error('Failed to create share link:', err));
+    }
+  }, [selectedText, user, data]);
 
   const fetchVerseAnnotations = useCallback(async (surah, verse) => {
     try {
@@ -1775,21 +1785,6 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
     }
   }, [currentShareId, query, approach, data]);
 
-  const handleTextHighlight = useCallback((highlightedText) => {
-    // Use ref to access current data value (stabilizes callback)
-    const currentData = dataRef.current;
-
-    // Open panel immediately for instant UX (don't await)
-    setCurrentVerse({
-      reflectionType: 'highlight',
-      highlightedText,
-      queryContext: currentData?.verses?.[0] ? `${currentData.verses[0].surah}:${currentData.verses[0].verse_number}` : 'Response'
-    });
-
-    // Ensure share ID in background (non-blocking)
-    ensureShareId().catch(err => console.error('Failed to create share link:', err));
-  }, [ensureShareId]);
-
   // Early return after all hooks
   if (!data) return <div className="results-container"><p>No results to display.</p></div>;
 
@@ -1808,7 +1803,7 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
   const handleEditAnnotation = (verse, annotation) => {
     setCurrentVerse(verse);
     setEditingAnnotation(annotation);
-    setAnnotationPanelOpen(true);
+    setAnnotationDialogOpen(true);
   };
 
   const handleDeleteAnnotation = async (surah, verse, annotationId) => {
@@ -1834,8 +1829,8 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
       fetchVerseAnnotations(currentVerse.surah, currentVerse.verse_number);
       setInlineAnnotationVerse(null); // Close inline form after saving
     }
-    // Release scroll lock if there's an active text selection
-    clearSelectionRef.current?.(); // ✅ Release scroll lock
+    // Clear any active text selection
+    clearSelection();
   };
 
   if (verses.length === 0 && tafsir_explanations.length === 0 && lessons_practical_applications.length === 0) {
@@ -1849,11 +1844,7 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
   }
 
   return (
-    <iOS18TextHighlighter
-      onHighlight={handleTextHighlight}
-      onClearSelection={clearSelectionRef}
-      enabled={true}
-    >
+    <>
       <div className="results-container">
         {/* General Reflection Button */}
       {user && (
@@ -1869,6 +1860,7 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
           <button
             onClick={() => {
               setCurrentVerse({ reflectionType: 'general', queryContext: query });
+              setAnnotationDialogOpen(true);
               ensureShareId().catch(err => console.error('Failed to create share link:', err));
             }}
             style={{
@@ -1895,89 +1887,7 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
         </div>
       )}
 
-      {/* General Annotation Panel */}
-      {currentVerse?.reflectionType === 'general' && (
-        <AnnotationPanel
-          isOpen={true}
-          verse={{}}
-          user={user}
-          reflectionType="general"
-          queryContext={currentVerse.queryContext}
-          shareId={currentShareId}
-          onClose={() => {
-            setCurrentVerse(null);
-            clearSelectionRef.current?.(); // ✅ Release scroll lock
-          }}
-          onSaved={() => {
-            setCurrentVerse(null);
-            clearSelectionRef.current?.(); // ✅ Release scroll lock
-            // Refresh annotations
-            Object.keys(annotations).forEach(key => {
-              const [surah, verse] = key.split(':');
-              fetchVerseAnnotations(surah, verse);
-            });
-          }}
-        />
-      )}
-
-      {/* Annotation Panel for verses */}
-      {currentVerse && currentVerse.surah && (
-        <AnnotationPanel
-          isOpen={annotationPanelOpen}
-          onClose={() => {
-            setAnnotationPanelOpen(false);
-            clearSelectionRef.current?.(); // ✅ Release scroll lock
-          }}
-          verse={currentVerse}
-          user={user}
-          existingAnnotation={editingAnnotation}
-          onSaved={handleAnnotationSaved}
-          reflectionType="verse"
-          shareId={currentShareId}
-        />
-      )}
-
-      {/* Annotation Panel for sections */}
-      {currentVerse && currentVerse.reflectionType === 'section' && (
-        <AnnotationPanel
-          isOpen={true}
-          onClose={() => {
-            setCurrentVerse(null);
-            clearSelectionRef.current?.(); // ✅ Release scroll lock
-          }}
-          verse={{}}
-          user={user}
-          reflectionType="section"
-          sectionName={currentVerse.sectionName}
-          queryContext={currentVerse.queryContext}
-          shareId={currentShareId}
-          onSaved={() => {
-            setCurrentVerse(null);
-            clearSelectionRef.current?.(); // ✅ Release scroll lock
-          }}
-        />
-      )}
-
-      {/* Annotation Panel for highlighted text */}
-      {currentVerse && currentVerse.reflectionType === 'highlight' && (
-        <AnnotationPanel
-          isOpen={true}
-          onClose={() => {
-            setCurrentVerse(null);
-            clearSelectionRef.current?.(); // ✅ Release scroll lock
-          }}
-          verse={{}}
-          user={user}
-          reflectionType="highlight"
-          highlightedText={currentVerse.highlightedText}
-          queryContext={currentVerse.queryContext}
-          shareId={currentShareId}
-          onSaved={() => {
-            setCurrentVerse(null);
-            clearSelectionRef.current?.(); // ✅ Release scroll lock
-          }}
-        />
-      )}
+      {/* All annotation panels are now handled by the unified AnnotationDialog at the bottom */}
 
       {verses.length > 0 && (
         <div className="result-section">
@@ -2034,6 +1944,7 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
               <button
                 onClick={() => {
                   setCurrentVerse({ reflectionType: 'section', sectionName: 'Tafsir Explanations', queryContext: query });
+                  setAnnotationDialogOpen(true);
                   ensureShareId().catch(err => console.error('Failed to create share link:', err));
                 }}
                 style={{
@@ -2080,6 +1991,7 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
               <button
                 onClick={() => {
                   setCurrentVerse({ reflectionType: 'section', sectionName: 'Related Verses', queryContext: query });
+                  setAnnotationDialogOpen(true);
                   ensureShareId().catch(err => console.error('Failed to create share link:', err));
                 }}
                 style={{
@@ -2118,6 +2030,7 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
               <button
                 onClick={() => {
                   setCurrentVerse({ reflectionType: 'section', sectionName: 'Lessons & Practical Applications', queryContext: query });
+                  setAnnotationDialogOpen(true);
                   ensureShareId().catch(err => console.error('Failed to create share link:', err));
                 }}
                 style={{
@@ -2154,6 +2067,7 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
               <button
                 onClick={() => {
                   setCurrentVerse({ reflectionType: 'section', sectionName: 'Summary', queryContext: query });
+                  setAnnotationDialogOpen(true);
                   ensureShareId().catch(err => console.error('Failed to create share link:', err));
                 }}
                 style={{
@@ -2180,6 +2094,32 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
         </div>
       )}
       </div>
-    </iOS18TextHighlighter>
+
+      {/* Unified Annotation Dialog for all annotation types */}
+      <AnnotationDialog
+        isOpen={annotationDialogOpen}
+        onClose={() => {
+          setAnnotationDialogOpen(false);
+          setCurrentVerse(null);
+          setEditingAnnotation(null);
+          clearSelection(); // Clear any text selection
+        }}
+        selectedText={currentVerse?.highlightedText}
+        verse={currentVerse}
+        user={user}
+        reflectionType={currentVerse?.reflectionType || 'verse'}
+        onSaved={(data) => {
+          handleAnnotationSaved();
+          setAnnotationDialogOpen(false);
+          setCurrentVerse(null);
+          setEditingAnnotation(null);
+          clearSelection();
+        }}
+        existingAnnotation={editingAnnotation}
+        sectionName={currentVerse?.sectionName}
+        queryContext={currentVerse?.queryContext || query}
+        shareId={currentShareId}
+      />
+    </>
   );
 }
