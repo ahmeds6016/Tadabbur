@@ -131,17 +131,6 @@ export default function AnnotationPanel({
     }
   }, [isOpen]);
 
-  // Ref for textarea to focus without scrolling
-  const textareaRef = useRef(null);
-
-  // Focus textarea when panel opens, without scrolling the page
-  useEffect(() => {
-    if (isOpen && textareaRef.current) {
-      // Use preventScroll to avoid page jumping
-      textareaRef.current.focus({ preventScroll: true });
-    }
-  }, [isOpen]);
-
   useEffect(() => {
     if (existingAnnotation) {
       setContent(existingAnnotation.content || '');
