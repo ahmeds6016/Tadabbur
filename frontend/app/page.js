@@ -1481,7 +1481,6 @@ function InlineAnnotationForm({ verse, user, onSaved, onCancel }) {
             resize: 'vertical',
             background: 'white'
           }}
-          autoFocus
         />
       </div>
 

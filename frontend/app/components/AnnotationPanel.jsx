@@ -119,6 +119,17 @@ export default function AnnotationPanel({
   const [error, setError] = useState('');
   const [showTagSuggestions, setShowTagSuggestions] = useState(false);
   const [suggestedTags, setSuggestedTags] = useState([]);
+  const textareaRef = useRef(null);
+
+  // Focus textarea after panel opens, but without scrolling
+  useEffect(() => {
+    if (isOpen && textareaRef.current) {
+      // Small delay to ensure panel is fully rendered
+      setTimeout(() => {
+        textareaRef.current?.focus({ preventScroll: true });
+      }, 100);
+    }
+  }, [isOpen]);
 
   // Ref for textarea to focus without scrolling
   const textareaRef = useRef(null);
