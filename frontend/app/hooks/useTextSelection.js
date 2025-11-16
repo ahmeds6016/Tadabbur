@@ -15,7 +15,7 @@ export default function useTextSelection(options = {}) {
   const {
     minLength = 3,
     enabled = true,
-    debounceMs = 100
+    debounceMs = 500  // Wait 500ms after user stops highlighting
   } = options;
 
   const [selectedText, setSelectedText] = useState(null);

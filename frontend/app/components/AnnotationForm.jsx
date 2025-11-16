@@ -213,9 +213,10 @@ export default function AnnotationForm({
                 type="button"
                 className={`type-button ${type === value ? 'active' : ''}`}
                 onClick={() => setType(value)}
+                title={label}
               >
                 <span className="type-icon">{icon}</span>
-                <span className="type-label">{label.replace(icon + ' ', '')}</span>
+                <span className="type-label">{label.substring(label.indexOf(' ') + 1)}</span>
               </button>
             ))}
           </div>
@@ -457,7 +458,7 @@ export default function AnnotationForm({
           min-width: 120px;
           border: none;
           outline: none;
-          font-size: 0.875rem;
+          font-size: 16px; /* Prevent iOS zoom - must be 16px or larger */
         }
 
         /* Error Message */

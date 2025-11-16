@@ -11,6 +11,7 @@ import {
 } from 'firebase/auth';
 import AnnotationDialog from './components/AnnotationDialog';
 import AnnotationDisplay from './components/AnnotationDisplay';
+import CollapsibleSection from './components/CollapsibleSection';
 import useTextSelection from './hooks/useTextSelection';
 import onboardingConfig from '../config/onboarding-messages.json';
 
@@ -1275,7 +1276,22 @@ function MainApp({ user, userProfile }) {
               </div>
             )}
 
-            <EnhancedResultsDisplay data={response} user={user} query={query} approach={approach} />
+            <EnhancedResultsDisplay
+              data={response}
+              user={user}
+              query={query}
+              approach={approach}
+              onQueryChange={(newQuery) => {
+                setQuery(newQuery);
+                // Auto-submit the form after setting the query
+                setTimeout(() => {
+                  const formElement = document.querySelector('.tafsir-form');
+                  if (formElement) {
+                    formElement.requestSubmit();
+                  }
+                }, 100);
+              }}
+            />
           </>
         )}
       </div>
@@ -1677,7 +1693,7 @@ function InlineAnnotationForm({ verse, user, onSaved, onCancel }) {
 // RESULTS DISPLAY COMPONENT WITH ANNOTATIONS
 // ============================================================================
 
-function EnhancedResultsDisplay({ data, user, query, approach }) {
+function EnhancedResultsDisplay({ data, user, query, approach, onQueryChange }) {
   const [annotations, setAnnotations] = useState({});
   const [annotationDialogOpen, setAnnotationDialogOpen] = useState(false);
   const [currentVerse, setCurrentVerse] = useState(null);
@@ -1890,8 +1906,12 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
       {/* All annotation panels are now handled by the unified AnnotationDialog at the bottom */}
 
       {verses.length > 0 && (
-        <div className="result-section">
-          <h2>Relevant Verses</h2>
+        <CollapsibleSection
+          title="Relevant Verses"
+          count={verses.length}
+          sectionKey="verses"
+          defaultExpanded={true}
+        >
           {verses.map((verse, index) => {
             const verseKey = `${verse.surah}:${verse.verse_number}`;
             const verseAnnotations = annotations[verseKey] || [];
@@ -1933,14 +1953,17 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
               </div>
             );
           })}
-        </div>
+        </CollapsibleSection>
       )}
 
       {tafsir_explanations.length > 0 && (
-        <div className="result-section">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h2 style={{ margin: 0 }}>Tafsir Explanations</h2>
-            {user && (
+        <CollapsibleSection
+          title="Tafsir Explanations"
+          count={tafsir_explanations.length}
+          sectionKey="tafsir"
+          defaultExpanded={false}
+          headerAction={
+            user && (
               <button
                 onClick={() => {
                   setCurrentVerse({ reflectionType: 'section', sectionName: 'Tafsir Explanations', queryContext: query });
@@ -1963,8 +1986,9 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
               >
                 💭 Reflect
               </button>
-            )}
-          </div>
+            )
+          }
+        >
           {tafsir_explanations.map((tafsir, index) => (
             <details key={index} className="tafsir-details enhanced" open>
               <summary>
@@ -1980,14 +2004,17 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
               </div>
             </details>
           ))}
-        </div>
+        </CollapsibleSection>
       )}
 
       {cross_references.length > 0 && (
-        <div className="result-section">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h2 style={{ margin: 0 }}>Related Verses</h2>
-            {user && (
+        <CollapsibleSection
+          title="Related Verses"
+          count={cross_references.length}
+          sectionKey="related"
+          defaultExpanded={false}
+          headerAction={
+            user && (
               <button
                 onClick={() => {
                   setCurrentVerse({ reflectionType: 'section', sectionName: 'Related Verses', queryContext: query });
@@ -2010,23 +2037,59 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
               >
                 💭 Reflect
               </button>
-            )}
-          </div>
+            )
+          }
+        >
           <div className="cross-references">
             {cross_references.map((ref, index) => (
               <div key={index} className="cross-ref-item">
-                <strong>{ref.verse}</strong>: {ref.relevance}
+                <button
+                  onClick={() => {
+                    // Navigate to the Tafsir of the related verse
+                    if (onQueryChange) {
+                      onQueryChange(ref.verse);
+                    }
+                  }}
+                  style={{
+                    background: 'none',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    padding: '8px 12px',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    width: '100%',
+                    transition: 'all 0.2s',
+                    marginBottom: '8px'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = '#f7fafc';
+                    e.currentTarget.style.borderColor = '#cbd5e0';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'none';
+                    e.currentTarget.style.borderColor = '#e2e8f0';
+                  }}
+                  title={`Click to view Tafsir of verse ${ref.verse}`}
+                >
+                  <strong style={{ color: '#4a5568' }}>📖 {ref.verse}</strong>
+                  <span style={{ color: '#718096', display: 'block', marginTop: '4px' }}>
+                    {ref.relevance}
+                  </span>
+                </button>
               </div>
             ))}
           </div>
-        </div>
+        </CollapsibleSection>
       )}
 
       {lessons_practical_applications.length > 0 && (
-        <div className="result-section">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h2 style={{ margin: 0 }}>Lessons &amp; Practical Applications</h2>
-            {user && (
+        <CollapsibleSection
+          title="Lessons & Practical Applications"
+          count={lessons_practical_applications.length}
+          sectionKey="lessons"
+          defaultExpanded={false}
+          headerAction={
+            user && (
               <button
                 onClick={() => {
                   setCurrentVerse({ reflectionType: 'section', sectionName: 'Lessons & Practical Applications', queryContext: query });
@@ -2049,21 +2112,24 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
               >
                 💭 Reflect
               </button>
-            )}
-          </div>
+            )
+          }
+        >
           <ul className="lessons-list">
             {lessons_practical_applications.map((lesson, index) => (
               <li key={index} className="lesson-item">{lesson.point}</li>
             ))}
           </ul>
-        </div>
+        </CollapsibleSection>
       )}
 
       {summary && (
-        <div className="result-section">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h2 style={{ margin: 0 }}>Summary</h2>
-            {user && (
+        <CollapsibleSection
+          title="Summary"
+          sectionKey="summary"
+          defaultExpanded={false}
+          headerAction={
+            user && (
               <button
                 onClick={() => {
                   setCurrentVerse({ reflectionType: 'section', sectionName: 'Summary', queryContext: query });
@@ -2086,12 +2152,13 @@ function EnhancedResultsDisplay({ data, user, query, approach }) {
               >
                 💭 Reflect
               </button>
-            )}
-          </div>
+            )
+          }
+        >
           <div className="summary-content">
             <p>{summary}</p>
           </div>
-        </div>
+        </CollapsibleSection>
       )}
       </div>
 
