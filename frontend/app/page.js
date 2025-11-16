@@ -606,6 +606,18 @@ function MainApp({ user, userProfile }) {
   const [isTafsirLoading, setIsTafsirLoading] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [rateLimitWarning, setRateLimitWarning] = useState('');
+  const [isMobile, setIsMobile] = useState(false);
+  const [suggestionsExpanded, setSuggestionsExpanded] = useState(false);
+
+  // Detect mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Apply persona theme
   useEffect(() => {
@@ -850,10 +862,15 @@ function MainApp({ user, userProfile }) {
           }, 2000);
           return;
         } catch (shareErr) {
-          // User cancelled or share failed, fall through to clipboard
-          if (shareErr.name !== 'AbortError') {
-            console.log('Share API failed, using clipboard:', shareErr);
+          // User cancelled - this is normal, just reset button silently
+          if (shareErr.name === 'AbortError') {
+            button.innerHTML = originalText;
+            button.style.background = 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)';
+            button.disabled = false;
+            return; // Exit gracefully, no error message
           }
+          // For other errors, fall through to clipboard
+          console.debug('Share API unavailable, using clipboard:', shareErr.message);
         }
       }
 
@@ -949,63 +966,65 @@ function MainApp({ user, userProfile }) {
           </div>
         </div>
 
-        {/* Navigation Links */}
-        <div style={{
-          display: 'flex',
-          gap: '12px',
-          marginBottom: '24px',
-          flexWrap: 'wrap',
-          justifyContent: 'center'
-        }}>
-          <a
-            href="/history"
-            style={{
-              padding: '10px 20px',
-              background: 'linear-gradient(135deg, var(--cream) 0%, rgba(212, 175, 55, 0.1) 100%)',
-              border: '2px solid var(--border-light)',
-              borderRadius: '12px',
-              color: 'var(--primary-teal)',
-              fontWeight: '600',
-              textDecoration: 'none',
-              transition: 'all 0.3s ease'
-            }}
-            className="nav-link"
-          >
-            🕒 Query History
-          </a>
-          <a
-            href="/saved"
-            style={{
-              padding: '10px 20px',
-              background: 'linear-gradient(135deg, var(--cream) 0%, rgba(212, 175, 55, 0.1) 100%)',
-              border: '2px solid var(--border-light)',
-              borderRadius: '12px',
-              color: 'var(--primary-teal)',
-              fontWeight: '600',
-              textDecoration: 'none',
-              transition: 'all 0.3s ease'
-            }}
-            className="nav-link"
-          >
-            ⭐ Saved Answers
-          </a>
-          <a
-            href="/annotations"
-            style={{
-              padding: '10px 20px',
-              background: 'linear-gradient(135deg, var(--cream) 0%, rgba(212, 175, 55, 0.1) 100%)',
-              border: '2px solid var(--border-light)',
-              borderRadius: '12px',
-              color: 'var(--primary-teal)',
-              fontWeight: '600',
-              textDecoration: 'none',
-              transition: 'all 0.3s ease'
-            }}
-            className="nav-link"
-          >
-            📝 My Reflections
-          </a>
-        </div>
+        {/* Navigation Links - Desktop Only */}
+        {!isMobile && (
+          <div style={{
+            display: 'flex',
+            gap: '12px',
+            marginBottom: '24px',
+            flexWrap: 'wrap',
+            justifyContent: 'center'
+          }}>
+            <a
+              href="/history"
+              style={{
+                padding: '10px 20px',
+                background: 'linear-gradient(135deg, var(--cream) 0%, rgba(212, 175, 55, 0.1) 100%)',
+                border: '2px solid var(--border-light)',
+                borderRadius: '12px',
+                color: 'var(--primary-teal)',
+                fontWeight: '600',
+                textDecoration: 'none',
+                transition: 'all 0.3s ease'
+              }}
+              className="nav-link"
+            >
+              🕒 Query History
+            </a>
+            <a
+              href="/saved"
+              style={{
+                padding: '10px 20px',
+                background: 'linear-gradient(135deg, var(--cream) 0%, rgba(212, 175, 55, 0.1) 100%)',
+                border: '2px solid var(--border-light)',
+                borderRadius: '12px',
+                color: 'var(--primary-teal)',
+                fontWeight: '600',
+                textDecoration: 'none',
+                transition: 'all 0.3s ease'
+              }}
+              className="nav-link"
+            >
+              ⭐ Saved Answers
+            </a>
+            <a
+              href="/annotations"
+              style={{
+                padding: '10px 20px',
+                background: 'linear-gradient(135deg, var(--cream) 0%, rgba(212, 175, 55, 0.1) 100%)',
+                border: '2px solid var(--border-light)',
+                borderRadius: '12px',
+                color: 'var(--primary-teal)',
+                fontWeight: '600',
+                textDecoration: 'none',
+                transition: 'all 0.3s ease'
+              }}
+              className="nav-link"
+            >
+              📝 Notes
+            </a>
+          </div>
+        )}
         
         {/* Query Suggestions - Always Visible */}
         {suggestions.length > 0 && (
@@ -1020,7 +1039,7 @@ function MainApp({ user, userProfile }) {
               🌟 Explore These Questions
             </h3>
             <div className="suggestions-grid" style={{ display: 'grid', opacity: 1, visibility: 'visible' }}>
-              {suggestions.slice(0, 12).map((suggestion, index) => {
+              {suggestions.slice(0, suggestionsExpanded ? 12 : 6).map((suggestion, index) => {
                 const displayText = typeof suggestion === 'string' ? suggestion : suggestion.query;
                 const approach = typeof suggestion === 'object' ? suggestion.approach : null;
                 const type = typeof suggestion === 'object' ? suggestion.type : null;
@@ -1041,6 +1060,37 @@ function MainApp({ user, userProfile }) {
                 );
               })}
             </div>
+
+            {/* Expand/Collapse Button */}
+            {suggestions.length > 6 && (
+              <div style={{ textAlign: 'center', marginTop: '16px' }}>
+                <button
+                  onClick={() => setSuggestionsExpanded(!suggestionsExpanded)}
+                  style={{
+                    padding: '10px 24px',
+                    background: suggestionsExpanded
+                      ? 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)'
+                      : 'var(--gradient-teal-gold)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '24px',
+                    fontSize: '0.9rem',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    boxShadow: 'var(--shadow-soft)'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                  onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                >
+                  {suggestionsExpanded ? (
+                    <>Show Less ▲</>
+                  ) : (
+                    <>Show {suggestions.length - 6} More Questions ▼</>
+                  )}
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -1134,6 +1184,81 @@ function MainApp({ user, userProfile }) {
 
         {response && !response.needs_clarification && (
           <>
+            {/* Sticky Result Navigation */}
+            <div style={{
+              position: 'sticky',
+              top: 0,
+              zIndex: 200,
+              background: 'white',
+              borderBottom: '2px solid var(--border-light)',
+              padding: '12px 16px',
+              marginBottom: '24px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+              display: 'flex',
+              gap: '12px',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              borderRadius: '12px'
+            }}>
+              <div style={{ display: 'flex', gap: '8px', flex: 1 }}>
+                <button
+                  onClick={() => {
+                    setResponse(null);
+                    setQuery('');
+                    setError('');
+                  }}
+                  style={{
+                    padding: '8px 16px',
+                    background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '0.9rem',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  ← Clear Results
+                </button>
+                <button
+                  onClick={() => {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    setTimeout(() => {
+                      document.querySelector('.tafsir-form input')?.focus();
+                    }, 300);
+                  }}
+                  style={{
+                    padding: '8px 16px',
+                    background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '0.9rem',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  🔍 New Search
+                </button>
+              </div>
+              <div style={{
+                fontSize: '0.85rem',
+                color: '#666',
+                fontWeight: '600',
+                padding: '4px 12px',
+                background: 'var(--cream)',
+                borderRadius: '8px'
+              }}>
+                Query: {query.substring(0, 30)}{query.length > 30 ? '...' : ''}
+              </div>
+            </div>
+
             {/* Save & Export Section - Moved to top for better accessibility */}
             <div className="export-section" style={{
               marginBottom: '24px',

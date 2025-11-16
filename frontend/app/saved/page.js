@@ -221,12 +221,19 @@ export default function SavedSearchesPage() {
             {saved.map((item) => (
               <div
                 key={item.id}
+                onClick={(e) => {
+                  // Don't expand if clicking the delete button
+                  if (e.target.closest('button')) return;
+                  setExpandedId(expandedId === item.id ? null : item.id);
+                }}
                 style={{
                   padding: '24px',
                   background: 'linear-gradient(135deg, #ffffff 0%, rgba(250, 246, 240, 1) 100%)',
                   borderRadius: '16px',
                   border: '2px solid var(--border-light)',
-                  transition: 'all 0.3s ease'
+                  transition: 'all 0.3s ease',
+                  cursor: 'pointer',
+                  position: 'relative'
                 }}
                 className="saved-item"
               >
@@ -243,7 +250,10 @@ export default function SavedSearchesPage() {
                     </div>
                   </div>
                   <button
-                    onClick={() => handleDelete(item.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(item.id);
+                    }}
                     style={{
                       background: 'transparent',
                       color: 'var(--error-color)',
@@ -258,26 +268,35 @@ export default function SavedSearchesPage() {
                   </button>
                 </div>
 
-                <div style={{ fontSize: '0.95rem', color: '#555', marginBottom: '12px' }}>
+                <div style={{ fontSize: '0.95rem', color: '#555', marginBottom: expandedId === item.id ? '12px' : '8px' }}>
                   {item.responseSnippet}...
                 </div>
 
+                {/* Visual indicator for expandable content */}
+                {expandedId !== item.id && (
+                  <div style={{
+                    textAlign: 'center',
+                    color: 'var(--primary-teal)',
+                    fontSize: '0.85rem',
+                    fontWeight: '600',
+                    marginTop: '8px'
+                  }}>
+                    Click to view full answer ▼
+                  </div>
+                )}
+
                 {expandedId === item.id ? (
                   <div>
-                    <button
-                      onClick={() => setExpandedId(null)}
-                      style={{
-                        background: 'transparent',
-                        color: 'var(--primary-teal)',
-                        border: '2px solid var(--primary-teal)',
-                        padding: '8px 16px',
-                        borderRadius: '8px',
-                        fontSize: '0.9rem',
-                        marginBottom: '16px'
-                      }}
-                    >
-                      Hide Full Answer ▲
-                    </button>
+                    <div style={{
+                      textAlign: 'center',
+                      color: '#999',
+                      fontSize: '0.85rem',
+                      marginBottom: '16px',
+                      borderTop: '1px solid #e5e7eb',
+                      paddingTop: '12px'
+                    }}>
+                      Click anywhere to collapse ▲
+                    </div>
                     {/* Display full response if available */}
                     {item.fullResponse ? (
                       <div style={{ padding: '16px', background: 'var(--cream)', borderRadius: '12px' }}>
@@ -356,21 +375,6 @@ export default function SavedSearchesPage() {
                       </div>
                     )}
                   </div>
-                ) : (
-                  <button
-                    onClick={() => setExpandedId(item.id)}
-                    style={{
-                      background: 'var(--primary-teal)',
-                      color: 'white',
-                      border: 'none',
-                      padding: '8px 16px',
-                      borderRadius: '8px',
-                      fontSize: '0.9rem',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    View Full Answer ▼
-                  </button>
                 )}
               </div>
             ))}

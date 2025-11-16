@@ -5,12 +5,20 @@ export default function TabNavigation({
   children,
   tabs = [],
   defaultTab = 0,
-  storageKey = 'selected-tab'
+  storageKey = 'selected-tab',
+  resetKey = null  // Add reset key prop
 }) {
   const [activeTab, setActiveTab] = useState(() => {
     if (typeof window === 'undefined') return defaultTab;
     const saved = localStorage.getItem(storageKey);
     return saved !== null ? parseInt(saved) : defaultTab;
+  });
+
+  // Track viewed sections
+  const [viewedSections, setViewedSections] = useState(() => {
+    if (typeof window === 'undefined') return new Set();
+    const saved = localStorage.getItem(`${storageKey}-viewed`);
+    return saved ? new Set(JSON.parse(saved)) : new Set();
   });
 
   // Check if we're on mobile
@@ -31,6 +39,14 @@ export default function TabNavigation({
     }
   }, [activeTab, storageKey]);
 
+  // Reset viewed sections when resetKey changes (new query)
+  useEffect(() => {
+    if (resetKey && typeof window !== 'undefined') {
+      setViewedSections(new Set());
+      localStorage.removeItem(`${storageKey}-viewed`);
+    }
+  }, [resetKey, storageKey]);
+
   // Filter out empty tabs (sections with no content)
   const validTabs = tabs.filter(tab => tab.content);
 
@@ -49,13 +65,25 @@ export default function TabNavigation({
             <button
               key={index}
               className={`tab-header ${activeTab === index ? 'active' : ''}`}
-              onClick={() => setActiveTab(index)}
+              onClick={() => {
+                setActiveTab(index);
+                // Mark section as viewed
+                const sectionKey = `${storageKey}-${index}`;
+                if (!viewedSections.has(sectionKey)) {
+                  const newViewed = new Set(viewedSections);
+                  newViewed.add(sectionKey);
+                  setViewedSections(newViewed);
+                  if (typeof window !== 'undefined') {
+                    localStorage.setItem(`${storageKey}-viewed`, JSON.stringify([...newViewed]));
+                  }
+                }
+              }}
               aria-selected={activeTab === index}
               role="tab"
             >
               <span className="tab-icon">{tab.icon}</span>
               <span className="tab-label">{tab.label}</span>
-              {tab.count !== undefined && tab.count > 0 && (
+              {tab.count !== undefined && tab.count > 0 && !viewedSections.has(`${storageKey}-${index}`) && (
                 <span className="tab-count">{tab.count}</span>
               )}
             </button>
@@ -135,18 +163,20 @@ export default function TabNavigation({
           position: absolute;
           top: 8px;
           right: 8px;
-          background: #ef4444;
-          color: white;
+          background: linear-gradient(135deg, #fbbf24, #f59e0b);
+          color: #7c2d12;
           font-size: 0.625rem;
           font-weight: 600;
           padding: 2px 6px;
           border-radius: 10px;
           min-width: 18px;
           text-align: center;
+          box-shadow: 0 1px 2px rgba(251, 191, 36, 0.3);
         }
 
         .tab-header.active .tab-count {
           background: #10b981;
+          color: white;
         }
 
         .tab-content {

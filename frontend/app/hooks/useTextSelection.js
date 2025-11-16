@@ -1,12 +1,12 @@
 'use client';
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useState, useRef } from 'react';
 
 /**
- * useTextSelection - Simple text selection detection hook
+ * useTextSelection - Improved text selection detection hook
  *
  * PRINCIPLES:
- * - Just detects selection, no UI
- * - No positioning logic
+ * - Reliable detection with immediate feedback
+ * - Better mobile support
  * - No scroll manipulation
  * - Clean and simple
  */
@@ -15,11 +15,13 @@ export default function useTextSelection(options = {}) {
   const {
     minLength = 3,
     enabled = true,
-    debounceMs = 500  // Wait 500ms after user stops highlighting
+    debounceMs = 300  // Reduced from 500ms for faster response
   } = options;
 
   const [selectedText, setSelectedText] = useState(null);
   const [selectionRect, setSelectionRect] = useState(null);
+  const timeoutRef = useRef(null);
+  const lastSelectionRef = useRef('');
 
   const handleSelectionChange = useCallback(() => {
     if (!enabled) return;
@@ -27,56 +29,68 @@ export default function useTextSelection(options = {}) {
     const selection = window.getSelection();
     const text = selection?.toString().trim();
 
-    // Check if we have a valid selection
-    if (text && text.length >= minLength) {
-      // Get selection bounds (optional, for positioning if needed)
-      try {
-        const range = selection.getRangeAt(0);
-        const rect = range.getBoundingClientRect();
-
-        if (rect.width > 0 && rect.height > 0) {
-          setSelectedText(text);
-          setSelectionRect({
-            top: rect.top,
-            left: rect.left,
-            bottom: rect.bottom,
-            right: rect.right,
-            width: rect.width,
-            height: rect.height
-          });
-        }
-      } catch (e) {
-        // Ignore invalid selections
+    // Immediate clear if no selection
+    if (!text || text.length < minLength) {
+      if (lastSelectionRef.current) {
+        setSelectedText(null);
+        setSelectionRect(null);
+        lastSelectionRef.current = '';
       }
-    } else {
-      // Clear selection
-      setSelectedText(null);
-      setSelectionRect(null);
+      return;
+    }
+
+    // Only update if selection changed
+    if (text === lastSelectionRef.current) return;
+    lastSelectionRef.current = text;
+
+    // Get selection bounds
+    try {
+      const range = selection.getRangeAt(0);
+      const rect = range.getBoundingClientRect();
+
+      if (rect.width > 0 && rect.height > 0) {
+        setSelectedText(text);
+        setSelectionRect({
+          top: rect.top,
+          left: rect.left,
+          bottom: rect.bottom,
+          right: rect.right,
+          width: rect.width,
+          height: rect.height
+        });
+      }
+    } catch (e) {
+      console.debug('Selection error:', e);
     }
   }, [enabled, minLength]);
 
-  // Debounced selection handler
   useEffect(() => {
     if (!enabled) return;
 
-    let timeoutId;
-    const debouncedHandler = () => {
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(handleSelectionChange, debounceMs);
+    // Immediate handler for mouseup/touchend
+    const immediateHandler = () => {
+      clearTimeout(timeoutRef.current);
+      handleSelectionChange();
     };
 
-    // Listen for selection changes
+    // Debounced handler for selectionchange
+    const debouncedHandler = () => {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = setTimeout(handleSelectionChange, debounceMs);
+    };
+
+    // Use immediate detection for user actions
+    document.addEventListener('mouseup', immediateHandler);
+    document.addEventListener('touchend', immediateHandler, { passive: true });
+
+    // Use debounced for selectionchange (fires during drag)
     document.addEventListener('selectionchange', debouncedHandler);
-    // Also listen for mouseup for better responsiveness
-    document.addEventListener('mouseup', debouncedHandler);
-    // Mobile support
-    document.addEventListener('touchend', debouncedHandler);
 
     return () => {
-      clearTimeout(timeoutId);
+      clearTimeout(timeoutRef.current);
+      document.removeEventListener('mouseup', immediateHandler);
+      document.removeEventListener('touchend', immediateHandler);
       document.removeEventListener('selectionchange', debouncedHandler);
-      document.removeEventListener('mouseup', debouncedHandler);
-      document.removeEventListener('touchend', debouncedHandler);
     };
   }, [enabled, handleSelectionChange, debounceMs]);
 
@@ -85,6 +99,7 @@ export default function useTextSelection(options = {}) {
     window.getSelection()?.removeAllRanges();
     setSelectedText(null);
     setSelectionRect(null);
+    lastSelectionRef.current = '';
   }, []);
 
   return {

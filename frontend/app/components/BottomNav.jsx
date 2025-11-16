@@ -28,13 +28,13 @@ export default function BottomNav({ user }) {
     },
     {
       label: 'History',
-      icon: '📜',
+      icon: '🕒',
       path: '/history',
       active: pathname === '/history'
     },
     {
       label: 'Saved',
-      icon: '💾',
+      icon: '⭐',
       path: '/saved',
       active: pathname === '/saved'
     },
@@ -71,15 +71,32 @@ export default function BottomNav({ user }) {
             bottom: 0;
             left: 0;
             right: 0;
-            background: white;
-            border-top: 1px solid #e5e7eb;
+            background: linear-gradient(to top, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.95));
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-top: 3px solid #10b981;
             display: flex;
             justify-content: space-around;
             align-items: center;
             height: 60px;
-            z-index: 100;
-            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+            z-index: 1000;
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15),
+                        0 -2px 6px rgba(16, 185, 129, 0.2);
             padding-bottom: env(safe-area-inset-bottom);
+          }
+
+          .bottom-nav::before {
+            content: '';
+            position: absolute;
+            top: -3px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg,
+              #10b981 0%,
+              #fbbf24 50%,
+              #10b981 100%);
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
           }
 
           .nav-item {
