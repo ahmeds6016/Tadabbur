@@ -121,6 +121,18 @@ a {
   margin: 0 auto;
   padding: 20px;
   animation: fadeIn 0.6s ease-out;
+  transition: margin-left 0.3s ease, max-width 0.3s ease;
+}
+
+/* Desktop sidebar spacing */
+.container.with-sidebar {
+  margin-left: 260px;
+  max-width: calc(100% - 280px);
+}
+
+.container.with-sidebar-collapsed {
+  margin-left: 70px;
+  max-width: calc(100% - 90px);
 }
 
 @keyframes fadeIn {

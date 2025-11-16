@@ -14,7 +14,14 @@ import AnnotationDisplay from './components/AnnotationDisplay';
 import CollapsibleSection from './components/CollapsibleSection';
 import TabNavigation from './components/TabNavigation';
 import BottomNav from './components/BottomNav';
+import DesktopNav from './components/DesktopNav';
+import TourOverlay from './components/TourOverlay';
+import Tooltip from './components/Tooltip';
+import HelpMenu, { FloatingHelpButton } from './components/HelpMenu';
+import OnboardingProgress from './components/OnboardingProgress';
+import FloatingAnnotateButton from './components/FloatingAnnotateButton';
 import useTextSelection from './hooks/useTextSelection';
+import { useOnboarding } from './hooks/useOnboarding';
 import onboardingConfig from '../config/onboarding-messages.json';
 
 // Firebase Configuration
@@ -608,6 +615,32 @@ function MainApp({ user, userProfile }) {
   const [rateLimitWarning, setRateLimitWarning] = useState('');
   const [isMobile, setIsMobile] = useState(false);
   const [suggestionsExpanded, setSuggestionsExpanded] = useState(false);
+  const [navCollapsed, setNavCollapsed] = useState(false);
+  const [desktopStats, setDesktopStats] = useState({
+    savedCount: 0,
+    historyCount: 0,
+    annotationCount: 0
+  });
+
+  // Onboarding system
+  const {
+    onboardingState,
+    showTour,
+    setShowTour,
+    currentTourStep,
+    setCurrentTourStep,
+    tourType,
+    markStepComplete,
+    startFeatureTour,
+    endFeatureTour,
+    resetOnboarding
+  } = useOnboarding(user?.uid);
+
+  // Help menu state
+  const [helpMenuOpen, setHelpMenuOpen] = useState(false);
+
+  // AbortController for cancelling fetch requests
+  const abortControllerRef = useRef(null);
 
   // Detect mobile
   useEffect(() => {
@@ -619,6 +652,36 @@ function MainApp({ user, userProfile }) {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  // Keyboard shortcuts for desktop
+  useEffect(() => {
+    if (isMobile) return; // Only enable on desktop
+
+    const handleKeyDown = (e) => {
+      // Ctrl+K or Cmd+K for search focus
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        document.querySelector('.tafsir-form input')?.focus();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+
+      // Escape to clear results or cancel request
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        // Cancel any in-flight request
+        if (abortControllerRef.current) {
+          abortControllerRef.current.abort();
+        }
+        setResponse(null);
+        setQuery('');
+        setError('');
+        setIsTafsirLoading(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isMobile, response]);
+
   // Apply persona theme
   useEffect(() => {
     const persona = userProfile?.persona || 'practicing_muslim';
@@ -626,6 +689,15 @@ function MainApp({ user, userProfile }) {
     document.documentElement.style.setProperty('--user-gradient', theme.gradient);
     document.documentElement.style.setProperty('--user-color', theme.color);
   }, [userProfile]);
+
+  // Start welcome tour for first-time users
+  useEffect(() => {
+    if (user && !onboardingState.hasSeenWelcome && !showTour) {
+      setTimeout(() => {
+        startFeatureTour('welcome');
+      }, 1000); // Small delay for smoother experience
+    }
+  }, [user, onboardingState.hasSeenWelcome]);
 
   // Fetch suggestions on mount
   useEffect(() => {
@@ -646,17 +718,25 @@ function MainApp({ user, userProfile }) {
   const handleGetTafsir = async (e) => {
     e.preventDefault();
     if (!query) return;
-    
+
+    // Cancel any in-flight request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // Create new AbortController for this request
+    abortControllerRef.current = new AbortController();
+
     // NEW: Add submitting animation class
     const formElement = e.target;
     formElement.classList.add('submitting');
     setTimeout(() => formElement.classList.remove('submitting'), 300);
-    
+
     setIsTafsirLoading(true);
     setResponse(null);
     setError('');
     setRateLimitWarning('');
-    
+
     try {
       const token = await user.getIdToken();
       const res = await fetch(`${BACKEND_URL}/tafsir`, {
@@ -665,7 +745,8 @@ function MainApp({ user, userProfile }) {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ approach, query })
+        body: JSON.stringify({ approach, query }),
+        signal: abortControllerRef.current.signal
       });
       
       const data = await res.json();
@@ -688,6 +769,11 @@ function MainApp({ user, userProfile }) {
       // Save to query history
       await saveQueryToHistory(query, approach, userProfile?.persona || '', true);
     } catch (err) {
+      // Don't show error for aborted requests
+      if (err.name === 'AbortError') {
+        console.log('Request was cancelled');
+        return;
+      }
       setError(err.message);
       // Save failed query to history too
       await saveQueryToHistory(query, approach, userProfile?.persona || '', false);
@@ -953,8 +1039,19 @@ function MainApp({ user, userProfile }) {
   const personaIcon = getPersonaIcon(userProfile?.persona || 'practicing_muslim');
 
   return (
-    <div className="container">
-      <div className="card main-app">
+    <>
+      {/* Desktop Navigation Sidebar */}
+      {!isMobile && (
+        <DesktopNav
+          user={user}
+          stats={desktopStats}
+          collapsed={navCollapsed}
+          onToggleCollapse={() => setNavCollapsed(!navCollapsed)}
+        />
+      )}
+
+      <div className={`container ${!isMobile ? (navCollapsed ? 'with-sidebar-collapsed' : 'with-sidebar') : ''}`}>
+        <div className="card main-app">
         <div className="header">
           <h1>Tafsir Simplified</h1>
           <div className="user-info" data-persona-icon={personaIcon}>
@@ -1189,7 +1286,7 @@ function MainApp({ user, userProfile }) {
               position: 'sticky',
               top: 0,
               zIndex: 200,
-              background: 'white',
+              background: 'linear-gradient(135deg, white 0%, var(--cream) 100%)',
               borderBottom: '2px solid var(--border-light)',
               padding: '12px 16px',
               marginBottom: '24px',
@@ -1200,12 +1297,17 @@ function MainApp({ user, userProfile }) {
               justifyContent: 'space-between',
               borderRadius: '12px'
             }}>
-              <div style={{ display: 'flex', gap: '8px', flex: 1 }}>
+              <div style={{ display: 'flex', gap: '8px', flex: 1, alignItems: 'center' }}>
                 <button
                   onClick={() => {
+                    // Cancel any in-flight request
+                    if (abortControllerRef.current) {
+                      abortControllerRef.current.abort();
+                    }
                     setResponse(null);
                     setQuery('');
                     setError('');
+                    setIsTafsirLoading(false);
                   }}
                   style={{
                     padding: '8px 16px',
@@ -1218,13 +1320,29 @@ function MainApp({ user, userProfile }) {
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '6px'
+                    gap: '6px',
+                    transition: 'transform 0.2s ease',
                   }}
+                  onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'}
+                  onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                  title={!isMobile ? 'Clear Results (Esc)' : 'Clear Results'}
                 >
-                  ← Clear Results
+                  {isTafsirLoading ? '✕ Cancel' : '← Clear Results'}
+                  {!isMobile && <kbd style={{
+                    background: 'rgba(255,255,255,0.2)',
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    fontSize: '0.75rem',
+                    marginLeft: '4px'
+                  }}>Esc</kbd>}
                 </button>
                 <button
                   onClick={() => {
+                    // Cancel any in-flight request before starting new search
+                    if (abortControllerRef.current) {
+                      abortControllerRef.current.abort();
+                    }
+                    setIsTafsirLoading(false);
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                     setTimeout(() => {
                       document.querySelector('.tafsir-form input')?.focus();
@@ -1241,10 +1359,21 @@ function MainApp({ user, userProfile }) {
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '6px'
+                    gap: '6px',
+                    transition: 'transform 0.2s ease',
                   }}
+                  onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'}
+                  onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                  title={!isMobile ? 'New Search (Ctrl+K)' : 'New Search'}
                 >
                   🔍 New Search
+                  {!isMobile && <kbd style={{
+                    background: 'rgba(255,255,255,0.2)',
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    fontSize: '0.75rem',
+                    marginLeft: '4px'
+                  }}>Ctrl+K</kbd>}
                 </button>
               </div>
               <div style={{
@@ -1253,7 +1382,8 @@ function MainApp({ user, userProfile }) {
                 fontWeight: '600',
                 padding: '4px 12px',
                 background: 'var(--cream)',
-                borderRadius: '8px'
+                borderRadius: '8px',
+                border: '1px solid var(--border-light)'
               }}>
                 Query: {query.substring(0, 30)}{query.length > 30 ? '...' : ''}
               </div>
@@ -1423,9 +1553,51 @@ function MainApp({ user, userProfile }) {
         )}
       </div>
 
-      {/* Bottom Navigation for PWA */}
-      <BottomNav user={user} />
-    </div>
+        {/* Bottom Navigation for PWA */}
+        <BottomNav user={user} />
+
+        {/* Onboarding Progress */}
+        {!onboardingState.completedAt && (
+          <OnboardingProgress
+            onboardingState={onboardingState}
+            onResumeTour={startFeatureTour}
+            onHide={() => markStepComplete('completedAt')}
+          />
+        )}
+
+        {/* Tour Overlay */}
+        {showTour && (
+          <TourOverlay
+            isOpen={showTour}
+            tourType={tourType}
+            currentStep={currentTourStep}
+            totalSteps={tourType === 'welcome' ? 5 : 3}
+            onNext={() => setCurrentTourStep(currentTourStep + 1)}
+            onPrev={() => setCurrentTourStep(currentTourStep - 1)}
+            onSkip={() => endFeatureTour(tourType)}
+            onComplete={() => {
+              markStepComplete(`has${tourType.charAt(0).toUpperCase() + tourType.slice(1)}`);
+              endFeatureTour(tourType);
+              // Mark first search if completing search tour
+              if (tourType === 'search' || tourType === 'welcome') {
+                markStepComplete('hasSearched');
+              }
+            }}
+          />
+        )}
+
+        {/* Help Menu */}
+        <HelpMenu
+          currentPage={response ? 'results' : 'home'}
+          isOpen={helpMenuOpen}
+          onClose={() => setHelpMenuOpen(false)}
+          onStartTour={startFeatureTour}
+        />
+
+        {/* Floating Help Button */}
+        <FloatingHelpButton onClick={() => setHelpMenuOpen(true)} />
+      </div>
+    </>
   );
 }
 
@@ -1834,14 +2006,15 @@ function EnhancedResultsDisplay({ data, user, query, approach, onQueryChange }) 
   // Track pending share ID request to prevent duplicates
   const pendingShareRequest = useRef(null);
 
-  // Use the new text selection hook
+  // Use the new text selection hook - only within results content
   const { selectedText, clearSelection } = useTextSelection({
     enabled: true,
-    minLength: 3
+    minLength: 3,
+    container: '.results-content' // Only listen within results
   });
 
-  // Open annotation dialog when text is selected
-  useEffect(() => {
+  // Handler for when user clicks annotate button
+  const handleAnnotateClick = () => {
     if (selectedText && user) {
       setCurrentVerse({
         reflectionType: 'highlight',
@@ -1851,7 +2024,7 @@ function EnhancedResultsDisplay({ data, user, query, approach, onQueryChange }) 
       setAnnotationDialogOpen(true);
       ensureShareId().catch(err => console.error('Failed to create share link:', err));
     }
-  }, [selectedText, user, data]);
+  };
 
   const fetchVerseAnnotations = useCallback(async (surah, verse) => {
     try {
@@ -2277,6 +2450,15 @@ function EnhancedResultsDisplay({ data, user, query, approach, onQueryChange }) 
         storageKey="tafsir-selected-tab"
       />
       </div>
+
+      {/* Floating Annotate Button - appears when text is selected */}
+      {selectedText && user && (
+        <FloatingAnnotateButton
+          selectedText={selectedText}
+          onAnnotate={handleAnnotateClick}
+          onDismiss={clearSelection}
+        />
+      )}
 
       {/* Unified Annotation Dialog for all annotation types */}
       <AnnotationDialog

@@ -4954,6 +4954,11 @@ def get_cached_tafsir_response(query: str, user_profile: dict, approach: str = "
         cache_info = get_firestore_cache_key(query, user_profile, approach)
         cache_key = cache_info['cache_key']
 
+        # Debug logging for cache key
+        print(f"🔍 Looking for cache with key: {cache_key[:16]}...")
+        print(f"   Query: {cache_info['normalized_query']}")
+        print(f"   Profile: persona={cache_info['profile'].get('persona')}, level={cache_info['profile'].get('knowledge_level')}")
+
         # Try Firestore first
         cache_ref = quran_db.collection('tafsir_cache').document(cache_key)
         cache_doc = cache_ref.get()
@@ -4987,6 +4992,40 @@ def get_cached_tafsir_response(query: str, user_profile: dict, approach: str = "
                 response_data = json.loads(gzip.decompress(base64.b64decode(response_data)))
 
             return response_data
+
+        # If no cache found with user profile, try with default profile as fallback
+        if user_profile and any(user_profile.values()):
+            print(f"💾 No cache found with user profile, trying default profile fallback...")
+            default_profile = {
+                'persona': 'practicing_muslim',
+                'knowledge_level': 'intermediate',
+                'learning_goal': 'balanced',
+                'include_arabic': True
+            }
+            default_cache_info = get_firestore_cache_key(query, default_profile, approach)
+            default_cache_key = default_cache_info['cache_key']
+
+            if default_cache_key != cache_key:  # Only try if different
+                print(f"🔍 Looking for default cache with key: {default_cache_key[:16]}...")
+                default_cache_ref = quran_db.collection('tafsir_cache').document(default_cache_key)
+                default_cache_doc = default_cache_ref.get()
+
+                if default_cache_doc.exists:
+                    cache_data = default_cache_doc.to_dict()
+                    created_at = cache_data.get('created_at')
+                    if created_at:
+                        age_days = (datetime.now(timezone.utc) - created_at).total_seconds() / 86400
+                        if age_days <= 7:
+                            print(f"💾 Using DEFAULT cached response (age: {age_days:.1f} days)")
+
+                            # Decompress if needed
+                            response_data = cache_data.get('response')
+                            if cache_data.get('compressed', False) and response_data:
+                                import gzip
+                                import base64
+                                response_data = json.loads(gzip.decompress(base64.b64decode(response_data)))
+
+                            return response_data
 
     except Exception as e:
         print(f"⚠️ Cache retrieval error: {e}")
@@ -5039,8 +5078,10 @@ def store_tafsir_cache(query: str, user_profile: dict, response: dict, approach:
 
         quran_db.collection('tafsir_cache').document(cache_key).set(cache_doc)
 
-        print(f"💾 Cached tafsir response: {cache_info['query_normalized']}")
-        print(f"   Cache key: {cache_key[:8]}...")
+        print(f"💾 STORING cache for: {cache_info['query_normalized']}")
+        print(f"   Cache key: {cache_key[:16]}...")
+        print(f"   Profile: persona={cache_info['profile_details'].get('persona')}, level={cache_info['profile_details'].get('knowledge_level')}")
+        print(f"   Approach: {approach}")
         print(f"   Size: {len(response_str)} bytes (compressed: {compressed})")
 
         # Track popular queries for pre-warming
@@ -6266,6 +6307,15 @@ def tafsir_handler_enhanced():
                 print(f"   ⏱️  PERFORMANCE: Firestore cache hit in {perf_metrics['stages']['cache_check']:.0f}ms")
                 return jsonify(firestore_cached), 200
 
+        # For semantic/explore queries, also check Firestore cache
+        elif approach == 'semantic':  # Remember: explore was normalized to semantic
+            firestore_cached = get_cached_tafsir_response(query, user_profile, approach)
+            if firestore_cached:
+                perf_metrics['stages']['cache_check'] = (time.time() - stage_start) * 1000
+                print(f"💾 FIRESTORE cache hit for explore/semantic query")
+                print(f"   ⏱️  PERFORMANCE: Firestore cache hit in {perf_metrics['stages']['cache_check']:.0f}ms")
+                return jsonify(firestore_cached), 200
+
         # Check in-memory cache as fallback
         cache_key = get_cache_key(query, user_profile, approach)
         with cache_lock:
@@ -7032,13 +7082,18 @@ def tafsir_handler_enhanced():
                     print(f"   ✅ Verse count: {verse_count}/{verse_limit} for {persona_name}")
                 perf_metrics['verse_count'] = verse_count
 
-                # Cache with thread safety
+                # Cache with thread safety (in-memory)
                 with cache_lock:
                     RESPONSE_CACHE[cache_key] = final_json
                     if len(RESPONSE_CACHE) > 1000:
                         keys_to_remove = list(RESPONSE_CACHE.keys())[:200]
                         for key in keys_to_remove:
                             RESPONSE_CACHE.pop(key, None)  # Use pop to avoid KeyError
+
+                # Store semantic/explore response in Firestore for long-term caching
+                if approach == 'semantic':
+                    print(f"💾 Storing semantic/explore query to Firestore cache...")
+                    store_tafsir_cache(query, user_profile, final_json, approach)
 
                 # Performance summary
                 perf_metrics['stages']['llm_generation'] = (time.time() - llm_start) * 1000

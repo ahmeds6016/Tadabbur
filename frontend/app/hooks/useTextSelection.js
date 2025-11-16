@@ -15,7 +15,8 @@ export default function useTextSelection(options = {}) {
   const {
     minLength = 3,
     enabled = true,
-    debounceMs = 300  // Reduced from 500ms for faster response
+    debounceMs = 500,  // Increased back to 500ms for better UX
+    container = null   // Selector to limit selection detection to specific container
   } = options;
 
   const [selectedText, setSelectedText] = useState(null);
@@ -37,6 +38,36 @@ export default function useTextSelection(options = {}) {
         lastSelectionRef.current = '';
       }
       return;
+    }
+
+    // Check if selection is within container if specified
+    if (container) {
+      try {
+        const range = selection.getRangeAt(0);
+        const containerEl = document.querySelector(container);
+
+        if (!containerEl) {
+          setSelectedText(null);
+          setSelectionRect(null);
+          lastSelectionRef.current = '';
+          return;
+        }
+
+        // Check if selection is within the container
+        const startNode = range.startContainer.nodeType === Node.TEXT_NODE
+          ? range.startContainer.parentNode
+          : range.startContainer;
+
+        if (!containerEl.contains(startNode)) {
+          setSelectedText(null);
+          setSelectionRect(null);
+          lastSelectionRef.current = '';
+          return;
+        }
+      } catch (e) {
+        console.debug('Container check error:', e);
+        return;
+      }
     }
 
     // Only update if selection changed
@@ -62,7 +93,7 @@ export default function useTextSelection(options = {}) {
     } catch (e) {
       console.debug('Selection error:', e);
     }
-  }, [enabled, minLength]);
+  }, [enabled, minLength, container]);
 
   useEffect(() => {
     if (!enabled) return;
