@@ -12,6 +12,8 @@ import {
 import AnnotationDialog from './components/AnnotationDialog';
 import AnnotationDisplay from './components/AnnotationDisplay';
 import CollapsibleSection from './components/CollapsibleSection';
+import TabNavigation from './components/TabNavigation';
+import BottomNav from './components/BottomNav';
 import useTextSelection from './hooks/useTextSelection';
 import onboardingConfig from '../config/onboarding-messages.json';
 
@@ -1295,6 +1297,9 @@ function MainApp({ user, userProfile }) {
           </>
         )}
       </div>
+
+      {/* Bottom Navigation for PWA */}
+      <BottomNav user={user} />
     </div>
   );
 }
@@ -1905,13 +1910,15 @@ function EnhancedResultsDisplay({ data, user, query, approach, onQueryChange }) 
 
       {/* All annotation panels are now handled by the unified AnnotationDialog at the bottom */}
 
-      {verses.length > 0 && (
-        <CollapsibleSection
-          title="Relevant Verses"
-          count={verses.length}
-          sectionKey="verses"
-          defaultExpanded={true}
-        >
+      <TabNavigation
+        tabs={[
+          // Verses Tab
+          verses.length > 0 && {
+            label: 'Verses',
+            icon: '📖',
+            count: verses.length,
+            content: (
+              <div className="verses-section">
           {verses.map((verse, index) => {
             const verseKey = `${verse.surah}:${verse.verse_number}`;
             const verseAnnotations = annotations[verseKey] || [];
@@ -1953,42 +1960,44 @@ function EnhancedResultsDisplay({ data, user, query, approach, onQueryChange }) 
               </div>
             );
           })}
-        </CollapsibleSection>
-      )}
-
-      {tafsir_explanations.length > 0 && (
-        <CollapsibleSection
-          title="Tafsir Explanations"
-          count={tafsir_explanations.length}
-          sectionKey="tafsir"
-          defaultExpanded={false}
-          headerAction={
-            user && (
-              <button
-                onClick={() => {
-                  setCurrentVerse({ reflectionType: 'section', sectionName: 'Tafsir Explanations', queryContext: query });
-                  setAnnotationDialogOpen(true);
-                  ensureShareId().catch(err => console.error('Failed to create share link:', err));
-                }}
-                style={{
-                  padding: '8px 16px',
-                  background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
-                  border: 'none',
-                  borderRadius: '8px',
-                  color: 'white',
-                  fontSize: '0.85rem',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-              >
-                💭 Reflect
-              </button>
+              </div>
             )
-          }
-        >
+          },
+
+          // Tafsir Tab (includes related verses)
+          tafsir_explanations.length > 0 && {
+            label: 'Tafsir',
+            icon: '📚',
+            count: tafsir_explanations.length,
+            content: (
+              <div className="tafsir-section">
+                {/* Tafsir Reflection Button */}
+                {user && (
+                  <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'flex-end' }}>
+                    <button
+                      onClick={() => {
+                        setCurrentVerse({ reflectionType: 'section', sectionName: 'Tafsir Explanations', queryContext: query });
+                        setAnnotationDialogOpen(true);
+                        ensureShareId().catch(err => console.error('Failed to create share link:', err));
+                      }}
+                      style={{
+                        padding: '8px 16px',
+                        background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                        border: 'none',
+                        borderRadius: '8px',
+                        color: 'white',
+                        fontSize: '0.85rem',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                      onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                    >
+                      💭 Reflect
+                    </button>
+                  </div>
+                )}
           {tafsir_explanations.map((tafsir, index) => (
             <details key={index} className="tafsir-details enhanced" open>
               <summary>
@@ -2004,42 +2013,13 @@ function EnhancedResultsDisplay({ data, user, query, approach, onQueryChange }) 
               </div>
             </details>
           ))}
-        </CollapsibleSection>
-      )}
 
-      {cross_references.length > 0 && (
-        <CollapsibleSection
-          title="Related Verses"
-          count={cross_references.length}
-          sectionKey="related"
-          defaultExpanded={false}
-          headerAction={
-            user && (
-              <button
-                onClick={() => {
-                  setCurrentVerse({ reflectionType: 'section', sectionName: 'Related Verses', queryContext: query });
-                  setAnnotationDialogOpen(true);
-                  ensureShareId().catch(err => console.error('Failed to create share link:', err));
-                }}
-                style={{
-                  padding: '8px 16px',
-                  background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
-                  border: 'none',
-                  borderRadius: '8px',
-                  color: 'white',
-                  fontSize: '0.85rem',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-              >
-                💭 Reflect
-              </button>
-            )
-          }
-        >
+                {/* Related Verses embedded within Tafsir tab */}
+                {cross_references.length > 0 && (
+                  <div style={{ marginTop: '24px' }}>
+                    <h3 style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '12px' }}>
+                      Related Verses ({cross_references.length})
+                    </h3>
           <div className="cross-references">
             {cross_references.map((ref, index) => (
               <div key={index} className="cross-ref-item">
@@ -2079,87 +2059,98 @@ function EnhancedResultsDisplay({ data, user, query, approach, onQueryChange }) 
               </div>
             ))}
           </div>
-        </CollapsibleSection>
-      )}
-
-      {lessons_practical_applications.length > 0 && (
-        <CollapsibleSection
-          title="Lessons & Practical Applications"
-          count={lessons_practical_applications.length}
-          sectionKey="lessons"
-          defaultExpanded={false}
-          headerAction={
-            user && (
-              <button
-                onClick={() => {
-                  setCurrentVerse({ reflectionType: 'section', sectionName: 'Lessons & Practical Applications', queryContext: query });
-                  setAnnotationDialogOpen(true);
-                  ensureShareId().catch(err => console.error('Failed to create share link:', err));
-                }}
-                style={{
-                  padding: '8px 16px',
-                  background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
-                  border: 'none',
-                  borderRadius: '8px',
-                  color: 'white',
-                  fontSize: '0.85rem',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-              >
-                💭 Reflect
-              </button>
+                  </div>
+                )}
+              </div>
             )
-          }
-        >
+          },
+
+          // Lessons Tab
+          lessons_practical_applications.length > 0 && {
+            label: 'Lessons',
+            icon: '💡',
+            count: lessons_practical_applications.length,
+            content: (
+              <div className="lessons-section">
+                {/* Lessons Reflection Button */}
+                {user && (
+                  <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'flex-end' }}>
+                    <button
+                      onClick={() => {
+                        setCurrentVerse({ reflectionType: 'section', sectionName: 'Lessons & Practical Applications', queryContext: query });
+                        setAnnotationDialogOpen(true);
+                        ensureShareId().catch(err => console.error('Failed to create share link:', err));
+                      }}
+                      style={{
+                        padding: '8px 16px',
+                        background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                        border: 'none',
+                        borderRadius: '8px',
+                        color: 'white',
+                        fontSize: '0.85rem',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                      onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                    >
+                      💭 Reflect
+                    </button>
+                  </div>
+                )}
           <ul className="lessons-list">
             {lessons_practical_applications.map((lesson, index) => (
               <li key={index} className="lesson-item">{lesson.point}</li>
             ))}
           </ul>
-        </CollapsibleSection>
-      )}
-
-      {summary && (
-        <CollapsibleSection
-          title="Summary"
-          sectionKey="summary"
-          defaultExpanded={false}
-          headerAction={
-            user && (
-              <button
-                onClick={() => {
-                  setCurrentVerse({ reflectionType: 'section', sectionName: 'Summary', queryContext: query });
-                  setAnnotationDialogOpen(true);
-                  ensureShareId().catch(err => console.error('Failed to create share link:', err));
-                }}
-                style={{
-                  padding: '8px 16px',
-                  background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
-                  border: 'none',
-                  borderRadius: '8px',
-                  color: 'white',
-                  fontSize: '0.85rem',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-              >
-                💭 Reflect
-              </button>
+              </div>
             )
-          }
-        >
+          },
+
+          // Summary Tab
+          summary && {
+            label: 'Summary',
+            icon: '📝',
+            content: (
+              <div className="summary-section">
+                {/* Summary Reflection Button */}
+                {user && (
+                  <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'flex-end' }}>
+                    <button
+                      onClick={() => {
+                        setCurrentVerse({ reflectionType: 'section', sectionName: 'Summary', queryContext: query });
+                        setAnnotationDialogOpen(true);
+                        ensureShareId().catch(err => console.error('Failed to create share link:', err));
+                      }}
+                      style={{
+                        padding: '8px 16px',
+                        background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                        border: 'none',
+                        borderRadius: '8px',
+                        color: 'white',
+                        fontSize: '0.85rem',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                      onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                    >
+                      💭 Reflect
+                    </button>
+                  </div>
+                )}
           <div className="summary-content">
             <p>{summary}</p>
           </div>
-        </CollapsibleSection>
-      )}
+              </div>
+            )
+          }
+        ].filter(Boolean)} // Remove null/false entries
+        defaultTab={0}
+        storageKey="tafsir-selected-tab"
+      />
       </div>
 
       {/* Unified Annotation Dialog for all annotation types */}
