@@ -375,7 +375,7 @@ export default function SavedSearchesPage() {
                       </div>
                     )}
                   </div>
-                )}
+                ) : null}
               </div>
             ))}
           </div>
