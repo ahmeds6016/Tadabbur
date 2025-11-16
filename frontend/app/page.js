@@ -20,6 +20,7 @@ import Tooltip from './components/Tooltip';
 import HelpMenu, { FloatingHelpButton } from './components/HelpMenu';
 import OnboardingProgress from './components/OnboardingProgress';
 import FloatingAnnotateButton from './components/FloatingAnnotateButton';
+import ErrorBoundary from './components/ErrorBoundary';
 import useTextSelection from './hooks/useTextSelection';
 import { useOnboarding } from './hooks/useOnboarding';
 import onboardingConfig from '../config/onboarding-messages.json';
@@ -652,35 +653,80 @@ function MainApp({ user, userProfile }) {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Keyboard shortcuts for desktop
+  // Keyboard shortcuts for desktop and mobile
   useEffect(() => {
-    if (isMobile) return; // Only enable on desktop
-
+    // Enable keyboard shortcuts on both desktop and mobile
     const handleKeyDown = (e) => {
-      // Ctrl+K or Cmd+K for search focus
+      // Don't trigger shortcuts if user is typing in input/textarea
+      const activeElement = document.activeElement;
+      const isTyping = activeElement?.tagName === 'INPUT' ||
+                      activeElement?.tagName === 'TEXTAREA' ||
+                      activeElement?.contentEditable === 'true';
+
+      // Ctrl+K or Cmd+K for search focus (always available)
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
         e.preventDefault();
         document.querySelector('.tafsir-form input')?.focus();
         window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
       }
 
-      // Escape to clear results or cancel request
+      // Skip other shortcuts if user is typing
+      if (isTyping && e.key !== 'Escape') return;
+
+      // Escape to cancel request or clear results (preserves query)
       if (e.key === 'Escape') {
         e.preventDefault();
-        // Cancel any in-flight request
-        if (abortControllerRef.current) {
-          abortControllerRef.current.abort();
+
+        if (isTafsirLoading) {
+          // Cancel in-flight request, keep query
+          if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+          }
+          setIsTafsirLoading(false);
+          setError('');
+        } else if (response) {
+          // Clear results and focus input for editing
+          setResponse(null);
+          setError('');
+          const inputEl = document.querySelector('.tafsir-form input');
+          inputEl?.focus();
+          inputEl?.select(); // Select text for easy editing
+        } else {
+          // Just blur if no results
+          activeElement?.blur();
         }
-        setResponse(null);
-        setQuery('');
-        setError('');
-        setIsTafsirLoading(false);
+      }
+
+      // Alt+T to toggle approach (Tafsir/Explore)
+      if (e.altKey && e.key === 't') {
+        e.preventDefault();
+        setApproach(prev => prev === 'tafsir' ? 'explore' : 'tafsir');
+      }
+
+      // Alt+S to save current result
+      if (e.altKey && e.key === 's' && response) {
+        e.preventDefault();
+        handleSaveAnswer();
+      }
+
+      // Alt+H for help
+      if (e.altKey && e.key === 'h') {
+        e.preventDefault();
+        // Trigger help menu if available
+        document.querySelector('.help-toggle')?.click();
+      }
+
+      // Alt+N for new search
+      if (e.altKey && e.key === 'n') {
+        e.preventDefault();
+        handleNewSearch();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isMobile, response]);
+  }, [response, isTafsirLoading, handleSaveAnswer, handleNewSearch]);
 
   // Apply persona theme
   useEffect(() => {
@@ -715,8 +761,36 @@ function MainApp({ user, userProfile }) {
     fetchSuggestions();
   }, []);
 
+  const handleCancelSearch = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    setIsTafsirLoading(false);
+    setError('');
+    // Keep query intact - don't clear it!
+  };
+
+  const handleNewSearch = () => {
+    // Clear results and focus input for new search
+    setResponse(null);
+    setError('');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setTimeout(() => {
+      const inputEl = document.querySelector('.tafsir-form input');
+      inputEl?.focus();
+      inputEl?.select();
+    }, 100);
+  };
+
   const handleGetTafsir = async (e) => {
     e.preventDefault();
+
+    // If currently loading, cancel instead of submitting
+    if (isTafsirLoading) {
+      handleCancelSearch();
+      return;
+    }
+
     if (!query) return;
 
     // Cancel any in-flight request
@@ -1192,8 +1266,8 @@ function MainApp({ user, userProfile }) {
         )}
 
         {/* Search Form - Fixed alignment */}
-        <form onSubmit={handleGetTafsir} className="tafsir-form">
-          <select value={approach} onChange={(e) => setApproach(e.target.value)}>
+        <form onSubmit={handleGetTafsir} className="tafsir-form" role="search" aria-label="Search Quran verses or topics">
+          <select value={approach} onChange={(e) => setApproach(e.target.value)} aria-label="Select search approach">
             <option value="tafsir">📖 Tafsir</option>
             <option value="explore">🔍 Explore</option>
           </select>
@@ -1206,8 +1280,13 @@ function MainApp({ user, userProfile }) {
             maxLength={200}
           />
 
-          <button type="submit" disabled={isTafsirLoading} className="search-button">
-            {isTafsirLoading ? '⏳' : '🔍'}
+          <button
+            type="submit"
+            className={`search-button ${isTafsirLoading ? 'loading' : ''}`}
+            title={isTafsirLoading ? "Cancel search" : "Search"}
+            aria-label={isTafsirLoading ? "Cancel search" : "Search Quran"}
+          >
+            {isTafsirLoading ? '✕' : '🔍'}
           </button>
         </form>
         
@@ -1300,14 +1379,24 @@ function MainApp({ user, userProfile }) {
               <div style={{ display: 'flex', gap: '8px', flex: 1, alignItems: 'center' }}>
                 <button
                   onClick={() => {
-                    // Cancel any in-flight request
-                    if (abortControllerRef.current) {
-                      abortControllerRef.current.abort();
+                    if (isTafsirLoading) {
+                      // Cancel in-flight request, keep query
+                      if (abortControllerRef.current) {
+                        abortControllerRef.current.abort();
+                      }
+                      setIsTafsirLoading(false);
+                      setError('');
+                    } else {
+                      // Clear results and focus input (keep query)
+                      setResponse(null);
+                      setError('');
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                      setTimeout(() => {
+                        const inputEl = document.querySelector('.tafsir-form input');
+                        inputEl?.focus();
+                        inputEl?.select();
+                      }, 300);
                     }
-                    setResponse(null);
-                    setQuery('');
-                    setError('');
-                    setIsTafsirLoading(false);
                   }}
                   style={{
                     padding: '8px 16px',
@@ -1327,7 +1416,7 @@ function MainApp({ user, userProfile }) {
                   onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
                   title={!isMobile ? 'Clear Results (Esc)' : 'Clear Results'}
                 >
-                  {isTafsirLoading ? '✕ Cancel' : '← Clear Results'}
+                  {isTafsirLoading ? '✕ Stop' : '← New Search'}
                   {!isMobile && <kbd style={{
                     background: 'rgba(255,255,255,0.2)',
                     padding: '2px 6px',
@@ -2010,7 +2099,7 @@ function EnhancedResultsDisplay({ data, user, query, approach, onQueryChange }) 
   const { selectedText, clearSelection } = useTextSelection({
     enabled: true,
     minLength: 3,
-    container: '.results-content' // Only listen within results
+    container: '.results-container' // Fixed: use correct container class
   });
 
   // Handler for when user clicks annotate button
@@ -2105,7 +2194,7 @@ function EnhancedResultsDisplay({ data, user, query, approach, onQueryChange }) 
   }, [currentShareId, query, approach, data]);
 
   // Early return after all hooks
-  if (!data) return <div className="results-container"><p>No results to display.</p></div>;
+  if (!data) return <div className="results-container" role="region" aria-label="Search results"><p>No results to display.</p></div>;
 
   const handleAddAnnotation = (verse) => {
     const verseKey = `${verse.surah}:${verse.verse_number}`;
@@ -2154,7 +2243,7 @@ function EnhancedResultsDisplay({ data, user, query, approach, onQueryChange }) 
 
   if (verses.length === 0 && tafsir_explanations.length === 0 && lessons_practical_applications.length === 0) {
     return (
-      <div className="results-container">
+      <div className="results-container" role="region" aria-label="Search results" aria-live="polite">
         <p style={{ textAlign: 'center', fontSize: '1.1rem', color: '#666' }}>
           No relevant information found in the source text for your query.
         </p>

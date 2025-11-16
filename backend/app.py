@@ -4957,7 +4957,7 @@ def get_cached_tafsir_response(query: str, user_profile: dict, approach: str = "
         # Debug logging for cache key
         print(f"🔍 Looking for cache with key: {cache_key[:16]}...")
         print(f"   Query: {cache_info['normalized_query']}")
-        print(f"   Profile: persona={cache_info['profile'].get('persona')}, level={cache_info['profile'].get('knowledge_level')}")
+        print(f"   Profile: persona={cache_info['profile_details'].get('persona')}, level={cache_info['profile_details'].get('knowledge_level')}")
 
         # Try Firestore first
         cache_ref = quran_db.collection('tafsir_cache').document(cache_key)

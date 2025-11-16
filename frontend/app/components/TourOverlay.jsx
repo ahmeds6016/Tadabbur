@@ -104,11 +104,25 @@ export default function TourOverlay({
   useEffect(() => {
     if (!isOpen || !currentTourStep) return;
 
+    let retryCount = 0;
+    const maxRetries = 10; // Maximum 5 seconds of retrying
+
     const findAndHighlight = () => {
       const target = document.querySelector(currentTourStep.target);
       if (!target) {
-        // If target not found, try again after a short delay
-        setTimeout(findAndHighlight, 500);
+        // If target not found, try again after a short delay (with max retries)
+        if (retryCount < maxRetries) {
+          retryCount++;
+          setTimeout(findAndHighlight, 500);
+        } else {
+          console.warn(`Tour target not found after ${maxRetries} attempts: ${currentTourStep.target}`);
+          // Skip to next step or close tour
+          if (currentStep < actualTotalSteps - 1) {
+            onNext();
+          } else {
+            onSkip();
+          }
+        }
         return;
       }
 

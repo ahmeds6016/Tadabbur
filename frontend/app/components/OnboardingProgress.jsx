@@ -32,17 +32,36 @@ export default function OnboardingProgress({ onboardingState, onResumeTour, onHi
   if (onboardingState.completedAt) return null;
 
   return (
-    <div className={`onboarding-progress ${isExpanded ? 'expanded' : 'collapsed'}`}>
-      <div className="progress-header" onClick={() => setIsExpanded(!isExpanded)}>
-        <div className="progress-title">
-          <span className="progress-icon">🎯</span>
-          <span className="progress-text">Getting Started</span>
-          <span className="progress-count">{completedCount}/{milestones.length}</span>
+    <>
+      {/* Backdrop when expanded for better visibility */}
+      {isExpanded && (
+        <div
+          className="onboarding-backdrop"
+          onClick={() => setIsExpanded(false)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.5)',
+            zIndex: 9997,
+            animation: 'fadeIn 0.3s ease'
+          }}
+        />
+      )}
+
+      <div className={`onboarding-progress ${isExpanded ? 'expanded' : 'collapsed'}`}>
+        <div className="progress-header" onClick={() => setIsExpanded(!isExpanded)}>
+          <div className="progress-title">
+            <span className="progress-icon">🎯</span>
+            <span className="progress-text">Getting Started</span>
+            <span className="progress-count">{completedCount}/{milestones.length}</span>
+          </div>
+          <button className="expand-btn" aria-label={isExpanded ? 'Collapse' : 'Expand'}>
+            {isExpanded ? '−' : '+'}
+          </button>
         </div>
-        <button className="expand-btn" aria-label={isExpanded ? 'Collapse' : 'Expand'}>
-          {isExpanded ? '−' : '+'}
-        </button>
-      </div>
 
       {isExpanded && (
         <div className="progress-content">
@@ -117,27 +136,34 @@ export default function OnboardingProgress({ onboardingState, onResumeTour, onHi
       <style jsx>{`
         .onboarding-progress {
           position: fixed;
-          bottom: 100px;
-          right: 24px;
-          width: 320px;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 400px;
+          max-width: 90vw;
           background: white;
-          border: 2px solid var(--border-light);
-          border-radius: 16px;
-          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-          z-index: 900;
+          border: 3px solid var(--gold);
+          border-radius: 20px;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+          z-index: 9998;
           transition: all 0.3s ease;
-          animation: slideIn 0.5s ease;
+          animation: slideInCenter 0.5s ease;
         }
 
-        @keyframes slideIn {
+        @keyframes slideInCenter {
           from {
-            transform: translateX(100%);
+            transform: translate(-50%, -50%) scale(0.8);
             opacity: 0;
           }
           to {
-            transform: translateX(0);
+            transform: translate(-50%, -50%) scale(1);
             opacity: 1;
           }
+        }
+
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
         }
 
         .onboarding-progress.collapsed {
@@ -420,5 +446,6 @@ export default function OnboardingProgress({ onboardingState, onResumeTour, onHi
         }
       `}</style>
     </div>
+    </>
   );
 }
