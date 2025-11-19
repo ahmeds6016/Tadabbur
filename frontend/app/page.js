@@ -735,7 +735,9 @@ function MainApp({ user, userProfile }) {
       // Alt+S to save current result
       if (e.altKey && e.key === 's' && response) {
         e.preventDefault();
-        handleSaveSearch();
+        if (handleSaveSearch) {
+          handleSaveSearch();
+        }
       }
 
       // Alt+H for help
@@ -748,7 +750,9 @@ function MainApp({ user, userProfile }) {
       // Alt+N for new search
       if (e.altKey && e.key === 'n') {
         e.preventDefault();
-        handleNewSearch();
+        if (handleNewSearch) {
+          handleNewSearch();
+        }
       }
     };
 
@@ -768,10 +772,12 @@ function MainApp({ user, userProfile }) {
   useEffect(() => {
     if (user && !onboardingState.hasSeenWelcome && !showTour) {
       setTimeout(() => {
-        startFeatureTour('welcome');
+        if (startFeatureTour) {
+          startFeatureTour('welcome');
+        }
       }, 1000); // Small delay for smoother experience
     }
-  }, [user, onboardingState.hasSeenWelcome]);
+  }, [user, onboardingState.hasSeenWelcome, showTour, startFeatureTour]);
 
   // Fetch suggestions on mount
   useEffect(() => {
@@ -815,7 +821,9 @@ function MainApp({ user, userProfile }) {
 
     // If currently loading, cancel instead of submitting
     if (isTafsirLoading) {
-      handleCancelSearch();
+      if (handleCancelSearch) {
+        handleCancelSearch();
+      }
       return;
     }
 
@@ -1129,13 +1137,14 @@ function MainApp({ user, userProfile }) {
 
   // Display persona name if available
   const getProfileDisplay = () => {
+    if (!userProfile) return 'Loading...';
     if (userProfile.persona) {
-      const personaName = userProfile.persona.split('_').map(word => 
+      const personaName = userProfile.persona.split('_').map(word =>
         word.charAt(0).toUpperCase() + word.slice(1)
       ).join(' ');
       return personaName;
     }
-    return `${userProfile.level} • ${userProfile.focus}`;
+    return `${userProfile.level || 'User'} • ${userProfile.focus || 'General'}`;
   };
 
   const personaIcon = getPersonaIcon(userProfile?.persona || 'practicing_muslim');
