@@ -5028,7 +5028,9 @@ def get_cached_tafsir_response(query: str, user_profile: dict, approach: str = "
                             return response_data
 
     except Exception as e:
+        import traceback
         print(f"⚠️ Cache retrieval error: {e}")
+        print(f"Traceback: {traceback.format_exc()}")
 
     return None
 

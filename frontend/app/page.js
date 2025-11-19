@@ -98,6 +98,34 @@ const getPersonaIcon = (persona) => {
 // ============================================================================
 
 export default function HomePage() {
+  // Add error logging
+  useEffect(() => {
+    console.log('HomePage component mounted');
+
+    // Global error handler
+    const handleError = (event) => {
+      console.error('Global error caught:', {
+        message: event.message,
+        filename: event.filename,
+        lineno: event.lineno,
+        colno: event.colno,
+        error: event.error
+      });
+    };
+
+    const handleUnhandledRejection = (event) => {
+      console.error('Unhandled promise rejection:', event.reason);
+    };
+
+    window.addEventListener('error', handleError);
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+
+    return () => {
+      window.removeEventListener('error', handleError);
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+    };
+  }, []);
+
   const [user, setUser] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -707,7 +735,7 @@ function MainApp({ user, userProfile }) {
       // Alt+S to save current result
       if (e.altKey && e.key === 's' && response) {
         e.preventDefault();
-        handleSaveAnswer();
+        handleSaveSearch();
       }
 
       // Alt+H for help
@@ -726,7 +754,7 @@ function MainApp({ user, userProfile }) {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [response, isTafsirLoading, handleSaveAnswer, handleNewSearch]);
+  }, [response, isTafsirLoading, handleSaveSearch, handleNewSearch]);
 
   // Apply persona theme
   useEffect(() => {
@@ -770,7 +798,7 @@ function MainApp({ user, userProfile }) {
     // Keep query intact - don't clear it!
   };
 
-  const handleNewSearch = () => {
+  const handleNewSearch = useCallback(() => {
     // Clear results and focus input for new search
     setResponse(null);
     setError('');
@@ -780,7 +808,7 @@ function MainApp({ user, userProfile }) {
       inputEl?.focus();
       inputEl?.select();
     }, 100);
-  };
+  }, []);
 
   const handleGetTafsir = async (e) => {
     e.preventDefault();
@@ -877,7 +905,7 @@ function MainApp({ user, userProfile }) {
     }
   };
 
-  const handleSaveSearch = async () => {
+  const handleSaveSearch = useCallback(async () => {
     if (!response || !query) return;
 
     // Extract snippet from response
@@ -909,7 +937,7 @@ function MainApp({ user, userProfile }) {
     } catch (err) {
       console.error('Failed to save search:', err);
     }
-  };
+  }, [response, query, user, approach]);
 
   const handleSuggestionClick = (suggestionObj) => {
     // Handle both old format (string) and new format (object with query and approach)
