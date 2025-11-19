@@ -651,6 +651,14 @@ function MainApp({ user, userProfile }) {
     annotationCount: 0
   });
 
+  // Annotation state (lifted from EnhancedResultsDisplay)
+  const [annotations, setAnnotations] = useState({});
+  const [annotationDialogOpen, setAnnotationDialogOpen] = useState(false);
+  const [currentVerse, setCurrentVerse] = useState(null);
+  const [editingAnnotation, setEditingAnnotation] = useState(null);
+  const [inlineAnnotationVerse, setInlineAnnotationVerse] = useState(null);
+  const [currentShareId, setCurrentShareId] = useState(null);
+
   // Onboarding system
   const {
     onboardingState,
@@ -668,8 +676,18 @@ function MainApp({ user, userProfile }) {
   // Help menu state
   const [helpMenuOpen, setHelpMenuOpen] = useState(false);
 
+  // Text selection for annotations (lifted from EnhancedResultsDisplay)
+  const { selectedText, clearSelection } = useTextSelection({
+    minLength: 3,
+    enabled: true,
+    container: '.results-container'
+  });
+
   // AbortController for cancelling fetch requests
   const abortControllerRef = useRef(null);
+
+  // Ref to track pending share request (for ensureShareId)
+  const pendingShareRequest = useRef(null);
 
   // Detect mobile
   useEffect(() => {
@@ -946,6 +964,89 @@ function MainApp({ user, userProfile }) {
       console.error('Failed to save search:', err);
     }
   }, [response, query, user, approach]);
+
+  // Ensure share ID exists (lifted from EnhancedResultsDisplay)
+  const ensureShareId = useCallback(async () => {
+    if (currentShareId) return currentShareId;
+
+    // Prevent duplicate requests
+    if (pendingShareRequest.current) {
+      return pendingShareRequest.current;
+    }
+
+    try {
+      const sharePromise = (async () => {
+        const token = await user.getIdToken();
+        const res = await fetch(`${BACKEND_URL}/share`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            query,
+            approach,
+            response: response
+          })
+        });
+
+        if (!res.ok) throw new Error('Failed to create share');
+
+        const data = await res.json();
+        const shareId = data.share_id;
+        setCurrentShareId(shareId);
+        pendingShareRequest.current = null;
+        return shareId;
+      })();
+
+      pendingShareRequest.current = sharePromise;
+      return await sharePromise;
+    } catch (error) {
+      console.error('Error creating share:', error);
+      pendingShareRequest.current = null;
+      return null;
+    }
+  }, [currentShareId, query, approach, response, user]);
+
+  // Annotation handlers (centralized in MainApp) - CORRECTED
+  const handleAnnotateClick = useCallback(() => {
+    if (selectedText && user) {
+      // Construct context object so dialog knows it's a highlight
+      setCurrentVerse({
+        reflectionType: 'highlight',
+        highlightedText: selectedText,
+        // Use the first verse as context if available, otherwise fallback to query
+        queryContext: response?.verses?.[0]
+          ? `${response.verses[0].surah}:${response.verses[0].verse_number}`
+          : query
+      });
+      setAnnotationDialogOpen(true);
+      ensureShareId().catch(console.error);
+    }
+  }, [selectedText, user, response, query, ensureShareId]);
+
+  const handleGeneralReflection = useCallback(() => {
+    setCurrentVerse({
+      reflectionType: 'general',
+      queryContext: query
+    });
+    setAnnotationDialogOpen(true);
+    ensureShareId().catch(console.error);
+  }, [query, ensureShareId]);
+
+  const handleAnnotationSaved = useCallback(() => {
+    setAnnotationDialogOpen(false);
+    setCurrentVerse(null);
+    setEditingAnnotation(null);
+    clearSelection();
+  }, [clearSelection]);
+
+  const handleAnnotationClose = useCallback(() => {
+    setAnnotationDialogOpen(false);
+    setCurrentVerse(null);
+    setEditingAnnotation(null);
+    clearSelection();
+  }, [clearSelection]);
 
   const handleSuggestionClick = (suggestionObj) => {
     // Handle both old format (string) and new format (object with query and approach)
@@ -1674,6 +1775,29 @@ function MainApp({ user, userProfile }) {
                   }
                 }, 100);
               }}
+              // NEW PROPS - Functions
+              handleSaveSearch={handleSaveSearch}
+              handleShareLink={handleShareLink}
+              ensureShareId={ensureShareId}
+              // NEW PROPS - Annotation state
+              annotations={annotations}
+              setAnnotations={setAnnotations}
+              annotationDialogOpen={annotationDialogOpen}
+              currentVerse={currentVerse}
+              setCurrentVerse={setCurrentVerse}
+              editingAnnotation={editingAnnotation}
+              setEditingAnnotation={setEditingAnnotation}
+              inlineAnnotationVerse={inlineAnnotationVerse}
+              setInlineAnnotationVerse={setInlineAnnotationVerse}
+              currentShareId={currentShareId}
+              // NEW PROPS - Text selection
+              selectedText={selectedText}
+              clearSelection={clearSelection}
+              // NEW PROPS - Handlers
+              onAnnotateClick={handleAnnotateClick}
+              onAnnotationSaved={handleAnnotationSaved}
+              onAnnotationClose={handleAnnotationClose}
+              onGeneralReflection={handleGeneralReflection}
             />
           </>
         )}
@@ -1722,6 +1846,30 @@ function MainApp({ user, userProfile }) {
 
         {/* Floating Help Button */}
         <FloatingHelpButton onClick={() => setHelpMenuOpen(true)} />
+
+        {/* Floating Annotate Button - appears when text is selected */}
+        {selectedText && user && (
+          <FloatingAnnotateButton
+            selectedText={selectedText}
+            onAnnotate={handleAnnotateClick}
+            onDismiss={clearSelection}
+          />
+        )}
+
+        {/* Unified Annotation Dialog for all annotation types */}
+        <AnnotationDialog
+          isOpen={annotationDialogOpen}
+          onClose={handleAnnotationClose}
+          selectedText={currentVerse?.highlightedText}
+          verse={currentVerse}
+          user={user}
+          reflectionType={currentVerse?.reflectionType || 'verse'}
+          onSaved={handleAnnotationSaved}
+          existingAnnotation={editingAnnotation}
+          sectionName={currentVerse?.sectionName}
+          queryContext={currentVerse?.queryContext || query}
+          shareId={currentShareId}
+        />
       </div>
     </>
   );
@@ -2121,36 +2269,38 @@ function InlineAnnotationForm({ verse, user, onSaved, onCancel }) {
 // RESULTS DISPLAY COMPONENT WITH ANNOTATIONS
 // ============================================================================
 
-function EnhancedResultsDisplay({ data, user, query, approach, onQueryChange }) {
-  const [annotations, setAnnotations] = useState({});
-  const [annotationDialogOpen, setAnnotationDialogOpen] = useState(false);
-  const [currentVerse, setCurrentVerse] = useState(null);
-  const [editingAnnotation, setEditingAnnotation] = useState(null);
-  const [inlineAnnotationVerse, setInlineAnnotationVerse] = useState(null);
-  const [currentShareId, setCurrentShareId] = useState(null);
-
-  // Track pending share ID request to prevent duplicates
-  const pendingShareRequest = useRef(null);
-
-  // Use the new text selection hook - only within results content
-  const { selectedText, clearSelection } = useTextSelection({
-    enabled: true,
-    minLength: 3,
-    container: '.results-container' // Fixed: use correct container class
-  });
-
-  // Handler for when user clicks annotate button
-  const handleAnnotateClick = () => {
-    if (selectedText && user) {
-      setCurrentVerse({
-        reflectionType: 'highlight',
-        highlightedText: selectedText,
-        queryContext: data?.verses?.[0] ? `${data.verses[0].surah}:${data.verses[0].verse_number}` : 'Response'
-      });
-      setAnnotationDialogOpen(true);
-      ensureShareId().catch(err => console.error('Failed to create share link:', err));
-    }
-  };
+function EnhancedResultsDisplay({
+  data,
+  user,
+  query,
+  approach,
+  onQueryChange,
+  // NEW PROPS - Functions
+  handleSaveSearch,
+  handleShareLink,
+  ensureShareId,
+  // NEW PROPS - Annotation state
+  annotations,
+  setAnnotations,
+  annotationDialogOpen,
+  currentVerse,
+  setCurrentVerse,
+  editingAnnotation,
+  setEditingAnnotation,
+  inlineAnnotationVerse,
+  setInlineAnnotationVerse,
+  currentShareId,
+  // NEW PROPS - Text selection
+  selectedText,
+  clearSelection,
+  // NEW PROPS - Handlers
+  onAnnotateClick,
+  onAnnotationSaved,
+  onAnnotationClose,
+  onGeneralReflection
+}) {
+  // All state and hooks now come from MainApp via props
+  // Local state and useTextSelection hook removed
 
   const fetchVerseAnnotations = useCallback(async (surah, verse) => {
     try {
@@ -2189,46 +2339,7 @@ function EnhancedResultsDisplay({ data, user, query, approach, onQueryChange }) 
     }
   }, [verses, user, fetchVerseAnnotations]);
 
-  // Ensure we have a share_id for linking reflections back to responses
-  const ensureShareId = useCallback(async () => {
-    if (currentShareId) return currentShareId;
-
-    // Prevent duplicate requests - reuse in-flight promise
-    if (pendingShareRequest.current) {
-      return pendingShareRequest.current;
-    }
-
-    try {
-      const promise = fetch(`${BACKEND_URL}/share`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          query: query,
-          approach: approach,
-          response: data
-        })
-      }).then(async (res) => {
-        if (!res.ok) {
-          console.error('Failed to create share link for annotation');
-          return null;
-        }
-        const shareData = await res.json();
-        setCurrentShareId(shareData.share_id);
-        return shareData.share_id;
-      });
-
-      pendingShareRequest.current = promise;
-      const result = await promise;
-      pendingShareRequest.current = null;
-      return result;
-    } catch (err) {
-      pendingShareRequest.current = null;
-      console.error('Error creating share link:', err);
-      return null;
-    }
-  }, [currentShareId, query, approach, data]);
+  // ensureShareId now comes from MainApp as a prop - removed local duplicate
 
   // Early return after all hooks
   if (!data) return <div className="results-container" role="region" aria-label="Search results"><p>No results to display.</p></div>;
@@ -2577,40 +2688,7 @@ function EnhancedResultsDisplay({ data, user, query, approach, onQueryChange }) 
       />
       </div>
 
-      {/* Floating Annotate Button - appears when text is selected */}
-      {selectedText && user && (
-        <FloatingAnnotateButton
-          selectedText={selectedText}
-          onAnnotate={handleAnnotateClick}
-          onDismiss={clearSelection}
-        />
-      )}
-
-      {/* Unified Annotation Dialog for all annotation types */}
-      <AnnotationDialog
-        isOpen={annotationDialogOpen}
-        onClose={() => {
-          setAnnotationDialogOpen(false);
-          setCurrentVerse(null);
-          setEditingAnnotation(null);
-          clearSelection(); // Clear any text selection
-        }}
-        selectedText={currentVerse?.highlightedText}
-        verse={currentVerse}
-        user={user}
-        reflectionType={currentVerse?.reflectionType || 'verse'}
-        onSaved={(data) => {
-          handleAnnotationSaved();
-          setAnnotationDialogOpen(false);
-          setCurrentVerse(null);
-          setEditingAnnotation(null);
-          clearSelection();
-        }}
-        existingAnnotation={editingAnnotation}
-        sectionName={currentVerse?.sectionName}
-        queryContext={currentVerse?.queryContext || query}
-        shareId={currentShareId}
-      />
+      {/* FloatingAnnotateButton and AnnotationDialog moved to MainApp */}
     </>
   );
 }
