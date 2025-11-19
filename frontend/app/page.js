@@ -699,6 +699,53 @@ function MainApp({ user, userProfile }) {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  // Define handler functions BEFORE keyboard shortcuts useEffect that references them
+  const handleNewSearch = useCallback(() => {
+    // Clear results and focus input for new search
+    setResponse(null);
+    setError('');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setTimeout(() => {
+      const inputEl = document.querySelector('.tafsir-form input');
+      inputEl?.focus();
+      inputEl?.select();
+    }, 100);
+  }, []);
+
+  const handleSaveSearch = useCallback(async () => {
+    if (!response || !query) return;
+
+    // Extract snippet from response
+    const snippet = response.summary ||
+      (response.tafsir_explanations && response.tafsir_explanations[0]?.explanation?.substring(0, 200)) ||
+      'Tafsir result';
+
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch(`${BACKEND_URL}/saved-searches`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          query: query,
+          approach: approach,
+          folder: 'Uncategorized',
+          title: query,
+          responseSnippet: snippet,
+          fullResponse: response
+        })
+      });
+
+      if (res.ok) {
+        alert('Answer saved! View it in your Saved Searches.');
+      }
+    } catch (err) {
+      console.error('Failed to save search:', err);
+    }
+  }, [response, query, user, approach]);
+
   // Keyboard shortcuts for desktop and mobile
   useEffect(() => {
     // Enable keyboard shortcuts on both desktop and mobile
@@ -822,17 +869,7 @@ function MainApp({ user, userProfile }) {
     // Keep query intact - don't clear it!
   };
 
-  const handleNewSearch = useCallback(() => {
-    // Clear results and focus input for new search
-    setResponse(null);
-    setError('');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    setTimeout(() => {
-      const inputEl = document.querySelector('.tafsir-form input');
-      inputEl?.focus();
-      inputEl?.select();
-    }, 100);
-  }, []);
+  // handleNewSearch moved to before keyboard shortcuts useEffect
 
   const handleGetTafsir = async (e) => {
     e.preventDefault();
@@ -931,39 +968,7 @@ function MainApp({ user, userProfile }) {
     }
   };
 
-  const handleSaveSearch = useCallback(async () => {
-    if (!response || !query) return;
-
-    // Extract snippet from response
-    const snippet = response.summary ||
-      (response.tafsir_explanations && response.tafsir_explanations[0]?.explanation?.substring(0, 200)) ||
-      'Tafsir result';
-
-    try {
-      const token = await user.getIdToken();
-      const res = await fetch(`${BACKEND_URL}/saved-searches`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          query: query,
-          approach: approach,
-          folder: 'Uncategorized',
-          title: query,
-          responseSnippet: snippet,
-          fullResponse: response
-        })
-      });
-
-      if (res.ok) {
-        alert('Answer saved! View it in your Saved Searches.');
-      }
-    } catch (err) {
-      console.error('Failed to save search:', err);
-    }
-  }, [response, query, user, approach]);
+  // handleSaveSearch moved to before keyboard shortcuts useEffect
 
   // Ensure share ID exists (lifted from EnhancedResultsDisplay)
   const ensureShareId = useCallback(async () => {
