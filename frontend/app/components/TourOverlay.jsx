@@ -145,35 +145,50 @@ export default function TourOverlay({
 
       // Calculate tooltip position
       let tooltipTop, tooltipLeft;
-      const tooltipWidth = 400;
-      const tooltipHeight = 200; // Approximate
+      const isMobile = window.innerWidth <= 768;
+      const tooltipWidth = isMobile ? window.innerWidth - 20 : 400;
+      const tooltipHeight = 250; // Approximate, accounting for content
       const padding = 20;
 
-      switch (currentTourStep.position) {
-        case 'bottom':
-          tooltipTop = rect.bottom + padding;
-          tooltipLeft = rect.left + (rect.width / 2) - (tooltipWidth / 2);
-          break;
-        case 'top':
-          tooltipTop = rect.top - tooltipHeight - padding;
-          tooltipLeft = rect.left + (rect.width / 2) - (tooltipWidth / 2);
-          break;
-        case 'left':
-          tooltipTop = rect.top + (rect.height / 2) - (tooltipHeight / 2);
-          tooltipLeft = rect.left - tooltipWidth - padding;
-          break;
-        case 'right':
-          tooltipTop = rect.top + (rect.height / 2) - (tooltipHeight / 2);
-          tooltipLeft = rect.right + padding;
-          break;
-        default:
-          tooltipTop = rect.bottom + padding;
-          tooltipLeft = rect.left;
-      }
+      if (isMobile) {
+        // On mobile, center the tooltip vertically for better visibility
+        // Position it in the middle of the screen, not at bottom
+        tooltipTop = Math.max(
+          padding,
+          Math.min(
+            window.innerHeight / 2 - tooltipHeight / 2,
+            window.innerHeight - tooltipHeight - padding
+          )
+        );
+        tooltipLeft = 10; // Fixed left margin on mobile
+      } else {
+        // Desktop positioning
+        switch (currentTourStep.position) {
+          case 'bottom':
+            tooltipTop = rect.bottom + padding;
+            tooltipLeft = rect.left + (rect.width / 2) - (tooltipWidth / 2);
+            break;
+          case 'top':
+            tooltipTop = rect.top - tooltipHeight - padding;
+            tooltipLeft = rect.left + (rect.width / 2) - (tooltipWidth / 2);
+            break;
+          case 'left':
+            tooltipTop = rect.top + (rect.height / 2) - (tooltipHeight / 2);
+            tooltipLeft = rect.left - tooltipWidth - padding;
+            break;
+          case 'right':
+            tooltipTop = rect.top + (rect.height / 2) - (tooltipHeight / 2);
+            tooltipLeft = rect.right + padding;
+            break;
+          default:
+            tooltipTop = rect.bottom + padding;
+            tooltipLeft = rect.left;
+        }
 
-      // Ensure tooltip stays within viewport
-      tooltipLeft = Math.max(10, Math.min(tooltipLeft, window.innerWidth - tooltipWidth - 10));
-      tooltipTop = Math.max(10, Math.min(tooltipTop, window.innerHeight - tooltipHeight - 10));
+        // Ensure tooltip stays within viewport
+        tooltipLeft = Math.max(10, Math.min(tooltipLeft, window.innerWidth - tooltipWidth - 10));
+        tooltipTop = Math.max(10, Math.min(tooltipTop, window.innerHeight - tooltipHeight - 10));
+      }
 
       setTooltipStyle({
         position: 'fixed',
@@ -438,6 +453,46 @@ export default function TourOverlay({
             left: 10px !important;
             right: 10px !important;
             width: auto !important;
+            padding: 20px 16px !important;
+            /* Ensure it's positioned in the middle of screen for visibility */
+            transform: none !important;
+          }
+
+          .tour-header h3 {
+            font-size: 1.1rem;
+          }
+
+          .tour-content p {
+            font-size: 0.9rem;
+            line-height: 1.5;
+          }
+
+          .tour-btn {
+            padding: 12px 16px;
+            font-size: 0.95rem;
+            /* Larger touch targets for mobile */
+            min-width: 80px;
+          }
+
+          .tour-actions {
+            gap: 8px;
+            width: 100%;
+          }
+
+          .tour-footer {
+            flex-direction: column;
+            gap: 16px;
+            align-items: stretch;
+          }
+
+          .tour-progress {
+            justify-content: center;
+            order: 2;
+          }
+
+          .tour-actions {
+            order: 1;
+            justify-content: space-between;
           }
         }
       `}</style>

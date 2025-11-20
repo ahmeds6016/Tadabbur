@@ -836,13 +836,15 @@ function MainApp({ user, userProfile }) {
   // Start welcome tour for first-time users
   useEffect(() => {
     if (user && !onboardingState.hasSeenWelcome && !showTour) {
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         if (startFeatureTour) {
           startFeatureTour('welcome');
         }
       }, 1000); // Small delay for smoother experience
+      return () => clearTimeout(timer);
     }
-  }, [user, onboardingState.hasSeenWelcome, showTour, startFeatureTour]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, onboardingState.hasSeenWelcome, showTour]); // startFeatureTour intentionally excluded to prevent infinite loops
 
   // Fetch suggestions on mount
   useEffect(() => {
@@ -1829,14 +1831,21 @@ function MainApp({ user, userProfile }) {
             totalSteps={tourType === 'welcome' ? 5 : 3}
             onNext={() => setCurrentTourStep(currentTourStep + 1)}
             onPrev={() => setCurrentTourStep(currentTourStep - 1)}
-            onSkip={() => endFeatureTour(tourType)}
-            onComplete={() => {
-              markStepComplete(`has${tourType.charAt(0).toUpperCase() + tourType.slice(1)}`);
-              endFeatureTour(tourType);
-              // Mark first search if completing search tour
-              if (tourType === 'search' || tourType === 'welcome') {
-                markStepComplete('hasSearched');
+            onSkip={() => {
+              // Mark welcome tour as seen even when skipped
+              if (tourType === 'welcome') {
+                markStepComplete('hasSeenWelcome');
               }
+              endFeatureTour(tourType);
+            }}
+            onComplete={() => {
+              // Mark welcome tour as complete with correct state key
+              if (tourType === 'welcome') {
+                markStepComplete('hasSeenWelcome');
+              } else {
+                markStepComplete(`has${tourType.charAt(0).toUpperCase() + tourType.slice(1)}`);
+              }
+              endFeatureTour(tourType);
             }}
           />
         )}
@@ -2324,7 +2333,7 @@ function EnhancedResultsDisplay({
     } catch (err) {
       console.error('Failed to fetch annotations:', err);
     }
-  }, [user]);
+  }, [user, setAnnotations]);
 
   // Extract data properties
   const {
