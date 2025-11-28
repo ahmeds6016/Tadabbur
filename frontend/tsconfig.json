@@ -25,6 +25,7 @@
       "@/context/*": ["./app/context/*"],
       "@/utils/*": ["./app/utils/*"],
       "@/hooks/*": ["./app/hooks/*"],
+      "@/types": ["./app/types/index.ts"],
       "@/types/*": ["./app/types/*"]
     },
     "forceConsistentCasingInFileNames": true,

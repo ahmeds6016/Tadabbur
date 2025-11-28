@@ -4,16 +4,13 @@
  */
 
 import type {
-  User,
   UserProfile,
   SearchQuery,
   TafsirResponse,
   Suggestion,
   HistoryItem,
   Annotation,
-  ShareData,
-  APIResponse,
-  RateLimitInfo
+  ShareData
 } from '@/types';
 
 // Error classes with TypeScript
