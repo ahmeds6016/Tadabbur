@@ -495,95 +495,98 @@ PERSONA_SUGGESTIONS = {
             "Hadith explaining verse 53:39-42",
             "Hadith about verse 59:9",
 
-            # Linguistic analysis
-            "Linguistic analysis of verse 112:1-4",
-            "Linguistic peculiarities in verse 2:255",
-            "Grammatical structure of verse 4:11",
-            "Rhetorical devices in verse 36:69-70",
-            "Semantic fields in verse 24:35",
-            "Iltifat examples in verse 10:22",
+            # Divine mercy and forgiveness
+            "39:53-54",   # Allah's boundless mercy - no despair
+            "25:70",      # Evil deeds replaced with good
+            "42:25",      # Accepts repentance and pardons
+            "4:110",      # Whoever does evil then seeks forgiveness
+            "11:90",      # Seek forgiveness, He is Most Loving
+            "15:56",      # Who despairs of Lord's mercy except the lost
 
-            # Legal methodology
-            "Legal rulings from verse 2:282-283",
-            "Legal implications of verse 4:11-12",
-            "Legal principles in verse 2:178-179",
-            "Juristic interpretations of verse 24:2",
-            "Legal consensus on verse 5:5",
-            "Legal disputes about verse 4:34",
+            # Divine proximity and response
+            "2:186",      # I am near, I respond
+            "50:16",      # Closer than jugular vein
+            "57:4",       # He is with you wherever you are
+            "58:7",       # No secret consultation but He is fourth
+            "11:61",      # My Lord is near and responsive
+            "34:50",      # If I go astray, I go astray to my own loss
 
-            # Historical context
-            "Historical context of verse 9:5",
-            "Circumstances of revelation for verse 24:11-26",
-            "Context when verse 8:41 was revealed",
-            "Historical setting of verse 3:121-128",
+            # Purpose and human condition
+            "51:56",      # Created jinn and humans to worship
+            "67:1-2",     # Created death and life to test
+            "90:4",       # Created human in struggle
+            "95:4-6",     # Created in best form
+            "103:1-3",    # Time, human is in loss except believers
+            "76:2-3",     # Created from drop, We guided the way
 
-            # Scholar opinions
-            "Scholar consensus on verse 3:7",
-            "Classical interpretations of verse 18:86",
-            "Scholarly debates on verse 4:157",
-            "Early tafsir of verse 53:1-18",
-            "Mufassir differences on verse 2:102"
+            # Justice and wisdom
+            "21:47",      # Scales of justice for Day of Judgment
+            "99:7-8",     # Atom's weight of good and evil
+            "3:185",      # Every soul shall taste death
+            "6:160",      # Good deeds multiplied tenfold
+            "4:40",       # Allah does not wrong atom's weight
+            "10:44",      # Allah wrongs not mankind at all"
         ],
         "explore": [
-            # Quranic sciences ('Ulum al-Quran)
-            "What are the differences between Meccan and Medinan surahs?",
-            "How do variant readings (qira'at) affect legal rulings?",
-            "What is the methodology for determining asbab al-nuzul authenticity?",
-            "How does the theory of nazm explain Quranic coherence?",
-            "What are the principles of naskh and their applications?",
-            "How do muqatta'at letters function in the Quran?",
-            "What constitutes i'jaz and how is it demonstrated?",
-            "How are gharib words in the Quran interpreted?",
-            "What is the relationship between sab'ah ahruf and qira'at?",
-            "How do scholars resolve apparent contradictions in verses?",
+            # Divine nature and human relationship
+            "How does the Quran reconcile divine mercy with divine justice?",
+            "What does 'Allah is closer than the jugular vein' mean for spiritual practice?",
+            "How do the 99 names reveal different aspects of divine reality?",
+            "What is the significance of Allah responding 'I am near' to seekers?",
+            "How does the Quran describe the moment of divine encounter?",
+            "What does it mean that Allah is 'the Light of the heavens and earth'?",
+            "How does divine predestination interact with human free will?",
+            "What is the nature of divine love in Quranic theology?",
+            "How does the Quran balance transcendence with immanence?",
+            "What does it mean that Allah guides whom He wills?",
 
-            # Tafsir methodologies
-            "What distinguishes tafsir bi'l-ma'thur from tafsir bi'l-ra'y?",
-            "How does isra'iliyyat impact Quranic exegesis?",
-            "What are the principles of thematic tafsir (mawdu'i)?",
-            "How do linguistic sciences contribute to tafsir?",
-            "What is the role of poetry in understanding Quranic Arabic?",
-            "How do different theological schools approach allegorical verses?",
-            "What are the boundaries of scientific interpretation?",
-            "How has tafsir methodology evolved over centuries?",
-            "What are the criteria for acceptable ta'wil?",
-            "How do contemporary approaches differ from classical?",
+            # Existential and purpose questions
+            "What is the Quranic answer to human suffering and evil?",
+            "How does the Quran address the purpose of creation?",
+            "What is the significance of being created 'in the best form'?",
+            "How does the Quran explain the human capacity for both good and evil?",
+            "What is the meaning of being Allah's khalifa on earth?",
+            "How does the Quran view the relationship between reason and revelation?",
+            "What is the nature of the covenant between Allah and humanity?",
+            "How does the Quran define true success and loss?",
+            "What is the significance of forgetting our primordial covenant?",
+            "How does the Quran address existential anxiety and despair?",
 
-            # Legal derivation (Istinbat)
-            "How are legal maxims (qawa'id) derived from Quranic verses?",
-            "What is the relationship between 'am and khass in legal texts?",
-            "How does the principle of maslaha interact with Quranic texts?",
-            "What are the methods for resolving conflicting evidence?",
-            "How do maqasid al-shari'ah emerge from Quranic study?",
-            "What role does 'urf play in understanding Quranic rulings?",
-            "How are hudud penalties derived and limited?",
-            "What is the methodology for qiyas from Quranic texts?",
-            "How do scholars determine the ratio legis ('illah)?",
-            "What are the principles of takhrij in fiqh?",
+            # Spiritual transformation and heart
+            "What does the Quran mean by the 'diseased heart' and its cure?",
+            "How does remembrance (dhikr) transform the human soul?",
+            "What is the process of tazkiyah (purification) in Quranic spirituality?",
+            "How does the Quran describe the expansion of the breast for Islam?",
+            "What are the veils between humans and divine reality?",
+            "How does gratitude (shukr) relate to increased divine favor?",
+            "What is the relationship between tawbah and divine love?",
+            "How does the Quran describe spiritual death and revival?",
+            "What is the significance of the heart's role in understanding?",
+            "How does certainty (yaqin) develop according to the Quran?",
 
-            # Linguistic and rhetorical analysis
-            "What are the patterns of iltifat in Quranic discourse?",
-            "How does tadmin function in Quranic semantics?",
-            "What is the significance of hapax legomena in the Quran?",
-            "How do kinayah and majaz enhance meaning?",
-            "What are the types of intertextuality in the Quran?",
-            "How does the Quran employ structural parallelism?",
-            "What rhetorical purposes do oath formulas serve?",
-            "How are semitic roots utilized for theological concepts?",
-            "What is the function of emphasis particles in argumentation?",
-            "How do scholars analyze the fasila system?",
+            # Death, afterlife, and ultimate reality
+            "How does the Quran describe the experience of death?",
+            "What is the nature of the barzakh (intermediate realm)?",
+            "How does divine justice manifest on the Day of Judgment?",
+            "What does the Quran reveal about the nature of Paradise?",
+            "How are the Fire's punishments related to earthly actions?",
+            "What is the significance of intercession (shafa'ah) on Judgment Day?",
+            "How does the Quran describe the transformation of reality on the Last Day?",
+            "What is the meaning of 'meeting with Allah'?",
+            "How does the Quran address the fear of death?",
+            "What is eternal life according to Quranic teaching?",
 
-            # Contemporary scholarly debates
-            "What are the hermeneutical approaches to gender verses?",
-            "How do scholars address historical contextualization?",
-            "What is the debate on the universality of Quranic rulings?",
-            "How are manuscripts variants evaluated and incorporated?",
-            "What methodologies address science and scripture reconciliation?",
-            "How do postcolonial readings approach the Quran?",
-            "What are the debates on translating the Quran?",
-            "How do digital humanities impact Quranic studies?",
-            "What are the ethical considerations in critical Quran studies?",
-            "How do insider vs outsider perspectives differ?"
+            # Knowledge, wisdom, and guidance
+            "What is the relationship between 'ilm and hikmah in the Quran?",
+            "How does the Quran view the limits of human knowledge?",
+            "What is the significance of pondering (tadabbur) over verses?",
+            "How does divine guidance differ from human guidance?",
+            "What is the role of the fitrah (primordial nature) in recognizing truth?",
+            "How does the Quran address doubt and strengthen faith?",
+            "What is the nature of wisdom that Allah grants to whom He wills?",
+            "How do signs (ayat) in creation lead to certainty?",
+            "What is the relationship between knowledge and humility?",
+            "How does the Quran distinguish between conjecture and certain knowledge?"
         ]
     },
 

@@ -1,0 +1,217 @@
+/* VerseCard CSS Module */
+/* Scoped styles that won't affect other components */
+
+.card {
+  background: white;
+  border-radius: 20px;
+  padding: 32px;
+  margin-bottom: 24px;
+  border-left: 6px solid var(--primary-teal);
+  box-shadow: var(--shadow-soft);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-medium);
+}
+
+/* Decorative corner ornament */
+.card::before {
+  content: '';
+  position: absolute;
+  top: -20px;
+  right: -20px;
+  width: 80px;
+  height: 80px;
+  background: radial-gradient(circle, var(--gold-light) 0%, transparent 70%);
+  opacity: 0.1;
+  border-radius: 50%;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.reference {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--primary-teal);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.surahName {
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.actionButton {
+  padding: 8px 12px;
+  background: transparent;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.actionButton:hover {
+  background: var(--cream);
+  border-color: var(--primary-teal);
+  color: var(--primary-teal);
+}
+
+.actionButton:active {
+  transform: scale(0.95);
+}
+
+.arabicText {
+  font-family: var(--font-amiri), 'Amiri', serif;
+  font-size: 2.5rem;
+  line-height: 2.2;
+  text-align: center;
+  direction: rtl;
+  color: var(--text-primary);
+  padding: 24px 16px;
+  margin: 24px 0;
+  background: linear-gradient(135deg,
+    rgba(13, 148, 136, 0.03) 0%,
+    rgba(212, 175, 55, 0.03) 100%);
+  border-radius: 12px;
+  border: 2px solid var(--border-light);
+}
+
+.translation {
+  font-family: 'Georgia', serif;
+  font-size: 1.15rem;
+  line-height: 1.9;
+  color: var(--deep-blue);
+  font-style: italic;
+  border-left: 4px solid var(--primary-teal);
+  padding-left: 20px;
+  margin: 20px 0;
+}
+
+.transliteration {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+  font-style: italic;
+  text-align: center;
+  margin-top: 12px;
+  padding: 12px;
+  background: var(--cream);
+  border-radius: 8px;
+}
+
+.footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-light);
+}
+
+.metadata {
+  display: flex;
+  gap: 16px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.metaItem {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.annotationIndicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  background: var(--cream);
+  border-radius: 20px;
+  font-size: 0.85rem;
+  color: var(--primary-teal);
+  font-weight: 600;
+}
+
+.annotationCount {
+  background: var(--primary-teal);
+  color: white;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+}
+
+/* Mobile adjustments */
+@media (max-width: 640px) {
+  .card {
+    padding: 20px;
+    border-radius: 16px;
+  }
+
+  .arabicText {
+    font-size: 2rem;
+    line-height: 2;
+    padding: 16px 12px;
+  }
+
+  .translation {
+    font-size: 1.05rem;
+    padding-left: 16px;
+  }
+
+  .actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .actionButton {
+    width: 100%;
+    padding: 10px;
+  }
+
+  .footer {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .card {
+    background: var(--surface-dark);
+    border-left-color: var(--primary-teal-light);
+  }
+
+  .arabicText {
+    background: rgba(13, 148, 136, 0.05);
+    border-color: var(--border-dark);
+  }
+
+  .translation {
+    color: var(--text-light);
+    border-left-color: var(--primary-teal-light);
+  }
+}

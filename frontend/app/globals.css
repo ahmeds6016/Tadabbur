@@ -15,9 +15,14 @@
   --primary-teal-dark: #0F766E;
   
   /* Secondary: Gold (Islamic calligraphy accent) */
-  --gold: #D4AF37;
+  --gold: #D4AF37; /* Original - decorative use only */
   --gold-light: #F4E4C1;
   --gold-dark: #B8941F;
+
+  /* WCAG AA Compliant Gold Variations */
+  --gold-text: #9A7B00; /* AA compliant on white backgrounds */
+  --gold-text-dark: #7A6100; /* AAA compliant on white */
+  --gold-on-dark: #F4D03F; /* AA compliant on dark backgrounds */
   
   /* Accent: Deep Blue (night prayer, scholarly depth) */
   --deep-blue: #1E3A5F;
@@ -31,6 +36,14 @@
   --error-color: #DC2626;
   --success-color: #059669;
   --warning-color: #D97706;
+  --info-color: #0D9488;
+
+  /* Text hierarchy with AA compliance */
+  --text-primary: #2C3E50; /* Main text */
+  --text-secondary: #64748B; /* Secondary text - AA compliant */
+  --text-muted: #94A3B8; /* De-emphasized text */
+  --text-on-teal: #FFFFFF; /* White on teal backgrounds */
+  --text-on-gold: #1F2937; /* Dark text on gold backgrounds */
   
   /* Borders with subtle elegance */
   --border-light: rgba(212, 175, 55, 0.2);

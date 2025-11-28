@@ -1691,15 +1691,104 @@ def get_cross_references(query):
             return refs
     return []
 
+
+def extract_verse_references_from_text(text):
+    """Extract verse references from tafsir text (e.g., '31:12', 'Surah Luqman 31:12')"""
+    import re
+    verse_refs = []
+
+    # Pattern 1: Direct references like "31:12" or "(31:12)"
+    pattern1 = r'\b(\d{1,3}):(\d{1,3})\b'
+    matches1 = re.findall(pattern1, text)
+    for surah, verse in matches1:
+        verse_refs.append(f"{surah}:{verse}")
+
+    # Pattern 2: Named references like "Surah Luqman 31:12" or "An-Nahl 16:114"
+    pattern2 = r'(?:Surah\s+)?(?:Al-)?[A-Za-z-]+\s+(\d{1,3}):(\d{1,3})'
+    matches2 = re.findall(pattern2, text)
+    for surah, verse in matches2:
+        verse_refs.append(f"{surah}:{verse}")
+
+    # Remove duplicates while preserving order
+    seen = set()
+    unique_refs = []
+    for ref in verse_refs:
+        if ref not in seen:
+            seen.add(ref)
+            unique_refs.append(ref)
+
+    return unique_refs
+
+
+def fetch_arabic_for_referenced_verses(tafsir_explanations, main_verses):
+    """Fetch Arabic text for verses mentioned in tafsir but not in main verses"""
+    all_referenced_verses = []
+    main_verse_refs = {f"{v.get('surah_number', '')}:{v.get('verse_number', '')}"
+                       for v in main_verses if v.get('surah_number') and v.get('verse_number')}
+
+    # Extract verse references from all tafsir explanations
+    for explanation in tafsir_explanations:
+        text = explanation.get('explanation', '')
+        refs = extract_verse_references_from_text(text)
+
+        for ref in refs:
+            # Skip if this is already in main verses
+            if ref in main_verse_refs:
+                continue
+
+            try:
+                parts = ref.split(':')
+                if len(parts) == 2:
+                    surah_num = int(parts[0])
+                    verse_num = int(parts[1])
+
+                    # Fetch the verse data
+                    verse_data = get_verse_from_firestore(surah_num, verse_num)
+                    if verse_data:
+                        all_referenced_verses.append({
+                            'surah_number': surah_num,
+                            'verse_number': verse_num,
+                            'arabic_text': verse_data.get('arabic', ''),
+                            'text_saheeh_international': verse_data.get('en_sahih', ''),
+                            'reference': ref,
+                            'is_supplementary': True  # Mark as supplementary verse
+                        })
+            except (ValueError, IndexError) as e:
+                print(f"Warning: Could not fetch verse {ref}: {e}")
+                continue
+
+    return all_referenced_verses
+
 def validate_response(response_data):
-    """Validate response quality"""
+    """Validate response quality and ensure all sections are present"""
     try:
-        required_fields = ["tafsir_explanations", "lessons_practical_applications"]
-        if not all(field in response_data for field in required_fields):
-            return False, "Missing required fields"
+        # Check ALL required fields for proper formatting
+        required_fields = [
+            "verses",
+            "tafsir_explanations",
+            "cross_references",
+            "lessons_practical_applications",
+            "summary"
+        ]
+
+        missing_fields = [field for field in required_fields if field not in response_data]
+        if missing_fields:
+            return False, f"Missing required fields: {', '.join(missing_fields)}"
+
+        # Validate verses section
+        verses = response_data.get("verses", [])
+        if not verses:
+            return False, "No verses provided"
+
+        for verse in verses:
+            if not verse.get("arabic_text") or not verse.get("text_saheeh_international"):
+                return False, "Verses missing Arabic or English text"
 
         # Check if at least one tafsir explanation has substantial content
         explanations = response_data.get("tafsir_explanations", [])
+        if len(explanations) != 2:
+            return False, "Must have exactly 2 tafsir sources (al-Qurtubi and Ibn Kathir)"
+
         substantial_explanations = [
             exp for exp in explanations
             if len(exp.get("explanation", "")) > 50 and
@@ -1709,9 +1798,56 @@ def validate_response(response_data):
         if len(substantial_explanations) == 0:
             return False, "No substantial explanations found"
 
+        # Validate lessons section
+        lessons = response_data.get("lessons_practical_applications", [])
+        if len(lessons) < 2:
+            return False, "Must have at least 2 practical lessons"
+
+        # Validate summary
+        summary = response_data.get("summary", "")
+        if len(summary) < 50:
+            return False, "Summary too short or missing"
+
         return True, "Valid response"
     except Exception as e:
         return False, f"Validation error: {e}"
+
+
+def format_response_with_headers(response_data):
+    """Add clear section headers to response for better UI display"""
+    formatted_response = response_data.copy()
+
+    # Add section headers as metadata
+    formatted_response['section_headers'] = {
+        'summary': '📚 Summary',
+        'verses': '📖 Verses',
+        'tafsir': '📝 Classical Commentary',
+        'cross_references': '🔗 Related Verses',
+        'lessons': '💡 Lessons & Applications'
+    }
+
+    # Ensure proper formatting of each section
+    if 'summary' in formatted_response and not formatted_response['summary']:
+        formatted_response['summary'] = "Summary not available for this query."
+
+    # Ensure cross_references is always a list
+    if 'cross_references' not in formatted_response:
+        formatted_response['cross_references'] = []
+
+    # Ensure lessons have proper structure
+    if 'lessons_practical_applications' in formatted_response:
+        lessons = formatted_response['lessons_practical_applications']
+        if lessons and isinstance(lessons, list):
+            # Ensure each lesson has a 'point' key
+            formatted_lessons = []
+            for lesson in lessons:
+                if isinstance(lesson, dict) and 'point' in lesson:
+                    formatted_lessons.append(lesson)
+                elif isinstance(lesson, str):
+                    formatted_lessons.append({'point': lesson})
+            formatted_response['lessons_practical_applications'] = formatted_lessons
+
+    return formatted_response
 
 # --- Error Handler ---
 def handle_errors(f):
@@ -4956,7 +5092,7 @@ def get_cached_tafsir_response(query: str, user_profile: dict, approach: str = "
 
         # Debug logging for cache key
         print(f"🔍 Looking for cache with key: {cache_key[:16]}...")
-        print(f"   Query: {cache_info['normalized_query']}")
+        print(f"   Query: {cache_info['query_normalized']}")
         print(f"   Profile: persona={cache_info['profile_details'].get('persona')}, level={cache_info['profile_details'].get('knowledge_level')}")
 
         # Try Firestore first
