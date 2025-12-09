@@ -104,7 +104,7 @@ body {
   position: relative;
 }
 
-/* Islamic Geometric Pattern Overlay */
+/* Islamic Geometric Pattern Overlay - Subtle for clean aesthetic */
 body::before {
   content: '';
   position: fixed;
@@ -112,11 +112,10 @@ body::before {
   left: 0;
   width: 100%;
   height: 100%;
-  opacity: 0.03;
+  opacity: 0.015; /* Reduced from 0.03 for cleaner look */
   z-index: -1;
-  background-image: 
-    repeating-linear-gradient(45deg, transparent, transparent 20px, var(--primary-teal) 20px, var(--primary-teal) 21px),
-    repeating-linear-gradient(-45deg, transparent, transparent 20px, var(--gold) 20px, var(--gold) 21px);
+  background-image:
+    repeating-linear-gradient(45deg, transparent, transparent 30px, var(--primary-teal) 30px, var(--primary-teal) 31px);
   pointer-events: none;
 }
 
@@ -254,10 +253,10 @@ a {
   display: block;
   font-size: 1.2rem;
   font-family: var(--font-amiri), 'Amiri', 'Traditional Arabic', serif;
-  color: var(--gold);
+  color: var(--gold-text); /* WCAG AA compliant */
   margin-top: 8px;
   letter-spacing: 0.05em;
-  -webkit-text-fill-color: var(--gold);
+  -webkit-text-fill-color: var(--gold-text); /* WCAG AA compliant */
 }
 
 .user-info {
@@ -824,18 +823,18 @@ button:hover:not(:disabled) {
   border-radius: 24px 0 0 24px;
 }
 
-/* Decorative top ornament */
+/* Decorative top ornament - Subtle */
 .result-section::after {
-  content: '☪';
+  content: '✦';
   position: absolute;
-  top: -20px;
+  top: -12px;
   left: 50%;
   transform: translateX(-50%);
-  font-size: 2.5rem;
-  color: var(--gold);
+  font-size: 1.25rem; /* Reduced from 2.5rem */
+  color: var(--gold-text);
   background: var(--background);
-  padding: 0 20px;
-  text-shadow: 0 2px 8px rgba(212, 175, 55, 0.3);
+  padding: 0 16px;
+  opacity: 0.7; /* Subtle instead of prominent */
 }
 
 .result-section h2 {
@@ -864,7 +863,7 @@ button:hover:not(:disabled) {
 .result-section h2::before {
   content: '◈';
   margin-right: 12px;
-  color: var(--gold);
+  color: var(--gold-text); /* WCAG AA compliant */
   font-size: 1.2rem;
 }
 
@@ -910,9 +909,9 @@ button:hover:not(:disabled) {
 }
 
 .verse-card:hover {
-  transform: translateY(-6px) scale(1.01);
-  box-shadow: var(--shadow-strong);
-  border-color: var(--gold);
+  transform: translateY(-2px); /* Subtle lift instead of dramatic */
+  box-shadow: var(--shadow-medium);
+  border-color: var(--primary-teal-light);
 }
 
 /* Floating animation */
@@ -944,7 +943,7 @@ button:hover:not(:disabled) {
 .verse-ref::before {
   content: '❖';
   margin-right: 8px;
-  color: var(--gold);
+  color: var(--gold-text); /* WCAG AA compliant */
 }
 
 .arabic-text {
@@ -1066,7 +1065,7 @@ button:hover:not(:disabled) {
 .tafsir-details summary::before {
   content: '◆';
   margin-right: 12px;
-  color: var(--gold);
+  color: var(--gold-text); /* WCAG AA compliant */
   transition: transform 0.3s ease;
   display: inline-block;
 }
