@@ -21,6 +21,12 @@ import HelpMenu, { FloatingHelpButton } from './components/HelpMenu';
 import OnboardingProgress from './components/OnboardingProgress';
 import FloatingAnnotateButton from './components/FloatingAnnotateButton';
 import ErrorBoundary from './components/ErrorBoundary';
+import TafsirLogo from './components/Logo';
+import { ToastContainer } from './components/ui/Toast';
+import { TafsirSkeleton, Skeleton } from './components/ui/SkeletonLoader';
+import { SearchModeSelector } from './components/search/SearchModeSelector';
+import { loadSearchState, saveSearchState, clearSearchState } from './utils/searchPersistence';
+import { useToast } from './hooks/useToast';
 import useTextSelection from './hooks/useTextSelection';
 import { useOnboarding } from './hooks/useOnboarding';
 import onboardingConfig from '../config/onboarding-messages.json';
@@ -130,6 +136,9 @@ export default function HomePage() {
   const [userProfile, setUserProfile] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Toast notifications
+  const { toasts, showSuccess, showError, showWarning, showInfo } = useToast();
+
   const fetchUserProfile = async (currentUser) => {
     if (!currentUser) return;
     try {
@@ -168,8 +177,12 @@ export default function HomePage() {
   if (isLoading) {
     return (
       <div className="container">
-        <div className="card">
-          <div className="loading-spinner"></div>
+        <div className="card" style={{ padding: '32px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
+            <Skeleton width="50px" height="50px" variant="circular" />
+            <Skeleton width="200px" height="32px" />
+          </div>
+          <TafsirSkeleton />
         </div>
       </div>
     );
@@ -699,11 +712,29 @@ function MainApp({ user, userProfile }) {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  // Load saved search state on mount (survives page refresh)
+  useEffect(() => {
+    const savedState = loadSearchState();
+    if (savedState) {
+      setQuery(savedState.query);
+      setApproach(savedState.approach);
+      setResponse(savedState.response);
+    }
+  }, []);
+
+  // Save search state when response changes
+  useEffect(() => {
+    if (response && query) {
+      saveSearchState(query, approach, response);
+    }
+  }, [response, query, approach]);
+
   // Define handler functions BEFORE keyboard shortcuts useEffect that references them
   const handleNewSearch = useCallback(() => {
     // Clear results and focus input for new search
     setResponse(null);
     setError('');
+    clearSearchState(); // Clear persisted search
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setTimeout(() => {
       const inputEl = document.querySelector('.tafsir-form input');
@@ -739,12 +770,15 @@ function MainApp({ user, userProfile }) {
       });
 
       if (res.ok) {
-        alert('Answer saved! View it in your Saved Searches.');
+        showSuccess('Answer saved! View it in your Saved Searches.');
+      } else {
+        showError('Failed to save search. Please try again.');
       }
     } catch (err) {
       console.error('Failed to save search:', err);
+      showError('Failed to save search. Please try again.');
     }
-  }, [response, query, user, approach]);
+  }, [response, query, user, approach, showSuccess, showError]);
 
   // Keyboard shortcuts for desktop and mobile
   useEffect(() => {
@@ -1259,6 +1293,9 @@ function MainApp({ user, userProfile }) {
 
   return (
     <>
+      {/* Toast Notifications */}
+      <ToastContainer toasts={toasts} />
+
       {/* Desktop Navigation Sidebar */}
       {!isMobile && (
         <DesktopNav
@@ -1272,7 +1309,10 @@ function MainApp({ user, userProfile }) {
       <div className={`container ${!isMobile ? (navCollapsed ? 'with-sidebar-collapsed' : 'with-sidebar') : ''}`}>
         <div className="card main-app">
         <div className="header">
-          <h1>Tafsir Simplified</h1>
+          <div className="header-logo">
+            <TafsirLogo size={50} showText={false} />
+            <h1>Tafsir Simplified</h1>
+          </div>
           <div className="user-info" data-persona-icon={personaIcon}>
             <span>{user.email}</span>
             <span className="persona-badge">{getProfileDisplay()}</span>
@@ -1408,6 +1448,11 @@ function MainApp({ user, userProfile }) {
               </div>
             )}
           </div>
+        )}
+
+        {/* Search Mode Selector - Shows when no active search */}
+        {!response && !isTafsirLoading && (
+          <SearchModeSelector mode={approach} onModeChange={setApproach} />
         )}
 
         {/* Search Form - Fixed alignment */}
@@ -1790,6 +1835,7 @@ function MainApp({ user, userProfile }) {
               annotations={annotations}
               setAnnotations={setAnnotations}
               annotationDialogOpen={annotationDialogOpen}
+              setAnnotationDialogOpen={setAnnotationDialogOpen}
               currentVerse={currentVerse}
               setCurrentVerse={setCurrentVerse}
               editingAnnotation={editingAnnotation}
@@ -2297,6 +2343,7 @@ function EnhancedResultsDisplay({
   annotations,
   setAnnotations,
   annotationDialogOpen,
+  setAnnotationDialogOpen,
   currentVerse,
   setCurrentVerse,
   editingAnnotation,
