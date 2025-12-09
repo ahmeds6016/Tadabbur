@@ -778,7 +778,7 @@ function MainApp({ user, userProfile }) {
       console.error('Failed to save search:', err);
       showError('Failed to save search. Please try again.');
     }
-  }, [response, query, user, approach, showSuccess, showError]);
+  }, [response, query, user, approach]);
 
   // Keyboard shortcuts for desktop and mobile
   useEffect(() => {
