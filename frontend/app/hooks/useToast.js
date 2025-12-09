@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 
 /**
  * Hook for managing toast notifications
@@ -9,6 +9,16 @@ import { useState, useCallback } from 'react';
 export function useToast() {
   const [toasts, setToasts] = useState([]);
 
+  // Use ref to avoid circular dependency issues
+  const removeToastRef = useRef(null);
+
+  const removeToast = useCallback((id) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  }, []);
+
+  // Store removeToast in ref for use in addToast
+  removeToastRef.current = removeToast;
+
   const addToast = useCallback((message, type = 'info', duration = 5000) => {
     const id = Date.now().toString();
     const newToast = {
@@ -16,21 +26,17 @@ export function useToast() {
       message,
       type,
       duration,
-      onClose: () => removeToast(id)
+      onClose: () => removeToastRef.current?.(id)
     };
 
     setToasts((prev) => [...prev, newToast]);
 
     // Auto-remove after duration
     setTimeout(() => {
-      removeToast(id);
+      removeToastRef.current?.(id);
     }, duration);
 
     return id;
-  }, []);
-
-  const removeToast = useCallback((id) => {
-    setToasts((prev) => prev.filter((toast) => toast.id !== id));
   }, []);
 
   const showSuccess = useCallback((message, duration) => {
