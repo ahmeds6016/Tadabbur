@@ -136,8 +136,8 @@ export default function HomePage() {
   const [userProfile, setUserProfile] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Toast notifications
-  const { toasts, showSuccess, showError, showWarning, showInfo } = useToast();
+  // Toast notifications - avoid destructuring to prevent production build issues
+  const toast = useToast();
 
   const fetchUserProfile = async (currentUser) => {
     if (!currentUser) return;
@@ -770,13 +770,13 @@ function MainApp({ user, userProfile }) {
       });
 
       if (res.ok) {
-        showSuccess('Answer saved! View it in your Saved Searches.');
+        toast.showSuccess('Answer saved! View it in your Saved Searches.');
       } else {
-        showError('Failed to save search. Please try again.');
+        toast.showError('Failed to save search. Please try again.');
       }
     } catch (err) {
       console.error('Failed to save search:', err);
-      showError('Failed to save search. Please try again.');
+      toast.showError('Failed to save search. Please try again.');
     }
   }, [response, query, user, approach]);
 
@@ -1294,7 +1294,7 @@ function MainApp({ user, userProfile }) {
   return (
     <>
       {/* Toast Notifications */}
-      <ToastContainer toasts={toasts} />
+      <ToastContainer toasts={toast.toasts} />
 
       {/* Desktop Navigation Sidebar */}
       {!isMobile && (
