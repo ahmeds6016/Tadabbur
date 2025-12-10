@@ -2678,17 +2678,18 @@ def validate_and_sanitize_plan(plan):
         trim_amount = total_verses - 10
         validated_contextual = validated_contextual[:-trim_amount] if trim_amount < len(validated_contextual) else []
 
-    # Validate Al-Qurtubi constraint
-    all_verses = validated_primary + validated_contextual
-    can_use_qurtubi = all(
-        v['surah'] <= 4 and (v['surah'] < 4 or v['verse'] <= 22)
-        for v in all_verses
-    )
-
+    # Keep both tafsir sources - per-verse filtering happens in get_tafsir_for_verse()
+    # Al-Qurtubi will be used for verses in Surahs 1-4:22, Ibn Kathir for all verses
     tafsir_sources = plan.get('tafsir_sources', ['Ibn Kathir'])
-    if 'Al-Qurtubi' in tafsir_sources and not can_use_qurtubi:
-        print("   ⚠️  Removed Al-Qurtubi (verses beyond coverage)")
-        tafsir_sources = ['Ibn Kathir']
+
+    # Always include both sources if Qurtubi was requested - filtering is per-verse
+    if 'Al-Qurtubi' in tafsir_sources:
+        all_verses = validated_primary + validated_contextual
+        qurtubi_eligible = sum(1 for v in all_verses if v['surah'] <= 4 and (v['surah'] < 4 or v['verse'] <= 22))
+        if qurtubi_eligible > 0:
+            print(f"   📚 Qurtubi available for {qurtubi_eligible}/{len(all_verses)} verses")
+        else:
+            print("   ℹ️  No verses in Qurtubi range (Surahs 1-4:22), using Ibn Kathir only")
 
     return {
         'query_intent': plan.get('query_intent', ''),
@@ -7001,11 +7002,12 @@ def tafsir_handler_enhanced():
                     context_by_source = retrieved_data['context_by_source']
                     cross_refs = retrieved_data.get('cross_references', [])
 
-                    # Get verse data for first verse if available
+                    # Get verse data for ALL verses (not just first)
                     if retrieved_data['verses']:
-                        first_verse = retrieved_data['verses'][0]
-                        verse_data = first_verse
-                        arabic_text = first_verse.get('arabic')
+                        # Pass all verses to prompt builder for complete Arabic text
+                        verse_data = retrieved_data['verses']
+                        # Keep first verse's arabic for backward compatibility
+                        arabic_text = retrieved_data['verses'][0].get('arabic')
 
                     print(f"   ✅ LLM-orchestrated retrieval: {len(retrieved_data['verses'])} verses, {len(retrieved_data.get('tafsir_chunks', []))} chunks")
                     print(f"   ⏱️  Planning: {perf_metrics['stages']['llm_planning']:.0f}ms, Retrieval: {perf_metrics['stages']['direct_retrieval']:.0f}ms")
