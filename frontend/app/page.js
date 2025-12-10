@@ -136,9 +136,6 @@ export default function HomePage() {
   const [userProfile, setUserProfile] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Toast notifications
-  const { toasts, showSuccess, showError } = useToast();
-
   const fetchUserProfile = async (currentUser) => {
     if (!currentUser) return;
     try {
@@ -663,6 +660,9 @@ function MainApp({ user, userProfile }) {
     historyCount: 0,
     annotationCount: 0
   });
+
+  // Toast notifications
+  const { toasts, showSuccess, showError } = useToast();
 
   // Annotation state (lifted from EnhancedResultsDisplay)
   const [annotations, setAnnotations] = useState({});
