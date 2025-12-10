@@ -2119,6 +2119,33 @@ def load_chunks_from_verse_files_enhanced():
 
 
 # --- Response Filtering Functions ---
+def sanitize_explanation_text(text):
+    """
+    Clean up LLM output that sometimes has excessive indentation.
+    Fixes issues like:
+        **Header**
+        Paragraph text with 8 spaces...
+    """
+    if not text:
+        return text
+
+    lines = text.split('\n')
+    cleaned_lines = []
+
+    for line in lines:
+        # Remove excessive leading whitespace (more than 4 spaces is considered excessive)
+        # Keep 0-4 spaces for legitimate indentation (like nested lists)
+        stripped = line.lstrip()
+        leading_spaces = len(line) - len(stripped)
+
+        if leading_spaces > 4:
+            # Reduce to max 4 spaces
+            line = '    ' + stripped if stripped else ''
+
+        cleaned_lines.append(line)
+
+    return '\n'.join(cleaned_lines)
+
 def filter_unavailable_sources(response_json):
     """
     Remove tafsir sources from response where content is unavailable.
@@ -2174,6 +2201,8 @@ def filter_unavailable_sources(response_json):
         # 2. Content is actually available (not "not available" message)
         # 3. Explanation has actual content
         if is_approved_source and not is_unavailable and explanation_text.strip():
+            # Sanitize the explanation text to fix excessive indentation
+            explanation['explanation'] = sanitize_explanation_text(explanation.get('explanation', ''))
             filtered_explanations.append(explanation)
 
     # Update response with filtered explanations
@@ -2182,6 +2211,16 @@ def filter_unavailable_sources(response_json):
     else:
         # If no sources available, set to empty list
         response_json['tafsir_explanations'] = []
+
+    # Also sanitize other text fields that might have indentation issues
+    if response_json.get('summary'):
+        response_json['summary'] = sanitize_explanation_text(response_json['summary'])
+
+    if response_json.get('key_points'):
+        response_json['key_points'] = [
+            sanitize_explanation_text(point) if isinstance(point, str) else point
+            for point in response_json['key_points']
+        ]
 
     return response_json
 
