@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { initializeApp, getApps } from 'firebase/app';
 import Link from 'next/link';
-import ReflectionDetailPanel from './components/ReflectionDetailPanel';
+import ReflectionDetailPanel from '../components/ReflectionDetailPanel';
 
 const firebaseConfig = {
   apiKey: "AIzaSyBKPuVvuJC1bTUsZsZkiMHRoBRRqF6YqVU",
