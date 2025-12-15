@@ -66,6 +66,9 @@
   transition: all 0.2s ease;
   color: var(--text-secondary);
   font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .actionButton:hover {

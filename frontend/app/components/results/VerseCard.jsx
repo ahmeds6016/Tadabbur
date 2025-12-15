@@ -1,6 +1,7 @@
 'use client';
 
 import styles from './VerseCard.module.css';
+import { PenLine, Bookmark, Share2 } from 'lucide-react';
 
 /**
  * VerseCard Component
@@ -42,7 +43,8 @@ export function VerseCard({
               className={styles.actionButton}
               aria-label="Add annotation"
             >
-              📝 Note
+              <PenLine size={14} />
+              <span>Note</span>
             </button>
           )}
           {onBookmark && (
@@ -51,7 +53,8 @@ export function VerseCard({
               className={styles.actionButton}
               aria-label="Bookmark verse"
             >
-              🔖 Save
+              <Bookmark size={14} />
+              <span>Save</span>
             </button>
           )}
           {onShare && (
@@ -60,7 +63,8 @@ export function VerseCard({
               className={styles.actionButton}
               aria-label="Share verse"
             >
-              🔗 Share
+              <Share2 size={14} />
+              <span>Share</span>
             </button>
           )}
         </div>

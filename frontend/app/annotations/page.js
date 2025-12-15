@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { initializeApp, getApps } from 'firebase/app';
 import Link from 'next/link';
+import ReflectionDetailPanel from './components/ReflectionDetailPanel';
 
 const firebaseConfig = {
   apiKey: "AIzaSyBKPuVvuJC1bTUsZsZkiMHRoBRRqF6YqVU",
@@ -222,6 +223,7 @@ export default function MyReflectionsPage() {
   const [selectedTypes, setSelectedTypes] = useState([]);
   const [selectedTags, setSelectedTags] = useState([]);
   const [showCalendar, setShowCalendar] = useState(false);
+  const [selectedAnnotation, setSelectedAnnotation] = useState(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -305,6 +307,25 @@ export default function MyReflectionsPage() {
     setSelectedType(null);
     setSearchQuery('');
     fetchAnnotations(user);
+  };
+
+  const handleDeleteAnnotation = async (annotationId) => {
+    if (!user) return;
+    try {
+      const token = await user.getIdToken();
+      const response = await fetch(`${BACKEND_URL}/annotations/${annotationId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (response.ok) {
+        // Remove from local state
+        setAnnotations(prev => prev.filter(a => a.id !== annotationId));
+      }
+    } catch (error) {
+      console.error('Error deleting annotation:', error);
+    }
   };
 
   const formatDate = (timestamp) => {
@@ -1132,11 +1153,7 @@ export default function MyReflectionsPage() {
               return (
                 <div
                   key={annotation.id}
-                  onClick={() => {
-                    if (annotation.share_id) {
-                      window.location.href = `/shared/${annotation.share_id}`;
-                    }
-                  }}
+                  onClick={() => setSelectedAnnotation(annotation)}
                   style={{
                     padding: '20px',
                     background: 'white',
@@ -1144,7 +1161,7 @@ export default function MyReflectionsPage() {
                     border: '2px solid var(--border-light)',
                     borderLeft: `6px solid ${typeConfig.color}`,
                     transition: 'all 0.3s ease',
-                    cursor: annotation.share_id ? 'pointer' : 'default'
+                    cursor: 'pointer'
                   }}
                   className="annotation-card"
                 >
@@ -1233,16 +1250,21 @@ export default function MyReflectionsPage() {
                         {formatDate(annotation.createdAt)}
                       </div>
                       {annotation.share_id && (
-                        <div style={{
-                          fontSize: '0.75rem',
-                          color: '#8b5cf6',
-                          fontWeight: '600',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px'
-                        }}>
-                          🔗 View Response
-                        </div>
+                        <a
+                          href={`/shared/${annotation.share_id}`}
+                          onClick={(e) => e.stopPropagation()}
+                          style={{
+                            fontSize: '0.75rem',
+                            color: '#8b5cf6',
+                            fontWeight: '600',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            textDecoration: 'none'
+                          }}
+                        >
+                          View Response
+                        </a>
                       )}
                     </div>
                   </div>
@@ -1256,19 +1278,18 @@ export default function MyReflectionsPage() {
                         fontSize: '0.95rem',
                         lineHeight: '1.6',
                         whiteSpace: 'pre-wrap',
-                        maxHeight: isExpanded ? 'none' : '4.8em', // ~3 lines (1.6 line-height * 3)
+                        maxHeight: '7.2em', // ~4.5 lines for preview
                         overflow: 'hidden',
-                        transition: 'max-height 0.3s ease',
                         position: 'relative'
                       }}
                     >
                       {annotation.content}
                     </p>
-                    {!isExpanded && annotation.content && annotation.content.split('\n').length > 3 && (
+                    {annotation.content && annotation.content.length > 200 && (
                       <div style={{
-                        background: 'linear-gradient(to bottom, transparent, var(--cream))',
-                        height: '20px',
-                        marginTop: '-20px',
+                        background: 'linear-gradient(to bottom, transparent, white)',
+                        height: '24px',
+                        marginTop: '-24px',
                         position: 'relative'
                       }} />
                     )}
@@ -1276,11 +1297,17 @@ export default function MyReflectionsPage() {
 
                   {/* Tags */}
                   {annotation.tags && annotation.tags.length > 0 && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    <div
+                      style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       {annotation.tags.map(tag => (
                         <span
                           key={tag}
-                          onClick={() => handleTagFilter(tag)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleTagFilter(tag);
+                          }}
                           style={{
                             background: 'var(--cream)',
                             color: 'var(--primary-teal)',
@@ -1298,10 +1325,27 @@ export default function MyReflectionsPage() {
                     </div>
                   )}
 
-                  {/* Expand/Collapse */}
-                  {annotation.content && annotation.content.length > 150 && (
+                  {/* Tap to read hint for long content */}
+                  {annotation.content && annotation.content.length > 200 && (
+                    <div
+                      style={{
+                        color: 'var(--text-muted)',
+                        fontSize: '0.8rem',
+                        marginTop: '8px',
+                        fontStyle: 'italic'
+                      }}
+                    >
+                      Tap to read full reflection
+                    </div>
+                  )}
+
+                  {/* REMOVED: Old Expand/Collapse button - now handled by panel */}
+                  {false && annotation.content && annotation.content.length > 150 && (
                     <button
-                      onClick={() => setExpandedId(isExpanded ? null : annotation.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setExpandedId(isExpanded ? null : annotation.id);
+                      }}
                       style={{
                         background: 'transparent',
                         border: 'none',
@@ -1330,6 +1374,14 @@ export default function MyReflectionsPage() {
           border-color: var(--gold);
         }
       `}</style>
+
+      {/* Reflection Detail Panel */}
+      <ReflectionDetailPanel
+        annotation={selectedAnnotation}
+        isOpen={!!selectedAnnotation}
+        onClose={() => setSelectedAnnotation(null)}
+        onDelete={handleDeleteAnnotation}
+      />
     </div>
   );
 }

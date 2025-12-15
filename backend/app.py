@@ -2146,6 +2146,53 @@ def sanitize_explanation_text(text):
 
     return '\n'.join(cleaned_lines)
 
+def sanitize_unavailability_text(text):
+    """
+    Remove mentions of source unavailability from response text.
+    This prevents user-facing messages like "Al-Qurtubi's tafsir is not available for this verse."
+
+    Returns: Cleaned text with unavailability mentions removed
+    """
+    if not text:
+        return text
+
+    # Patterns that indicate source unavailability (case-insensitive)
+    unavailability_patterns = [
+        # Direct unavailability statements
+        r"al-Qurtubi'?s?\s+(?:tafsir|commentary|comprehensive tafsir).*?(?:is\s+)?not\s+available.*?(?:\.|;|$)",
+        r"(?:tafsir|commentary)\s+(?:is\s+)?not\s+available\s+for\s+(?:this\s+)?verse.*?(?:\.|;|$)",
+        r"(?:is\s+)?not\s+available\s+for\s+(?:Surah|this\s+verse|verses?\s+beyond).*?(?:\.|;|$)",
+        # Scope/coverage limitations
+        r"(?:is\s+)?beyond\s+(?:the\s+)?scope.*?(?:\.|;|$)",
+        r"(?:only\s+)?covers?\s+(?:only\s+)?Surahs?\s+1-?4.*?(?:\.|;|$)",
+        r"available\s+(?:only\s+)?for\s+Surahs?\s+1-?4.*?(?:therefore|so|thus).*?(?:\.|;|$)",
+        r"limited\s+to\s+Surahs?\s+1-?4.*?(?:\.|;|$)",
+        r"does\s+not\s+cover\s+(?:this\s+)?(?:verse|surah|passage).*?(?:\.|;|$)",
+        # Source material limitations
+        r"(?:the\s+)?(?:provided\s+)?source\s+material.*?does\s+not\s+contain.*?(?:\.|;|$)",
+        r"(?:no|insufficient)\s+(?:tafsir|commentary)\s+(?:is\s+)?available.*?(?:\.|;|$)",
+    ]
+
+    cleaned = text
+    for pattern in unavailability_patterns:
+        cleaned = re.sub(pattern, '', cleaned, flags=re.IGNORECASE | re.DOTALL)
+
+    # Clean up resulting artifacts
+    # Remove multiple consecutive spaces
+    cleaned = re.sub(r'\s{2,}', ' ', cleaned)
+    # Remove orphaned punctuation at start of sentences
+    cleaned = re.sub(r'^\s*[,;:]\s*', '', cleaned)
+    cleaned = re.sub(r'\.\s*[,;:]\s*', '. ', cleaned)
+    # Remove empty parentheses or brackets
+    cleaned = re.sub(r'\(\s*\)', '', cleaned)
+    cleaned = re.sub(r'\[\s*\]', '', cleaned)
+    # Clean up double periods
+    cleaned = re.sub(r'\.{2,}', '.', cleaned)
+    # Remove leading/trailing whitespace
+    cleaned = cleaned.strip()
+
+    return cleaned if cleaned else text
+
 def filter_unavailable_sources(response_json):
     """
     Remove tafsir sources from response where content is unavailable.
@@ -2215,12 +2262,24 @@ def filter_unavailable_sources(response_json):
     # Also sanitize other text fields that might have indentation issues
     if response_json.get('summary'):
         response_json['summary'] = sanitize_explanation_text(response_json['summary'])
+        # Remove any unavailability messages from summary
+        response_json['summary'] = sanitize_unavailability_text(response_json['summary'])
 
     if response_json.get('key_points'):
         response_json['key_points'] = [
             sanitize_explanation_text(point) if isinstance(point, str) else point
             for point in response_json['key_points']
         ]
+        # Remove unavailability messages from key points
+        response_json['key_points'] = [
+            sanitize_unavailability_text(point) if isinstance(point, str) else point
+            for point in response_json['key_points']
+        ]
+
+    # Sanitize unavailability text from each tafsir explanation
+    for explanation in response_json.get('tafsir_explanations', []):
+        if explanation.get('explanation'):
+            explanation['explanation'] = sanitize_unavailability_text(explanation['explanation'])
 
     return response_json
 
@@ -4647,14 +4706,6 @@ FORMATTING DECISION:
 • If persona = new_revert, revert, or seeker → Use bullets (•), ONE emoji in main headers ONLY, short sentences
 • If persona = practicing_muslim or teacher → Use balanced: **bold headers**, short paragraphs + some bullets, NO emojis
 • If persona = scholar or student → Use short paragraphs (2-4 sentences) with **bolded sub-headers**, NO bullets, NO emojis
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-SOURCE COVERAGE (Important Context)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-• **Ibn Kathir**: Complete Quran (all 114 Surahs)
-• **al-Qurtubi**: Surahs 1-4 only (up to Surah 4:22)
-
-If query is about verses beyond Surah 4:22, explain that al-Qurtubi's commentary is not available.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 CRITICAL REMINDERS

@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { Home, Clock, Star, FileText, BookOpen, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export default function DesktopNav({ user, stats = {}, collapsed = false, onToggleCollapse }) {
   const pathname = usePathname();
@@ -11,7 +12,7 @@ export default function DesktopNav({ user, stats = {}, collapsed = false, onTogg
     {
       id: 'home',
       label: 'Home',
-      icon: '🏠',
+      icon: Home,
       href: '/',
       shortcut: 'Alt+H',
       description: 'Search and explore Tafsir'
@@ -19,7 +20,7 @@ export default function DesktopNav({ user, stats = {}, collapsed = false, onTogg
     {
       id: 'history',
       label: 'History',
-      icon: '📜',
+      icon: Clock,
       href: '/history',
       shortcut: 'Alt+R',
       description: `${stats.historyCount || 0} recent queries`,
@@ -28,7 +29,7 @@ export default function DesktopNav({ user, stats = {}, collapsed = false, onTogg
     {
       id: 'saved',
       label: 'Saved',
-      icon: '⭐',
+      icon: Star,
       href: '/saved',
       shortcut: 'Alt+S',
       description: `${stats.savedCount || 0} saved answers`,
@@ -37,7 +38,7 @@ export default function DesktopNav({ user, stats = {}, collapsed = false, onTogg
     {
       id: 'notes',
       label: 'Notes',
-      icon: '📝',
+      icon: FileText,
       href: '/annotations',
       shortcut: 'Alt+N',
       description: `${stats.annotationCount || 0} reflections`,
@@ -87,11 +88,13 @@ export default function DesktopNav({ user, stats = {}, collapsed = false, onTogg
           title={collapsed ? 'Expand sidebar (Alt+B)' : 'Collapse sidebar (Alt+B)'}
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
-          {collapsed ? '→' : '←'}
+          {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
         </button>
         {!collapsed && (
           <div className="nav-title">
-            <span className="nav-logo">📖</span>
+            <span className="nav-logo">
+              <BookOpen size={24} strokeWidth={2} />
+            </span>
             <span className="nav-text">Tafsir Simplified</span>
           </div>
         )}
@@ -100,6 +103,7 @@ export default function DesktopNav({ user, stats = {}, collapsed = false, onTogg
       <div className="nav-items">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
+          const IconComponent = item.icon;
           return (
             <Link
               key={item.id}
@@ -109,7 +113,9 @@ export default function DesktopNav({ user, stats = {}, collapsed = false, onTogg
               onMouseLeave={() => setTooltipVisible(null)}
               title={collapsed ? `${item.label} - ${item.description}` : ''}
             >
-              <span className="nav-icon">{item.icon}</span>
+              <span className="nav-icon">
+                <IconComponent size={20} strokeWidth={isActive ? 2.5 : 2} />
+              </span>
               {!collapsed && (
                 <>
                   <span className="nav-label">{item.label}</span>
@@ -170,12 +176,11 @@ export default function DesktopNav({ user, stats = {}, collapsed = false, onTogg
           bottom: 0;
           width: 260px;
           background: linear-gradient(180deg, var(--cream) 0%, #faf6f0 100%);
-          border-right: 2px solid var(--border-light);
+          border-right: 1px solid var(--border-light);
           display: flex;
           flex-direction: column;
           transition: width 0.3s ease;
           z-index: 100;
-          box-shadow: 2px 0 8px rgba(0, 0, 0, 0.05);
         }
 
         .desktop-nav.collapsed {
@@ -201,14 +206,14 @@ export default function DesktopNav({ user, stats = {}, collapsed = false, onTogg
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 14px;
           transition: all 0.2s ease;
+          color: var(--text-muted, #6b7280);
         }
 
         .collapse-btn:hover {
-          background: var(--gold);
+          background: var(--primary-teal);
           color: white;
-          border-color: var(--gold);
+          border-color: var(--primary-teal);
         }
 
         .nav-title {
@@ -219,7 +224,9 @@ export default function DesktopNav({ user, stats = {}, collapsed = false, onTogg
         }
 
         .nav-logo {
-          font-size: 1.5rem;
+          color: var(--primary-teal);
+          display: flex;
+          align-items: center;
         }
 
         .nav-text {
@@ -254,20 +261,20 @@ export default function DesktopNav({ user, stats = {}, collapsed = false, onTogg
         }
 
         .nav-item:hover {
-          background: rgba(16, 185, 129, 0.1);
-          transform: translateX(2px);
+          background: rgba(13, 148, 136, 0.08);
         }
 
         .nav-item.active {
-          background: linear-gradient(135deg, var(--primary-teal), var(--gold));
+          background: var(--primary-teal);
           color: white;
-          box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+          box-shadow: 0 2px 8px rgba(13, 148, 136, 0.25);
         }
 
         .nav-icon {
-          font-size: 1.3rem;
           width: 24px;
-          text-align: center;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
 
         .nav-label {
@@ -350,7 +357,7 @@ export default function DesktopNav({ user, stats = {}, collapsed = false, onTogg
           width: 36px;
           height: 36px;
           border-radius: 50%;
-          background: var(--gradient-teal-gold);
+          background: var(--primary-teal);
           display: flex;
           align-items: center;
           justify-content: center;

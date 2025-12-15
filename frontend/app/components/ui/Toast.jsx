@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { CheckCircle, XCircle, AlertTriangle, Info, X } from 'lucide-react';
 
 /**
  * Toast notification component for displaying temporary messages
@@ -39,17 +40,18 @@ export function Toast({
   if (!isVisible) return null;
 
   const getIcon = () => {
+    const iconProps = { size: 20, strokeWidth: 2.5 };
     switch (type) {
       case 'success':
-        return '✅';
+        return <CheckCircle {...iconProps} color="var(--success-color, #059669)" />;
       case 'error':
-        return '❌';
+        return <XCircle {...iconProps} color="var(--error-color, #DC2626)" />;
       case 'warning':
-        return '⚠️';
+        return <AlertTriangle {...iconProps} color="var(--warning-color, #D97706)" />;
       case 'info':
-        return 'ℹ️';
+        return <Info {...iconProps} color="var(--info-color, #0D9488)" />;
       default:
-        return 'ℹ️';
+        return <Info {...iconProps} color="var(--info-color, #0D9488)" />;
     }
   };
 
@@ -82,7 +84,7 @@ export function Toast({
           className="toast-close"
           aria-label="Dismiss notification"
         >
-          ×
+          <X size={18} />
         </button>
       </div>
 
@@ -116,8 +118,9 @@ export function Toast({
         }
 
         .toast-icon {
-          font-size: 1.25rem;
           flex-shrink: 0;
+          display: flex;
+          align-items: center;
         }
 
         .toast-message {
@@ -130,12 +133,9 @@ export function Toast({
         .toast-close {
           background: none;
           border: none;
-          font-size: 1.5rem;
           color: var(--text-muted);
           cursor: pointer;
-          padding: 0;
-          width: 24px;
-          height: 24px;
+          padding: 4px;
           display: flex;
           align-items: center;
           justify-content: center;

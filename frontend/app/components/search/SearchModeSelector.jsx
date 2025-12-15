@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { BookOpen, Compass } from 'lucide-react';
 
 export function SearchModeSelector({ mode, onModeChange }) {
   return (
@@ -11,7 +12,9 @@ export function SearchModeSelector({ mode, onModeChange }) {
           onClick={() => onModeChange('tafsir')}
           aria-pressed={mode === 'tafsir'}
         >
-          <div className="mode-icon">📖</div>
+          <div className="mode-icon">
+            <BookOpen size={32} strokeWidth={mode === 'tafsir' ? 2.5 : 2} />
+          </div>
           <h3>Deep Tafsir</h3>
           <p>Detailed commentary on specific verses</p>
         </button>
@@ -21,7 +24,9 @@ export function SearchModeSelector({ mode, onModeChange }) {
           onClick={() => onModeChange('explore')}
           aria-pressed={mode === 'explore'}
         >
-          <div className="mode-icon">🔍</div>
+          <div className="mode-icon">
+            <Compass size={32} strokeWidth={mode === 'explore' ? 2.5 : 2} />
+          </div>
           <h3>Topic Explorer</h3>
           <p>Discover verses by theme or concept</p>
         </button>
@@ -54,6 +59,7 @@ export function SearchModeSelector({ mode, onModeChange }) {
         .mode-card:hover {
           transform: translateY(-2px);
           box-shadow: var(--shadow-medium);
+          border-color: var(--primary-teal);
         }
 
         .mode-card.active {
@@ -64,8 +70,18 @@ export function SearchModeSelector({ mode, onModeChange }) {
         }
 
         .mode-icon {
-          font-size: 2rem;
-          margin-bottom: 8px;
+          color: var(--text-muted, #6b7280);
+          margin-bottom: 12px;
+          display: flex;
+          justify-content: center;
+        }
+
+        .mode-card.active .mode-icon {
+          color: var(--primary-teal);
+        }
+
+        .mode-card:hover .mode-icon {
+          color: var(--primary-teal);
         }
 
         .mode-card h3 {

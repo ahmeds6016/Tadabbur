@@ -1,6 +1,7 @@
 'use client';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { Home, Clock, Star, FileText } from 'lucide-react';
 
 export default function BottomNav({ user }) {
   const pathname = usePathname();
@@ -22,25 +23,25 @@ export default function BottomNav({ user }) {
   const navItems = [
     {
       label: 'Home',
-      icon: '🏠',
+      icon: Home,
       path: '/',
       active: pathname === '/'
     },
     {
       label: 'History',
-      icon: '🕒',
+      icon: Clock,
       path: '/history',
       active: pathname === '/history'
     },
     {
       label: 'Saved',
-      icon: '⭐',
+      icon: Star,
       path: '/saved',
       active: pathname === '/saved'
     },
     user && {
       label: 'Notes',
-      icon: '📝',
+      icon: FileText,
       path: '/annotations',
       active: pathname === '/annotations'
     }
@@ -52,18 +53,23 @@ export default function BottomNav({ user }) {
       <div style={{ height: '60px' }} />
 
       <nav className="bottom-nav">
-        {navItems.map((item) => (
-          <button
-            key={item.path}
-            onClick={() => router.push(item.path)}
-            className={`nav-item ${item.active ? 'active' : ''}`}
-            aria-label={item.label}
-            aria-current={item.active ? 'page' : undefined}
-          >
-            <span className="nav-icon">{item.icon}</span>
-            <span className="nav-label">{item.label}</span>
-          </button>
-        ))}
+        {navItems.map((item) => {
+          const IconComponent = item.icon;
+          return (
+            <button
+              key={item.path}
+              onClick={() => router.push(item.path)}
+              className={`nav-item ${item.active ? 'active' : ''}`}
+              aria-label={item.label}
+              aria-current={item.active ? 'page' : undefined}
+            >
+              <span className="nav-icon">
+                <IconComponent size={22} strokeWidth={item.active ? 2.5 : 2} />
+              </span>
+              <span className="nav-label">{item.label}</span>
+            </button>
+          );
+        })}
 
         <style jsx>{`
           .bottom-nav {
@@ -74,29 +80,14 @@ export default function BottomNav({ user }) {
             background: linear-gradient(to top, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.95));
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
-            border-top: 3px solid #10b981;
+            border-top: 1px solid var(--border-light, #e5e7eb);
             display: flex;
             justify-content: space-around;
             align-items: center;
             height: 60px;
             z-index: 1000;
-            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15),
-                        0 -2px 6px rgba(16, 185, 129, 0.2);
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
             padding-bottom: env(safe-area-inset-bottom);
-          }
-
-          .bottom-nav::before {
-            content: '';
-            position: absolute;
-            top: -3px;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: linear-gradient(90deg,
-              #10b981 0%,
-              #fbbf24 50%,
-              #10b981 100%);
-            box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
           }
 
           .nav-item {
@@ -105,23 +96,23 @@ export default function BottomNav({ user }) {
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 2px;
+            gap: 4px;
             background: none;
             border: none;
             padding: 8px;
             cursor: pointer;
-            color: #6b7280;
-            transition: all 0.2s;
+            color: var(--text-muted, #6b7280);
+            transition: all 0.2s ease;
             position: relative;
-            min-height: 44px; /* iOS touch target size */
+            min-height: 44px;
           }
 
           .nav-item:active {
-            background: #f3f4f6;
+            background: var(--cream, #faf6f0);
           }
 
           .nav-item.active {
-            color: #10b981;
+            color: var(--primary-teal, #0d9488);
           }
 
           .nav-item.active::before {
@@ -130,31 +121,31 @@ export default function BottomNav({ user }) {
             top: 0;
             left: 50%;
             transform: translateX(-50%);
-            width: 40px;
+            width: 32px;
             height: 2px;
-            background: #10b981;
+            background: var(--primary-teal, #0d9488);
             border-radius: 0 0 2px 2px;
           }
 
           .nav-icon {
-            font-size: 1.25rem;
-            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 24px;
           }
 
           .nav-label {
-            font-size: 0.625rem;
-            font-weight: 500;
-            margin-top: 2px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            letter-spacing: 0.02em;
           }
 
-          /* Haptic feedback simulation on touch */
           @media (hover: none) {
             .nav-item:active {
               transform: scale(0.95);
             }
           }
 
-          /* Dark mode support */
           @media (prefers-color-scheme: dark) {
             .bottom-nav {
               background: #1f2937;
@@ -174,7 +165,6 @@ export default function BottomNav({ user }) {
             }
           }
 
-          /* PWA standalone mode optimizations */
           @media all and (display-mode: standalone) {
             .bottom-nav {
               padding-bottom: calc(env(safe-area-inset-bottom) + 8px);
