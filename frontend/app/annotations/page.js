@@ -21,33 +21,47 @@ const auth = getAuth(app);
 
 const BACKEND_URL = 'https://tafsir-backend-612616741510.us-central1.run.app';
 
+// Core 5 reflection types with Lucide icons (reduced from 17 emoji types)
 const ANNOTATION_TYPE_CONFIG = {
-  personal_insight: { icon: '💡', label: 'Insight', color: '#0D9488' },
-  question: { icon: '❓', label: 'Question', color: '#8B5CF6' },
-  application: { icon: '✅', label: 'Application', color: '#059669' },
-  memory: { icon: '💭', label: 'Memory', color: '#3B82F6' },
-  connection: { icon: '🔗', label: 'Connection', color: '#D97706' },
-  dua: { icon: '🤲', label: 'Dua/Prayer', color: '#10B981' },
-  gratitude: { icon: '🙏', label: 'Gratitude', color: '#F59E0B' },
-  reminder: { icon: '⏰', label: 'Reminder', color: '#EF4444' },
-  story: { icon: '📚', label: 'Story', color: '#6366F1' },
-  linguistic: { icon: '📝', label: 'Linguistic', color: '#84CC16' },
-  historical: { icon: '📜', label: 'Historical', color: '#A78BFA' },
-  scientific: { icon: '🔬', label: 'Scientific', color: '#06B6D4' },
-  personal_experience: { icon: '💭', label: 'Experience', color: '#EC4899' },
-  teaching_point: { icon: '👨‍🏫', label: 'Teaching', color: '#F97316' },
-  warning: { icon: '⚠️', label: 'Warning', color: '#DC2626' },
-  goal: { icon: '🎯', label: 'Goal', color: '#059669' },
-  contemplation: { icon: '🤔', label: 'Contemplation', color: '#7C3AED' }
+  insight: { iconComponent: Lightbulb, icon: '💡', label: 'Insight', color: '#0D9488' },
+  question: { iconComponent: HelpCircle, icon: '❓', label: 'Question', color: '#8B5CF6' },
+  application: { iconComponent: CheckSquare, icon: '✅', label: 'Application', color: '#059669' },
+  dua: { iconComponent: Heart, icon: '🤲', label: 'Dua/Prayer', color: '#10B981' },
+  connection: { iconComponent: Link2, icon: '🔗', label: 'Connection', color: '#D97706' }
 };
 
-// Helper function to get config for any type (including custom ones)
+// Legacy type mapping for backward compatibility (map old 17 types to new 5)
+const LEGACY_TYPE_MAPPING = {
+  personal_insight: 'insight',
+  memory: 'insight',
+  contemplation: 'insight',
+  personal_experience: 'insight',
+  gratitude: 'dua',
+  reminder: 'application',
+  teaching_point: 'application',
+  goal: 'application',
+  story: 'connection',
+  linguistic: 'connection',
+  historical: 'connection',
+  scientific: 'connection',
+  warning: 'question'
+};
+
+// Helper function to get config for any type (core, legacy, or custom)
 const getTypeConfig = (type) => {
+  // Check core types first
   if (ANNOTATION_TYPE_CONFIG[type]) {
     return ANNOTATION_TYPE_CONFIG[type];
   }
-  // For custom types, use default styling
+
+  // Map legacy types to core types
+  if (LEGACY_TYPE_MAPPING[type]) {
+    return ANNOTATION_TYPE_CONFIG[LEGACY_TYPE_MAPPING[type]];
+  }
+
+  // For unknown/custom types, use default styling
   return {
+    iconComponent: BookOpen,
     icon: '✨',
     label: type ? type.charAt(0).toUpperCase() + type.slice(1).replace(/_/g, ' ') : 'Custom',
     color: '#6B7280'
@@ -742,25 +756,32 @@ export default function MyReflectionsPage() {
           <div style={{ marginBottom: '16px' }}>
             <h3 style={{ fontSize: '0.9rem', fontWeight: '700', marginBottom: '8px', color: '#666' }}>Filter by Type:</h3>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              {Object.entries(ANNOTATION_TYPE_CONFIG).map(([type, config]) => (
-                <button
-                  key={type}
-                  onClick={() => handleTypeFilter(type)}
-                  style={{
-                    background: selectedType === type ? config.color : 'white',
-                    color: selectedType === type ? 'white' : config.color,
-                    border: `2px solid ${config.color}`,
-                    padding: '6px 14px',
-                    borderRadius: '20px',
-                    fontSize: '0.85rem',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s ease'
-                  }}
-                >
-                  {config.icon} {config.label}
-                </button>
-              ))}
+              {Object.entries(ANNOTATION_TYPE_CONFIG).map(([type, config]) => {
+                const IconComponent = config.iconComponent;
+                return (
+                  <button
+                    key={type}
+                    onClick={() => handleTypeFilter(type)}
+                    style={{
+                      background: selectedType === type ? config.color : 'white',
+                      color: selectedType === type ? 'white' : config.color,
+                      border: `2px solid ${config.color}`,
+                      padding: '6px 14px',
+                      borderRadius: '20px',
+                      fontSize: '0.85rem',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    {IconComponent && <IconComponent size={16} strokeWidth={2} />}
+                    {config.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -1021,6 +1042,7 @@ export default function MyReflectionsPage() {
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
                       {Object.entries(stats.byType).map(([type, count]) => {
                         const config = getTypeConfig(type);
+                        const IconComponent = config.iconComponent;
                         const percentage = Math.round((count / stats.totalReflections) * 100);
                         return (
                           <div
@@ -1034,7 +1056,9 @@ export default function MyReflectionsPage() {
                               textAlign: 'center'
                             }}
                           >
-                            <div style={{ fontSize: '1.5rem' }}>{config.icon}</div>
+                            <div style={{ fontSize: '1.5rem', display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>
+                              {IconComponent ? <IconComponent size={28} strokeWidth={2} color={config.color} /> : config.icon}
+                            </div>
                             <div style={{
                               fontSize: '0.85rem',
                               fontWeight: '600',
@@ -1251,12 +1275,38 @@ export default function MyReflectionsPage() {
 
         {/* Annotations List */}
         {annotations.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '60px 20px', color: '#999' }}>
-            <p style={{ fontSize: '3rem', marginBottom: '16px' }}>📝</p>
-            <p style={{ fontSize: '1.2rem' }}>No reflections yet</p>
-            <p style={{ marginTop: '8px' }}>
+          <div style={{
+            textAlign: 'center',
+            padding: '80px 20px',
+            background: 'linear-gradient(135deg, #f0fdf4 0%, #fef3c7 100%)',
+            borderRadius: '16px',
+            border: '2px dashed #d1d5db'
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              marginBottom: '16px',
+              color: '#0D9488'
+            }}>
+              <BookOpen size={64} strokeWidth={1.5} />
+            </div>
+            <p style={{
+              fontSize: '1.5rem',
+              fontWeight: '700',
+              color: '#374151',
+              marginBottom: '8px'
+            }}>
+              No reflections yet
+            </p>
+            <p style={{
+              fontSize: '1rem',
+              color: '#6b7280',
+              lineHeight: '1.6',
+              maxWidth: '400px',
+              margin: '0 auto'
+            }}>
               {selectedTag || selectedType || searchQuery
-                ? 'No reflections match your filters. Try adjusting them.'
+                ? 'No reflections match your filters. Try adjusting them or clearing filters.'
                 : 'Start adding notes to verses as you study to build your personal Quran journal.'}
             </p>
           </div>
