@@ -2146,6 +2146,50 @@ def sanitize_explanation_text(text):
 
     return '\n'.join(cleaned_lines)
 
+def sanitize_heading_format(text):
+    """
+    Convert bold text at the start of lines into proper markdown headings.
+    Fixes the issue where LLM generates **Header** instead of ## Header,
+    which causes headings to appear inline instead of as block elements.
+
+    Examples:
+        **Introduction** -> ## Introduction
+        **Key Points** -> ## Key Points
+        Some **bold text** here -> Some **bold text** here (unchanged - not at line start)
+    """
+    if not text:
+        return text
+
+    lines = text.split('\n')
+    converted_lines = []
+
+    for line in lines:
+        stripped = line.strip()
+
+        # Check if line starts with **text** pattern (bold at start of line)
+        # Match: **Text** or **Text with spaces**
+        # Don't match: Some text **bold** or text with **bold** in middle
+        if stripped.startswith('**') and '**' in stripped[2:]:
+            # Find the closing **
+            end_pos = stripped.find('**', 2)
+            if end_pos != -1:
+                # Extract the text between ** **
+                heading_text = stripped[2:end_pos]
+                # Keep any text after the closing **
+                rest_of_line = stripped[end_pos + 2:].strip()
+
+                # Convert to ## heading format
+                if rest_of_line:
+                    converted_lines.append(f"## {heading_text}\n{rest_of_line}")
+                else:
+                    converted_lines.append(f"## {heading_text}")
+                continue
+
+        # If no conversion needed, keep original line
+        converted_lines.append(line)
+
+    return '\n'.join(converted_lines)
+
 def sanitize_unavailability_text(text):
     """
     Remove mentions of source unavailability from response text.
@@ -2248,8 +2292,9 @@ def filter_unavailable_sources(response_json):
         # 2. Content is actually available (not "not available" message)
         # 3. Explanation has actual content
         if is_approved_source and not is_unavailable and explanation_text.strip():
-            # Sanitize the explanation text to fix excessive indentation
-            explanation['explanation'] = sanitize_explanation_text(explanation.get('explanation', ''))
+            # Sanitize the explanation text to fix excessive indentation and heading format
+            sanitized = sanitize_explanation_text(explanation.get('explanation', ''))
+            explanation['explanation'] = sanitize_heading_format(sanitized)
             filtered_explanations.append(explanation)
 
     # Update response with filtered explanations
@@ -2259,15 +2304,17 @@ def filter_unavailable_sources(response_json):
         # If no sources available, set to empty list
         response_json['tafsir_explanations'] = []
 
-    # Also sanitize other text fields that might have indentation issues
+    # Also sanitize other text fields that might have indentation and heading format issues
     if response_json.get('summary'):
-        response_json['summary'] = sanitize_explanation_text(response_json['summary'])
+        sanitized_summary = sanitize_explanation_text(response_json['summary'])
+        sanitized_summary = sanitize_heading_format(sanitized_summary)
         # Remove any unavailability messages from summary
-        response_json['summary'] = sanitize_unavailability_text(response_json['summary'])
+        response_json['summary'] = sanitize_unavailability_text(sanitized_summary)
 
     if response_json.get('key_points'):
+        # Apply indentation and heading format sanitization
         response_json['key_points'] = [
-            sanitize_explanation_text(point) if isinstance(point, str) else point
+            sanitize_heading_format(sanitize_explanation_text(point)) if isinstance(point, str) else point
             for point in response_json['key_points']
         ]
         # Remove unavailability messages from key points
@@ -4678,11 +4725,11 @@ ONLY use the source material provided above. DO NOT generate additional explanat
     "tafsir_explanations": [
         {{
             "source": "al-Qurtubi",
-            "explanation": "FORMAT BASED ON PERSONA: Bullets + MINIMAL emojis for beginners ({format_style}), balanced with NO emojis for intermediate, short paragraphs with sub-headers for scholars. Fix all grammar, improve clarity, preserve accuracy. If verse beyond Surah 4:22, state: 'Al-Qurtubi's tafsir is not available for this verse.'"
+            "explanation": "FORMAT BASED ON PERSONA: Bullets + MINIMAL emojis for beginners ({format_style}), balanced with NO emojis for intermediate, short paragraphs with ## markdown sub-headers for scholars. Use ## Heading format for headers (NOT **bold**). Fix all grammar, improve clarity, preserve accuracy. If verse beyond Surah 4:22, state: 'Al-Qurtubi's tafsir is not available for this verse.'"
         }},
         {{
             "source": "Ibn Kathir",
-            "explanation": "FORMAT BASED ON PERSONA: Bullets + MINIMAL emojis for beginners ({format_style}), balanced with NO emojis for intermediate, short paragraphs with sub-headers for scholars. Fix all grammar, improve clarity, preserve accuracy."
+            "explanation": "FORMAT BASED ON PERSONA: Bullets + MINIMAL emojis for beginners ({format_style}), balanced with NO emojis for intermediate, short paragraphs with ## markdown sub-headers for scholars. Use ## Heading format for headers (NOT **bold**). Fix all grammar, improve clarity, preserve accuracy."
         }}
     ],
 
@@ -4693,10 +4740,30 @@ ONLY use the source material provided above. DO NOT generate additional explanat
         }}
     ],
 
+    "hadith": [
+        {{
+            "reference": "Hadith source (e.g., 'Sahih Bukhari 1234')",
+            "text": "Brief hadith text or summary",
+            "relevance": "How this hadith relates to the verse"
+        }}
+    ],
+
     "lessons_practical_applications": [
-        {{"point": "Clear, actionable takeaway 1"}},
-        {{"point": "Clear, actionable takeaway 2"}},
-        {{"point": "Clear, actionable takeaway 3"}}
+        {{
+            "point": "Concise lesson title (one sentence)",
+            "example": "Real-life scenario showing this principle in action",
+            "action": "One specific thing to do today (if/when/then format)"
+        }},
+        {{
+            "point": "Concise lesson title (one sentence)",
+            "example": "Real-life scenario showing this principle in action",
+            "action": "One specific thing to do today (if/when/then format)"
+        }},
+        {{
+            "point": "Concise lesson title (one sentence)",
+            "example": "Real-life scenario showing this principle in action",
+            "action": "One specific thing to do today (if/when/then format)"
+        }}
     ],
 
     "summary": "2-3 sentences directly answering the query"
@@ -4704,8 +4771,10 @@ ONLY use the source material provided above. DO NOT generate additional explanat
 
 FORMATTING DECISION:
 • If persona = new_revert, revert, or seeker → Use bullets (•), ONE emoji in main headers ONLY, short sentences
-• If persona = practicing_muslim or teacher → Use balanced: **bold headers**, short paragraphs + some bullets, NO emojis
-• If persona = scholar or student → Use short paragraphs (2-4 sentences) with **bolded sub-headers**, NO bullets, NO emojis
+• If persona = practicing_muslim or teacher → Use balanced: ## markdown headers, short paragraphs + some bullets, NO emojis
+• If persona = scholar or student → Use short paragraphs (2-4 sentences) with ## markdown sub-headers, NO bullets, NO emojis
+
+IMPORTANT: Always use ## Heading format for headers, NEVER use **bold** for headers
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 CRITICAL REMINDERS

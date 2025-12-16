@@ -39,11 +39,14 @@ export default function TabNavigation({
     }
   }, [activeTab, storageKey]);
 
-  // Reset viewed sections when resetKey changes (new query)
+  // Reset viewed sections AND active tab when resetKey changes (new query)
   useEffect(() => {
     if (resetKey && typeof window !== 'undefined') {
       setViewedSections(new Set());
       localStorage.removeItem(`${storageKey}-viewed`);
+      // Reset to first tab (verses first)
+      setActiveTab(0);
+      localStorage.setItem(storageKey, '0');
     }
   }, [resetKey, storageKey]);
 

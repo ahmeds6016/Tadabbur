@@ -2387,6 +2387,7 @@ function EnhancedResultsDisplay({
     verses = [],
     tafsir_explanations = [],
     cross_references = [],
+    hadith = [],
     lessons_practical_applications = [],
     summary = ''
   } = data || {};
@@ -2507,6 +2508,7 @@ function EnhancedResultsDisplay({
       {/* All annotation panels are now handled by the unified AnnotationDialog at the bottom */}
 
       <TabNavigation
+        resetKey={query}  // Reset to first tab (verses) on new query
         tabs={[
           // Verses Tab
           verses.length > 0 && {
@@ -2657,6 +2659,45 @@ function EnhancedResultsDisplay({
           </div>
                   </div>
                 )}
+
+                {/* Hadith section - separate from Related Verses */}
+                {hadith.length > 0 && (
+                  <div style={{ marginTop: '24px' }}>
+                    <h3 style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '12px' }}>
+                      Hadith ({hadith.length})
+                    </h3>
+                    <div className="hadith-references" style={{ display: 'grid', gap: '12px' }}>
+                      {hadith.map((h, index) => (
+                        <div
+                          key={index}
+                          style={{
+                            background: '#fef3c7',
+                            border: '1px solid #fbbf24',
+                            borderRadius: '8px',
+                            padding: '12px',
+                          }}
+                        >
+                          <div style={{ fontWeight: '600', color: '#92400e', marginBottom: '8px' }}>
+                            {h.reference}
+                          </div>
+                          {h.text && (
+                            <div style={{
+                              fontStyle: 'italic',
+                              color: '#78350f',
+                              marginBottom: '8px',
+                              lineHeight: '1.6'
+                            }}>
+                              &quot;{h.text}&quot;
+                            </div>
+                          )}
+                          <div style={{ color: '#78350f', fontSize: '0.9rem' }}>
+                            {h.relevance}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )
           },
@@ -2695,11 +2736,60 @@ function EnhancedResultsDisplay({
                     </button>
                   </div>
                 )}
-          <ul className="lessons-list">
+          <div style={{ display: 'grid', gap: '16px' }}>
             {lessons_practical_applications.map((lesson, index) => (
-              <li key={index} className="lesson-item">{lesson.point}</li>
+              <div
+                key={index}
+                style={{
+                  background: 'white',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '12px',
+                  padding: '16px',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+                }}
+              >
+                <div style={{
+                  fontWeight: '700',
+                  fontSize: '1rem',
+                  color: 'var(--primary-teal)',
+                  marginBottom: '12px'
+                }}>
+                  {lesson.point}
+                </div>
+                {lesson.example && (
+                  <div style={{
+                    background: '#f0fdf4',
+                    borderLeft: '3px solid #10b981',
+                    padding: '10px 12px',
+                    marginBottom: '12px',
+                    borderRadius: '4px'
+                  }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#059669', marginBottom: '4px', textTransform: 'uppercase' }}>
+                      Example
+                    </div>
+                    <div style={{ fontSize: '0.9rem', color: '#065f46', lineHeight: '1.6' }}>
+                      {lesson.example}
+                    </div>
+                  </div>
+                )}
+                {lesson.action && (
+                  <div style={{
+                    background: '#fefce8',
+                    borderLeft: '3px solid #eab308',
+                    padding: '10px 12px',
+                    borderRadius: '4px'
+                  }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#ca8a04', marginBottom: '4px', textTransform: 'uppercase' }}>
+                      Action Step
+                    </div>
+                    <div style={{ fontSize: '0.9rem', color: '#713f12', lineHeight: '1.6' }}>
+                      {lesson.action}
+                    </div>
+                  </div>
+                )}
+              </div>
             ))}
-          </ul>
+          </div>
               </div>
             )
           },

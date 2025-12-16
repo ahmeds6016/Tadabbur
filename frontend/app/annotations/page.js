@@ -4,6 +4,7 @@ import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { initializeApp, getApps } from 'firebase/app';
 import Link from 'next/link';
 import ReflectionDetailPanel from '../components/ReflectionDetailPanel';
+import { Flame, Trophy, Calendar, BookOpen, Clock, TrendingUp, Lightbulb, HelpCircle, CheckSquare, Heart, Link2 } from 'lucide-react';
 
 const firebaseConfig = {
   apiKey: "AIzaSyBKPuVvuJC1bTUsZsZkiMHRoBRRqF6YqVU",
@@ -236,6 +237,19 @@ export default function MyReflectionsPage() {
     return () => unsubscribe();
   }, []);
 
+  // Time tracking: Track time spent on annotations page
+  useEffect(() => {
+    // Track immediately on mount
+    trackTimeSpent();
+
+    // Then track every minute
+    const interval = setInterval(() => {
+      trackTimeSpent();
+    }, 60000); // 60 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
   const fetchAnnotations = async (currentUser, tag = null, type = null) => {
     try {
       const token = await currentUser.getIdToken();
@@ -387,6 +401,59 @@ export default function MyReflectionsPage() {
     });
   };
 
+  // Time tracking functions (localStorage-based)
+  const getTimeTrackingData = () => {
+    if (typeof window === 'undefined') {
+      return { today: 0, week: 0 };
+    }
+
+    try {
+      const data = JSON.parse(localStorage.getItem('tafsir-time-tracking') || '{}');
+      const today = new Date().toISOString().split('T')[0];
+      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+      // Calculate today's time
+      const todayTime = data[today] || 0;
+
+      // Calculate last 7 days time
+      let weekTime = 0;
+      Object.entries(data).forEach(([date, minutes]) => {
+        if (date >= weekAgo) {
+          weekTime += minutes;
+        }
+      });
+
+      return {
+        today: todayTime,
+        week: weekTime
+      };
+    } catch (e) {
+      return { today: 0, week: 0 };
+    }
+  };
+
+  const trackTimeSpent = () => {
+    if (typeof window === 'undefined') return;
+
+    const today = new Date().toISOString().split('T')[0];
+    try {
+      const data = JSON.parse(localStorage.getItem('tafsir-time-tracking') || '{}');
+      // Add 1 minute (called every minute when page is active)
+      data[today] = (data[today] || 0) + 1;
+
+      // Clean up old data (keep last 30 days only)
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      Object.keys(data).forEach(date => {
+        if (date < thirtyDaysAgo) {
+          delete data[date];
+        }
+      });
+
+      localStorage.setItem('tafsir-time-tracking', JSON.stringify(data));
+    } catch (e) {
+      console.error('Failed to track time:', e);
+    }
+  };
 
   // Calculate comprehensive statistics
   const calculateStats = () => {
@@ -423,13 +490,15 @@ export default function MyReflectionsPage() {
       const typeKey = annotation.type || 'uncategorized';
       stats.byType[typeKey] = (stats.byType[typeKey] || 0) + 1;
 
-      // By surah
-      const surahKey = `Surah ${annotation.surah}`;
-      stats.bySurah[surahKey] = (stats.bySurah[surahKey] || 0) + 1;
+      // By surah (only for verse-type reflections)
+      if (annotation.reflection_type === 'verse' && annotation.surah && annotation.verse) {
+        const surahKey = `Surah ${annotation.surah}`;
+        stats.bySurah[surahKey] = (stats.bySurah[surahKey] || 0) + 1;
 
-      // By verse
-      const verseKey = `${annotation.surah}:${annotation.verse}`;
-      verseActivity[verseKey] = (verseActivity[verseKey] || 0) + 1;
+        // By verse
+        const verseKey = `${annotation.surah}:${annotation.verse}`;
+        verseActivity[verseKey] = (verseActivity[verseKey] || 0) + 1;
+      }
 
       // Tags frequency
       annotation.tags?.forEach(tag => {
@@ -536,6 +605,19 @@ export default function MyReflectionsPage() {
     stats.currentStreak = currentStreak;
     stats.mostActiveDay = maxDay;
     stats.mostAnnotatedVerse = maxVerse;
+
+    // Find last reflection date
+    if (sortedAnnotations.length > 0) {
+      const lastAnnotation = sortedAnnotations[sortedAnnotations.length - 1];
+      if (lastAnnotation.createdAt?.seconds) {
+        stats.lastReflectionDate = new Date(lastAnnotation.createdAt.seconds * 1000);
+      }
+    }
+
+    // Get time tracking data from localStorage
+    const timeData = getTimeTrackingData();
+    stats.timeSpentToday = timeData.today;
+    stats.timeSpentWeek = timeData.week;
 
     return stats;
   };
@@ -829,70 +911,90 @@ export default function MyReflectionsPage() {
               const stats = calculateStats();
               return (
                 <>
-                  {/* Key Metrics */}
+                  {/* Key Metrics - Redesigned */}
                   <div style={{
                     display: 'grid',
                     gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
                     gap: '16px',
                     marginBottom: '24px'
                   }}>
+                    {/* Current Streak */}
                     <div style={{
-                      padding: '16px',
+                      padding: '20px',
                       background: 'linear-gradient(135deg, #10B981 0%, #0D9488 100%)',
                       color: 'white',
                       borderRadius: '12px',
-                      textAlign: 'center'
+                      textAlign: 'center',
+                      boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)'
                     }}>
-                      <div style={{ fontSize: '2.5rem', fontWeight: '800' }}>
+                      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>
+                        <Flame size={32} strokeWidth={2.5} />
+                      </div>
+                      <div style={{ fontSize: '2.5rem', fontWeight: '800', marginBottom: '4px' }}>
                         {stats.currentStreak}
                       </div>
-                      <div style={{ fontSize: '0.9rem', fontWeight: '600' }}>
-                        🔥 Current Streak (days)
+                      <div style={{ fontSize: '0.85rem', fontWeight: '600', opacity: 0.95 }}>
+                        Current Streak (days)
                       </div>
                     </div>
 
+                    {/* Longest Streak */}
                     <div style={{
-                      padding: '16px',
+                      padding: '20px',
                       background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
                       color: 'white',
                       borderRadius: '12px',
-                      textAlign: 'center'
+                      textAlign: 'center',
+                      boxShadow: '0 4px 12px rgba(245, 158, 11, 0.2)'
                     }}>
-                      <div style={{ fontSize: '2.5rem', fontWeight: '800' }}>
+                      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>
+                        <Trophy size={32} strokeWidth={2.5} />
+                      </div>
+                      <div style={{ fontSize: '2.5rem', fontWeight: '800', marginBottom: '4px' }}>
                         {stats.longestStreak}
                       </div>
-                      <div style={{ fontSize: '0.9rem', fontWeight: '600' }}>
-                        🏆 Longest Streak
+                      <div style={{ fontSize: '0.85rem', fontWeight: '600', opacity: 0.95 }}>
+                        Longest Streak
                       </div>
                     </div>
 
+                    {/* Last 30 Days */}
                     <div style={{
-                      padding: '16px',
+                      padding: '20px',
                       background: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)',
                       color: 'white',
                       borderRadius: '12px',
-                      textAlign: 'center'
+                      textAlign: 'center',
+                      boxShadow: '0 4px 12px rgba(139, 92, 246, 0.2)'
                     }}>
-                      <div style={{ fontSize: '2.5rem', fontWeight: '800' }}>
-                        {stats.totalWords.toLocaleString()}
+                      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>
+                        <TrendingUp size={32} strokeWidth={2.5} />
                       </div>
-                      <div style={{ fontSize: '0.9rem', fontWeight: '600' }}>
-                        ✍️ Total Words Written
+                      <div style={{ fontSize: '2.5rem', fontWeight: '800', marginBottom: '4px' }}>
+                        {stats.recentDays}
+                      </div>
+                      <div style={{ fontSize: '0.85rem', fontWeight: '600', opacity: 0.95 }}>
+                        Reflections (Last 30 Days)
                       </div>
                     </div>
 
+                    {/* Time Spent */}
                     <div style={{
-                      padding: '16px',
-                      background: 'linear-gradient(135deg, #EC4899 0%, #DB2777 100%)',
+                      padding: '20px',
+                      background: 'linear-gradient(135deg, #06B6D4 0%, #0891B2 100%)',
                       color: 'white',
                       borderRadius: '12px',
-                      textAlign: 'center'
+                      textAlign: 'center',
+                      boxShadow: '0 4px 12px rgba(6, 182, 212, 0.2)'
                     }}>
-                      <div style={{ fontSize: '2.5rem', fontWeight: '800' }}>
-                        {stats.recentDays}
+                      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>
+                        <Clock size={32} strokeWidth={2.5} />
                       </div>
-                      <div style={{ fontSize: '0.9rem', fontWeight: '600' }}>
-                        📝 Last 30 Days
+                      <div style={{ fontSize: '1.5rem', fontWeight: '800', marginBottom: '4px' }}>
+                        {stats.timeSpentToday}m / {stats.timeSpentWeek}m
+                      </div>
+                      <div style={{ fontSize: '0.85rem', fontWeight: '600', opacity: 0.95 }}>
+                        Time (Today / Week)
                       </div>
                     </div>
                   </div>
@@ -908,9 +1010,13 @@ export default function MyReflectionsPage() {
                       fontSize: '1.1rem',
                       fontWeight: '700',
                       marginBottom: '16px',
-                      color: 'var(--primary-teal)'
+                      color: 'var(--primary-teal)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
                     }}>
-                      📊 Reflection Types Distribution
+                      <TrendingUp size={20} strokeWidth={2.5} />
+                      Reflection Types Distribution
                     </h3>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
                       {Object.entries(stats.byType).map(([type, count]) => {
@@ -1071,34 +1177,44 @@ export default function MyReflectionsPage() {
                     </div>
                   </div>
 
-                  {/* Insights */}
+                  {/* Insights - Redesigned */}
                   <div style={{
                     padding: '20px',
                     background: 'linear-gradient(135deg, var(--primary-teal) 0%, var(--deep-blue) 100%)',
                     color: 'white',
-                    borderRadius: '12px'
+                    borderRadius: '12px',
+                    boxShadow: '0 4px 12px rgba(13, 148, 136, 0.2)'
                   }}>
                     <h3 style={{
                       fontSize: '1.1rem',
                       fontWeight: '700',
-                      marginBottom: '16px'
+                      marginBottom: '16px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
                     }}>
-                      ✨ Insights
+                      <TrendingUp size={20} strokeWidth={2.5} />
+                      Insights
                     </h3>
-                    <div style={{ display: 'grid', gap: '12px' }}>
+                    <div style={{ display: 'grid', gap: '12px', fontSize: '0.95rem' }}>
+                      {stats.mostAnnotatedVerse && stats.mostAnnotatedVerse !== 'undefined:undefined' && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <BookOpen size={16} />
+                          Most reflected verse: <strong>Surah {stats.mostAnnotatedVerse}</strong>
+                        </div>
+                      )}
                       {stats.mostActiveDay && (
-                        <div>
-                          📅 Most active day: <strong>{new Date(stats.mostActiveDay).toLocaleDateString()}</strong>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <Calendar size={16} />
+                          Most active day: <strong>{new Date(stats.mostActiveDay).toLocaleDateString()}</strong>
                         </div>
                       )}
-                      {stats.mostAnnotatedVerse && (
-                        <div>
-                          📖 Most reflected verse: <strong>Verse {stats.mostAnnotatedVerse}</strong>
+                      {stats.lastReflectionDate && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <Clock size={16} />
+                          Last reflection: <strong>{stats.lastReflectionDate.toLocaleDateString()} at {stats.lastReflectionDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</strong>
                         </div>
                       )}
-                      <div>
-                        📝 Average reflection length: <strong>{stats.averageLength} characters</strong>
-                      </div>
                     </div>
                   </div>
                 </>
