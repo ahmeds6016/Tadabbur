@@ -1,24 +1,10 @@
 'use client';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
 import { Home, Clock, Star, FileText } from 'lucide-react';
 
 export default function BottomNav({ user }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth <= 768);
-    };
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-  // Don't show on desktop
-  if (!isMobile) return null;
 
   const navItems = [
     {
@@ -75,8 +61,9 @@ export default function BottomNav({ user }) {
           .bottom-nav {
             position: fixed;
             bottom: 0;
-            left: 0;
-            right: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: min(1200px, 100%);
             background: linear-gradient(to top, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.95));
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
@@ -88,6 +75,7 @@ export default function BottomNav({ user }) {
             z-index: 1000;
             box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
             padding-bottom: env(safe-area-inset-bottom);
+            border-radius: 16px 16px 0 0;
           }
 
           .nav-item {
@@ -150,6 +138,7 @@ export default function BottomNav({ user }) {
             .bottom-nav {
               background: #1f2937;
               border-top-color: #374151;
+              box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.35);
             }
 
             .nav-item {
@@ -168,6 +157,36 @@ export default function BottomNav({ user }) {
           @media all and (display-mode: standalone) {
             .bottom-nav {
               padding-bottom: calc(env(safe-area-inset-bottom) + 8px);
+            }
+          }
+
+          /* Desktop-friendly PWA layout */
+          @media (min-width: 1024px) {
+            .bottom-nav {
+              gap: 8px;
+              padding-left: 24px;
+              padding-right: 24px;
+              height: 70px;
+            }
+
+            .nav-item {
+              flex-direction: row;
+              gap: 10px;
+              justify-content: center;
+              align-items: center;
+              font-size: 0.95rem;
+              padding: 10px 14px;
+            }
+
+            .nav-label {
+              font-size: 0.85rem;
+            }
+
+            .nav-item.active::before {
+              top: auto;
+              bottom: -2px;
+              height: 3px;
+              width: 48px;
             }
           }
         `}</style>

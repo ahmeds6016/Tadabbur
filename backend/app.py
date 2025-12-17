@@ -2163,85 +2163,268 @@ def sanitize_heading_format(text):
     if not text:
         return text
 
-    # STEP 1: Ensure ## headings are on their own line
-    # Replace patterns like "text. ## Heading" with "text.\n\n## Heading"
     import re
 
-    # Pattern: any non-newline chars followed by ## (with optional space before ##)
-    # Capture: (text before ##) (##) (heading text) (rest)
-    # This matches: "text. ## Heading" or "text.## Heading" or "text. ##Heading"
-    heading_pattern = r'([^\n]+?)\s*(##\s*[^\n]+?)(\s+[^\n]+)?$'
+    def add_blank_line(processed: List[str]) -> None:
+        """Insert a single blank line if the previous line isn't already blank."""
+        if processed and processed[-1].strip():
+            processed.append('')
 
-    lines = text.split('\n')
+    def split_heading_and_body(raw_heading: str) -> Tuple[str, str]:
+        """
+        Separate a heading from any trailing body text that may have been kept
+        on the same line (e.g., '## Heading While the verse declares...').
+        """
+        heading_content = raw_heading.strip()
+        if not heading_content:
+            return "", ""
+
+        boundary_positions = []
+
+        # Punctuation followed by capital letter often marks the start of body text
+        punctuation_match = re.search(r'[.?!:]\s+[A-Z]', heading_content)
+        if punctuation_match:
+            boundary_positions.append(punctuation_match.start())
+
+        # Common sentence starters that indicate body text
+        sentence_starters = [
+            ' While ', ' The ', ' This ', ' It ', ' Ibn ', ' He ', ' She ',
+            ' They ', ' These ', ' Those ', ' When ', ' If ', ' As ', ' In ', ' For '
+        ]
+        for starter in sentence_starters:
+            pos = heading_content.find(starter)
+            if pos > 0:
+                boundary_positions.append(pos)
+
+        if boundary_positions:
+            split_at = min(boundary_positions)
+            return heading_content[:split_at].strip(' .:;-'), heading_content[split_at:].strip()
+
+        return heading_content, ""
+
     processed_lines = []
 
-    for line in lines:
-        # Check if line contains ## but not at the start
-        if '##' in line and not line.strip().startswith('##'):
-            # Split at ## boundary
-            parts = line.split('##', 1)
-            if len(parts) == 2:
-                before = parts[0].strip()
-                after = parts[1].strip()
-
-                # Try to separate heading from paragraph text that follows
-                # Look for common patterns where paragraph starts:
-                # 1. " While ", " The ", " This ", " It " (sentence starters)
-                # 2. Two or more spaces
-                # 3. Period followed by space and capital letter
-
-                sentence_starters = [' While ', ' The ', ' This ', ' It ', ' Ibn ', ' He ', ' She ',
-                                   ' They ', ' These ', ' Those ', ' When ', ' If ', ' As ']
-
-                heading_text = after
-                remaining_text = ''
-
-                # Find the earliest occurrence of a sentence starter
-                earliest_pos = len(after)
-                for starter in sentence_starters:
-                    pos = after.find(starter)
-                    if pos != -1 and pos < earliest_pos:
-                        earliest_pos = pos
-
-                if earliest_pos < len(after):
-                    # Found a sentence starter - split there
-                    heading_text = after[:earliest_pos].strip()
-                    remaining_text = after[earliest_pos:].strip()
-
-                # Add the parts with proper spacing
-                if before:
-                    processed_lines.append(before)
-                    processed_lines.append('')  # blank line
-
-                processed_lines.append(f"## {heading_text}")
-
-                if remaining_text:
-                    processed_lines.append('')  # blank line
-                    processed_lines.append(remaining_text)
-
-                continue
-
-        # STEP 2: Convert **Header** to ## Header (original logic)
+    for line in text.split('\n'):
         stripped = line.strip()
 
+        # Preserve blank lines
+        if stripped == '':
+            processed_lines.append('')
+            continue
+
+        # Convert **Header** (at start of line) to ## Header
         if stripped.startswith('**') and '**' in stripped[2:]:
             end_pos = stripped.find('**', 2)
             if end_pos != -1:
-                heading_text = stripped[2:end_pos]
+                heading_text = stripped[2:end_pos].strip()
                 rest_of_line = stripped[end_pos + 2:].strip()
 
+                add_blank_line(processed_lines)
+                if heading_text:
+                    processed_lines.append(f"## {heading_text}")
                 if rest_of_line:
-                    processed_lines.append(f"## {heading_text}")
-                    processed_lines.append('')  # blank line
+                    processed_lines.append('')
                     processed_lines.append(rest_of_line)
-                else:
-                    processed_lines.append(f"## {heading_text}")
                 continue
+
+        # Headings already at line start but possibly with trailing text
+        if stripped.startswith('##'):
+            heading_text, trailing_text = split_heading_and_body(stripped[2:])
+            add_blank_line(processed_lines)
+            if heading_text:
+                processed_lines.append(f"## {heading_text}")
+            if trailing_text:
+                processed_lines.append('')
+                processed_lines.append(trailing_text)
+            continue
+
+        # Inline headings embedded within a paragraph
+        if '##' in stripped:
+            before, after = stripped.split('##', 1)
+            before = before.rstrip()
+            heading_text, trailing_text = split_heading_and_body(after)
+
+            if before:
+                processed_lines.append(before)
+
+            add_blank_line(processed_lines)
+            if heading_text:
+                processed_lines.append(f"## {heading_text}")
+
+            if trailing_text:
+                processed_lines.append('')
+                processed_lines.append(trailing_text)
+            continue
 
         # No conversion needed
         processed_lines.append(line)
 
-    return '\n'.join(processed_lines)
+    # Collapse multiple consecutive blank lines
+    cleaned_lines = []
+    for line in processed_lines:
+        if line == '' and (not cleaned_lines or cleaned_lines[-1] == ''):
+            continue
+        cleaned_lines.append(line)
+
+    return '\n'.join(cleaned_lines)
+
+def enforce_persona_verse_limit(response_json: Dict, persona_name: str, requested_verses: Optional[List[Tuple[int, int]]] = None) -> Tuple[Dict, bool, int, int]:
+    """
+    Enforce persona-specific verse limits while prioritizing explicitly requested verses.
+
+    Returns a tuple of:
+        (response_json, trimmed_flag, original_count, final_count)
+    """
+    if not response_json or not isinstance(response_json, dict):
+        return response_json, False, 0, 0
+
+    verses = response_json.get('verses')
+    if not verses or not isinstance(verses, list):
+        return response_json, False, 0, 0
+
+    original_count = len(verses)
+    verse_limit = PERSONA_VERSE_LIMITS.get(persona_name, 8)
+
+    requested_set = set()
+    if requested_verses:
+        for surah, verse in requested_verses:
+            try:
+                requested_set.add((int(surah), int(verse)))
+            except (TypeError, ValueError):
+                continue
+
+    def normalize_verse_id(entry: Dict) -> Optional[Tuple[int, int]]:
+        surah_val = entry.get('surah') or entry.get('surah_number')
+        verse_val = entry.get('verse_number') or entry.get('verse')
+        try:
+            return int(surah_val), int(str(verse_val).split(':')[-1])
+        except (TypeError, ValueError):
+            return None
+
+    prioritized = []
+    others = []
+    seen = set()
+
+    for verse_entry in verses:
+        verse_id = normalize_verse_id(verse_entry)
+
+        if verse_id:
+            if verse_id in seen:
+                continue  # Deduplicate identical verse entries
+            seen.add(verse_id)
+
+            if requested_set and verse_id in requested_set:
+                prioritized.append(verse_entry)
+            else:
+                others.append(verse_entry)
+        else:
+            # Keep unrecognized structures at the end (rare)
+            others.append(verse_entry)
+
+    # Always honor all explicitly requested verses, even if they exceed the persona limit
+    allowed_count = max(verse_limit, len(prioritized))
+    remaining_slots = max(0, allowed_count - len(prioritized))
+
+    limited_verses = prioritized + others[:remaining_slots]
+    trimmed = len(limited_verses) < original_count
+
+    response_json['verses'] = limited_verses
+    final_count = len(limited_verses)
+
+    return response_json, trimmed, original_count, final_count
+
+def normalize_verse_id(entry: Dict) -> Optional[Tuple[int, int]]:
+    """Extract (surah, verse) tuple from a verse entry dict."""
+    try:
+        surah_val = entry.get('surah') or entry.get('surah_number')
+        verse_val = entry.get('verse_number') or entry.get('verse')
+        if isinstance(verse_val, str) and ':' in verse_val:
+            verse_val = verse_val.split(':')[-1]
+        return int(surah_val), int(verse_val)
+    except (TypeError, ValueError, AttributeError):
+        return None
+
+def build_requested_verse_objects(requested_data: Any) -> List[Dict]:
+    """
+    Build normalized verse objects for the main verses array using requested verse data.
+    """
+    if not requested_data:
+        return []
+
+    data_list = requested_data if isinstance(requested_data, list) else [requested_data]
+    normalized = []
+
+    for data in data_list:
+        try:
+            surah_num = data.get('surah_number') or data.get('surah')
+            verse_num = data.get('verse_number') or data.get('verse')
+            if isinstance(verse_num, str) and ':' in verse_num:
+                verse_num = verse_num.split(':')[-1]
+
+            normalized.append({
+                "surah": int(surah_num) if surah_num is not None else None,
+                "surah_name": data.get('surah_name') or data.get('surahName'),
+                "verse_number": str(verse_num) if verse_num is not None else None,
+                "text_saheeh_international": data.get('english') or data.get('text_saheeh_international'),
+                "arabic_text": data.get('arabic') or data.get('arabic_text')
+            })
+        except (TypeError, ValueError, AttributeError):
+            continue
+
+    # Filter out incomplete entries (missing surah or verse)
+    normalized = [
+        v for v in normalized
+        if v.get("surah") is not None and v.get("verse_number") is not None
+    ]
+
+    return normalized
+
+def keep_requested_verses_primary(response_json: Dict, requested_data: Any, requested_verses: Optional[List[Tuple[int, int]]] = None) -> Dict:
+    """
+    Ensure the main `verses` array only contains the explicitly requested verse(s).
+    Any extra verses get moved into `cross_references`.
+    """
+    if not response_json or not isinstance(response_json, dict):
+        return response_json
+
+    # Establish requested set from explicit list or requested_data
+    requested_set = set()
+    if requested_verses:
+        for surah, verse in requested_verses:
+            try:
+                requested_set.add((int(surah), int(verse)))
+            except (TypeError, ValueError):
+                continue
+    elif requested_data:
+        data_list = requested_data if isinstance(requested_data, list) else [requested_data]
+        for data in data_list:
+            verse_id = normalize_verse_id(data)
+            if verse_id:
+                requested_set.add(verse_id)
+
+    # Move non-requested verses into cross references
+    current_verses = response_json.get('verses', [])
+    extra_refs = []
+    for verse_entry in current_verses:
+        verse_id = normalize_verse_id(verse_entry)
+        if verse_id and requested_set and verse_id not in requested_set:
+            extra_refs.append(f"{verse_id[0]}:{verse_id[1]}")
+
+    cross_refs = response_json.get('cross_references') or []
+    if not isinstance(cross_refs, list):
+        cross_refs = [cross_refs]
+
+    for ref in extra_refs:
+        if ref not in cross_refs:
+            cross_refs.append(ref)
+
+    response_json['cross_references'] = cross_refs
+
+    requested_objects = build_requested_verse_objects(requested_data)
+    if requested_objects:
+        response_json['verses'] = requested_objects
+
+    return response_json
 
 def sanitize_unavailability_text(text):
     """
@@ -6889,9 +7072,24 @@ def tafsir_handler_enhanced():
                     # Filter out unavailable sources before caching and returning
                     final_json = filter_unavailable_sources(final_json)
 
+                    # Keep only requested verse(s) in main list; move extras to cross references
+                    final_json = keep_requested_verses_primary(
+                        final_json,
+                        verse_data,
+                        requested_verses=[(surah, verse)]
+                    )
+
+                    persona_name = user_profile.get('persona', 'practicing_muslim')
+                    final_json, trimmed, original_count, final_count = enforce_persona_verse_limit(
+                        final_json,
+                        persona_name,
+                        requested_verses=[(surah, verse)]
+                    )
+                    if trimmed:
+                        print(f"   ℹ️  Trimmed verses to {final_count}/{original_count} for persona {persona_name}")
+
                     # Log verse count for monitoring
                     verse_count = len(final_json.get('verses', []))
-                    persona_name = user_profile.get('persona', 'practicing_muslim')
                     verse_limit = PERSONA_VERSE_LIMITS.get(persona_name, 8)
                     if verse_count > verse_limit:
                         print(f"   ⚠️  VERSE LIMIT EXCEEDED: {verse_count} verses returned (limit: {verse_limit} for {persona_name})")
@@ -7142,9 +7340,25 @@ def tafsir_handler_enhanced():
                         # Filter out unavailable sources before caching and returning
                         final_json = filter_unavailable_sources(final_json)
 
+                        # Keep only requested verse(s) in main list; move extras to cross references
+                        final_json = keep_requested_verses_primary(
+                            final_json,
+                            verses_for_ai,
+                            requested_verses=[(surah, v) for v in range(start_verse, end_verse + 1)]
+                        )
+
+                        persona_name = user_profile.get('persona', 'practicing_muslim')
+                        requested_range = [(surah, v) for v in range(start_verse, end_verse + 1)]
+                        final_json, trimmed, original_count, final_count = enforce_persona_verse_limit(
+                            final_json,
+                            persona_name,
+                            requested_verses=requested_range
+                        )
+                        if trimmed:
+                            print(f"   ℹ️  Trimmed verses to {final_count}/{original_count} for persona {persona_name}")
+
                         # Log verse count for monitoring
                         verse_count = len(final_json.get('verses', []))
-                        persona_name = user_profile.get('persona', 'practicing_muslim')
                         verse_limit = PERSONA_VERSE_LIMITS.get(persona_name, 8)
                         if verse_count > verse_limit:
                             print(f"   ⚠️  VERSE LIMIT EXCEEDED: {verse_count} verses returned (limit: {verse_limit} for {persona_name})")
@@ -7423,9 +7637,25 @@ def tafsir_handler_enhanced():
                 # Filter out unavailable sources before caching and returning
                 final_json = filter_unavailable_sources(final_json)
 
+                # Keep only requested verse(s) in main list; move extras to cross references
+                final_json = keep_requested_verses_primary(
+                    final_json,
+                    verse_data,
+                    requested_verses=[(verse_ref[0], verse_ref[1])] if verse_ref else None
+                )
+
+                persona_name = user_profile.get('persona', 'practicing_muslim')
+                requested_list = [(verse_ref[0], verse_ref[1])] if verse_ref else None
+                final_json, trimmed, original_count, final_count = enforce_persona_verse_limit(
+                    final_json,
+                    persona_name,
+                    requested_verses=requested_list
+                )
+                if trimmed:
+                    print(f"   ℹ️  Trimmed verses to {final_count}/{original_count} for persona {persona_name}")
+
                 # Log verse count for monitoring
                 verse_count = len(final_json.get('verses', []))
-                persona_name = user_profile.get('persona', 'practicing_muslim')
                 verse_limit = PERSONA_VERSE_LIMITS.get(persona_name, 8)
                 if verse_count > verse_limit:
                     print(f"   ⚠️  VERSE LIMIT EXCEEDED: {verse_count} verses returned (limit: {verse_limit} for {persona_name})")
