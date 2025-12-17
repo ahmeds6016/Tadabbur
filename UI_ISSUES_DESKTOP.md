@@ -5,6 +5,27 @@
 
 ---
 
+## ✅ FIXED ISSUES
+
+### ✓ Markdown Heading Formatting **[FIXED - Commit 922391b]**
+**Location**: backend/app.py:2149-2230, frontend/app/globals.css:1280-1301
+**Issue**: Headings (##) appeared inline in middle of paragraphs instead of on their own lines.
+
+Example from screenshot:
+```
+...their transgressions. ## The Conditionality of Forgiveness While the verse declares...
+```
+
+Also, "The Universal Call to Repentance" (first heading) had different size/spacing than subsequent ## headings.
+
+**Fix Applied**:
+- **Backend**: Enhanced `sanitize_heading_format()` to detect inline headings, use smart sentence-starter detection to split heading from paragraph, and add proper blank lines
+- **Frontend**: Normalized h1 and h2 to same size (1.15rem) and spacing (20px/10px margins)
+
+**Result**: All headings now appear on separate lines with consistent spacing throughout the document.
+
+---
+
 ## 🔴 CRITICAL ISSUES
 
 ### 1. Duplicate "New Search" Buttons
