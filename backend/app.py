@@ -2333,6 +2333,99 @@ def enforce_persona_verse_limit(response_json: Dict, persona_name: str, requeste
 
     return response_json, trimmed, original_count, final_count
 
+def normalize_verse_id(entry: Dict) -> Optional[Tuple[int, int]]:
+    """Extract (surah, verse) tuple from a verse entry dict."""
+    try:
+        surah_val = entry.get('surah') or entry.get('surah_number')
+        verse_val = entry.get('verse_number') or entry.get('verse')
+        if isinstance(verse_val, str) and ':' in verse_val:
+            verse_val = verse_val.split(':')[-1]
+        return int(surah_val), int(verse_val)
+    except (TypeError, ValueError, AttributeError):
+        return None
+
+def build_requested_verse_objects(requested_data: Any) -> List[Dict]:
+    """
+    Build normalized verse objects for the main verses array using requested verse data.
+    """
+    if not requested_data:
+        return []
+
+    data_list = requested_data if isinstance(requested_data, list) else [requested_data]
+    normalized = []
+
+    for data in data_list:
+        try:
+            surah_num = data.get('surah_number') or data.get('surah')
+            verse_num = data.get('verse_number') or data.get('verse')
+            if isinstance(verse_num, str) and ':' in verse_num:
+                verse_num = verse_num.split(':')[-1]
+
+            normalized.append({
+                "surah": int(surah_num) if surah_num is not None else None,
+                "surah_name": data.get('surah_name') or data.get('surahName'),
+                "verse_number": str(verse_num) if verse_num is not None else None,
+                "text_saheeh_international": data.get('english') or data.get('text_saheeh_international'),
+                "arabic_text": data.get('arabic') or data.get('arabic_text')
+            })
+        except (TypeError, ValueError, AttributeError):
+            continue
+
+    # Filter out incomplete entries (missing surah or verse)
+    normalized = [
+        v for v in normalized
+        if v.get("surah") is not None and v.get("verse_number") is not None
+    ]
+
+    return normalized
+
+def keep_requested_verses_primary(response_json: Dict, requested_data: Any, requested_verses: Optional[List[Tuple[int, int]]] = None) -> Dict:
+    """
+    Ensure the main `verses` array only contains the explicitly requested verse(s).
+    Any extra verses get moved into `cross_references`.
+    """
+    if not response_json or not isinstance(response_json, dict):
+        return response_json
+
+    # Establish requested set from explicit list or requested_data
+    requested_set = set()
+    if requested_verses:
+        for surah, verse in requested_verses:
+            try:
+                requested_set.add((int(surah), int(verse)))
+            except (TypeError, ValueError):
+                continue
+    elif requested_data:
+        data_list = requested_data if isinstance(requested_data, list) else [requested_data]
+        for data in data_list:
+            verse_id = normalize_verse_id(data)
+            if verse_id:
+                requested_set.add(verse_id)
+
+    # Move non-requested verses into cross references
+    current_verses = response_json.get('verses', [])
+    extra_refs = []
+    for verse_entry in current_verses:
+        verse_id = normalize_verse_id(verse_entry)
+        if verse_id and requested_set and verse_id not in requested_set:
+            extra_refs.append(f"{verse_id[0]}:{verse_id[1]}")
+
+    cross_refs = response_json.get('cross_references') or []
+    if not isinstance(cross_refs, list):
+        cross_refs = [cross_refs]
+
+    for ref in extra_refs:
+        if ref not in cross_refs:
+            cross_refs.append(ref)
+
+    response_json['cross_references'] = cross_refs
+
+    requested_objects = build_requested_verse_objects(requested_data)
+    if requested_objects:
+        response_json['verses'] = requested_objects
+
+    return response_json
+
 def sanitize_unavailability_text(text):
     """
     Remove mentions of source unavailability from response text.
@@ -6979,6 +7072,13 @@ def tafsir_handler_enhanced():
                     # Filter out unavailable sources before caching and returning
                     final_json = filter_unavailable_sources(final_json)
 
+                    # Keep only requested verse(s) in main list; move extras to cross references
+                    final_json = keep_requested_verses_primary(
+                        final_json,
+                        verse_data,
+                        requested_verses=[(surah, verse)]
+                    )
+
                     persona_name = user_profile.get('persona', 'practicing_muslim')
                     final_json, trimmed, original_count, final_count = enforce_persona_verse_limit(
                         final_json,
@@ -7239,6 +7339,13 @@ def tafsir_handler_enhanced():
 
                         # Filter out unavailable sources before caching and returning
                         final_json = filter_unavailable_sources(final_json)
+
+                        # Keep only requested verse(s) in main list; move extras to cross references
+                        final_json = keep_requested_verses_primary(
+                            final_json,
+                            verses_for_ai,
+                            requested_verses=[(surah, v) for v in range(start_verse, end_verse + 1)]
+                        )
 
                         persona_name = user_profile.get('persona', 'practicing_muslim')
                         requested_range = [(surah, v) for v in range(start_verse, end_verse + 1)]
@@ -7529,6 +7636,13 @@ def tafsir_handler_enhanced():
 
                 # Filter out unavailable sources before caching and returning
                 final_json = filter_unavailable_sources(final_json)
+
+                # Keep only requested verse(s) in main list; move extras to cross references
+                final_json = keep_requested_verses_primary(
+                    final_json,
+                    verse_data,
+                    requested_verses=[(verse_ref[0], verse_ref[1])] if verse_ref else None
+                )
 
                 persona_name = user_profile.get('persona', 'practicing_muslim')
                 requested_list = [(verse_ref[0], verse_ref[1])] if verse_ref else None
