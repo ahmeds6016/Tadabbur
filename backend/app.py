@@ -2148,47 +2148,100 @@ def sanitize_explanation_text(text):
 
 def sanitize_heading_format(text):
     """
-    Convert bold text at the start of lines into proper markdown headings.
-    Fixes the issue where LLM generates **Header** instead of ## Header,
-    which causes headings to appear inline instead of as block elements.
+    Convert bold text at the start of lines into proper markdown headings AND
+    ensure ## headings are always on their own line with proper spacing.
+
+    Fixes two issues:
+    1. LLM generates **Header** instead of ## Header
+    2. LLM generates inline headings like "text. ## Header more text"
 
     Examples:
         **Introduction** -> ## Introduction
-        **Key Points** -> ## Key Points
-        Some **bold text** here -> Some **bold text** here (unchanged - not at line start)
+        text. ## Header more -> text.\n\n## Header\n\nmore
+        Some **bold text** here -> Some **bold text** here (unchanged)
     """
     if not text:
         return text
 
+    # STEP 1: Ensure ## headings are on their own line
+    # Replace patterns like "text. ## Heading" with "text.\n\n## Heading"
+    import re
+
+    # Pattern: any non-newline chars followed by ## (with optional space before ##)
+    # Capture: (text before ##) (##) (heading text) (rest)
+    # This matches: "text. ## Heading" or "text.## Heading" or "text. ##Heading"
+    heading_pattern = r'([^\n]+?)\s*(##\s*[^\n]+?)(\s+[^\n]+)?$'
+
     lines = text.split('\n')
-    converted_lines = []
+    processed_lines = []
 
     for line in lines:
-        stripped = line.strip()
+        # Check if line contains ## but not at the start
+        if '##' in line and not line.strip().startswith('##'):
+            # Split at ## boundary
+            parts = line.split('##', 1)
+            if len(parts) == 2:
+                before = parts[0].strip()
+                after = parts[1].strip()
 
-        # Check if line starts with **text** pattern (bold at start of line)
-        # Match: **Text** or **Text with spaces**
-        # Don't match: Some text **bold** or text with **bold** in middle
-        if stripped.startswith('**') and '**' in stripped[2:]:
-            # Find the closing **
-            end_pos = stripped.find('**', 2)
-            if end_pos != -1:
-                # Extract the text between ** **
-                heading_text = stripped[2:end_pos]
-                # Keep any text after the closing **
-                rest_of_line = stripped[end_pos + 2:].strip()
+                # Try to separate heading from paragraph text that follows
+                # Look for common patterns where paragraph starts:
+                # 1. " While ", " The ", " This ", " It " (sentence starters)
+                # 2. Two or more spaces
+                # 3. Period followed by space and capital letter
 
-                # Convert to ## heading format
-                if rest_of_line:
-                    converted_lines.append(f"## {heading_text}\n{rest_of_line}")
-                else:
-                    converted_lines.append(f"## {heading_text}")
+                sentence_starters = [' While ', ' The ', ' This ', ' It ', ' Ibn ', ' He ', ' She ',
+                                   ' They ', ' These ', ' Those ', ' When ', ' If ', ' As ']
+
+                heading_text = after
+                remaining_text = ''
+
+                # Find the earliest occurrence of a sentence starter
+                earliest_pos = len(after)
+                for starter in sentence_starters:
+                    pos = after.find(starter)
+                    if pos != -1 and pos < earliest_pos:
+                        earliest_pos = pos
+
+                if earliest_pos < len(after):
+                    # Found a sentence starter - split there
+                    heading_text = after[:earliest_pos].strip()
+                    remaining_text = after[earliest_pos:].strip()
+
+                # Add the parts with proper spacing
+                if before:
+                    processed_lines.append(before)
+                    processed_lines.append('')  # blank line
+
+                processed_lines.append(f"## {heading_text}")
+
+                if remaining_text:
+                    processed_lines.append('')  # blank line
+                    processed_lines.append(remaining_text)
+
                 continue
 
-        # If no conversion needed, keep original line
-        converted_lines.append(line)
+        # STEP 2: Convert **Header** to ## Header (original logic)
+        stripped = line.strip()
 
-    return '\n'.join(converted_lines)
+        if stripped.startswith('**') and '**' in stripped[2:]:
+            end_pos = stripped.find('**', 2)
+            if end_pos != -1:
+                heading_text = stripped[2:end_pos]
+                rest_of_line = stripped[end_pos + 2:].strip()
+
+                if rest_of_line:
+                    processed_lines.append(f"## {heading_text}")
+                    processed_lines.append('')  # blank line
+                    processed_lines.append(rest_of_line)
+                else:
+                    processed_lines.append(f"## {heading_text}")
+                continue
+
+        # No conversion needed
+        processed_lines.append(line)
+
+    return '\n'.join(processed_lines)
 
 def sanitize_unavailability_text(text):
     """
