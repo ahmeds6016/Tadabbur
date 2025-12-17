@@ -53,9 +53,61 @@ export default function TabNavigation({
   // Filter out empty tabs (sections with no content)
   const validTabs = tabs.filter(tab => tab.content);
 
-  // Don't use tabs on desktop - show all content
+  // Don't use tabs on desktop - show all content with section labels
   if (!isMobile) {
-    return <>{validTabs.map(tab => tab.content)}</>;
+    return (
+      <div className="desktop-sections">
+        {validTabs.map((tab, index) => (
+          <section key={index} className="desktop-section" aria-label={tab.label}>
+            <header className="desktop-section-header">
+              <span className="tab-icon">{tab.icon}</span>
+              <h2 className="tab-label">{tab.label}{tab.count !== undefined ? ` (${tab.count})` : ''}</h2>
+            </header>
+            <div className="desktop-section-body">
+              {tab.content}
+            </div>
+          </section>
+        ))}
+
+        <style jsx>{`
+          .desktop-sections {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+          }
+
+          .desktop-section {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 16px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+            padding: 20px 24px;
+          }
+
+          .desktop-section-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+          }
+
+          .desktop-section-header .tab-icon {
+            font-size: 1.4rem;
+          }
+
+          .desktop-section-header .tab-label {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #065f46;
+            margin: 0;
+          }
+
+          .desktop-section-body {
+            margin-top: 8px;
+          }
+        `}</style>
+      </div>
+    );
   }
 
   // Mobile tab interface

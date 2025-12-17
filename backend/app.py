@@ -28,6 +28,7 @@ import vertexai
 from vertexai.language_models import TextEmbeddingModel
 from google.cloud import aiplatform
 from google.cloud import storage
+from backend.utils.text_cleaning import sanitize_heading_format
 
 # Imports for Reranking (Setup 1: Retriever-Reranker pattern)
 # DISABLED: Testing pure RAG optimization for latency and quality
@@ -2146,22 +2147,68 @@ def sanitize_explanation_text(text):
 
     return '\n'.join(cleaned_lines)
 
-def sanitize_heading_format(text):
+def enforce_persona_verse_limit(response_json: Dict, persona_name: str, requested_verses: Optional[List[Tuple[int, int]]] = None) -> Tuple[Dict, bool, int, int]:
     """
-    Convert bold text at the start of lines into proper markdown headings AND
-    ensure ## headings are always on their own line with proper spacing.
+    Enforce persona-specific verse limits while prioritizing explicitly requested verses.
 
-    Fixes two issues:
-    1. LLM generates **Header** instead of ## Header
-    2. LLM generates inline headings like "text. ## Header more text"
-
-    Examples:
-        **Introduction** -> ## Introduction
-        text. ## Header more -> text.\n\n## Header\n\nmore
-        Some **bold text** here -> Some **bold text** here (unchanged)
+    Returns a tuple of:
+        (response_json, trimmed_flag, original_count, final_count)
     """
-    if not text:
-        return text
+    if not response_json or not isinstance(response_json, dict):
+        return response_json, False, 0, 0
+
+    verses = response_json.get('verses')
+    if not verses or not isinstance(verses, list):
+        return response_json, False, 0, 0
+
+    original_count = len(verses)
+    verse_limit = PERSONA_VERSE_LIMITS.get(persona_name, 8)
+
+    requested_set = set()
+    if requested_verses:
+        for surah, verse in requested_verses:
+            try:
+                requested_set.add((int(surah), int(verse)))
+            except (TypeError, ValueError):
+                continue
+
+    def normalize_verse_id(entry: Dict) -> Optional[Tuple[int, int]]:
+        surah_val = entry.get('surah') or entry.get('surah_number')
+        verse_val = entry.get('verse_number') or entry.get('verse')
+        try:
+            return int(surah_val), int(str(verse_val).split(':')[-1])
+        except (TypeError, ValueError):
+            return None
+
+    prioritized = []
+    others = []
+    seen = set()
+
+    for verse_entry in verses:
+        verse_id = normalize_verse_id(verse_entry)
+
+        if verse_id:
+            if verse_id in seen:
+                continue  # Deduplicate identical verse entries
+            seen.add(verse_id)
+
+            if requested_set and verse_id in requested_set:
+                prioritized.append(verse_entry)
+            else:
+                others.append(verse_entry)
+        else:
+            # Keep unrecognized structures at the end (rare)
+            others.append(verse_entry)
+
+    # Always honor all explicitly requested verses, even if they exceed the persona limit
+    allowed_count = max(verse_limit, len(prioritized))
+    remaining_slots = max(0, allowed_count - len(prioritized))
+
+    limited_verses = prioritized + others[:remaining_slots]
+    trimmed = len(limited_verses) < original_count
+
+    response_json['verses'] = limited_verses
+    final_count = len(limited_verses)
 
     import re
 
