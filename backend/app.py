@@ -2210,6 +2210,174 @@ def enforce_persona_verse_limit(response_json: Dict, persona_name: str, requeste
     response_json['verses'] = limited_verses
     final_count = len(limited_verses)
 
+    import re
+
+    def add_blank_line(processed: List[str]) -> None:
+        """Insert a single blank line if the previous line isn't already blank."""
+        if processed and processed[-1].strip():
+            processed.append('')
+
+    def split_heading_and_body(raw_heading: str) -> Tuple[str, str]:
+        """
+        Separate a heading from any trailing body text that may have been kept
+        on the same line (e.g., '## Heading While the verse declares...').
+        """
+        heading_content = raw_heading.strip()
+        if not heading_content:
+            return "", ""
+
+        boundary_positions = []
+
+        # Punctuation followed by capital letter often marks the start of body text
+        punctuation_match = re.search(r'[.?!:]\s+[A-Z]', heading_content)
+        if punctuation_match:
+            boundary_positions.append(punctuation_match.start())
+
+        # Common sentence starters that indicate body text
+        sentence_starters = [
+            ' While ', ' The ', ' This ', ' It ', ' Ibn ', ' He ', ' She ',
+            ' They ', ' These ', ' Those ', ' When ', ' If ', ' As ', ' In ', ' For '
+        ]
+        for starter in sentence_starters:
+            pos = heading_content.find(starter)
+            if pos > 0:
+                boundary_positions.append(pos)
+
+        if boundary_positions:
+            split_at = min(boundary_positions)
+            return heading_content[:split_at].strip(' .:;-'), heading_content[split_at:].strip()
+
+        return heading_content, ""
+
+    processed_lines = []
+
+    for line in text.split('\n'):
+        stripped = line.strip()
+
+        # Preserve blank lines
+        if stripped == '':
+            processed_lines.append('')
+            continue
+
+        # Convert **Header** (at start of line) to ## Header
+        if stripped.startswith('**') and '**' in stripped[2:]:
+            end_pos = stripped.find('**', 2)
+            if end_pos != -1:
+                heading_text = stripped[2:end_pos].strip()
+                rest_of_line = stripped[end_pos + 2:].strip()
+
+                add_blank_line(processed_lines)
+                if heading_text:
+                    processed_lines.append(f"## {heading_text}")
+                if rest_of_line:
+                    processed_lines.append('')
+                    processed_lines.append(rest_of_line)
+                continue
+
+        # Headings already at line start but possibly with trailing text
+        if stripped.startswith('##'):
+            heading_text, trailing_text = split_heading_and_body(stripped[2:])
+            add_blank_line(processed_lines)
+            if heading_text:
+                processed_lines.append(f"## {heading_text}")
+            if trailing_text:
+                processed_lines.append('')
+                processed_lines.append(trailing_text)
+            continue
+
+        # Inline headings embedded within a paragraph
+        if '##' in stripped:
+            before, after = stripped.split('##', 1)
+            before = before.rstrip()
+            heading_text, trailing_text = split_heading_and_body(after)
+
+            if before:
+                processed_lines.append(before)
+
+            add_blank_line(processed_lines)
+            if heading_text:
+                processed_lines.append(f"## {heading_text}")
+
+            if trailing_text:
+                processed_lines.append('')
+                processed_lines.append(trailing_text)
+            continue
+
+        # No conversion needed
+        processed_lines.append(line)
+
+    # Collapse multiple consecutive blank lines
+    cleaned_lines = []
+    for line in processed_lines:
+        if line == '' and (not cleaned_lines or cleaned_lines[-1] == ''):
+            continue
+        cleaned_lines.append(line)
+
+    return '\n'.join(cleaned_lines)
+
+def enforce_persona_verse_limit(response_json: Dict, persona_name: str, requested_verses: Optional[List[Tuple[int, int]]] = None) -> Tuple[Dict, bool, int, int]:
+    """
+    Enforce persona-specific verse limits while prioritizing explicitly requested verses.
+
+    Returns a tuple of:
+        (response_json, trimmed_flag, original_count, final_count)
+    """
+    if not response_json or not isinstance(response_json, dict):
+        return response_json, False, 0, 0
+
+    verses = response_json.get('verses')
+    if not verses or not isinstance(verses, list):
+        return response_json, False, 0, 0
+
+    original_count = len(verses)
+    verse_limit = PERSONA_VERSE_LIMITS.get(persona_name, 8)
+
+    requested_set = set()
+    if requested_verses:
+        for surah, verse in requested_verses:
+            try:
+                requested_set.add((int(surah), int(verse)))
+            except (TypeError, ValueError):
+                continue
+
+    def normalize_verse_id(entry: Dict) -> Optional[Tuple[int, int]]:
+        surah_val = entry.get('surah') or entry.get('surah_number')
+        verse_val = entry.get('verse_number') or entry.get('verse')
+        try:
+            return int(surah_val), int(str(verse_val).split(':')[-1])
+        except (TypeError, ValueError):
+            return None
+
+    prioritized = []
+    others = []
+    seen = set()
+
+    for verse_entry in verses:
+        verse_id = normalize_verse_id(verse_entry)
+
+        if verse_id:
+            if verse_id in seen:
+                continue  # Deduplicate identical verse entries
+            seen.add(verse_id)
+
+            if requested_set and verse_id in requested_set:
+                prioritized.append(verse_entry)
+            else:
+                others.append(verse_entry)
+        else:
+            # Keep unrecognized structures at the end (rare)
+            others.append(verse_entry)
+
+    # Always honor all explicitly requested verses, even if they exceed the persona limit
+    allowed_count = max(verse_limit, len(prioritized))
+    remaining_slots = max(0, allowed_count - len(prioritized))
+
+    limited_verses = prioritized + others[:remaining_slots]
+    trimmed = len(limited_verses) < original_count
+
+    response_json['verses'] = limited_verses
+    final_count = len(limited_verses)
+
     return response_json, trimmed, original_count, final_count
 
 def normalize_verse_id(entry: Dict) -> Optional[Tuple[int, int]]:
