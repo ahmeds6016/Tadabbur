@@ -1294,6 +1294,12 @@ button:hover:not(:disabled) {
   /* Remove border-bottom for cleaner look */
 }
 
+/* Remove excessive top margin when heading is first element */
+.markdown-content h1:first-child,
+.markdown-content h2:first-child {
+  margin-top: 0;
+}
+
 .markdown-content h3 {
   font-size: 1.05rem;
   margin-top: 16px;
