@@ -2681,7 +2681,7 @@ def build_direct_verse_response(verse_data: Dict, verse_metadata_list: List[Dict
 
         response['tafsir_explanations'].append({
             "source": source_name,
-            "explanation": "\n\n".join(explanation_parts) if explanation_parts else "No detailed commentary available"
+            "explanation": sanitize_heading_format("\n\n".join(explanation_parts)) if explanation_parts else "No detailed commentary available"
         })
 
         # Add metadata summary
