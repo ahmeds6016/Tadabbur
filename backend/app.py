@@ -30,19 +30,6 @@ from google.cloud import aiplatform
 from google.cloud import storage
 from utils.text_cleaning import sanitize_heading_format
 
-# Imports for Reranking (Setup 1: Retriever-Reranker pattern)
-# DISABLED: Testing pure RAG optimization for latency and quality
-try:
-    from sentence_transformers import CrossEncoder
-    from transformers import AutoTokenizer
-    RERANKER_AVAILABLE = False  # DISABLED: Forcing RAG-only mode for testing
-except ImportError:
-    print("⚠️  WARNING: sentence-transformers not installed. Reranking will be disabled.")
-    print("   Install with: pip install sentence-transformers transformers")
-    RERANKER_AVAILABLE = False
-    CrossEncoder = None
-    AutoTokenizer = None
-
 # --- App Initialization ---
 app = Flask(__name__)
 CORS(app, resources={r"/*": {
@@ -72,43 +59,7 @@ GCS_BUCKET_NAME = os.environ.get("GCS_BUCKET_NAME", "tafsir-simplified-sources")
 EMBEDDING_MODEL = "gemini-embedding-001"
 EMBEDDING_DIMENSION = 1536  # Changed from 1024 to 1536
 
-# --- Reranker Configuration (Setup 1: Retriever-Reranker) ---
-# Tiered model approach for maximum reliability
-RERANKER_MODELS = [
-    {
-        "name": "jinaai/jina-reranker-v2-base-multilingual",
-        "description": "Primary: Multilingual (Arabic+English), 1024 token limit for query+document combined",
-        "max_length": 1024,  # CORRECTED: Total limit for query + document combined
-        "default_threshold": 0.0,  # Jina scores typically [0, 1]
-        "supports_sliding_window": True,
-        "window_overlap": 100,  # REDUCED from 200 - less overlap for faster processing
-        "query_reserved_tokens": 150,  # Reserve tokens for query (avg query ~100 tokens)
-        "max_document_tokens": 874,  # 1024 - 150 = max tokens for document per window
-    },
-    {
-        "name": "cross-encoder/ms-marco-MiniLM-L-6-v2",
-        "description": "Fallback: Fast, reliable, English-focused",
-        "max_length": 512,  # Total limit for query + document combined
-        "default_threshold": -2.0,  # MS-MARCO scores typically [-10, 10]
-        "supports_sliding_window": False,
-        "query_reserved_tokens": 100,
-        "max_document_tokens": 412,
-    }
-]
-
-# Reranker retrieval configuration (DISABLED - kept for comparison)
-RERANKER_CONFIG = {
-    'tafsir': {
-        'num_candidates': 15,  # Increased back since batch processing is fast
-        'final_chunks': 5,     # Keep focused output
-    },
-    'semantic': {
-        'num_candidates': 20,  # Can handle more with batch processing
-        'final_chunks': 5,     # Keep focused output
-    }
-}
-
-# OPTIMIZED RAG-ONLY CONFIGURATION (Active)
+# --- RAG CONFIGURATION ---
 # Tuned for quality + latency without reranking
 RAG_OPTIMIZED_CONFIG = {
     'tafsir': {
@@ -180,26 +131,10 @@ RESPONSE_CACHE = {}  # In-memory cache
 USER_RATE_LIMITS = defaultdict(list)  # Rate limiting
 ANALYTICS = defaultdict(int)  # Usage analytics
 
-# Reranker global state
-RERANKER_MODEL = None  # Will be initialized at startup
-RERANKER_MODEL_NAME = None  # Track which model loaded successfully
-RERANKER_TOKENIZER = None  # Tokenizer for counting tokens in sliding window
-RERANKER_STATS = {
-    'total_calls': 0,
-    'total_chunks_scored': 0,
-    'avg_latency_ms': 0.0,
-    'fallback_to_distance': 0,
-    'sliding_window_used': 0,
-    'total_windows_processed': 0,
-    'avg_windows_per_chunk': 0.0,
-    'chunks_truncated': 0,
-}
-
 # Thread safety locks
 cache_lock = threading.Lock()
 rate_limit_lock = threading.Lock()
 analytics_lock = threading.Lock()
-reranker_lock = threading.Lock()  # For thread-safe reranker usage
 
 # ============================================================================
 # NEW: PERSONA SYSTEM FOR ADAPTIVE RESPONSES
@@ -3448,444 +3383,6 @@ def retrieve_chunks_from_neighbors(neighbors, distance_threshold=0.6):
     return retrieved
 
 
-def initialize_reranker():
-    """
-    Initialize reranker model with tiered fallback approach.
-
-    Attempts to load models in priority order:
-    1. jina-reranker-v2-base-multilingual (best for Arabic+English)
-    2. cross-encoder/ms-marco-MiniLM-L-6-v2 (fast fallback)
-
-    If all models fail, system falls back to distance-based filtering.
-    """
-    global RERANKER_MODEL, RERANKER_MODEL_NAME, RERANKER_TOKENIZER
-
-    if not RERANKER_AVAILABLE:
-        print("❌ RERANKER INITIALIZATION SKIPPED: sentence-transformers not available")
-        print("   System will use distance-based filtering (lower precision)")
-        return
-
-    print("\n" + "="*70)
-    print("🔄 INITIALIZING RERANKER SYSTEM (Setup 1: Retriever-Reranker)")
-    print("="*70)
-
-    for model_config in RERANKER_MODELS:
-        model_name = model_config['name']
-        description = model_config['description']
-
-        try:
-            print(f"\n📥 Attempting to load: {model_name}")
-            print(f"   Description: {description}")
-            print(f"   Max length: {model_config['max_length']} tokens")
-
-            # Load model with timeout protection
-            start_time = time.time()
-
-            # Jina models require trust_remote_code=True
-            if 'jina' in model_name.lower():
-                model = CrossEncoder(
-                    model_name,
-                    max_length=model_config['max_length'],
-                    trust_remote_code=True,
-                    automodel_args={"torch_dtype": "auto"}
-                )
-            else:
-                model = CrossEncoder(model_name, max_length=model_config['max_length'])
-
-            load_time = time.time() - start_time
-
-            # Verify model loaded correctly with a test
-            test_query = "test"
-            test_doc = "This is a test document."
-            test_score = model.predict([(test_query, test_doc)])[0]
-
-            RERANKER_MODEL = model
-            RERANKER_MODEL_NAME = model_name
-
-            # Load tokenizer for sliding window support
-            try:
-                RERANKER_TOKENIZER = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
-                print(f"   Tokenizer: Loaded successfully")
-                print(f"   Sliding window: {'Enabled' if model_config.get('supports_sliding_window', False) else 'Disabled'}")
-            except Exception as e:
-                print(f"   Tokenizer: Failed to load ({e}), will use character-based approximation")
-                RERANKER_TOKENIZER = None
-
-            print(f"✅ SUCCESS: Reranker loaded in {load_time:.2f}s")
-            print(f"   Model: {model_name}")
-            print(f"   Test score: {test_score:.4f}")
-            print(f"   Default threshold: {model_config['default_threshold']}")
-            print(f"   Status: Ready for production use")
-            print("="*70 + "\n")
-            return  # Success, exit function
-
-        except Exception as e:
-            print(f"⚠️  FAILED to load {model_name}")
-            print(f"   Error: {type(e).__name__}: {str(e)}")
-            print(f"   Trying next model...\n")
-            continue
-
-    # All models failed
-    print("❌ RERANKER INITIALIZATION FAILED: All models failed to load")
-    print("   System will fall back to distance-based filtering")
-    print("   Recommendation: Install sentence-transformers or check model availability")
-    print("="*70 + "\n")
-    RERANKER_MODEL = None
-    RERANKER_MODEL_NAME = None
-
-def create_sliding_windows(query: str, document: str, model_config: Dict) -> List[Tuple[str, int, int]]:
-    """
-    Create sliding windows for documents that exceed token limits.
-
-    Args:
-        query: The search query
-        document: The document text to split
-        model_config: Model configuration with max_length, overlap, etc.
-
-    Returns:
-        List of tuples: (window_text, start_char, end_char)
-    """
-    global RERANKER_TOKENIZER
-
-    max_total_tokens = model_config.get('max_length', 1024)
-    query_reserved = model_config.get('query_reserved_tokens', 150)
-    max_doc_tokens = model_config.get('max_document_tokens', 874)
-    overlap_tokens = model_config.get('window_overlap', 200)
-
-    # If tokenizer available, use it for accurate token counting
-    if RERANKER_TOKENIZER is not None:
-        try:
-            # CRITICAL FIX: Safely count query tokens without exceeding limit
-            # First check if query is too long using character approximation
-            query_char_estimate = len(query) * 4  # Rough estimate: 4 chars per token
-            if query_char_estimate > max_total_tokens * 3:  # If query alone might exceed limit
-                # Query is too long, truncate it safely
-                safe_query = query[:max_total_tokens * 3]  # Use first ~750 chars
-                try:
-                    query_tokens = len(RERANKER_TOKENIZER.encode(safe_query, add_special_tokens=False, truncation=True, max_length=max_total_tokens))
-                except:
-                    query_tokens = min(len(safe_query) // 4, query_reserved)  # Fallback estimate
-            else:
-                # Query should be safe to tokenize
-                try:
-                    query_tokens = len(RERANKER_TOKENIZER.encode(query, add_special_tokens=False, truncation=True, max_length=max_total_tokens))
-                except:
-                    # Even if it fails, use approximation
-                    query_tokens = min(len(query) // 4, query_reserved)
-
-            # Adjust max document tokens based on actual query length
-            actual_max_doc_tokens = max_total_tokens - query_tokens - 10  # 10 for special tokens
-            actual_max_doc_tokens = min(actual_max_doc_tokens, max_doc_tokens)
-
-            # CRITICAL FIX: Pre-chunk document to avoid tokenizer limit exceeded error
-            # First, do a rough character-based chunking to get manageable pieces
-            chars_per_token_estimate = 4
-            safe_chunk_size = max_total_tokens * chars_per_token_estimate * 2  # 2x safety margin
-
-            # If document is too long, pre-chunk it
-            if len(document) > safe_chunk_size:
-                # Work with smaller pieces to avoid tokenizer errors
-                windows = []
-
-                # Process document in safe-sized chunks
-                for chunk_start in range(0, len(document), int(safe_chunk_size * 0.8)):  # 80% to ensure overlap
-                    chunk_end = min(chunk_start + safe_chunk_size, len(document))
-                    doc_chunk = document[chunk_start:chunk_end]
-
-                    # Tokenize this smaller chunk safely
-                    try:
-                        # First verify this chunk is actually small enough
-                        if len(doc_chunk) // 3 > max_total_tokens:
-                            # Still too big, make it smaller
-                            doc_chunk = doc_chunk[:max_total_tokens * 3]
-
-                        chunk_tokens = RERANKER_TOKENIZER.encode(doc_chunk, add_special_tokens=False)
-                    except Exception as e:
-                        # If even this fails, fall back to character approximation
-                        print(f"   ⚠️  Tokenizer failed on chunk, using character approximation: {e}")
-                        raise  # Fall through to character-based method
-
-                    # Create windows from this chunk's tokens
-                    window_stride = max(1, actual_max_doc_tokens - overlap_tokens)
-                    for i in range(0, len(chunk_tokens), window_stride):
-                        window_tokens = chunk_tokens[i:i + actual_max_doc_tokens]
-                        window_text = RERANKER_TOKENIZER.decode(window_tokens, skip_special_tokens=True)
-
-                        # Calculate positions relative to full document
-                        token_start_in_doc = chunk_start + (i * chars_per_token_estimate)
-                        token_end_in_doc = min(token_start_in_doc + (len(window_tokens) * chars_per_token_estimate), len(document))
-
-                        windows.append((window_text, token_start_in_doc, token_end_in_doc))
-
-                        if i + actual_max_doc_tokens >= len(chunk_tokens):
-                            break
-
-                return windows if windows else [(document[:safe_chunk_size], 0, min(len(document), safe_chunk_size))]
-
-            # Check if document is ACTUALLY safe to tokenize (not just based on character count)
-            # The tokenizer has a hard limit that we must not exceed
-            # Estimate: average 3-4 chars per token, but can vary widely
-            estimated_tokens = len(document) // 3  # Conservative estimate
-
-            if estimated_tokens > max_total_tokens:
-                # Document is still too large, need to use chunking approach
-                print(f"   ⚠️  Document estimated at {estimated_tokens} tokens, using chunking approach")
-                # Fall through to character-based approximation
-                raise ValueError("Document too large for direct tokenization")
-
-            # Document should be safe to tokenize
-            try:
-                # Do NOT truncate - we want to process the full document
-                doc_tokens = RERANKER_TOKENIZER.encode(document, add_special_tokens=False)
-            except Exception as e:
-                print(f"   ⚠️  Tokenizer error: {e}")
-                # Fall back to character-based approximation
-                raise  # This will trigger the fallback below
-
-            # If document fits in one window, return as is
-            if len(doc_tokens) <= actual_max_doc_tokens:
-                return [(document, 0, len(document))]
-
-            # Create sliding windows
-            windows = []
-            window_size = actual_max_doc_tokens
-            stride = window_size - overlap_tokens
-
-            for i in range(0, len(doc_tokens), stride):
-                # Get window tokens
-                window_tokens = doc_tokens[i:i + window_size]
-
-                # Decode back to text
-                window_text = RERANKER_TOKENIZER.decode(window_tokens, skip_special_tokens=True)
-
-                # Calculate approximate character positions
-                start_ratio = i / len(doc_tokens)
-                end_ratio = min((i + len(window_tokens)) / len(doc_tokens), 1.0)
-                start_char = int(start_ratio * len(document))
-                end_char = int(end_ratio * len(document))
-
-                windows.append((window_text, start_char, end_char))
-
-                # Stop if we've covered the entire document
-                if i + window_size >= len(doc_tokens):
-                    break
-
-            return windows
-
-        except Exception as e:
-            print(f"   ⚠️  Tokenizer error in sliding window: {e}")
-            # Fall through to character-based approximation
-
-    # Fallback: Character-based approximation (4 chars ≈ 1 token)
-    chars_per_token = 4
-    max_doc_chars = max_doc_tokens * chars_per_token
-    overlap_chars = overlap_tokens * chars_per_token
-
-    # If document fits in one window, return as is
-    if len(document) <= max_doc_chars:
-        return [(document, 0, len(document))]
-
-    # Create sliding windows based on characters
-    windows = []
-    stride = max_doc_chars - overlap_chars
-
-    for i in range(0, len(document), stride):
-        window_text = document[i:i + max_doc_chars]
-        windows.append((window_text, i, i + len(window_text)))
-
-        # Stop if we've covered the entire document
-        if i + max_doc_chars >= len(document):
-            break
-
-    return windows
-
-
-def rerank_chunks(query: str, chunks: List[Dict], approach: str = 'tafsir') -> List[Dict]:
-    """
-    Rerank retrieved chunks using CrossEncoder for precision.
-    OPTIMIZED: Now uses batch processing for massive speedup!
-
-    This is STAGE 2 of the Retriever-Reranker pattern:
-    - Stage 1 (Retriever): Fast vector search with high recall
-    - Stage 2 (Reranker): Precise CrossEncoder scoring for high precision
-
-    Args:
-        query: Original user query
-        chunks: List of chunk dicts with 'text', 'distance', 'chunk_id', 'source'
-        approach: 'tafsir' or 'semantic' (affects threshold and final count)
-
-    Returns:
-        Reranked and filtered list of chunks with 'rerank_score' added
-
-    Fallback: If reranker unavailable, returns chunks sorted by distance
-    """
-    global RERANKER_MODEL, RERANKER_STATS
-
-    if not chunks:
-        return []
-
-    # FALLBACK: If reranker not available, use distance-based filtering
-    if RERANKER_MODEL is None:
-        print(f"   ⚠️  Reranker unavailable - using distance-based filtering")
-        RERANKER_STATS['fallback_to_distance'] += 1
-
-        # Sort by distance (lower = better)
-        sorted_chunks = sorted(chunks, key=lambda x: x['distance'])
-
-        # Apply distance threshold
-        distance_threshold = 0.6
-        filtered = [c for c in sorted_chunks if c['distance'] <= distance_threshold]
-
-        # Add placeholder rerank_score for compatibility
-        for chunk in filtered:
-            chunk['rerank_score'] = 1.0 - chunk['distance']  # Convert to similarity
-
-        return filtered
-
-    # RERANKING PATH - OPTIMIZED WITH BATCH PROCESSING
-    start_time = time.time()
-    MAX_RERANKING_TIME = 5  # Reduced timeout since batch processing is much faster
-
-    try:
-        # CRITICAL OPTIMIZATION: Batch process ALL chunks at once instead of one-by-one
-        # This reduces latency from 28+ seconds to ~1-2 seconds!
-
-        with reranker_lock:  # Thread-safe reranker usage
-            # Create all query-chunk pairs for batch processing
-            all_pairs = [(query, chunk['text']) for chunk in chunks]
-
-            # Check if we'll timeout with too many chunks
-            if len(chunks) > 20:
-                print(f"   ⚠️  Too many chunks ({len(chunks)}), limiting to top 15 by distance")
-                # Sort by distance and take top 15
-                chunks_sorted = sorted(chunks, key=lambda x: x.get('distance', 1.0))[:15]
-                all_pairs = [(query, chunk['text']) for chunk in chunks_sorted]
-                # Mark remaining chunks with fallback scores
-                for chunk in chunks[15:]:
-                    chunk['rerank_score'] = 1.0 - chunk.get('distance', 0.5)
-                    chunk['rerank_strategy'] = 'skipped_too_many'
-            else:
-                chunks_sorted = chunks
-
-            # BATCH PROCESSING: Process all chunks in ONE call
-            print(f"   🚀 Batch reranking {len(all_pairs)} chunks...")
-            batch_start = time.time()
-
-            try:
-                # Process all pairs at once with optimal batch size
-                all_scores = RERANKER_MODEL.predict(
-                    all_pairs,
-                    batch_size=min(32, len(all_pairs)),  # Use smaller batch if fewer chunks
-                    show_progress_bar=False  # Disable progress bar for cleaner logs
-                )
-
-                # Assign scores back to chunks
-                for i, chunk in enumerate(chunks_sorted):
-                    chunk['rerank_score'] = float(all_scores[i])
-                    chunk['rerank_strategy'] = 'batch_processed'
-
-                batch_time = (time.time() - batch_start) * 1000
-                print(f"   ✅ Batch reranking completed in {batch_time:.0f}ms")
-
-            except Exception as e:
-                print(f"   ⚠️  Batch reranking failed: {e}")
-                print(f"   Falling back to distance-based scoring...")
-                # Fallback to distance scores
-                for chunk in chunks:
-                    chunk['rerank_score'] = 1.0 - chunk.get('distance', 0.5)
-                    chunk['rerank_strategy'] = 'batch_failed_fallback'
-
-            # Update reranking statistics
-            RERANKER_STATS['chunks_processed'] = RERANKER_STATS.get('chunks_processed', 0) + len(chunks_sorted)
-
-        # Sort by rerank score (higher = more relevant)
-        chunks.sort(key=lambda x: x['rerank_score'], reverse=True)
-
-        # Determine threshold based on model and approach
-        model_config = next((m for m in RERANKER_MODELS if m['name'] == RERANKER_MODEL_NAME), None)
-
-        if model_config:
-            base_threshold = model_config['default_threshold']
-
-            # STRICTER thresholds to reduce irrelevant chunks
-            if approach == 'semantic':
-                # Semantic queries need higher relevance
-                threshold = base_threshold + 0.2 if 'jina' in RERANKER_MODEL_NAME else base_threshold + 1.0
-            else:  # tafsir
-                # Tafsir queries also need good relevance
-                threshold = base_threshold + 0.1 if 'jina' in RERANKER_MODEL_NAME else base_threshold + 0.5
-        else:
-            # Fallback threshold
-            threshold = 0.2 if 'jina' in RERANKER_MODEL_NAME else 0.0
-
-        # Filter by threshold - only keep highly relevant chunks
-        relevant_chunks = [c for c in chunks if c['rerank_score'] > threshold]
-
-        # Additional filtering: if we still have too many chunks, increase threshold dynamically
-        config = RERANKER_CONFIG.get(approach, RERANKER_CONFIG['tafsir'])
-        max_chunks = config['final_chunks']
-
-        # If we have way too many chunks even after threshold, take only the top scoring ones
-        if len(relevant_chunks) > max_chunks * 2:
-            # Sort by score and take top chunks
-            relevant_chunks.sort(key=lambda x: x['rerank_score'], reverse=True)
-            # Increase threshold to the score of the chunk at max_chunks position
-            if len(relevant_chunks) > max_chunks:
-                dynamic_threshold = relevant_chunks[max_chunks]['rerank_score']
-                relevant_chunks = [c for c in relevant_chunks if c['rerank_score'] >= dynamic_threshold]
-
-        # Apply final count limits
-        final_chunks = relevant_chunks[:max_chunks]
-
-        # Update stats
-        latency_ms = (time.time() - start_time) * 1000
-        RERANKER_STATS['total_calls'] += 1
-        RERANKER_STATS['total_chunks_scored'] += len(chunks)
-
-        # Running average for latency
-        prev_avg = RERANKER_STATS['avg_latency_ms']
-        total_calls = RERANKER_STATS['total_calls']
-        RERANKER_STATS['avg_latency_ms'] = ((prev_avg * (total_calls - 1)) + latency_ms) / total_calls
-
-        # Track timing for performance analysis
-        chunks_processed = len([c for c in chunks if 'rerank_score' in c and c.get('rerank_strategy') not in ['timeout_fallback', 'early_termination_fallback']])
-        print(f"   ⏱️  RERANKER TIMING: {latency_ms:.0f}ms for {chunks_processed}/{len(chunks)} chunks")
-
-        # Logging
-        print(f"   ✨ Reranker: {len(chunks)} → {len(relevant_chunks)} relevant → {len(final_chunks)} final")
-        print(f"      Model: {RERANKER_MODEL_NAME}")
-        print(f"      Threshold: {threshold:.2f}")
-        print(f"      Strategy: Batch processing")
-
-        print(f"      Top score: {final_chunks[0]['rerank_score']:.3f}" if final_chunks else "      No chunks passed threshold")
-        print(f"      Latency: {latency_ms:.1f}ms")
-
-        # Performance metrics
-        if chunks_processed < len(chunks):
-            print(f"      ⚠️  Early termination: {chunks_processed}/{len(chunks)} chunks processed")
-
-        # Log warning for slow reranking with different thresholds
-        if latency_ms > 30000:  # More than 30 seconds
-            print(f"   🔴 CRITICAL: Reranking took {latency_ms:.0f}ms - performance severely degraded")
-        elif latency_ms > 10000:  # More than 10 seconds
-            print(f"   ⚠️  SLOW RERANKING: {latency_ms:.0f}ms - consider reducing chunk count further")
-
-        return final_chunks
-
-    except Exception as e:
-        print(f"   ❌ Reranker error: {type(e).__name__}: {str(e)}")
-        print(f"      Falling back to distance-based filtering")
-
-        RERANKER_STATS['fallback_to_distance'] += 1
-
-        # Emergency fallback to distance
-        sorted_chunks = sorted(chunks, key=lambda x: x['distance'])
-        filtered = [c for c in sorted_chunks if c['distance'] <= 0.6]
-
-        for chunk in filtered:
-            chunk['rerank_score'] = 1.0 - chunk['distance']
-
-        return filtered[:RERANKER_CONFIG.get(approach, RERANKER_CONFIG['tafsir'])['final_chunks']]
 
 def initialize_firebase():
     """Initialize dual database connections"""
@@ -3932,7 +3429,6 @@ def initialize_firebase():
 # Initialize services on startup (fail fast if any critical component fails)
 initialize_firebase()
 load_chunks_from_verse_files_enhanced() # UPDATED CALL
-initialize_reranker()  # NEW: Load reranker model with fallback
 vertexai.init(project=GCP_INFRASTRUCTURE_PROJECT, location=LOCATION)
 
 # --- Firebase Auth Decorator ---
@@ -4456,30 +3952,33 @@ Now expand: "{query}"
 # --- UPDATED: Enhanced Multi-Source RAG Functions with 1536 dimensions ---
 def perform_diversified_rag_search(query, expanded_query, embedding_model, index_endpoint, query_type="default", approach="tafsir"):
     """
-    UPDATED: Two-Stage Retriever-Reranker RAG (Setup 1 from Reddit post)
+    Optimized RAG Search with Vector Similarity
 
-    Setup 1: Retriever-Reranker Pattern
-    =====================================
-    Stage 1 (Retriever): Fast vector search with high recall
-      - Get 40-50 candidates (increased from 20-30)
-      - No distance filtering (accept all candidates)
-      - Latency: ~200-300ms
+    Three-Stage Process:
+    ====================
+    Stage 1 (Vector Search): Fast vector search with distance filtering
+      - Retrieve 8-10 neighbors using cosine similarity
+      - Filter by distance threshold (0.7 for tafsir, 0.65 for semantic)
+      - Latency: ~150-250ms
 
-    Stage 2 (Reranker): Precise CrossEncoder scoring for high precision
-      - Re-score all candidates with CrossEncoder(query, chunk)
-      - Filter by adaptive threshold
-      - Select top 15-20 chunks based on rerank scores
-      - Latency: ~100-200ms
+    Stage 2 (Deduplication + Capping): Quality optimization
+      - Deduplicate by verse reference
+      - Cap to configured limits (3-8 chunks)
+      - Latency: ~10-20ms
+
+    Stage 3 (Source Weighting): Dynamic source diversification
+      - Compare Ibn Kathir vs al-Qurtubi quality scores
+      - Apply dynamic weights (50/50, 70/30, or 100/0)
+      - Latency: ~5-10ms
 
     Benefits:
-    - +25% precision (CrossEncoder understands semantic nuance)
-    - Handles negation ("patience" vs "lack of patience")
-    - More accurate than distance thresholds (0.6 is arbitrary)
-    - No query expansion needed (reranker handles semantic matching)
+    - Fast and efficient (~200-300ms total)
+    - High-quality results through distance-based filtering
+    - Balanced source coverage
 
     Args:
-        query: Original user query (NOT expanded - reranker handles semantics)
-        expanded_query: Deprecated, kept for compatibility (will be removed)
+        query: User query text
+        expanded_query: Deprecated, kept for compatibility
         embedding_model: Gemini embedding model
         index_endpoint: Vertex AI vector index endpoint
         query_type: Query classification type
@@ -4505,16 +4004,10 @@ def perform_diversified_rag_search(query, expanded_query, embedding_model, index
     embedding_time = (time.time() - embedding_start) * 1000
     print(f"   ⏱️  Query embedding: {embedding_time:.0f}ms")
 
-    # Increased candidate count for better recall (reranker will filter)
-    # OPTIMIZED: Use RAG_OPTIMIZED_CONFIG when reranker is disabled
-    if RERANKER_AVAILABLE:
-        config = RERANKER_CONFIG.get(approach, RERANKER_CONFIG['tafsir'])
-        num_neighbors = config['num_candidates']
-        print(f"   Mode: RERANKER (candidates: {num_neighbors})")
-    else:
-        config = RAG_OPTIMIZED_CONFIG.get(approach, RAG_OPTIMIZED_CONFIG['tafsir'])
-        num_neighbors = config['num_neighbors']
-        print(f"   Mode: OPTIMIZED RAG-ONLY (neighbors: {num_neighbors}, threshold: {config['distance_threshold']})")
+    # RAG-optimized configuration
+    config = RAG_OPTIMIZED_CONFIG.get(approach, RAG_OPTIMIZED_CONFIG['tafsir'])
+    num_neighbors = config['num_neighbors']
+    print(f"   Mode: OPTIMIZED RAG (neighbors: {num_neighbors}, threshold: {config['distance_threshold']})")
 
     print(f"   Query: {query[:100]}..." if len(query) > 100 else f"   Query: {query}")
     print(f"   Approach: {approach}")
@@ -4533,93 +4026,72 @@ def perform_diversified_rag_search(query, expanded_query, embedding_model, index
         print(f"   ❌ Vector search failed: {e}")
         neighbors_result = [[]]
 
-    # Retrieve chunks with appropriate filtering based on mode
+    # Retrieve chunks with distance-based filtering
     retrieval_start = time.time()
-    if RERANKER_AVAILABLE:
-        # Reranker mode: Accept all candidates for reranking
-        retrieved_chunks = retrieve_chunks_from_neighbors(
-            neighbors_result[0],
-            distance_threshold=1.0  # Accept everything - reranker will filter
-        )
-        print(f"   Retrieved: {len(retrieved_chunks)} chunks for reranking in {(time.time() - retrieval_start) * 1000:.0f}ms")
-    else:
-        # RAG-only mode: Use distance threshold for quality filtering
-        distance_threshold = config['distance_threshold']
-        retrieved_chunks = retrieve_chunks_from_neighbors(
-            neighbors_result[0],
-            distance_threshold=distance_threshold
-        )
-        print(f"   Retrieved: {len(retrieved_chunks)} chunks (filtered by distance >= {distance_threshold}) in {(time.time() - retrieval_start) * 1000:.0f}ms")
+    distance_threshold = config['distance_threshold']
+    retrieved_chunks = retrieve_chunks_from_neighbors(
+        neighbors_result[0],
+        distance_threshold=distance_threshold
+    )
+    print(f"   Retrieved: {len(retrieved_chunks)} chunks (filtered by distance >= {distance_threshold}) in {(time.time() - retrieval_start) * 1000:.0f}ms")
 
     print(f"   ⏱️  STAGE 1 TOTAL: {(time.time() - perf_start) * 1000:.0f}ms")
 
     # ========================================================================
-    # STAGE 2: PRECISION OPTIMIZATION
+    # STAGE 2: RAG OPTIMIZATION (Deduplication + Capping)
     # ========================================================================
     stage2_start = time.time()
+    print(f"\n✨ STAGE 2: RAG Optimization (Deduplication + Capping)")
 
-    if RERANKER_AVAILABLE:
-        print(f"\n✨ STAGE 2: CrossEncoder Reranking (High Precision)")
-        # Rerank all retrieved chunks using CrossEncoder
-        rerank_start = time.time()
-        reranked_chunks = rerank_chunks(query, retrieved_chunks, approach)
-        rerank_time = (time.time() - rerank_start) * 1000
-        print(f"   Final chunks after reranking: {len(reranked_chunks)}")
-        print(f"   ⏱️  STAGE 2 TOTAL: {rerank_time:.0f}ms")
+    # Deduplicate by verse reference
+    if config.get('deduplicate', False):
+        seen_verses = set()
+        deduplicated = []
+        for chunk in retrieved_chunks:
+            verse_key = f"{chunk.get('surah', '')}:{chunk.get('verse', '')}"
+            if verse_key not in seen_verses:
+                seen_verses.add(verse_key)
+                deduplicated.append(chunk)
+        print(f"   Deduplicated: {len(retrieved_chunks)} → {len(deduplicated)} chunks")
+        retrieved_chunks = deduplicated
+
+    # Cap to max_chunks
+    max_chunks = config.get('max_chunks', 8)
+    min_chunks = config.get('min_chunks', 3)
+
+    if len(retrieved_chunks) > max_chunks:
+        final_chunks = retrieved_chunks[:max_chunks]
+        print(f"   Capped to max: {max_chunks} chunks")
+    elif len(retrieved_chunks) < min_chunks:
+        final_chunks = retrieved_chunks
+        print(f"   ⚠️  Only {len(retrieved_chunks)} chunks (min: {min_chunks})")
     else:
-        print(f"\n✨ STAGE 2: RAG Optimization (Deduplication + Capping)")
-        # RAG-only mode: Deduplicate and cap results
+        final_chunks = retrieved_chunks
+        print(f"   Using all {len(retrieved_chunks)} chunks")
 
-        # Deduplicate by verse reference
-        if config.get('deduplicate', False):
-            seen_verses = set()
-            deduplicated = []
-            for chunk in retrieved_chunks:
-                verse_key = f"{chunk.get('surah', '')}:{chunk.get('verse', '')}"
-                if verse_key not in seen_verses:
-                    seen_verses.add(verse_key)
-                    deduplicated.append(chunk)
-            print(f"   Deduplicated: {len(retrieved_chunks)} → {len(deduplicated)} chunks")
-            retrieved_chunks = deduplicated
-
-        # Cap to max_chunks
-        max_chunks = config.get('max_chunks', 8)
-        min_chunks = config.get('min_chunks', 3)
-
-        if len(retrieved_chunks) > max_chunks:
-            reranked_chunks = retrieved_chunks[:max_chunks]
-            print(f"   Capped to max: {max_chunks} chunks")
-        elif len(retrieved_chunks) < min_chunks:
-            reranked_chunks = retrieved_chunks
-            print(f"   ⚠️  Only {len(retrieved_chunks)} chunks (min: {min_chunks})")
-        else:
-            reranked_chunks = retrieved_chunks
-            print(f"   Using all {len(retrieved_chunks)} chunks")
-
-        print(f"   ⏱️  STAGE 2 TOTAL: {(time.time() - stage2_start) * 1000:.0f}ms")
+    print(f"   ⏱️  STAGE 2 TOTAL: {(time.time() - stage2_start) * 1000:.0f}ms")
 
     # ========================================================================
-    # STAGE 3: SOURCE DIVERSIFICATION (Rerank Score-Based Weighting)
+    # STAGE 3: SOURCE DIVERSIFICATION (Distance-Based Weighting)
     # ========================================================================
     print(f"\n📊 STAGE 3: Dynamic Source Weighting")
 
-    # Categorize reranked chunks by source
+    # Categorize final chunks by source
     source_chunks = {
         'Ibn Kathir': [],
         'al-Qurtubi': []
     }
 
-    for chunk in reranked_chunks:
+    for chunk in final_chunks:
         source = chunk['source']
         if source in source_chunks:
             source_chunks[source].append(chunk)
 
     # Separate chunks by source for analysis
-    ibn_kathir_chunks = [c for c in reranked_chunks if c['source'] == 'Ibn Kathir']
-    qurtubi_chunks = [c for c in reranked_chunks if c['source'] == 'al-Qurtubi']
+    ibn_kathir_chunks = [c for c in final_chunks if c['source'] == 'Ibn Kathir']
+    qurtubi_chunks = [c for c in final_chunks if c['source'] == 'al-Qurtubi']
 
-    # Calculate dynamic weights based on quality scores
-    # RERANKER mode: Use rerank_score | RAG mode: Use distance
+    # Calculate dynamic weights based on distance scores
     if len(qurtubi_chunks) == 0:
         # al-Qurtubi has NO relevant chunks (content not in Surahs 1-4)
         weights = {'Ibn Kathir': 1.0, 'al-Qurtubi': 0.0}
@@ -4631,21 +4103,12 @@ def perform_diversified_rag_search(query, expanded_query, embedding_model, index
         print(f"   ✅ Dynamic weights: Ibn Kathir has no chunks → al-Qurtubi 100%")
 
     else:
-        # BOTH sources have chunks - compare quality scores
-        if RERANKER_AVAILABLE:
-            # Use rerank scores for comparison
-            avg_score_ik = sum(c['rerank_score'] for c in ibn_kathir_chunks) / len(ibn_kathir_chunks)
-            avg_score_q = sum(c['rerank_score'] for c in qurtubi_chunks) / len(qurtubi_chunks)
-            score_diff = abs(avg_score_ik - avg_score_q)
-            similarity_threshold = 0.1 if 'jina' in (RERANKER_MODEL_NAME or '') else 1.0
-            metric_name = "rerank score"
-        else:
-            # Use distance scores for comparison (higher is better)
-            avg_score_ik = sum(c.get('distance', 0) for c in ibn_kathir_chunks) / len(ibn_kathir_chunks)
-            avg_score_q = sum(c.get('distance', 0) for c in qurtubi_chunks) / len(qurtubi_chunks)
-            score_diff = abs(avg_score_ik - avg_score_q)
-            similarity_threshold = 0.05  # 5% difference in cosine similarity
-            metric_name = "distance"
+        # BOTH sources have chunks - compare distance scores (higher is better)
+        avg_score_ik = sum(c.get('distance', 0) for c in ibn_kathir_chunks) / len(ibn_kathir_chunks)
+        avg_score_q = sum(c.get('distance', 0) for c in qurtubi_chunks) / len(qurtubi_chunks)
+        score_diff = abs(avg_score_ik - avg_score_q)
+        similarity_threshold = 0.05  # 5% difference in cosine similarity
+        metric_name = "distance"
 
         if score_diff < similarity_threshold:
             # Scores similar → Use 50/50 balanced mix
@@ -4666,15 +4129,14 @@ def perform_diversified_rag_search(query, expanded_query, embedding_model, index
     context_by_source = {}
     for source_name, chunks in source_chunks.items():
         if chunks:
-            # Chunks are already sorted by rerank_score (descending) from rerank_chunks()
-            # Just extract text for context
+            # Extract text for context
             context_by_source[source_name] = [chunk['text'] for chunk in chunks]
         else:
             context_by_source[source_name] = []
 
     print(f"   Final distribution: IK={len(source_chunks['Ibn Kathir'])}, Q={len(source_chunks['al-Qurtubi'])}")
 
-    return reranked_chunks, context_by_source
+    return final_chunks, context_by_source
 
 def build_structured_context(context_by_source, arabic_text=None, cross_refs=None):
     """Build enhanced context blocks with Arabic text and cross-references"""
@@ -7771,23 +7233,14 @@ def tafsir_handler_enhanced():
 # --- REPLACED: Health Check ---
 @app.route("/health", methods=["GET"])
 def health_check_enhanced():
-    """Enhanced health check with hybrid system status and reranker info"""
+    """Enhanced health check with hybrid system status"""
     return jsonify({
         "status": "healthy",
         "timestamp": datetime.now().isoformat(),
         "chunks_loaded": len(TAFSIR_CHUNKS),
         "metadata_entries": len(VERSE_METADATA),
         "cache_size": len(RESPONSE_CACHE),
-        "system_type": "hybrid",
-        "reranker": {
-            "enabled": RERANKER_MODEL is not None,
-            "model": RERANKER_MODEL_NAME if RERANKER_MODEL_NAME else "none (fallback to distance)",
-            "status": "active" if RERANKER_MODEL is not None else "disabled",
-            "calls": RERANKER_STATS['total_calls'],
-            "avg_latency_ms": round(RERANKER_STATS['avg_latency_ms'], 2),
-            "sliding_window_active": RERANKER_STATS['sliding_window_used'] > 0,
-            "windows_processed": RERANKER_STATS['total_windows_processed']
-        },
+        "system_type": "RAG-optimized",
         "query_routes": {
             "metadata": {
                 "description": "Direct lookup + AI formatting",
@@ -7815,72 +7268,6 @@ def health_check_enhanced():
         }
     }), 200
 
-
-# --- Reranker Stats Endpoint ---
-@app.route("/reranker-stats", methods=["GET"])
-def reranker_stats():
-    """
-    Detailed reranker performance statistics and configuration.
-    Useful for monitoring and calibration.
-    """
-    if not RERANKER_AVAILABLE:
-        return jsonify({
-            "status": "unavailable",
-            "reason": "sentence-transformers not installed",
-            "recommendation": "Install with: pip install sentence-transformers"
-        }), 200
-
-    if RERANKER_MODEL is None:
-        return jsonify({
-            "status": "failed_to_load",
-            "reason": "All reranker models failed to initialize",
-            "attempted_models": [m['name'] for m in RERANKER_MODELS],
-            "fallback": "Using distance-based filtering (lower precision)",
-            "stats": RERANKER_STATS
-        }), 200
-
-    # Get model config
-    model_config = next((m for m in RERANKER_MODELS if m['name'] == RERANKER_MODEL_NAME), None)
-
-    return jsonify({
-        "status": "active",
-        "model": {
-            "name": RERANKER_MODEL_NAME,
-            "description": model_config['description'] if model_config else "N/A",
-            "max_length": model_config['max_length'] if model_config else "N/A",
-            "default_threshold": model_config['default_threshold'] if model_config else "N/A",
-            "supports_sliding_window": model_config.get('supports_sliding_window', False) if model_config else False,
-            "query_reserved_tokens": model_config.get('query_reserved_tokens', 150) if model_config else "N/A",
-            "max_document_tokens": model_config.get('max_document_tokens', 874) if model_config else "N/A",
-            "window_overlap": model_config.get('window_overlap', 200) if model_config else "N/A"
-        },
-        "performance": {
-            "total_calls": RERANKER_STATS['total_calls'],
-            "total_chunks_scored": RERANKER_STATS['total_chunks_scored'],
-            "avg_latency_ms": round(RERANKER_STATS['avg_latency_ms'], 2),
-            "fallback_to_distance_count": RERANKER_STATS['fallback_to_distance'],
-            "avg_chunks_per_call": round(RERANKER_STATS['total_chunks_scored'] / max(RERANKER_STATS['total_calls'], 1), 1)
-        },
-        "sliding_window": {
-            "enabled": model_config.get('supports_sliding_window', False) if model_config else False,
-            "tokenizer_loaded": RERANKER_TOKENIZER is not None,
-            "chunks_using_windows": RERANKER_STATS['sliding_window_used'],
-            "total_windows_processed": RERANKER_STATS['total_windows_processed'],
-            "avg_windows_per_chunk": round(RERANKER_STATS['avg_windows_per_chunk'], 2),
-            "window_usage_rate": f"{(RERANKER_STATS['sliding_window_used'] / max(RERANKER_STATS['total_chunks_scored'], 1) * 100):.1f}%" if RERANKER_STATS['total_chunks_scored'] > 0 else "0%"
-        },
-        "configuration": {
-            "tafsir": RERANKER_CONFIG['tafsir'],
-            "semantic": RERANKER_CONFIG['semantic']
-        },
-        "approach": "Setup 1: Retriever-Reranker",
-        "benefits": [
-            "+25% precision over distance-based filtering",
-            "Handles semantic nuance (negation, context)",
-            "No query expansion needed",
-            "Adaptive thresholds per model"
-        ]
-    }), 200
 
 
 # --- Debug Endpoint ---
