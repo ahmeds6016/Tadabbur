@@ -1,6 +1,6 @@
 import pytest
 
-from backend.utils.text_cleaning import sanitize_heading_format
+from utils.text_cleaning import sanitize_heading_format
 
 
 @pytest.mark.parametrize(

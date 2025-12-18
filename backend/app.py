@@ -28,7 +28,7 @@ import vertexai
 from vertexai.language_models import TextEmbeddingModel
 from google.cloud import aiplatform
 from google.cloud import storage
-from backend.utils.text_cleaning import sanitize_heading_format
+from utils.text_cleaning import sanitize_heading_format
 
 # Imports for Reranking (Setup 1: Retriever-Reranker pattern)
 # DISABLED: Testing pure RAG optimization for latency and quality
