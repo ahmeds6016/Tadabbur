@@ -699,6 +699,9 @@ function MainApp({ user, userProfile }) {
   // AbortController for cancelling fetch requests
   const abortControllerRef = useRef(null);
 
+  // Timeout for search requests (60 seconds for explore, 30 seconds for tafsir)
+  const searchTimeoutRef = useRef(null);
+
   // Ref to track pending share request (for ensureShareId)
   const pendingShareRequest = useRef(null);
 
@@ -920,13 +923,28 @@ function MainApp({ user, userProfile }) {
 
     if (!query) return;
 
-    // Cancel any in-flight request
+    // Cancel any in-flight request and timeout
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
+    }
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
     }
 
     // Create new AbortController for this request
     abortControllerRef.current = new AbortController();
+
+    // Set timeout based on approach (explore takes longer due to RAG)
+    const timeoutMs = approach === 'explore' ? 90000 : 45000; // 90s for explore, 45s for tafsir
+    searchTimeoutRef.current = setTimeout(() => {
+      // Clear the ref BEFORE aborting so the catch handler knows it was a timeout
+      searchTimeoutRef.current = null;
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        setError('The request took too long. Please try again or simplify your query.');
+        setIsTafsirLoading(false);
+      }
+    }, timeoutMs);
 
     // NEW: Add submitting animation class
     const formElement = e.target;
@@ -970,15 +988,29 @@ function MainApp({ user, userProfile }) {
       // Save to query history
       await saveQueryToHistory(query, approach, userProfile?.persona || '', true);
     } catch (err) {
-      // Don't show error for aborted requests
+      // Don't show error for user-initiated cancellations (but show for timeouts)
       if (err.name === 'AbortError') {
-        console.log('Request was cancelled');
+        // Check if this was a timeout abort (searchTimeoutRef is null after timeout fires)
+        if (searchTimeoutRef.current === null) {
+          // Timeout already set the error message
+          return;
+        }
+        console.log('Request was cancelled by user');
         return;
       }
-      setError(err.message);
+      // Improve error message for user
+      const errorMessage = err.message.includes('Internal server error')
+        ? 'The server encountered an issue. Please try again in a moment.'
+        : err.message;
+      setError(errorMessage);
       // Save failed query to history too
       await saveQueryToHistory(query, approach, userProfile?.persona || '', false);
     } finally {
+      // Clear the timeout when request completes
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+        searchTimeoutRef.current = null;
+      }
       setIsTafsirLoading(false);
     }
   };
