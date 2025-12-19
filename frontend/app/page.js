@@ -686,7 +686,8 @@ function MainApp({ user, userProfile }) {
     markStepComplete,
     startFeatureTour,
     endFeatureTour,
-    resetOnboarding
+    resetOnboarding,
+    isLoaded: onboardingLoaded
   } = useOnboarding(user?.uid);
 
   // Help menu state
@@ -759,6 +760,26 @@ function MainApp({ user, userProfile }) {
       saveSearchState(query, approach, response);
     }
   }, [response, query, approach]);
+
+  // Persist approach separately so it survives errors and page refreshes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('tafsir-last-approach', approach);
+    }
+  }, [approach]);
+
+  // Load last used approach on mount (for error recovery)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const lastApproach = localStorage.getItem('tafsir-last-approach');
+      if (lastApproach && (lastApproach === 'tafsir' || lastApproach === 'explore')) {
+        // Only set if not already set by saved state or URL params
+        if (!response && !urlParamsProcessed) {
+          setApproach(lastApproach);
+        }
+      }
+    }
+  }, []);
 
   // Define handler functions BEFORE keyboard shortcuts useEffect that references them
   const handleNewSearch = useCallback(() => {
@@ -898,8 +919,11 @@ function MainApp({ user, userProfile }) {
     document.documentElement.style.setProperty('--user-color', theme.color);
   }, [userProfile]);
 
-  // Start welcome tour for first-time users
+  // Start welcome tour for first-time users (only after localStorage is loaded)
   useEffect(() => {
+    // Wait for onboarding state to load from localStorage before deciding to show tour
+    if (!onboardingLoaded) return;
+
     if (user && !onboardingState.hasSeenWelcome && !showTour) {
       const timer = setTimeout(() => {
         if (startFeatureTour) {
@@ -909,7 +933,7 @@ function MainApp({ user, userProfile }) {
       return () => clearTimeout(timer);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, onboardingState.hasSeenWelcome, showTour]); // startFeatureTour intentionally excluded to prevent infinite loops
+  }, [user, onboardingState.hasSeenWelcome, showTour, onboardingLoaded]); // startFeatureTour intentionally excluded to prevent infinite loops
 
   // Fetch suggestions on mount
   useEffect(() => {

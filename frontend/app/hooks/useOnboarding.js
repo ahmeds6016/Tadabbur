@@ -25,6 +25,7 @@ export function useOnboarding(userId) {
   const [showTour, setShowTour] = useState(false);
   const [currentTourStep, setCurrentTourStep] = useState(0);
   const [tourType, setTourType] = useState(null);
+  const [isLoaded, setIsLoaded] = useState(false); // Track if localStorage has been loaded
 
   // Load onboarding state from localStorage
   useEffect(() => {
@@ -32,12 +33,19 @@ export function useOnboarding(userId) {
 
     const savedState = localStorage.getItem(`onboarding-${userId}`);
     if (savedState) {
-      setOnboardingState(JSON.parse(savedState));
+      const parsed = JSON.parse(savedState);
+      setOnboardingState(parsed);
+      // Only show tour if user hasn't seen welcome AND state says they should see it
+      if (!parsed.hasSeenWelcome && parsed.tutorialActive) {
+        setShowTour(true);
+        setTourType('welcome');
+      }
     } else {
       // First time user - show welcome tour
       setShowTour(true);
       setTourType('welcome');
     }
+    setIsLoaded(true); // Mark as loaded after processing
   }, [userId]);
 
   // Save state to localStorage whenever it changes
@@ -132,6 +140,7 @@ export function useOnboarding(userId) {
     setShowTour,
     currentTourStep,
     setCurrentTourStep,
-    tourType
+    tourType,
+    isLoaded  // Expose loading state to prevent race conditions
   };
 }
