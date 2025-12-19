@@ -7107,13 +7107,25 @@ def tafsir_handler_enhanced():
             try:
                 # Enhance with verse data
                 if verse_data:
-                    final_json["verses"] = [{
-                        "surah": verse_data['surah_number'],  # Use surah_number for annotations
-                        "surah_name": verse_data['surah_name'],
-                        "verse_number": str(verse_data['verse_number']),
-                        "text_saheeh_international": verse_data['english'],
-                        "arabic_text": verse_data['arabic']
-                    }]
+                    # verse_data can be a list (from LLM retrieval) or a single dict (from fallback)
+                    if isinstance(verse_data, list):
+                        # LLM-orchestrated retrieval: verse_data is already a list of verse dicts
+                        final_json["verses"] = [{
+                            "surah": v.get('surah_number') or v.get('surah'),
+                            "surah_name": v.get('surah_name', ''),
+                            "verse_number": str(v.get('verse_number') or v.get('verse', '')),
+                            "text_saheeh_international": v.get('english', ''),
+                            "arabic_text": v.get('arabic', '')
+                        } for v in verse_data]
+                    else:
+                        # Single verse dict (from fallback path)
+                        final_json["verses"] = [{
+                            "surah": verse_data['surah_number'],
+                            "surah_name": verse_data['surah_name'],
+                            "verse_number": str(verse_data['verse_number']),
+                            "text_saheeh_international": verse_data['english'],
+                            "arabic_text": verse_data['arabic']
+                        }]
                     final_json["query_type"] = "semantic_with_verse"
                 else:
                     final_json["query_type"] = "thematic"

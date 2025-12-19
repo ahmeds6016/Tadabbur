@@ -119,7 +119,7 @@ export default function QueryHistoryPage() {
         </div>
 
         <p style={{ marginBottom: '24px', color: '#666' }}>
-          Your recent queries are automatically saved here.
+          Your recent queries are saved here. Click any query to run it again.
         </p>
 
         {history.length === 0 ? (
@@ -131,42 +131,51 @@ export default function QueryHistoryPage() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {history.map((item) => (
-              <div
+              <Link
                 key={item.id}
-                style={{
-                  padding: '20px',
-                  background: 'linear-gradient(135deg, #ffffff 0%, rgba(250, 246, 240, 1) 100%)',
-                  borderRadius: '12px',
-                  border: '2px solid var(--border-light)',
-                  transition: 'all 0.3s ease'
-                }}
-                className="history-item"
+                href={`/?query=${encodeURIComponent(item.query)}&approach=${item.approach || 'tafsir'}`}
+                style={{ textDecoration: 'none' }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: '700', fontSize: '1.1rem', marginBottom: '8px', color: 'var(--primary-teal)' }}>
-                      {item.query}
+                <div
+                  style={{
+                    padding: '20px',
+                    background: 'linear-gradient(135deg, #ffffff 0%, rgba(250, 246, 240, 1) 100%)',
+                    borderRadius: '12px',
+                    border: '2px solid var(--border-light)',
+                    transition: 'all 0.3s ease',
+                    cursor: 'pointer'
+                  }}
+                  className="history-item"
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: '700', fontSize: '1.1rem', marginBottom: '8px', color: 'var(--primary-teal)' }}>
+                        {item.query}
+                      </div>
+                      <div style={{ fontSize: '0.9rem', color: '#666', marginBottom: '4px' }}>
+                        <span style={{ fontWeight: '600' }}>Approach:</span> {item.approach === 'tafsir' ? '📖 Tafsir-Based' : '🔍 Explore'}
+                      </div>
+                      <div style={{ fontSize: '0.85rem', color: '#999' }}>
+                        {formatTimestamp(item.timestamp)}
+                      </div>
                     </div>
-                    <div style={{ fontSize: '0.9rem', color: '#666', marginBottom: '4px' }}>
-                      <span style={{ fontWeight: '600' }}>Approach:</span> {item.approach === 'tafsir' ? '📖 Tafsir-Based' : '🔍 Explore'}
-                    </div>
-                    <div style={{ fontSize: '0.85rem', color: '#999' }}>
-                      {formatTimestamp(item.timestamp)}
-                    </div>
-                  </div>
-                  <div>
-                    {item.hasResult ? (
-                      <span style={{ background: 'var(--success-color)', color: 'white', padding: '4px 12px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: '600' }}>
-                        ✓ Success
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
+                      {item.hasResult ? (
+                        <span style={{ background: 'var(--success-color)', color: 'white', padding: '4px 12px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: '600' }}>
+                          ✓ Success
+                        </span>
+                      ) : (
+                        <span style={{ background: 'var(--error-color)', color: 'white', padding: '4px 12px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: '600' }}>
+                          ✗ Failed
+                        </span>
+                      )}
+                      <span style={{ fontSize: '0.75rem', color: 'var(--primary-teal)', fontWeight: '600' }}>
+                        Click to re-run →
                       </span>
-                    ) : (
-                      <span style={{ background: 'var(--error-color)', color: 'white', padding: '4px 12px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: '600' }}>
-                        ✗ Failed
-                      </span>
-                    )}
+                    </div>
                   </div>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         )}

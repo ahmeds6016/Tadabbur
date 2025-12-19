@@ -16,3 +16,4 @@ __pycache__/
 
 # Build artifacts
 /backend.zip
+downloaded-logs-*.json

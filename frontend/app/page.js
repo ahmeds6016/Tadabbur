@@ -1,6 +1,7 @@
 'use client';
 import ReactMarkdown from 'react-markdown';
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { initializeApp, getApps } from 'firebase/app';
 import {
   getAuth,
@@ -645,9 +646,11 @@ function OnboardingComponent({ user, onProfileComplete }) {
 // ============================================================================
 
 function MainApp({ user, userProfile }) {
+  const searchParams = useSearchParams();
   const [approach, setApproach] = useState('tafsir');
   const [query, setQuery] = useState('');
   const [response, setResponse] = useState(null);
+  const [urlParamsProcessed, setUrlParamsProcessed] = useState(false);
   const [error, setError] = useState('');
   const [isTafsirLoading, setIsTafsirLoading] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
@@ -724,6 +727,31 @@ function MainApp({ user, userProfile }) {
       setResponse(savedState.response);
     }
   }, []);
+
+  // Handle URL parameters (for history re-run functionality)
+  useEffect(() => {
+    if (urlParamsProcessed) return; // Only process once
+
+    const queryParam = searchParams.get('query');
+    const approachParam = searchParams.get('approach');
+
+    if (queryParam) {
+      // URL params take priority over saved state
+      setQuery(queryParam);
+      if (approachParam === 'tafsir' || approachParam === 'explore') {
+        setApproach(approachParam);
+      }
+      setUrlParamsProcessed(true);
+
+      // Clear the URL params after reading them (clean URL)
+      if (typeof window !== 'undefined') {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('query');
+        url.searchParams.delete('approach');
+        window.history.replaceState({}, '', url.pathname);
+      }
+    }
+  }, [searchParams, urlParamsProcessed]);
 
   // Save search state when response changes
   useEffect(() => {
