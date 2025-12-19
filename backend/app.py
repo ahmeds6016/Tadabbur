@@ -4920,15 +4920,21 @@ def invalidate_cache():
             if not data.get('confirm', False):
                 return jsonify({'error': 'Confirmation required to clear all cache'}), 400
 
+            # Clear Firestore cache
             cache_docs = quran_db.collection('tafsir_cache').stream()
-            count = 0
+            firestore_count = 0
             for doc in cache_docs:
                 doc.reference.delete()
-                count += 1
+                firestore_count += 1
+
+            # Clear in-memory cache
+            with cache_lock:
+                memory_count = len(RESPONSE_CACHE)
+                RESPONSE_CACHE.clear()
 
             return jsonify({
                 'success': True,
-                'message': f'Cleared entire cache ({count} entries)'
+                'message': f'Cleared entire cache (Firestore: {firestore_count}, Memory: {memory_count} entries)'
             }), 200
 
         else:
