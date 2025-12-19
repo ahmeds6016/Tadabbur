@@ -4470,11 +4470,11 @@ ONLY use the source material provided above. DO NOT generate additional explanat
     "tafsir_explanations": [
         {{
             "source": "al-Qurtubi",
-            "explanation": "FORMAT BASED ON PERSONA: Bullets + MINIMAL emojis for beginners ({format_style}), balanced with NO emojis for intermediate, short paragraphs with ## markdown sub-headers for scholars. Use ## Heading format for headers (NOT **bold**). Fix all grammar, improve clarity, preserve accuracy. If verse beyond Surah 4:22, state: 'Al-Qurtubi's tafsir is not available for this verse.'"
+            "explanation": "FORMAT BASED ON PERSONA: Bullets + MINIMAL emojis for beginners ({format_style}), balanced with NO emojis for intermediate, short paragraphs with **bolded sub-headers** for scholars. Use **Bold Header** format for headers. Fix all grammar, improve clarity, preserve accuracy. If verse beyond Surah 4:22, state: 'Al-Qurtubi's tafsir is not available for this verse.'"
         }},
         {{
             "source": "Ibn Kathir",
-            "explanation": "FORMAT BASED ON PERSONA: Bullets + MINIMAL emojis for beginners ({format_style}), balanced with NO emojis for intermediate, short paragraphs with ## markdown sub-headers for scholars. Use ## Heading format for headers (NOT **bold**). Fix all grammar, improve clarity, preserve accuracy."
+            "explanation": "FORMAT BASED ON PERSONA: Bullets + MINIMAL emojis for beginners ({format_style}), balanced with NO emojis for intermediate, short paragraphs with **bolded sub-headers** for scholars. Use **Bold Header** format for headers. Fix all grammar, improve clarity, preserve accuracy."
         }}
     ],
 
@@ -4516,10 +4516,10 @@ ONLY use the source material provided above. DO NOT generate additional explanat
 
 FORMATTING DECISION:
 • If persona = new_revert, revert, or seeker → Use bullets (•), ONE emoji in main headers ONLY, short sentences
-• If persona = practicing_muslim or teacher → Use balanced: ## markdown headers, short paragraphs + some bullets, NO emojis
-• If persona = scholar or student → Use short paragraphs (2-4 sentences) with ## markdown sub-headers, NO bullets, NO emojis
+• If persona = practicing_muslim or teacher → Use balanced: **bold headers**, short paragraphs + some bullets, NO emojis
+• If persona = scholar or student → Use short paragraphs (2-4 sentences) with **bolded sub-headers**, NO bullets, NO emojis
 
-IMPORTANT: Always use ## Heading format for headers, NEVER use **bold** for headers
+IMPORTANT: Always use **Bold Header** format for sub-headers (e.g., **Divine Will and Human Diversity**)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 CRITICAL REMINDERS
