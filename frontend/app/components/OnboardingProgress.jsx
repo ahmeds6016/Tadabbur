@@ -6,7 +6,7 @@ const milestones = [
   { id: 'hasSearched', label: 'First Search', icon: '🔍' },
   { id: 'hasUsedAnnotations', label: 'First Reflection', icon: '📝' },
   { id: 'hasViewedSaved', label: 'Saved an Answer', icon: '⭐' },
-  { id: 'hasExploredQuestions', label: 'Explored Suggestions', icon: '💡' },
+  { id: 'hasViewedHistory', label: 'Viewed History', icon: '📜' },
   { id: 'hasSharedContent', label: 'Shared Content', icon: '🔗' }
 ];
 

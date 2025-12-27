@@ -22,9 +22,9 @@ const helpContent = {
           },
           {
             icon: '📚',
-            label: 'Understanding Approaches',
-            description: 'Tafsir for verse commentary, Explore for thematic insights',
-            tour: 'approaches'
+            label: 'Deep Tafsir Commentary',
+            description: 'Classical scholarly insights with historical and linguistic analysis',
+            tour: 'search'
           }
         ]
       },
@@ -315,8 +315,8 @@ export default function HelpMenu({ currentPage = 'home', isOpen, onClose, onStar
               <h3>Frequently Asked Questions</h3>
 
               <div className="faq-item">
-                <h4>What's the difference between Tafsir and Explore?</h4>
-                <p>Tafsir provides verse-by-verse classical commentary from renowned scholars. Explore finds thematic connections across the Quran for broader topics and questions.</p>
+                <h4>What is Deep Tafsir?</h4>
+                <p>Deep Tafsir provides verse-by-verse classical commentary from renowned scholars like Ibn Kathir and Al-Qurtubi, with historical context and linguistic analysis for deeper understanding.</p>
               </div>
 
               <div className="faq-item">

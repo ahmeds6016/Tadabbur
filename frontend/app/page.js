@@ -23,9 +23,9 @@ import OnboardingProgress from './components/OnboardingProgress';
 import FloatingAnnotateButton from './components/FloatingAnnotateButton';
 import ErrorBoundary from './components/ErrorBoundary';
 import TafsirLogo from './components/Logo';
+import SurahVersePicker from './components/SurahVersePicker';
 import { ToastContainer } from './components/ui/Toast';
 import { TafsirSkeleton, Skeleton } from './components/ui/SkeletonLoader';
-import { SearchModeSelector } from './components/search/SearchModeSelector';
 import { loadSearchState, saveSearchState, clearSearchState } from './utils/searchPersistence';
 import { useToast } from './hooks/useToast';
 import useTextSelection from './hooks/useTextSelection';
@@ -647,16 +647,15 @@ function OnboardingComponent({ user, onProfileComplete }) {
 
 function MainApp({ user, userProfile }) {
   const searchParams = useSearchParams();
-  const [approach, setApproach] = useState('tafsir');
+  // Deep Tafsir mode only - Explore is disabled for now
+  const approach = 'tafsir';
   const [query, setQuery] = useState('');
   const [response, setResponse] = useState(null);
   const [urlParamsProcessed, setUrlParamsProcessed] = useState(false);
   const [error, setError] = useState('');
   const [isTafsirLoading, setIsTafsirLoading] = useState(false);
-  const [suggestions, setSuggestions] = useState([]);
   const [rateLimitWarning, setRateLimitWarning] = useState('');
   const [isMobile, setIsMobile] = useState(false);
-  const [suggestionsExpanded, setSuggestionsExpanded] = useState(false);
   const [navCollapsed, setNavCollapsed] = useState(false);
   const [desktopStats, setDesktopStats] = useState({
     savedCount: 0,
@@ -724,7 +723,6 @@ function MainApp({ user, userProfile }) {
     const savedState = loadSearchState();
     if (savedState) {
       setQuery(savedState.query);
-      setApproach(savedState.approach);
       setResponse(savedState.response);
     }
   }, []);
@@ -734,21 +732,16 @@ function MainApp({ user, userProfile }) {
     if (urlParamsProcessed) return; // Only process once
 
     const queryParam = searchParams.get('query');
-    const approachParam = searchParams.get('approach');
 
     if (queryParam) {
       // URL params take priority over saved state
       setQuery(queryParam);
-      if (approachParam === 'tafsir' || approachParam === 'explore') {
-        setApproach(approachParam);
-      }
       setUrlParamsProcessed(true);
 
       // Clear the URL params after reading them (clean URL)
       if (typeof window !== 'undefined') {
         const url = new URL(window.location.href);
         url.searchParams.delete('query');
-        url.searchParams.delete('approach');
         window.history.replaceState({}, '', url.pathname);
       }
     }
@@ -760,26 +753,6 @@ function MainApp({ user, userProfile }) {
       saveSearchState(query, approach, response);
     }
   }, [response, query, approach]);
-
-  // Persist approach separately so it survives errors and page refreshes
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('tafsir-last-approach', approach);
-    }
-  }, [approach]);
-
-  // Load last used approach on mount (for error recovery)
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const lastApproach = localStorage.getItem('tafsir-last-approach');
-      if (lastApproach && (lastApproach === 'tafsir' || lastApproach === 'explore')) {
-        // Only set if not already set by saved state or URL params
-        if (!response && !urlParamsProcessed) {
-          setApproach(lastApproach);
-        }
-      }
-    }
-  }, []);
 
   // Define handler functions BEFORE keyboard shortcuts useEffect that references them
   const handleNewSearch = useCallback(() => {
@@ -877,12 +850,6 @@ function MainApp({ user, userProfile }) {
         }
       }
 
-      // Alt+T to toggle approach (Tafsir/Explore)
-      if (e.altKey && e.key === 't') {
-        e.preventDefault();
-        setApproach(prev => prev === 'tafsir' ? 'explore' : 'tafsir');
-      }
-
       // Alt+S to save current result
       if (e.altKey && e.key === 's' && response) {
         e.preventDefault();
@@ -935,21 +902,6 @@ function MainApp({ user, userProfile }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, onboardingState.hasSeenWelcome, showTour, onboardingLoaded]); // startFeatureTour intentionally excluded to prevent infinite loops
 
-  // Fetch suggestions on mount
-  useEffect(() => {
-    const fetchSuggestions = async () => {
-      try {
-        const res = await fetch(`${BACKEND_URL}/suggestions`);
-        if (res.ok) {
-          const data = await res.json();
-          setSuggestions(data.suggestions || []);
-        }
-      } catch (err) {
-        console.log('Could not fetch suggestions');
-      }
-    };
-    fetchSuggestions();
-  }, []);
 
   const handleCancelSearch = () => {
     if (abortControllerRef.current) {
@@ -986,8 +938,8 @@ function MainApp({ user, userProfile }) {
     // Create new AbortController for this request
     abortControllerRef.current = new AbortController();
 
-    // Set timeout based on approach (explore takes longer due to RAG)
-    const timeoutMs = approach === 'explore' ? 90000 : 45000; // 90s for explore, 45s for tafsir
+    // Set timeout for tafsir requests (45 seconds)
+    const timeoutMs = 45000;
     searchTimeoutRef.current = setTimeout(() => {
       // Clear the ref BEFORE aborting so the catch handler knows it was a timeout
       searchTimeoutRef.current = null;
@@ -1174,12 +1126,11 @@ function MainApp({ user, userProfile }) {
   }, [clearSelection]);
 
   const handleSuggestionClick = (suggestionObj) => {
-    // Handle both old format (string) and new format (object with query and approach)
+    // Handle both old format (string) and new format (object with query)
     if (typeof suggestionObj === 'string') {
       setQuery(suggestionObj);
     } else {
       setQuery(suggestionObj.query);
-      setApproach(suggestionObj.approach);
     }
   };
 
@@ -1466,91 +1417,24 @@ function MainApp({ user, userProfile }) {
           </div>
         )}
         
-        {/* Query Suggestions - Always Visible */}
-        {suggestions.length > 0 && (
-          <div className="suggestions-section" style={{ marginBottom: '24px', display: 'block', opacity: 1, visibility: 'visible' }}>
-            <h3 style={{
-              textAlign: 'center',
-              color: 'var(--primary-teal)',
-              marginBottom: '16px',
-              fontSize: '1.1rem',
-              fontWeight: '600'
-            }}>
-              🌟 Explore These Questions
-            </h3>
-            <div className="suggestions-grid" style={{ display: 'grid', opacity: 1, visibility: 'visible' }}>
-              {suggestions.slice(0, suggestionsExpanded ? 12 : 6).map((suggestion, index) => {
-                const displayText = typeof suggestion === 'string' ? suggestion : suggestion.query;
-                const approach = typeof suggestion === 'object' ? suggestion.approach : null;
-                const type = typeof suggestion === 'object' ? suggestion.type : null;
+        {/* Surah/Verse Picker */}
+        <SurahVersePicker
+          onSelect={(queryStr) => {
+            setQuery(queryStr);
+            // Auto-submit after selection
+            setTimeout(() => {
+              document.querySelector('.tafsir-form')?.requestSubmit();
+            }, 100);
+          }}
+        />
 
-                // Simplified icons: 📖 for direct verse/tafsir, 🔍 for exploration
-                const approachIcon = approach === 'tafsir' || type === 'verse' ? '📖' : '🔍';
-                const approachLabel = approach === 'tafsir' ? 'Tafsir' : 'Explore';
-
-                return (
-                  <button
-                    key={index}
-                    onClick={() => handleSuggestionClick(suggestion)}
-                    className="suggestion-chip"
-                    title={`${approachIcon} ${approachLabel}`}
-                  >
-                    <span>{approachIcon && <span style={{marginRight: '4px'}}>{approachIcon}</span>}{displayText}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Expand/Collapse Button */}
-            {suggestions.length > 6 && (
-              <div style={{ textAlign: 'center', marginTop: '16px' }}>
-                <button
-                  onClick={() => setSuggestionsExpanded(!suggestionsExpanded)}
-                  style={{
-                    padding: '10px 24px',
-                    background: suggestionsExpanded
-                      ? 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)'
-                      : 'var(--gradient-teal-gold)',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '24px',
-                    fontSize: '0.9rem',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s ease',
-                    boxShadow: 'var(--shadow-soft)'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-                  onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-                >
-                  {suggestionsExpanded ? (
-                    <>Show Less ▲</>
-                  ) : (
-                    <>Show {suggestions.length - 6} More Questions ▼</>
-                  )}
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Search Mode Selector - Shows when no active search */}
-        {!response && !isTafsirLoading && (
-          <SearchModeSelector mode={approach} onModeChange={setApproach} />
-        )}
-
-        {/* Search Form - Fixed alignment */}
-        <form onSubmit={handleGetTafsir} className="tafsir-form" role="search" aria-label="Search Quran verses or topics">
-          <select value={approach} onChange={(e) => setApproach(e.target.value)} aria-label="Select search approach">
-            <option value="tafsir">📖 Tafsir</option>
-            <option value="explore">🔍 Explore</option>
-          </select>
-
+        {/* Search Form - Deep Tafsir Mode */}
+        <form onSubmit={handleGetTafsir} className="tafsir-form" role="search" aria-label="Search Quran verses">
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Enter Surah:Verse (e.g., 2:255) or topic (e.g., charity, prayer)..."
+            placeholder="Or type: verse (2:255), range (1:1-7), or analysis query (historical context of 17:23)..."
             maxLength={200}
           />
 
@@ -1797,104 +1681,6 @@ function MainApp({ user, userProfile }) {
                 </button>
               </div>
             </div>
-
-            {/* Approach Suggestion Banner */}
-            {response.approach_suggestion && (
-              <div style={{
-                padding: '16px 20px',
-                background: 'linear-gradient(135deg, #fff3cd 0%, #fffaeb 100%)',
-                border: '2px solid #ffc107',
-                borderRadius: '12px',
-                marginBottom: '24px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '16px',
-                boxShadow: '0 2px 8px rgba(255, 193, 7, 0.15)'
-              }}>
-                <span style={{ fontSize: '1.5rem', flexShrink: 0 }}>💡</span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: '700', color: '#856404', marginBottom: '4px' }}>
-                    Suggestion
-                  </div>
-                  <div style={{ color: '#856404', fontSize: '0.95rem', lineHeight: '1.5' }}>
-                    {response.approach_suggestion.reason}. Try the{' '}
-                    <strong>
-                      {response.approach_suggestion.suggested === 'tafsir' ? '📖 Tafsir-Based' : '🔍 Explore'}
-                    </strong> approach instead.
-                  </div>
-                </div>
-                <button
-                  onClick={async () => {
-                    // Set the approach first
-                    setApproach(response.approach_suggestion.suggested);
-
-                    // Wait for state update, then trigger search
-                    setTimeout(async () => {
-                      setIsTafsirLoading(true);
-                      setResponse(null);
-                      setError('');
-                      setRateLimitWarning('');
-
-                      try {
-                        const token = await user.getIdToken();
-                        const res = await fetch(`${BACKEND_URL}/tafsir`, {
-                          method: 'POST',
-                          headers: {
-                            'Content-Type': 'application/json',
-                            Authorization: `Bearer ${token}`
-                          },
-                          body: JSON.stringify({
-                            approach: response.approach_suggestion.suggested,
-                            query
-                          })
-                        });
-
-                        const data = await res.json();
-
-                        if (res.status === 429) {
-                          setRateLimitWarning('You have reached your query limit. Please try again later.');
-                          return;
-                        }
-
-                        if (!res.ok) throw new Error(data.error || 'Unknown error fetching Tafsir.');
-
-                        setResponse(data);
-                        await saveQueryToHistory(query, response.approach_suggestion.suggested, userProfile?.persona || '', true);
-                      } catch (err) {
-                        setError(err.message);
-                        await saveQueryToHistory(query, response.approach_suggestion.suggested, userProfile?.persona || '', false);
-                      } finally {
-                        setIsTafsirLoading(false);
-                      }
-                    }, 0);
-                  }}
-                  style={{
-                    padding: '10px 20px',
-                    background: 'linear-gradient(135deg, #ffc107 0%, #ffb300 100%)',
-                    border: 'none',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontWeight: '700',
-                    color: '#fff',
-                    fontSize: '0.9rem',
-                    whiteSpace: 'nowrap',
-                    flexShrink: 0,
-                    boxShadow: '0 2px 6px rgba(255, 193, 7, 0.3)',
-                    transition: 'all 0.3s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.transform = 'translateY(-2px)';
-                    e.target.style.boxShadow = '0 4px 12px rgba(255, 193, 7, 0.4)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.transform = 'translateY(0)';
-                    e.target.style.boxShadow = '0 2px 6px rgba(255, 193, 7, 0.3)';
-                  }}
-                >
-                  Try It
-                </button>
-              </div>
-            )}
 
             <EnhancedResultsDisplay
               data={response}

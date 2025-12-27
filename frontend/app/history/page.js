@@ -44,7 +44,11 @@ export default function QueryHistoryPage() {
 
       if (res.ok) {
         const data = await res.json();
-        setHistory(data.history || []);
+        // Filter to only show Deep Tafsir entries (exclude Explore mode queries)
+        const tafsirHistory = (data.history || []).filter(
+          item => !item.approach || item.approach === 'tafsir'
+        );
+        setHistory(tafsirHistory);
       }
     } catch (err) {
       console.error('Failed to fetch history:', err);
@@ -126,14 +130,14 @@ export default function QueryHistoryPage() {
           <div style={{ textAlign: 'center', padding: '60px 20px', color: '#999' }}>
             <p style={{ fontSize: '3rem', marginBottom: '16px' }}>📝</p>
             <p style={{ fontSize: '1.2rem' }}>No queries yet</p>
-            <p style={{ marginTop: '8px' }}>Your search history will appear here as you use the app.</p>
+            <p style={{ marginTop: '8px' }}>Your tafsir search history will appear here as you use the app.</p>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {history.map((item) => (
               <Link
                 key={item.id}
-                href={`/?query=${encodeURIComponent(item.query)}&approach=${item.approach || 'tafsir'}`}
+                href={`/?query=${encodeURIComponent(item.query)}`}
                 style={{ textDecoration: 'none' }}
               >
                 <div
@@ -150,10 +154,7 @@ export default function QueryHistoryPage() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: '700', fontSize: '1.1rem', marginBottom: '8px', color: 'var(--primary-teal)' }}>
-                        {item.query}
-                      </div>
-                      <div style={{ fontSize: '0.9rem', color: '#666', marginBottom: '4px' }}>
-                        <span style={{ fontWeight: '600' }}>Approach:</span> {item.approach === 'tafsir' ? '📖 Tafsir-Based' : '🔍 Explore'}
+                        📖 {item.query}
                       </div>
                       <div style={{ fontSize: '0.85rem', color: '#999' }}>
                         {formatTimestamp(item.timestamp)}

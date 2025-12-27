@@ -121,7 +121,7 @@ export default function SharedPage() {
                 {query}
               </p>
               <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#666' }}>
-                Approach: {approach === 'tafsir' ? '📖 Tafsir' : '🔍 Explore'}
+                📖 Deep Tafsir Commentary
               </p>
             </div>
             <div style={{ fontSize: '0.85rem', color: '#666' }}>
@@ -244,7 +244,7 @@ export default function SharedPage() {
             This content was shared from <strong>Tafsir Simplified</strong>
           </p>
           <p style={{ margin: '8px 0 0 0', fontSize: '0.85rem', color: '#888' }}>
-            Explore classical Islamic tafsir with AI-powered insights
+            Deep verse commentary from classical scholars
           </p>
         </div>
       </div>

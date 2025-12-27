@@ -4,22 +4,16 @@ import { useState, useEffect, useRef } from 'react';
 const tourContent = {
   welcome: [
     {
+      target: '.surah-verse-picker',
+      title: 'Browse by Surah',
+      content: 'Use the Surah picker to browse all 114 surahs. Select a surah, optionally choose specific verses, and get deep tafsir commentary instantly.',
+      position: 'bottom'
+    },
+    {
       target: '.tafsir-form input',
-      title: 'Start Your Journey',
-      content: 'Search for any verse (like "2:255") or Islamic topic (like "patience", "prayer"). The search bar accepts both verse references and natural language questions.',
+      title: 'Search for Verses',
+      content: 'Search for specific verses like "2:255" or "Al-Baqarah 255", verse ranges like "1:1-7", or analytical queries like "historical context of 17:23".',
       position: 'bottom'
-    },
-    {
-      target: '.approach-selector',
-      title: 'Choose Your Approach',
-      content: '📖 Tafsir: Get classical commentary for specific verses with multiple scholarly interpretations.\n🔍 Explore: Discover thematic connections across the Quran for broader topics.',
-      position: 'bottom'
-    },
-    {
-      target: '.query-suggestions',
-      title: 'Explore Curated Questions',
-      content: 'Click any of these thoughtfully selected questions to explore different aspects of Islamic knowledge. New suggestions appear regularly.',
-      position: 'top'
     },
     {
       target: '.nav-link',
@@ -38,13 +32,13 @@ const tourContent = {
     {
       target: '.tafsir-form input',
       title: 'Search Formats',
-      content: 'Try different formats:\n• Single verse: "2:255" or "Al-Baqarah 255"\n• Range: "2:1-5"\n• Topic: "What does the Quran say about patience?"',
+      content: 'Try different formats:\n• Single verse: "2:255" or "Al-Baqarah 255"\n• Range: "2:1-5" or "Surah 36"\n• Analysis: "historical context of 17:23"',
       position: 'bottom'
     },
     {
-      target: '.approach-selector',
-      title: 'Tafsir vs Explore',
-      content: 'Tafsir provides verse-by-verse commentary from classical scholars. Explore finds thematic connections and answers conceptual questions.',
+      target: '.surah-verse-picker',
+      title: 'Browse All Surahs',
+      content: 'Use the picker to browse all 114 surahs with verse counts. Quick-select famous verses like Ayatul Kursi or Al-Fatihah.',
       position: 'bottom'
     },
     {
