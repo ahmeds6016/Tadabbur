@@ -5,10 +5,19 @@ import traceback
 import time
 import hashlib
 import threading
+import logging
 from functools import wraps
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from typing import Tuple, Optional, Dict, List, Any
+
+# Configure logging - use INFO in production, DEBUG for development
+log_level = logging.DEBUG if os.environ.get('FLASK_DEBUG') else logging.INFO
+logging.basicConfig(
+    level=log_level,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -5438,7 +5447,10 @@ def get_query_history():
     """Get user's recent query history"""
     try:
         uid = request.user['uid']
-        limit = int(request.args.get('limit', 50))
+        try:
+            limit = min(int(request.args.get('limit', 50)), 200)  # Cap at 200
+        except (ValueError, TypeError):
+            limit = 50
 
         history_ref = users_db.collection('users').document(uid).collection('query_history')
         query = history_ref.order_by('timestamp', direction='DESCENDING').limit(limit)
@@ -5729,7 +5741,10 @@ def get_user_annotations():
         uid = request.user['uid']
         tag = request.args.get('tag')
         annotation_type = request.args.get('type')
-        limit = int(request.args.get('limit', 100))
+        try:
+            limit = min(int(request.args.get('limit', 100)), 500)  # Cap at 500
+        except (ValueError, TypeError):
+            limit = 100
 
         annotations_ref = users_db.collection('users').document(uid).collection('annotations')
         query = annotations_ref.order_by('createdAt', direction='DESCENDING').limit(limit)

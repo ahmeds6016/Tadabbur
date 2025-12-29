@@ -1,24 +1,10 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { getAuth, onAuthStateChanged } from 'firebase/auth';
-import { initializeApp, getApps } from 'firebase/app';
+import { onAuthStateChanged } from 'firebase/auth';
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
-
-const firebaseConfig = {
-  apiKey: "AIzaSyBKPuVvuJC1bTUsZsZkiMHRoBRRqF6YqVU",
-  authDomain: "tafsir-simplified-6b262.firebaseapp.com",
-  projectId: "tafsir-simplified-6b262",
-  storageBucket: "tafsir-simplified-6b262.appspot.com",
-  messagingSenderId: "69730898944",
-  appId: "1:69730898944:web:ee2cbeee72be8d856474e5",
-  measurementId: "G-7RZD1G66YH"
-};
-
-const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
-const auth = getAuth(app);
-
-const BACKEND_URL = 'https://tafsir-backend-612616741510.us-central1.run.app';
+import { auth } from '../lib/firebase';
+import { BACKEND_URL } from '../lib/config';
 
 export default function SavedSearchesPage() {
   const [user, setUser] = useState(null);

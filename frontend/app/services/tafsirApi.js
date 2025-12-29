@@ -309,24 +309,24 @@ class TafsirAPI {
   getDefaultSuggestions(persona) {
     const defaults = {
       new_revert: [
-        { text: "What are the Five Pillars of Islam?", approach: "explore" },
         { text: "Explain Surah Al-Fatihah", approach: "tafsir" },
-        { text: "What does the Quran say about mercy?", approach: "explore" }
+        { text: "Surah 2:255 - Ayatul Kursi", approach: "tafsir" },
+        { text: "Surah 112 - Al-Ikhlas", approach: "tafsir" }
       ],
       practicing_muslim: [
-        { text: "Explain verse 2:255 (Ayatul Kursi)", approach: "tafsir" },
-        { text: "What does the Quran say about patience?", approach: "explore" },
-        { text: "Explain the story of Prophet Yusuf", approach: "explore" }
+        { text: "Surah 2:255 - Ayatul Kursi", approach: "tafsir" },
+        { text: "Surah 67:1-5 - Al-Mulk opening", approach: "tafsir" },
+        { text: "Surah 3:190-194 - Reflection verses", approach: "tafsir" }
       ],
       student: [
-        { text: "Analyze the linguistic miracles in Surah Yusuf", approach: "tafsir" },
-        { text: "Compare different interpretations of 3:7", approach: "tafsir" },
-        { text: "Themes of social justice in the Quran", approach: "explore" }
+        { text: "Surah 12:1-10 - Prophet Yusuf's story", approach: "tafsir" },
+        { text: "Surah 3:7 - Muhkam and Mutashabih", approach: "tafsir" },
+        { text: "Surah 2:282 - Longest verse", approach: "tafsir" }
       ],
       scholar: [
-        { text: "Examine the concept of Naskh (abrogation)", approach: "explore" },
-        { text: "Analyze verse 4:34 with classical and modern interpretations", approach: "tafsir" },
-        { text: "The methodology of Tafsir bil-Ma'thur vs Tafsir bil-Ra'y", approach: "explore" }
+        { text: "Surah 4:34 - Classical interpretations", approach: "tafsir" },
+        { text: "Surah 2:106 - Naskh concept", approach: "tafsir" },
+        { text: "Surah 3:7 - Hermeneutical principles", approach: "tafsir" }
       ]
     };
 

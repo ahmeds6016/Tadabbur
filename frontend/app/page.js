@@ -2,14 +2,14 @@
 import ReactMarkdown from 'react-markdown';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { initializeApp, getApps } from 'firebase/app';
 import {
-  getAuth,
   onAuthStateChanged,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut
 } from 'firebase/auth';
+import { auth } from './lib/firebase';
+import { BACKEND_URL, getPersonaTheme, getPersonaIcon } from './lib/config';
 import AnnotationDialog from './components/AnnotationDialog';
 import AnnotationDisplay from './components/AnnotationDisplay';
 import CollapsibleSection from './components/CollapsibleSection';
@@ -32,83 +32,13 @@ import useTextSelection from './hooks/useTextSelection';
 import { useOnboarding } from './hooks/useOnboarding';
 import onboardingConfig from '../config/onboarding-messages.json';
 
-// Firebase Configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyBKPuVvuJC1bTUsZsZkiMHRoBRRqF6YqVU",
-  authDomain: "tafsir-simplified-6b262.firebaseapp.com",
-  projectId: "tafsir-simplified-6b262",
-  storageBucket: "tafsir-simplified-6b262.appspot.com",
-  messagingSenderId: "69730898944",
-  appId: "1:69730898944:web:ee2cbeee72be8d856474e5",
-  measurementId: "G-7RZD1G66YH"
-};
-
-const BACKEND_URL = 'https://tafsir-backend-612616741510.us-central1.run.app';
-
-// Initialize Firebase
-const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
-const auth = getAuth(app);
-
-// ============================================================================
-// PERSONA THEME CONFIGURATION
-// ============================================================================
-
-const getPersonaTheme = (persona) => {
-  const themes = {
-    new_revert: {
-      gradient: 'linear-gradient(135deg, #10B981 0%, #34D399 100%)',
-      icon: '🌱',
-      color: '#10B981'
-    },
-    revert: {
-      gradient: 'linear-gradient(135deg, #059669 0%, #10B981 100%)',
-      icon: '📗',
-      color: '#059669'
-    },
-    seeker: {
-      gradient: 'linear-gradient(135deg, #8B5CF6 0%, #A78BFA 100%)',
-      icon: '🔍',
-      color: '#8B5CF6'
-    },
-    practicing_muslim: {
-      gradient: 'linear-gradient(135deg, #0D9488 0%, #14B8A6 100%)',
-      icon: '🕌',
-      color: '#0D9488'
-    },
-    teacher: {
-      gradient: 'linear-gradient(135deg, #D97706 0%, #F59E0B 100%)',
-      icon: '👨‍🏫',
-      color: '#D97706'
-    },
-    scholar: {
-      gradient: 'linear-gradient(135deg, #1E3A5F 0%, #3B5A7F 100%)',
-      icon: '📚',
-      color: '#1E3A5F'
-    },
-    student: {
-      gradient: 'linear-gradient(135deg, #3B82F6 0%, #60A5FA 100%)',
-      icon: '🎓',
-      color: '#3B82F6'
-    }
-  };
-  
-  return themes[persona] || themes.practicing_muslim;
-};
-
-const getPersonaIcon = (persona) => {
-  const theme = getPersonaTheme(persona);
-  return theme.icon;
-};
-
 // ============================================================================
 // MAIN COMPONENT
 // ============================================================================
 
 export default function HomePage() {
-  // Add error logging
+  // Global error handlers
   useEffect(() => {
-    console.log('HomePage component mounted');
-
     // Global error handler
     const handleError = (event) => {
       console.error('Global error caught:', {
@@ -149,8 +79,8 @@ export default function HomePage() {
       if (data?.level || data?.persona) {
         setUserProfile(data);
       }
-    } catch (error) {
-      console.log('No saved profile, proceeding to onboarding.');
+    } catch {
+      // No saved profile, will proceed to onboarding
     }
   };
 
@@ -308,8 +238,8 @@ function OnboardingComponent({ user, onProfileComplete }) {
           const data = await res.json();
           setPersonas(Object.entries(data.personas));
         }
-      } catch (err) {
-        console.log('Could not fetch personas, using defaults');
+      } catch {
+        // Could not fetch personas, using defaults
         setPersonas([
           ['new_revert', { 
             name: 'New Revert', 
@@ -367,9 +297,7 @@ function OnboardingComponent({ user, onProfileComplete }) {
       if (!isDeterministicPersona) {
         payload.knowledge_level = profile.knowledge_level;
       }
-      
-      console.log('Sending profile:', payload);
-      
+
       const response = await fetch(`${BACKEND_URL}/set_profile`, {
         method: 'POST',
         headers: {
@@ -385,7 +313,6 @@ function OnboardingComponent({ user, onProfileComplete }) {
       }
       
       const result = await response.json();
-      console.log('Profile saved:', result);
       onProfileComplete(result.profile);
     } catch (err) {
       console.error('Profile error:', err);
@@ -999,7 +926,7 @@ function MainApp({ user, userProfile }) {
           // Timeout already set the error message
           return;
         }
-        console.log('Request was cancelled by user');
+        // User cancelled the request
         return;
       }
       // Improve error message for user

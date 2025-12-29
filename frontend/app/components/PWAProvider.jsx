@@ -13,16 +13,8 @@ export default function PWAProvider({ children }) {
       window.addEventListener('load', () => {
         navigator.serviceWorker
           .register('/sw.js')
-          .then((registration) => {
-            console.log('Service Worker registered:', registration);
-
-            // Check for updates
-            registration.addEventListener('updatefound', () => {
-              console.log('Service Worker update found');
-            });
-          })
-          .catch((error) => {
-            console.error('Service Worker registration failed:', error);
+          .catch(() => {
+            // Service worker registration failed silently
           });
       });
     }
@@ -30,12 +22,10 @@ export default function PWAProvider({ children }) {
     // Check if already installed
     if (window.matchMedia('(display-mode: standalone)').matches) {
       setIsInstalled(true);
-      console.log('App is already installed');
     }
 
     // Listen for install prompt
     const handleBeforeInstallPrompt = (e) => {
-      console.log('beforeinstallprompt fired');
       e.preventDefault();
       setDeferredPrompt(e);
       setIsInstallable(true);
@@ -45,7 +35,6 @@ export default function PWAProvider({ children }) {
 
     // Check if app was just installed
     window.addEventListener('appinstalled', () => {
-      console.log('App was installed');
       setIsInstalled(true);
       setIsInstallable(false);
       setDeferredPrompt(null);
@@ -57,25 +46,17 @@ export default function PWAProvider({ children }) {
   }, []);
 
   const handleInstallClick = async () => {
-    if (!deferredPrompt) {
-      console.log('No deferred prompt available');
-      return;
-    }
+    if (!deferredPrompt) return;
 
     // Show the install prompt
     deferredPrompt.prompt();
 
     // Wait for the user to respond
-    const { outcome } = await deferredPrompt.userChoice;
-    console.log(`Install prompt outcome: ${outcome}`);
+    await deferredPrompt.userChoice;
 
     // Clean up
     setDeferredPrompt(null);
     setIsInstallable(false);
-
-    if (outcome === 'accepted') {
-      console.log('User accepted the install prompt');
-    }
   };
 
   return (

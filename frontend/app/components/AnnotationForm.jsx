@@ -1,7 +1,6 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
-
-const BACKEND_URL = 'https://tafsir-backend-612616741510.us-central1.run.app';
+import { BACKEND_URL } from '../lib/config';
 
 const ANNOTATION_TYPES = [
   { value: 'personal_insight', label: '💡 Personal Insight', icon: '💡' },

@@ -3,8 +3,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
-
-const BACKEND_URL = 'https://tafsir-backend-612616741510.us-central1.run.app';
+import { BACKEND_URL } from '../../lib/config';
 
 export default function SharedPage() {
   const params = useParams();
