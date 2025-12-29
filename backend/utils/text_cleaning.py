@@ -96,15 +96,16 @@ def _handle_bold_subheadings(text: str) -> str:
 
     # Pattern: **Verse N: Arabic (Translation)** followed by text
     # Example: **Verse 1: Qul Huwa... (Say, "He is...")** Ibn Kathir elucidates...
-    verse_pattern = r'(\*\*Verse \d+:[^*]+\*\*)\s+([A-Z])'
+    verse_pattern = r'(\*\*Verse \d+:[^*]+\*\*)\s+([A-Z\'\"])'
 
     # Pattern: **Heading Title** followed by text (heading doesn't end with :)
     # Example: **Context of Revelation** This Surah was revealed...
-    heading_pattern = r'(\*\*[A-Z][^*:]+\*\*)\s+([A-Z])'
+    # Also handles: **The Name 'Allah'** 'Allah' is... (text starting with quote)
+    heading_pattern = r'(\*\*[A-Z][^*:]+\*\*)\s+([A-Z\'\"])'
 
     # Pattern: **Heading:** followed by text
     # Example: **Analysis:** The verse states...
-    colon_heading_pattern = r'(\*\*[^*]+:\*\*)\s+([A-Z])'
+    colon_heading_pattern = r'(\*\*[^*]+:\*\*)\s+([A-Z\'\"])'
 
     def add_linebreak(match):
         return match.group(1) + '\n\n' + match.group(2)
