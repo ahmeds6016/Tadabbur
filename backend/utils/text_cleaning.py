@@ -1,25 +1,35 @@
 from typing import Any, Dict, List, Optional, Tuple
+import re
 
 
 def sanitize_heading_format(text: str) -> str:
     """
-    Ensure ## headings are on their own line with proper spacing.
+    Ensure headings (## and **Bold**) are on their own line with proper spacing.
 
-    IMPORTANT: This function does NOT convert **Bold** to ## headings.
-    **Bold** sub-headers are the preferred format and should be kept as-is.
+    Handles:
+    1. ## Markdown headings - ensures they're on their own line
+    2. **Bold subheadings** - ensures line break after them when followed by text
 
-    This function only handles cases where the LLM generates inline ## headings
-    like "text. ## Heading more text" - it splits these onto separate lines.
+    Patterns for bold subheadings that need line breaks:
+    - **Verse 1: Some Text** followed by paragraph text
+    - **Context of Revelation** followed by paragraph text
+    - **Some Heading:** followed by paragraph text
     """
     if not text:
         return text
 
-    import re
+    # First pass: Handle ## headings
+    if '##' in text:
+        text = _handle_hash_headings(text)
 
-    # If no ## headings exist, return text unchanged (most common case)
-    if '##' not in text:
-        return text
+    # Second pass: Handle **Bold** subheadings that are inline with text
+    text = _handle_bold_subheadings(text)
 
+    return text
+
+
+def _handle_hash_headings(text: str) -> str:
+    """Handle ## markdown headings - ensure they're on their own line."""
     processed_lines = []
 
     for line in text.split('\n'):
@@ -68,3 +78,40 @@ def sanitize_heading_format(text: str) -> str:
         cleaned_lines.pop()
 
     return '\n'.join(cleaned_lines)
+
+
+def _handle_bold_subheadings(text: str) -> str:
+    """
+    Handle **Bold** subheadings that are inline with paragraph text.
+
+    Patterns to match:
+    - **Verse N: Text (Translation)** followed by explanation text
+    - **Some Heading** followed by explanation text (when heading ends with **)
+    - **Heading:** followed by text
+
+    We insert a line break after the bold subheading.
+    """
+    if '**' not in text:
+        return text
+
+    # Pattern: **Verse N: Arabic (Translation)** followed by text
+    # Example: **Verse 1: Qul Huwa... (Say, "He is...")** Ibn Kathir elucidates...
+    verse_pattern = r'(\*\*Verse \d+:[^*]+\*\*)\s+([A-Z])'
+
+    # Pattern: **Heading Title** followed by text (heading doesn't end with :)
+    # Example: **Context of Revelation** This Surah was revealed...
+    heading_pattern = r'(\*\*[A-Z][^*:]+\*\*)\s+([A-Z])'
+
+    # Pattern: **Heading:** followed by text
+    # Example: **Analysis:** The verse states...
+    colon_heading_pattern = r'(\*\*[^*]+:\*\*)\s+([A-Z])'
+
+    def add_linebreak(match):
+        return match.group(1) + '\n\n' + match.group(2)
+
+    # Apply patterns in order of specificity
+    text = re.sub(verse_pattern, add_linebreak, text)
+    text = re.sub(colon_heading_pattern, add_linebreak, text)
+    text = re.sub(heading_pattern, add_linebreak, text)
+
+    return text
