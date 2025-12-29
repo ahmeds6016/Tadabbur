@@ -1563,17 +1563,17 @@ def detect_query_intent(query: str) -> dict:
     # Priority 1: Check for historical keywords (timeline, revelation context, events)
     if any(re.search(pattern, query_lower) for pattern in historical_patterns):
         return {
-            'suggested_approach': 'explore',  # Changed from 'historical'
+            'suggested_approach': 'tafsir',  # Deep tafsir can handle historical context
             'confidence': 'high',
-            'reason': 'Your query asks about revelation context, timeline, or historical events - use Explore mode'
+            'reason': 'Your query asks about revelation context or historical events - include a verse reference for best results'
         }
 
     # Priority 2: Check for thematic keywords (cross-verse concepts, holistic understanding)
     if any(re.search(pattern, query_lower) for pattern in thematic_patterns):
         return {
-            'suggested_approach': 'explore',  # Changed from 'thematic'
+            'suggested_approach': 'tafsir',  # Deep tafsir handles thematic queries with verse references
             'confidence': 'high',
-            'reason': 'Your query explores a concept across multiple verses - use Explore mode'
+            'reason': 'Your query explores a concept - include a verse reference for detailed commentary'
         }
 
     # Priority 3: Check for tafsir-specific patterns (detailed commentary, classical scholars)
@@ -6282,26 +6282,26 @@ def tafsir_handler_enhanced():
                 # Remove duplicates while preserving order
                 suggestions = list(dict.fromkeys(suggestions[:4]))  # Limit to 4 suggestions
 
-                # Provide approach-specific help and examples
-                if approach == 'tafsir':
-                    help_message = '🤔 I couldn\'t find that verse. Let me help you format it correctly.'
-                    help_text = 'Try one of these formats:\n• Numeric: "2:255"\n• Named: "Surah Al-Baqarah 255"\n\n💡 For topics and themes, use 🔍 Explore mode instead!'
+                # Check if this looks like a full surah query (e.g., "Surah 67" without verse)
+                surah_only_match = re.match(r'^(?:surah\s+)?(\d{1,3})$', query.strip().lower())
+                if surah_only_match or re.match(r'^surah\s+\d{1,3}$', query.strip().lower()):
+                    help_message = '📚 Full surah queries are not currently supported.'
+                    help_text = 'Please specify a verse or verse range (max 10 verses):\n• Single verse: "67:1"\n• Verse range: "67:1-10"\n• Analysis: "historical context of 67:1"'
                     example_suggestions = [
-                        '2:255 (Ayat al-Kursi)',
-                        'Surah Al-Fatihah verse 1',
-                        '35:6',
-                        'Surah Fatir, Verse 6'
+                        '67:1 (First verse)',
+                        '67:1-10 (First 10 verses)',
+                        '67:15-24 (Middle section)',
+                        'linguistic analysis of 67:1'
                     ] if not suggestions else suggestions
-                else:  # explore mode
-                    help_message = '🔍 It looks like you\'re trying to find a specific verse, but you\'re in Explore mode.'
-                    help_text = 'Explore mode is for topics and themes across the Quran.\n\n📖 Switch to Tafsir mode for specific verses like "2:255"\n\n🔍 Or ask about topics like:\n• "What does the Quran say about patience?"\n• "Quranic principles for ethical business"\n• "Verses about gratitude"'
-                    # Provide topic-based examples instead of verse references
+                else:
+                    help_message = '🤔 I couldn\'t find that verse. Let me help you format it correctly.'
+                    help_text = 'Try one of these formats:\n• Numeric: "2:255"\n• Named: "Surah Al-Baqarah verse 255"\n• Range: "2:255-257" (max 10 verses)\n• Analysis: "historical context of 2:255"'
                     example_suggestions = [
-                        'What does the Quran say about patience?',
-                        'Quranic principles for ethical business',
-                        'Verses about gratitude',
-                        'Islamic guidance on family relationships'
-                    ]
+                        '2:255 (Ayatul Kursi)',
+                        'Surah Al-Fatihah verse 1',
+                        '3:190-194',
+                        'linguistic analysis of 2:255'
+                    ] if not suggestions else suggestions
 
                 response_data = {
                     'needs_clarification': True,

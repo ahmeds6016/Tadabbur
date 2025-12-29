@@ -119,6 +119,9 @@ const SURAHS = [
   { number: 114, name: 'An-Nas', englishName: 'The Mankind', verseCount: 6 }
 ];
 
+// Max verses per query
+const MAX_VERSE_RANGE = 10;
+
 export default function SurahVersePicker({ onSelect, initialSurah = null, initialVerse = null }) {
   const [selectedSurah, setSelectedSurah] = useState(initialSurah);
   const [startVerse, setStartVerse] = useState(initialVerse || '');
@@ -126,6 +129,7 @@ export default function SurahVersePicker({ onSelect, initialSurah = null, initia
   const [isRangeMode, setIsRangeMode] = useState(false);
   const [surahSearch, setSurahSearch] = useState('');
   const [showSurahDropdown, setShowSurahDropdown] = useState(false);
+  const [validationError, setValidationError] = useState('');
   const dropdownRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -161,42 +165,107 @@ export default function SurahVersePicker({ onSelect, initialSurah = null, initia
     setShowSurahDropdown(false);
     setStartVerse('');
     setEndVerse('');
+    setValidationError('');
   };
 
-  // Handle apply selection
-  const handleApply = () => {
-    if (!selectedSurah) return;
+  // Validate and clamp verse inputs
+  const handleStartVerseChange = (value) => {
+    const num = parseInt(value);
+    if (value === '') {
+      setStartVerse('');
+      setValidationError('');
+    } else if (!isNaN(num)) {
+      // Clamp to valid range
+      const clamped = Math.max(1, Math.min(num, maxVerses));
+      setStartVerse(clamped.toString());
+      setValidationError('');
 
-    let queryStr = '';
-    if (isRangeMode && startVerse && endVerse) {
-      queryStr = `${selectedSurah}:${startVerse}-${endVerse}`;
-    } else if (startVerse) {
-      queryStr = `${selectedSurah}:${startVerse}`;
-    } else {
-      // Full surah
-      queryStr = `Surah ${selectedSurah}`;
+      // If end verse is now less than start, update it
+      if (isRangeMode && endVerse && parseInt(endVerse) < clamped) {
+        setEndVerse(clamped.toString());
+      }
+    }
+  };
+
+  const handleEndVerseChange = (value) => {
+    const num = parseInt(value);
+    const start = parseInt(startVerse) || 1;
+
+    if (value === '') {
+      setEndVerse('');
+      setValidationError('');
+    } else if (!isNaN(num)) {
+      // Clamp: must be >= start and <= maxVerses
+      const clamped = Math.max(start, Math.min(num, maxVerses));
+
+      // Check range limit
+      if (clamped - start + 1 > MAX_VERSE_RANGE) {
+        const maxEnd = start + MAX_VERSE_RANGE - 1;
+        setEndVerse(Math.min(maxEnd, maxVerses).toString());
+        setValidationError(`Maximum ${MAX_VERSE_RANGE} verses per query`);
+      } else {
+        setEndVerse(clamped.toString());
+        setValidationError('');
+      }
+    }
+  };
+
+  // Validate before apply
+  const validateAndApply = () => {
+    if (!selectedSurah) {
+      setValidationError('Please select a surah');
+      return;
     }
 
-    onSelect(queryStr);
+    if (!startVerse) {
+      setValidationError('Please enter a verse number');
+      return;
+    }
+
+    const start = parseInt(startVerse);
+    if (start < 1 || start > maxVerses) {
+      setValidationError(`Verse must be between 1 and ${maxVerses}`);
+      return;
+    }
+
+    if (isRangeMode) {
+      if (!endVerse) {
+        setValidationError('Please enter an end verse for the range');
+        return;
+      }
+
+      const end = parseInt(endVerse);
+      if (end < start) {
+        setValidationError('End verse must be greater than start verse');
+        return;
+      }
+
+      if (end - start + 1 > MAX_VERSE_RANGE) {
+        setValidationError(`Maximum ${MAX_VERSE_RANGE} verses per query`);
+        return;
+      }
+
+      onSelect(`${selectedSurah}:${start}-${end}`);
+    } else {
+      onSelect(`${selectedSurah}:${start}`);
+    }
   };
 
-  // Quick select for famous verses
-  const famousVerses = [
-    { surah: 2, verse: 255, label: 'Ayatul Kursi (2:255)' },
-    { surah: 1, verse: '1-7', label: 'Al-Fatihah (1:1-7)' },
-    { surah: 112, verse: '1-4', label: 'Al-Ikhlas (112:1-4)' },
-    { surah: 36, verse: 1, label: 'Surah Ya-Sin (36)' },
-    { surah: 67, verse: 1, label: 'Surah Al-Mulk (67)' },
+  // Quick select options - actual verse queries (no full surahs)
+  const quickSelects = [
+    // Famous verses
+    { query: '2:255', label: 'Ayatul Kursi (2:255)' },
+    { query: '1:1-7', label: 'Al-Fatihah (1:1-7)' },
+    { query: '112:1-4', label: 'Al-Ikhlas (112:1-4)' },
+    { query: '39:53', label: 'Mercy Verse (39:53)' },
+    { query: '3:190-194', label: 'Reflection (3:190-194)' },
+    // Meta/Analysis queries
+    { query: 'historical context of 33:33', label: 'Historical: 33:33', isAnalysis: true },
+    { query: 'linguistic analysis of 2:255', label: 'Linguistic: 2:255', isAnalysis: true },
   ];
 
-  const handleQuickSelect = (verse) => {
-    if (typeof verse.verse === 'string' && verse.verse.includes('-')) {
-      onSelect(`${verse.surah}:${verse.verse}`);
-    } else if (verse.verse === 1 && verse.label.startsWith('Surah')) {
-      onSelect(`Surah ${verse.surah}`);
-    } else {
-      onSelect(`${verse.surah}:${verse.verse}`);
-    }
+  const handleQuickSelect = (item) => {
+    onSelect(item.query);
   };
 
   return (
@@ -224,7 +293,7 @@ export default function SurahVersePicker({ onSelect, initialSurah = null, initia
         </h3>
       </div>
 
-      {/* Quick Select Famous Verses */}
+      {/* Quick Select */}
       <div style={{ marginBottom: '16px' }}>
         <div style={{
           fontSize: '0.85rem',
@@ -238,18 +307,18 @@ export default function SurahVersePicker({ onSelect, initialSurah = null, initia
           flexWrap: 'wrap',
           gap: '8px'
         }}>
-          {famousVerses.map((verse, index) => (
+          {quickSelects.map((item, index) => (
             <button
               key={index}
               type="button"
-              onClick={() => handleQuickSelect(verse)}
+              onClick={() => handleQuickSelect(item)}
               style={{
                 padding: '6px 12px',
-                background: 'white',
-                border: '1px solid var(--border-light)',
+                background: item.isAnalysis ? 'rgba(139, 92, 246, 0.1)' : 'white',
+                border: `1px solid ${item.isAnalysis ? 'rgba(139, 92, 246, 0.3)' : 'var(--border-light)'}`,
                 borderRadius: '20px',
                 fontSize: '0.8rem',
-                color: 'var(--primary-teal)',
+                color: item.isAnalysis ? '#7c3aed' : 'var(--primary-teal)',
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
                 fontWeight: '500'
@@ -259,11 +328,11 @@ export default function SurahVersePicker({ onSelect, initialSurah = null, initia
                 e.target.style.background = 'var(--gold-light)';
               }}
               onMouseLeave={(e) => {
-                e.target.style.borderColor = 'var(--border-light)';
-                e.target.style.background = 'white';
+                e.target.style.borderColor = item.isAnalysis ? 'rgba(139, 92, 246, 0.3)' : 'var(--border-light)';
+                e.target.style.background = item.isAnalysis ? 'rgba(139, 92, 246, 0.1)' : 'white';
               }}
             >
-              {verse.label}
+              {item.label}
             </button>
           ))}
         </div>
@@ -360,7 +429,7 @@ export default function SurahVersePicker({ onSelect, initialSurah = null, initia
         </div>
       </div>
 
-      {/* Verse Selection */}
+      {/* Verse Selection - Required */}
       {selectedSurah && (
         <div style={{ marginBottom: '16px' }}>
           <div style={{
@@ -374,7 +443,7 @@ export default function SurahVersePicker({ onSelect, initialSurah = null, initia
               fontWeight: '600',
               color: '#374151'
             }}>
-              Select Verse(s) <span style={{ fontWeight: 'normal', color: '#666' }}>(optional - leave empty for full surah)</span>
+              Select Verse(s) <span style={{ color: '#ef4444' }}>*</span>
             </label>
             <label style={{
               display: 'flex',
@@ -389,11 +458,14 @@ export default function SurahVersePicker({ onSelect, initialSurah = null, initia
                 checked={isRangeMode}
                 onChange={(e) => {
                   setIsRangeMode(e.target.checked);
-                  if (!e.target.checked) setEndVerse('');
+                  if (!e.target.checked) {
+                    setEndVerse('');
+                    setValidationError('');
+                  }
                 }}
                 style={{ cursor: 'pointer' }}
               />
-              Range
+              Range (max {MAX_VERSE_RANGE})
             </label>
           </div>
 
@@ -407,12 +479,12 @@ export default function SurahVersePicker({ onSelect, initialSurah = null, initia
               min="1"
               max={maxVerses}
               value={startVerse}
-              onChange={(e) => setStartVerse(e.target.value)}
+              onChange={(e) => handleStartVerseChange(e.target.value)}
               placeholder={`1-${maxVerses}`}
               style={{
                 flex: 1,
                 padding: '10px 14px',
-                border: '2px solid var(--border-light)',
+                border: `2px solid ${validationError && !startVerse ? '#ef4444' : 'var(--border-light)'}`,
                 borderRadius: '8px',
                 fontSize: '0.95rem',
                 outline: 'none',
@@ -425,14 +497,14 @@ export default function SurahVersePicker({ onSelect, initialSurah = null, initia
                 <input
                   type="number"
                   min={parseInt(startVerse) || 1}
-                  max={maxVerses}
+                  max={Math.min(maxVerses, (parseInt(startVerse) || 1) + MAX_VERSE_RANGE - 1)}
                   value={endVerse}
-                  onChange={(e) => setEndVerse(e.target.value)}
-                  placeholder={`${startVerse || 1}-${maxVerses}`}
+                  onChange={(e) => handleEndVerseChange(e.target.value)}
+                  placeholder={`${parseInt(startVerse) || 1}-${Math.min(maxVerses, (parseInt(startVerse) || 1) + MAX_VERSE_RANGE - 1)}`}
                   style={{
                     flex: 1,
                     padding: '10px 14px',
-                    border: '2px solid var(--border-light)',
+                    border: `2px solid ${validationError && isRangeMode && !endVerse ? '#ef4444' : 'var(--border-light)'}`,
                     borderRadius: '8px',
                     fontSize: '0.95rem',
                     outline: 'none',
@@ -447,15 +519,30 @@ export default function SurahVersePicker({ onSelect, initialSurah = null, initia
             color: '#999',
             marginTop: '4px'
           }}>
-            This surah has {maxVerses} verses
+            This surah has {maxVerses} verses (max {MAX_VERSE_RANGE} verses per query)
           </div>
+        </div>
+      )}
+
+      {/* Validation Error */}
+      {validationError && (
+        <div style={{
+          padding: '8px 12px',
+          background: 'rgba(239, 68, 68, 0.1)',
+          border: '1px solid rgba(239, 68, 68, 0.3)',
+          borderRadius: '8px',
+          marginBottom: '12px',
+          fontSize: '0.85rem',
+          color: '#dc2626'
+        }}>
+          {validationError}
         </div>
       )}
 
       {/* Apply Button */}
       <button
         type="button"
-        onClick={handleApply}
+        onClick={validateAndApply}
         disabled={!selectedSurah}
         style={{
           width: '100%',
@@ -476,7 +563,7 @@ export default function SurahVersePicker({ onSelect, initialSurah = null, initia
               `Get Tafsir for ${selectedSurah}:${startVerse}-${endVerse}` :
               `Get Tafsir for ${selectedSurah}:${startVerse}`
           ) : (
-            `Get Tafsir for Surah ${SURAHS.find(s => s.number === selectedSurah)?.name}`
+            'Enter a verse number'
           )
         ) : (
           'Select a Surah'
