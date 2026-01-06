@@ -84,35 +84,25 @@ def _handle_bold_subheadings(text: str) -> str:
     """
     Handle **Bold** subheadings that are inline with paragraph text.
 
-    Patterns to match:
-    - **Verse N: Text (Translation)** followed by explanation text
-    - **Some Heading** followed by explanation text (when heading ends with **)
-    - **Heading:** followed by text
-
-    We insert a line break after the bold subheading.
+    Adds a single line break after bold subheadings for 0.5 line spacing.
+    Uses non-greedy matching to handle multiple headings on the same line.
     """
     if '**' not in text:
         return text
 
-    # Pattern: **Verse N: Arabic (Translation)** followed by text
-    # Example: **Verse 1: Qul Huwa... (Say, "He is...")** Ibn Kathir elucidates...
-    verse_pattern = r'(\*\*Verse \d+:[^*]+\*\*)\s+([A-Z\'\"])'
-
-    # Pattern: **Heading Title** followed by text (heading doesn't end with :)
-    # Example: **Context of Revelation** This Surah was revealed...
-    # Also handles: **The Name 'Allah'** 'Allah' is... (text starting with quote)
-    heading_pattern = r'(\*\*[A-Z][^*:]+\*\*)\s+([A-Z\'\"])'
-
-    # Pattern: **Heading:** followed by text
-    # Example: **Analysis:** The verse states...
-    colon_heading_pattern = r'(\*\*[^*]+:\*\*)\s+([A-Z\'\"])'
+    # Generic pattern: Match any **Bold Text** followed by whitespace and then content
+    # Uses non-greedy .*? to match content between ** pairs correctly
+    # Matches when followed by any word character, quote, or opening paren
+    # This handles all cases: **Heading** Text, **Verse 1: Arabic** Text, **Title:** Text
+    bold_pattern = r'(\*\*[^*]+\*\*)\s+([A-Za-z0-9\'\"\(\[])'
 
     def add_linebreak(match):
-        return match.group(1) + '\n\n' + match.group(2)
+        return match.group(1) + '\n' + match.group(2)
 
-    # Apply patterns in order of specificity
-    text = re.sub(verse_pattern, add_linebreak, text)
-    text = re.sub(colon_heading_pattern, add_linebreak, text)
-    text = re.sub(heading_pattern, add_linebreak, text)
+    # Apply the pattern - may need multiple passes for consecutive headings
+    prev_text = None
+    while prev_text != text:
+        prev_text = text
+        text = re.sub(bold_pattern, add_linebreak, text)
 
     return text
