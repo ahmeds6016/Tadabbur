@@ -168,45 +168,47 @@ export default function SurahVersePicker({ onSelect, initialSurah = null, initia
     setValidationError('');
   };
 
-  // Validate and clamp verse inputs
+  // Allow free typing - validate on blur/submit instead of clamping every keystroke
   const handleStartVerseChange = (value) => {
-    const num = parseInt(value);
-    if (value === '') {
-      setStartVerse('');
+    // Allow free typing of digits
+    if (value === '' || /^\d*$/.test(value)) {
+      setStartVerse(value);
       setValidationError('');
-    } else if (!isNaN(num)) {
-      // Clamp to valid range
-      const clamped = Math.max(1, Math.min(num, maxVerses));
-      setStartVerse(clamped.toString());
-      setValidationError('');
-
-      // If end verse is now less than start, update it
-      if (isRangeMode && endVerse && parseInt(endVerse) < clamped) {
-        setEndVerse(clamped.toString());
-      }
     }
   };
 
   const handleEndVerseChange = (value) => {
-    const num = parseInt(value);
+    // Allow free typing of digits
+    if (value === '' || /^\d*$/.test(value)) {
+      setEndVerse(value);
+      setValidationError('');
+    }
+  };
+
+  // Validate on blur for better UX
+  const handleStartVerseBlur = () => {
+    if (!startVerse) return;
+    const num = parseInt(startVerse);
+    if (isNaN(num) || num < 1) {
+      setStartVerse('1');
+    } else if (num > maxVerses) {
+      setStartVerse(maxVerses.toString());
+    }
+  };
+
+  const handleEndVerseBlur = () => {
+    if (!endVerse) return;
+    const num = parseInt(endVerse);
     const start = parseInt(startVerse) || 1;
 
-    if (value === '') {
-      setEndVerse('');
-      setValidationError('');
-    } else if (!isNaN(num)) {
-      // Clamp: must be >= start and <= maxVerses
-      const clamped = Math.max(start, Math.min(num, maxVerses));
-
-      // Check range limit
-      if (clamped - start + 1 > MAX_VERSE_RANGE) {
-        const maxEnd = start + MAX_VERSE_RANGE - 1;
-        setEndVerse(Math.min(maxEnd, maxVerses).toString());
-        setValidationError(`Maximum ${MAX_VERSE_RANGE} verses per query`);
-      } else {
-        setEndVerse(clamped.toString());
-        setValidationError('');
-      }
+    if (isNaN(num) || num < start) {
+      setEndVerse(start.toString());
+    } else if (num > maxVerses) {
+      setEndVerse(maxVerses.toString());
+    }
+    // Show warning if range exceeded but don't auto-clamp
+    if (num - start + 1 > MAX_VERSE_RANGE) {
+      setValidationError(`Maximum ${MAX_VERSE_RANGE} verses per query. Range will be limited.`);
     }
   };
 
@@ -234,15 +236,21 @@ export default function SurahVersePicker({ onSelect, initialSurah = null, initia
         return;
       }
 
-      const end = parseInt(endVerse);
-      if (end < start) {
-        setValidationError('End verse must be greater than start verse');
+      let end = parseInt(endVerse);
+      if (isNaN(end) || end < start) {
+        setValidationError('End verse must be greater than or equal to start verse');
         return;
       }
 
+      // Clamp end verse to maxVerses
+      if (end > maxVerses) {
+        end = maxVerses;
+      }
+
+      // Auto-limit range if exceeded (don't reject, just limit)
       if (end - start + 1 > MAX_VERSE_RANGE) {
-        setValidationError(`Maximum ${MAX_VERSE_RANGE} verses per query`);
-        return;
+        end = start + MAX_VERSE_RANGE - 1;
+        if (end > maxVerses) end = maxVerses;
       }
 
       onSelect(`${selectedSurah}:${start}-${end}`);
@@ -251,17 +259,24 @@ export default function SurahVersePicker({ onSelect, initialSurah = null, initia
     }
   };
 
-  // Quick select options - actual verse queries (no full surahs)
+  // Quick select options - diverse verse queries
   const quickSelects = [
     // Famous verses
     { query: '2:255', label: 'Ayatul Kursi (2:255)' },
     { query: '1:1-7', label: 'Al-Fatihah (1:1-7)' },
     { query: '112:1-4', label: 'Al-Ikhlas (112:1-4)' },
-    { query: '39:53', label: 'Mercy Verse (39:53)' },
-    { query: '3:190-194', label: 'Reflection (3:190-194)' },
-    // Meta/Analysis queries
-    { query: 'historical context of 33:33', label: 'Historical: 33:33', isAnalysis: true },
-    { query: 'linguistic analysis of 2:255', label: 'Linguistic: 2:255', isAnalysis: true },
+    // Spiritual verses
+    { query: '55:1-13', label: 'Ar-Rahman (55:1-13)' },
+    { query: '36:1-12', label: 'Ya-Sin Opening (36:1-12)' },
+    { query: '67:1-5', label: 'Al-Mulk (67:1-5)' },
+    // Wisdom and Guidance
+    { query: '31:12-19', label: 'Luqman\'s Advice (31:12-19)' },
+    { query: '49:11-13', label: 'Brotherhood (49:11-13)' },
+    { query: '17:23-24', label: 'Parents (17:23-24)' },
+    // Stories
+    { query: '12:1-6', label: 'Yusuf Opening (12:1-6)' },
+    { query: '18:9-16', label: 'Cave Companions (18:9-16)' },
+    { query: '28:7-13', label: 'Baby Musa (28:7-13)' },
   ];
 
   const handleQuickSelect = (item) => {
@@ -480,6 +495,7 @@ export default function SurahVersePicker({ onSelect, initialSurah = null, initia
               max={maxVerses}
               value={startVerse}
               onChange={(e) => handleStartVerseChange(e.target.value)}
+              onBlur={handleStartVerseBlur}
               placeholder={`1-${maxVerses}`}
               style={{
                 flex: 1,
@@ -497,10 +513,11 @@ export default function SurahVersePicker({ onSelect, initialSurah = null, initia
                 <input
                   type="number"
                   min={parseInt(startVerse) || 1}
-                  max={Math.min(maxVerses, (parseInt(startVerse) || 1) + MAX_VERSE_RANGE - 1)}
+                  max={maxVerses}
                   value={endVerse}
                   onChange={(e) => handleEndVerseChange(e.target.value)}
-                  placeholder={`${parseInt(startVerse) || 1}-${Math.min(maxVerses, (parseInt(startVerse) || 1) + MAX_VERSE_RANGE - 1)}`}
+                  onBlur={handleEndVerseBlur}
+                  placeholder={`to verse...`}
                   style={{
                     flex: 1,
                     padding: '10px 14px',

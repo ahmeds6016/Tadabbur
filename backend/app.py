@@ -3607,12 +3607,32 @@ def fix_malformed_json(text: str) -> str:
 
                 next_char = text[next_idx] if next_idx < len(text) else None
 
-                # If followed by :, ,, }, ], or end of text, this closes the string
-                if next_char is None or next_char in ',:}]':
+                # If followed by ,, }, ], or end of text, this closes the string
+                if next_char is None or next_char in ',}]':
                     in_string = False
                     result.append(char)
                     i += 1
                     continue
+                elif next_char == ':':
+                    # Colon could be JSON key separator OR part of text like "Ababil": Ibn...
+                    # Check if colon is followed by a JSON value start: ", {, [, digit, true, false, null
+                    colon_idx = next_idx + 1
+                    while colon_idx < len(text) and text[colon_idx] in ' \t\n\r':
+                        colon_idx += 1
+                    after_colon = text[colon_idx] if colon_idx < len(text) else None
+
+                    # If after colon we have a JSON value start, this quote ends the string (it's a key)
+                    if after_colon in '"{[0123456789tfn-':
+                        in_string = False
+                        result.append(char)
+                        i += 1
+                        continue
+                    else:
+                        # Colon followed by text (e.g., "Ababil": Ibn) - escape the quote
+                        result.append('\\')
+                        result.append(char)
+                        i += 1
+                        continue
                 else:
                     # This is an unescaped quote in the middle - escape it!
                     result.append('\\')
