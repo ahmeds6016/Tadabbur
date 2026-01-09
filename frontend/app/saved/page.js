@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
+import remarkBreaks from 'remark-breaks';
 import { auth } from '../lib/firebase';
 import { BACKEND_URL } from '../lib/config';
 
@@ -316,7 +317,7 @@ export default function SavedSearchesPage() {
                               {item.fullResponse.tafsir_explanations.map((tafsir, idx) => (
                                 <div key={idx} style={{ marginBottom: '16px', padding: '12px', background: 'white', borderRadius: '8px' }}>
                                   <h4 style={{ color: 'var(--gold)', marginBottom: '8px' }}>{tafsir.source}</h4>
-                                  <ReactMarkdown>{tafsir.explanation}</ReactMarkdown>
+                                  <ReactMarkdown remarkPlugins={[remarkBreaks]}>{tafsir.explanation}</ReactMarkdown>
                                 </div>
                               ))}
                             </div>
