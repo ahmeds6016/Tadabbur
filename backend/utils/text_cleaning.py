@@ -4,28 +4,28 @@ import re
 
 def sanitize_heading_format(text: str) -> str:
     """
-    Insert line break after **Bold** subheadings when followed by text.
+    Insert line break after bold subheadings when followed by text.
 
-    The LLM generates **Bold** headings but doesn't always add line breaks.
+    Handles both **Bold** and __Bold__ markdown syntax.
     The frontend uses remark-breaks to render \n as <br>.
-    This function ensures there's a \n after bold headings.
     """
-    if not text or '**' not in text:
+    if not text:
         return text
 
-    # Pattern: **Any Bold Text** followed by space(s) and then a word character
-    # This catches: "**Heading** The text continues..."
-    # But not: "**Heading**\nThe text..." (already has line break)
-    # And not: "**Heading**" at end of text
-    pattern = r'(\*\*[^*]+\*\*) +([A-Za-z0-9\'\"\(])'
+    # Pattern 1: **Any Bold Text** followed by space(s) and then text
+    if '**' in text:
+        pattern_asterisk = r'(\*\*[^*]+\*\*) +([A-Za-z0-9\'\"\(\[])'
+        prev = None
+        while prev != text:
+            prev = text
+            text = re.sub(pattern_asterisk, lambda m: m.group(1) + '\n' + m.group(2), text)
 
-    def add_linebreak(match):
-        return match.group(1) + '\n' + match.group(2)
-
-    # Apply until no more matches (handles multiple headings)
-    prev = None
-    while prev != text:
-        prev = text
-        text = re.sub(pattern, add_linebreak, text)
+    # Pattern 2: __Any Bold Text__ followed by space(s) and then text
+    if '__' in text:
+        pattern_underscore = r'(__[^_]+__) +([A-Za-z0-9\'\"\(\[])'
+        prev = None
+        while prev != text:
+            prev = text
+            text = re.sub(pattern_underscore, lambda m: m.group(1) + '\n' + m.group(2), text)
 
     return text
