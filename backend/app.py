@@ -6389,6 +6389,8 @@ def tafsir_handler_enhanced():
                 perf_metrics['stages']['cache_check'] = (time.time() - stage_start) * 1000
                 print(f"💾 FIRESTORE cache hit for tafsir query")
                 print(f"   ⏱️  PERFORMANCE: Firestore cache hit in {perf_metrics['stages']['cache_check']:.0f}ms")
+                # Apply sanitization to cached responses (ensures line breaks in headings)
+                firestore_cached = filter_unavailable_sources(firestore_cached)
                 return jsonify(firestore_cached), 200
 
         # For semantic/explore queries, also check Firestore cache
@@ -6398,6 +6400,8 @@ def tafsir_handler_enhanced():
                 perf_metrics['stages']['cache_check'] = (time.time() - stage_start) * 1000
                 print(f"💾 FIRESTORE cache hit for explore/semantic query")
                 print(f"   ⏱️  PERFORMANCE: Firestore cache hit in {perf_metrics['stages']['cache_check']:.0f}ms")
+                # Apply sanitization to cached responses (ensures line breaks in headings)
+                firestore_cached = filter_unavailable_sources(firestore_cached)
                 return jsonify(firestore_cached), 200
 
         # Check in-memory cache as fallback
@@ -6407,7 +6411,9 @@ def tafsir_handler_enhanced():
                 perf_metrics['stages']['cache_check'] = (time.time() - stage_start) * 1000
                 print(f"💾 Memory cache hit for query (approach: {approach})")
                 print(f"   ⏱️  PERFORMANCE: Memory cache hit in {perf_metrics['stages']['cache_check']:.0f}ms")
-                return jsonify(RESPONSE_CACHE[cache_key]), 200
+                # Apply sanitization to cached responses (ensures line breaks in headings)
+                cached_response = filter_unavailable_sources(RESPONSE_CACHE[cache_key].copy())
+                return jsonify(cached_response), 200
         perf_metrics['stages']['cache_check'] = (time.time() - stage_start) * 1000
 
         print(f"\n{'='*70}")
