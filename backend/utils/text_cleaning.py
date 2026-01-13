@@ -15,12 +15,13 @@ def sanitize_heading_format(text: str) -> str:
 
     # Pattern 1: **Any Bold Text** followed by whitespace and then text
     # Using \s+ instead of space to catch non-breaking spaces (\u00A0) from LLM
+    # Using \n\n for proper paragraph break (works without remark-breaks)
     if '**' in text:
         pattern_asterisk = r'(\*\*[^*]+\*\*)\s+([A-Za-z0-9\'\"\(\[])'
         prev = None
         while prev != text:
             prev = text
-            text = re.sub(pattern_asterisk, lambda m: m.group(1) + '\n' + m.group(2), text)
+            text = re.sub(pattern_asterisk, lambda m: m.group(1) + '\n\n' + m.group(2), text)
 
     # Pattern 2: __Any Bold Text__ followed by whitespace and then text
     if '__' in text:
@@ -28,6 +29,6 @@ def sanitize_heading_format(text: str) -> str:
         prev = None
         while prev != text:
             prev = text
-            text = re.sub(pattern_underscore, lambda m: m.group(1) + '\n' + m.group(2), text)
+            text = re.sub(pattern_underscore, lambda m: m.group(1) + '\n\n' + m.group(2), text)
 
     return text
