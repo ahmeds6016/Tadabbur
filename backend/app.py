@@ -2520,8 +2520,17 @@ def filter_unavailable_sources(response_json):
         # 3. Explanation has actual content
         if is_approved_source and not is_unavailable and explanation_text.strip():
             # Sanitize the explanation text to fix excessive indentation and heading format
-            sanitized = sanitize_explanation_text(explanation.get('explanation', ''))
+            original_text = explanation.get('explanation', '')
+            sanitized = sanitize_explanation_text(original_text)
+            before_heading_fix = sanitized
             explanation['explanation'] = sanitize_heading_format(sanitized)
+            # DEBUG: Log heading format processing
+            has_bold = '**' in original_text
+            newlines_before = before_heading_fix.count('\n')
+            newlines_after = explanation['explanation'].count('\n')
+            print(f"📝 {source_name.upper()}: has_bold={has_bold}, newlines: {newlines_before} → {newlines_after}")
+            if newlines_after > newlines_before:
+                print(f"   ✅ Added {newlines_after - newlines_before} line breaks after bold headings")
             filtered_explanations.append(explanation)
 
     # Update response with filtered explanations
