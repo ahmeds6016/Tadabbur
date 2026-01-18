@@ -2522,15 +2522,21 @@ def filter_unavailable_sources(response_json):
             # Sanitize the explanation text to fix excessive indentation and heading format
             original_text = explanation.get('explanation', '')
             sanitized = sanitize_explanation_text(original_text)
-            before_heading_fix = sanitized
-            explanation['explanation'] = sanitize_heading_format(sanitized)
+
+            # INLINE heading format fix (bypass import caching issues)
+            # Add line breaks after **Bold** subheadings
+            if '**' in sanitized:
+                pattern = r'(\*\*[^*]+\*\*)\s+([A-Za-z0-9\'\"\(\[])'
+                prev = None
+                while prev != sanitized:
+                    prev = sanitized
+                    sanitized = re.sub(pattern, lambda m: m.group(1) + '\n\n' + m.group(2), sanitized)
+
+            explanation['explanation'] = sanitized
             # DEBUG: Log heading format processing
             has_bold = '**' in original_text
-            newlines_before = before_heading_fix.count('\n')
-            newlines_after = explanation['explanation'].count('\n')
-            print(f"📝 {source_name.upper()}: has_bold={has_bold}, newlines: {newlines_before} → {newlines_after}")
-            if newlines_after > newlines_before:
-                print(f"   ✅ Added {newlines_after - newlines_before} line breaks after bold headings")
+            newlines_added = sanitized.count('\n\n')
+            print(f"📝 {source_name.upper()}: has_bold={has_bold}, paragraph_breaks={newlines_added}")
             filtered_explanations.append(explanation)
 
     # Update response with filtered explanations
