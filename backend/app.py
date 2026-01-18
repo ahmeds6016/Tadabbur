@@ -2523,20 +2523,16 @@ def filter_unavailable_sources(response_json):
             original_text = explanation.get('explanation', '')
             sanitized = sanitize_explanation_text(original_text)
 
-            # INLINE heading format fix (bypass import caching issues)
-            # Add line breaks after **Bold** subheadings
+            # FIX: Add line breaks after **Bold** headings
+            # Find all **text** patterns and ensure \n\n follows
             if '**' in sanitized:
-                pattern = r'(\*\*[^*]+\*\*)\s+([A-Za-z0-9\'\"\(\[])'
-                prev = None
-                while prev != sanitized:
-                    prev = sanitized
-                    sanitized = re.sub(pattern, lambda m: m.group(1) + '\n\n' + m.group(2), sanitized)
+                import re as regex_module
+                # Match **anything** followed by whitespace and a letter/quote
+                bold_pattern = regex_module.compile(r'(\*\*[^*]+\*\*)([ \t]+)([A-Za-z\'\"])')
+                sanitized = bold_pattern.sub(r'\1\n\n\3', sanitized)
+                print(f"🔧 HEADING FIX APPLIED: {explanation.get('source', 'unknown')}")
 
             explanation['explanation'] = sanitized
-            # DEBUG: Log heading format processing
-            has_bold = '**' in original_text
-            newlines_added = sanitized.count('\n\n')
-            print(f"📝 {source_name.upper()}: has_bold={has_bold}, paragraph_breaks={newlines_added}")
             filtered_explanations.append(explanation)
 
     # Update response with filtered explanations
