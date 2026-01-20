@@ -2525,13 +2525,19 @@ def filter_unavailable_sources(response_json):
 
             # FIX: Add line breaks BEFORE and AFTER **Bold** headings
             if '**' in sanitized:
+                # Simple string replacements for BEFORE heading (more reliable than regex)
+                sanitized = sanitized.replace('. **', '.\n\n**')
+                sanitized = sanitized.replace('? **', '?\n\n**')
+                sanitized = sanitized.replace('! **', '!\n\n**')
+                # Handle non-breaking spaces too
+                sanitized = sanitized.replace('.\u00a0**', '.\n\n**')
+                sanitized = sanitized.replace('?\u00a0**', '?\n\n**')
+                sanitized = sanitized.replace('!\u00a0**', '!\n\n**')
+
+                # Regex for AFTER heading (before text starts)
                 import re as regex_module
-                # 1. Add \n\n BEFORE headings (after sentence endings like ". ")
-                before_pattern = regex_module.compile(r'([.!?])[ \t]+(\*\*[^*]+\*\*)')
-                sanitized = before_pattern.sub(r'\1\n\n\2', sanitized)
-                # 2. Add \n\n AFTER headings (before text)
-                after_pattern = regex_module.compile(r'(\*\*[^*]+\*\*)([ \t]+)([A-Za-z\'\"])')
-                sanitized = after_pattern.sub(r'\1\n\n\3', sanitized)
+                after_pattern = regex_module.compile(r'(\*\*[^*]+\*\*)[ \t]+([A-Za-z\'\"])')
+                sanitized = after_pattern.sub(r'\1\n\n\2', sanitized)
                 print(f"🔧 HEADING FIX APPLIED: {explanation.get('source', 'unknown')}")
 
             explanation['explanation'] = sanitized
