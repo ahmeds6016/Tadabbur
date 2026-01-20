@@ -2523,13 +2523,15 @@ def filter_unavailable_sources(response_json):
             original_text = explanation.get('explanation', '')
             sanitized = sanitize_explanation_text(original_text)
 
-            # FIX: Add line breaks after **Bold** headings
-            # Find all **text** patterns and ensure \n\n follows
+            # FIX: Add line breaks BEFORE and AFTER **Bold** headings
             if '**' in sanitized:
                 import re as regex_module
-                # Match **anything** followed by whitespace and a letter/quote
-                bold_pattern = regex_module.compile(r'(\*\*[^*]+\*\*)([ \t]+)([A-Za-z\'\"])')
-                sanitized = bold_pattern.sub(r'\1\n\n\3', sanitized)
+                # 1. Add \n\n BEFORE headings (after sentence endings like ". ")
+                before_pattern = regex_module.compile(r'([.!?])[ \t]+(\*\*[^*]+\*\*)')
+                sanitized = before_pattern.sub(r'\1\n\n\2', sanitized)
+                # 2. Add \n\n AFTER headings (before text)
+                after_pattern = regex_module.compile(r'(\*\*[^*]+\*\*)([ \t]+)([A-Za-z\'\"])')
+                sanitized = after_pattern.sub(r'\1\n\n\3', sanitized)
                 print(f"🔧 HEADING FIX APPLIED: {explanation.get('source', 'unknown')}")
 
             explanation['explanation'] = sanitized
