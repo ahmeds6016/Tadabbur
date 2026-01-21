@@ -1609,8 +1609,8 @@ def detect_query_intent(query: str) -> dict:
         'reason': None
     }
 
-def is_rate_limited(user_id, limit=50, window_hours=1):
-    """Check if user is rate limited"""
+def is_rate_limited(user_id, limit=150, window_hours=1):
+    """Check if user is rate limited (150 requests per hour per user)"""
     now = datetime.now()
     window_start = now - timedelta(hours=window_hours)
 
@@ -2525,19 +2525,22 @@ def filter_unavailable_sources(response_json):
 
             # FIX: Add line breaks BEFORE and AFTER **Bold** headings
             if '**' in sanitized:
-                # Simple string replacements for BEFORE heading (more reliable than regex)
-                sanitized = sanitized.replace('. **', '.\n\n**')
-                sanitized = sanitized.replace('? **', '?\n\n**')
-                sanitized = sanitized.replace('! **', '!\n\n**')
-                # Handle non-breaking spaces too
-                sanitized = sanitized.replace('.\u00a0**', '.\n\n**')
-                sanitized = sanitized.replace('?\u00a0**', '?\n\n**')
-                sanitized = sanitized.replace('!\u00a0**', '!\n\n**')
-
-                # Regex for AFTER heading (before text starts)
                 import re as regex_module
-                after_pattern = regex_module.compile(r'(\*\*[^*]+\*\*)[ \t]+([A-Za-z\'\"])')
+
+                # BEFORE heading: punctuation + any whitespace + ** → punctuation + \n\n + **
+                # Handles: `. **`, `.  **`, `.\t**`, `.\u00a0**`, etc.
+                before_pattern = regex_module.compile(r'([.?!])[ \t\u00a0]+(\*\*)')
+                sanitized = before_pattern.sub(r'\1\n\n\2', sanitized)
+
+                # Also handle case with NO space: `.***` or `.** ` (punctuation directly before **)
+                no_space_pattern = regex_module.compile(r'([.?!])(\*\*[A-Za-z])')
+                sanitized = no_space_pattern.sub(r'\1\n\n\2', sanitized)
+
+                # AFTER heading: **text** + whitespace + word → **text** + \n\n + word
+                # Uses non-greedy .+? to properly match heading content
+                after_pattern = regex_module.compile(r'(\*\*.+?\*\*)[ \t\u00a0]+([A-Za-z0-9\'\"\(])')
                 sanitized = after_pattern.sub(r'\1\n\n\2', sanitized)
+
                 print(f"🔧 HEADING FIX APPLIED: {explanation.get('source', 'unknown')}")
 
             explanation['explanation'] = sanitized
@@ -6592,12 +6595,13 @@ def tafsir_handler_enhanced():
                     },
                 }
 
-                # Add retry logic for Gemini API calls
-                max_retries = 2
-                retry_delay = 2
+                # Add retry logic for Gemini API calls with exponential backoff for rate limits
+                max_retries = 4  # More retries for rate limiting
                 response = None
 
                 for attempt in range(max_retries):
+                    # Exponential backoff: 2s, 4s, 8s, 16s
+                    retry_delay = 2 ** (attempt + 1)
                     try:
                         response = requests.post(
                             VERTEX_ENDPOINT,
@@ -6615,13 +6619,32 @@ def tafsir_handler_enhanced():
                                 "retry": True,
                                 "error_type": "timeout"
                             }), 503
-                        print(f"⚠️ Gemini timeout on attempt {attempt + 1}, retrying...")
+                        print(f"⚠️ Gemini timeout on attempt {attempt + 1}, retrying in {retry_delay}s...")
                         time.sleep(retry_delay)
                     except requests.HTTPError as e:
-                        if attempt == max_retries - 1 or response.status_code != 503:
-                            raise  # Re-raise if final attempt or not a service unavailable error
-                        print(f"⚠️ Gemini service unavailable, retrying...")
-                        time.sleep(retry_delay)
+                        status_code = response.status_code if response else 500
+                        # Handle rate limiting (429) with exponential backoff
+                        if status_code == 429:
+                            if attempt == max_retries - 1:
+                                print(f"❌ Gemini API rate limited after {max_retries} attempts")
+                                return jsonify({
+                                    "error": "AI service is busy. Please wait a moment and try again.",
+                                    "retry": True,
+                                    "error_type": "rate_limit",
+                                    "retry_after": 30
+                                }), 429
+                            print(f"⚠️ Gemini rate limited (429), retrying in {retry_delay}s...")
+                            time.sleep(retry_delay)
+                            continue
+                        # Handle service unavailable (503)
+                        if status_code == 503:
+                            if attempt == max_retries - 1:
+                                raise
+                            print(f"⚠️ Gemini service unavailable, retrying in {retry_delay}s...")
+                            time.sleep(retry_delay)
+                            continue
+                        # For other errors, raise immediately
+                        raise
 
                 # Parse response
                 raw_response = response.json()
@@ -6858,11 +6881,12 @@ def tafsir_handler_enhanced():
                         },
                     }
 
-                    # Add retry logic for Gemini API calls
-                    max_retries = 2
-                    retry_delay = 2
+                    # Add retry logic for Gemini API calls with exponential backoff for rate limits
+                    max_retries = 4  # More retries for rate limiting
 
                     for attempt in range(max_retries):
+                        # Exponential backoff: 2s, 4s, 8s, 16s
+                        retry_delay = 2 ** (attempt + 1)
                         try:
                             response = requests.post(
                                 VERTEX_ENDPOINT,
@@ -6880,12 +6904,32 @@ def tafsir_handler_enhanced():
                                     "retry": True,
                                     "error_type": "timeout"
                                 }), 503
-                            print(f"⚠️ Retry {attempt + 1}/{max_retries}...")
+                            print(f"⚠️ Retry {attempt + 1}/{max_retries} in {retry_delay}s...")
                             time.sleep(retry_delay)
                         except requests.HTTPError as e:
-                            if attempt == max_retries - 1 or response.status_code != 503:
-                                raise
-                            time.sleep(retry_delay)
+                            status_code = response.status_code if response else 500
+                            # Handle rate limiting (429) with exponential backoff
+                            if status_code == 429:
+                                if attempt == max_retries - 1:
+                                    print(f"❌ Gemini API rate limited after {max_retries} attempts")
+                                    return jsonify({
+                                        "error": "AI service is busy. Please wait a moment and try again.",
+                                        "retry": True,
+                                        "error_type": "rate_limit",
+                                        "retry_after": 30
+                                    }), 429
+                                print(f"⚠️ Gemini rate limited (429), retrying in {retry_delay}s...")
+                                time.sleep(retry_delay)
+                                continue
+                            # Handle service unavailable (503)
+                            if status_code == 503:
+                                if attempt == max_retries - 1:
+                                    raise
+                                print(f"⚠️ Gemini service unavailable, retrying in {retry_delay}s...")
+                                time.sleep(retry_delay)
+                                continue
+                            # For other errors, raise immediately
+                            raise
 
                     # Parse response
                     raw_response = response.json()
@@ -7091,11 +7135,12 @@ def tafsir_handler_enhanced():
                 }
 
                 try:
-                    # Add retry logic for HTTP-level Gemini API calls
-                    max_http_retries = 2
-                    retry_delay = 2
+                    # Add retry logic for HTTP-level Gemini API calls with exponential backoff
+                    max_http_retries = 4  # More retries for rate limiting
 
                     for http_attempt in range(max_http_retries):
+                        # Exponential backoff: 2s, 4s, 8s, 16s
+                        retry_delay = 2 ** (http_attempt + 1)
                         try:
                             response = requests.post(
                                 VERTEX_ENDPOINT,
@@ -7113,12 +7158,32 @@ def tafsir_handler_enhanced():
                                     "retry": True,
                                     "error_type": "timeout"
                                 }), 503
-                            print(f"⚠️ HTTP retry {http_attempt + 1}/{max_http_retries}...")
+                            print(f"⚠️ HTTP retry {http_attempt + 1}/{max_http_retries} in {retry_delay}s...")
                             time.sleep(retry_delay)
                         except requests.HTTPError as e:
-                            if http_attempt == max_http_retries - 1 or response.status_code != 503:
-                                raise
-                            time.sleep(retry_delay)
+                            status_code = response.status_code if response else 500
+                            # Handle rate limiting (429) with exponential backoff
+                            if status_code == 429:
+                                if http_attempt == max_http_retries - 1:
+                                    print(f"❌ Gemini API rate limited after {max_http_retries} attempts")
+                                    return jsonify({
+                                        "error": "AI service is busy. Please wait a moment and try again.",
+                                        "retry": True,
+                                        "error_type": "rate_limit",
+                                        "retry_after": 30
+                                    }), 429
+                                print(f"⚠️ Gemini rate limited (429), retrying in {retry_delay}s...")
+                                time.sleep(retry_delay)
+                                continue
+                            # Handle service unavailable (503)
+                            if status_code == 503:
+                                if http_attempt == max_http_retries - 1:
+                                    raise
+                                print(f"⚠️ Gemini service unavailable, retrying in {retry_delay}s...")
+                                time.sleep(retry_delay)
+                                continue
+                            # For other errors, raise immediately
+                            raise
 
                     # Parse response
                     raw_response = response.json()
