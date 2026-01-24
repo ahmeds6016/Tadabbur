@@ -2575,6 +2575,8 @@ def filter_unavailable_sources(response_json):
     # Update response with filtered explanations
     if filtered_explanations:
         response_json['tafsir_explanations'] = filtered_explanations
+        # DEBUG MARKER: This proves the new code is running
+        response_json['_debug_heading_fix'] = 'v4_applied'
     else:
         # If no sources available, set to empty list
         response_json['tafsir_explanations'] = []
