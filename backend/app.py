@@ -2529,6 +2529,11 @@ def filter_unavailable_sources(response_json):
 
                 original_for_debug = sanitized[:150].replace('\n', '\\n')
 
+                # STEP 0: Normalize heading format - remove spaces after ** and before **
+                # LLM sometimes generates "** Heading **" instead of "**Heading**"
+                sanitized = regex_module.sub(r'\*\*\s+', '**', sanitized)  # "** Text" -> "**Text"
+                sanitized = regex_module.sub(r'\s+\*\*', '**', sanitized)  # "Text **" -> "Text**"
+
                 # STEP 1: Add \n\n AFTER **heading** (before next text)
                 # Pattern: **any text** followed by optional whitespace then a letter
                 sanitized = regex_module.sub(
@@ -2546,14 +2551,11 @@ def filter_unavailable_sources(response_json):
                 )
 
                 # STEP 3: Also handle existing single \n before/after heading
-                # Replace: **heading**\n followed by letter -> **heading**\n\n letter
                 sanitized = regex_module.sub(
                     r'(\*\*[^*]+\*\*)\n([A-Za-z])',
                     r'\1\n\n\2',
                     sanitized
                 )
-
-                # Replace: punctuation\n**Heading -> punctuation\n\n**Heading
                 sanitized = regex_module.sub(
                     r'([.?!:;,\)\]\'\"])\n(\*\*[A-Z])',
                     r'\1\n\n\2',
@@ -2565,7 +2567,7 @@ def filter_unavailable_sources(response_json):
                     sanitized = sanitized.replace('\n\n\n', '\n\n')
 
                 modified_for_debug = sanitized[:150].replace('\n', '\\n')
-                print(f"🔧 HEADING FIX v3: {explanation.get('source', 'unknown')}")
+                print(f"🔧 HEADING FIX v5: {explanation.get('source', 'unknown')}")
                 print(f"   BEFORE: {original_for_debug}")
                 print(f"   AFTER:  {modified_for_debug}")
 
@@ -2576,7 +2578,7 @@ def filter_unavailable_sources(response_json):
     if filtered_explanations:
         response_json['tafsir_explanations'] = filtered_explanations
         # DEBUG MARKER: This proves the new code is running
-        response_json['_debug_heading_fix'] = 'v4_applied'
+        response_json['_debug_heading_fix'] = 'v5_normalized'
     else:
         # If no sources available, set to empty list
         response_json['tafsir_explanations'] = []
