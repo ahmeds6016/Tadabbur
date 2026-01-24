@@ -2449,8 +2449,8 @@ def sanitize_unavailability_text(text):
         cleaned = re.sub(pattern, '', cleaned, flags=re.IGNORECASE | re.DOTALL)
 
     # Clean up resulting artifacts
-    # Remove multiple consecutive spaces
-    cleaned = re.sub(r'\s{2,}', ' ', cleaned)
+    # Remove multiple consecutive spaces (but NOT newlines - preserve paragraph breaks)
+    cleaned = re.sub(r'[^\S\n]{2,}', ' ', cleaned)  # Match 2+ whitespace except newlines
     # Remove orphaned punctuation at start of sentences
     cleaned = re.sub(r'^\s*[,;:]\s*', '', cleaned)
     cleaned = re.sub(r'\.\s*[,;:]\s*', '. ', cleaned)
@@ -2578,7 +2578,7 @@ def filter_unavailable_sources(response_json):
     if filtered_explanations:
         response_json['tafsir_explanations'] = filtered_explanations
         # DEBUG MARKER: This proves the new code is running
-        response_json['_debug_heading_fix'] = 'v5_normalized'
+        response_json['_debug_heading_fix'] = 'v6_newlines_preserved'
     else:
         # If no sources available, set to empty list
         response_json['tafsir_explanations'] = []
