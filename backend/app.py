@@ -2527,22 +2527,47 @@ def filter_unavailable_sources(response_json):
             if '**' in sanitized:
                 import re as regex_module
 
-                # BEFORE: Add \n\n before **Heading** when preceded by punctuation + whitespace
-                # Matches: ". **Heading" or ".  **Heading" or ".) **Heading" etc.
-                # Uses \s* to match ANY whitespace (including unicode spaces)
-                before_pattern = regex_module.compile(r'([.?!:;,\)\]\'\"])\s*(\*\*[A-Z])')
-                sanitized = before_pattern.sub(r'\1\n\n\2', sanitized)
+                original_for_debug = sanitized[:150].replace('\n', '\\n')
 
-                # AFTER: Add \n\n after **Heading** when followed by letter
-                # Matches: "**Heading** The" or "**Heading**  The"
-                after_pattern = regex_module.compile(r'(\*\*[^*]+\*\*)\s*([A-Za-z])')
-                sanitized = after_pattern.sub(r'\1\n\n\2', sanitized)
+                # STEP 1: Add \n\n AFTER **heading** (before next text)
+                # Pattern: **any text** followed by optional whitespace then a letter
+                sanitized = regex_module.sub(
+                    r'(\*\*[^*]+\*\*)[ \t]*([A-Za-z])',
+                    r'\1\n\n\2',
+                    sanitized
+                )
 
-                # Prevent triple+ newlines from being created
+                # STEP 2: Add \n\n BEFORE **heading** (after punctuation)
+                # Pattern: punctuation + optional whitespace + **Capital
+                sanitized = regex_module.sub(
+                    r'([.?!:;,\)\]\'\"])[ \t]*(\*\*[A-Z])',
+                    r'\1\n\n\2',
+                    sanitized
+                )
+
+                # STEP 3: Also handle existing single \n before/after heading
+                # Replace: **heading**\n followed by letter -> **heading**\n\n letter
+                sanitized = regex_module.sub(
+                    r'(\*\*[^*]+\*\*)\n([A-Za-z])',
+                    r'\1\n\n\2',
+                    sanitized
+                )
+
+                # Replace: punctuation\n**Heading -> punctuation\n\n**Heading
+                sanitized = regex_module.sub(
+                    r'([.?!:;,\)\]\'\"])\n(\*\*[A-Z])',
+                    r'\1\n\n\2',
+                    sanitized
+                )
+
+                # Cleanup: prevent triple+ newlines
                 while '\n\n\n' in sanitized:
                     sanitized = sanitized.replace('\n\n\n', '\n\n')
 
-                print(f"🔧 HEADING FIX APPLIED: {explanation.get('source', 'unknown')}")
+                modified_for_debug = sanitized[:150].replace('\n', '\\n')
+                print(f"🔧 HEADING FIX v3: {explanation.get('source', 'unknown')}")
+                print(f"   BEFORE: {original_for_debug}")
+                print(f"   AFTER:  {modified_for_debug}")
 
             explanation['explanation'] = sanitized
             filtered_explanations.append(explanation)
