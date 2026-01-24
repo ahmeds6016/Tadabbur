@@ -2523,23 +2523,24 @@ def filter_unavailable_sources(response_json):
             original_text = explanation.get('explanation', '')
             sanitized = sanitize_explanation_text(original_text)
 
-            # FIX: Add line breaks BEFORE and AFTER **Bold** headings
+            # FIX: Add line breaks BEFORE and AFTER **Bold** subheadings
             if '**' in sanitized:
                 import re as regex_module
 
-                # BEFORE heading: punctuation + any whitespace + ** → punctuation + \n\n + **
-                # Handles: `. **`, `.  **`, `.\t**`, `.\u00a0**`, etc.
-                before_pattern = regex_module.compile(r'([.?!])[ \t\u00a0]+(\*\*)')
+                # BEFORE: Add \n\n before **Heading** when preceded by punctuation + whitespace
+                # Matches: ". **Heading" or ".  **Heading" or ".) **Heading" etc.
+                # Uses \s* to match ANY whitespace (including unicode spaces)
+                before_pattern = regex_module.compile(r'([.?!:;,\)\]\'\"])\s*(\*\*[A-Z])')
                 sanitized = before_pattern.sub(r'\1\n\n\2', sanitized)
 
-                # Also handle case with NO space: `.***` or `.** ` (punctuation directly before **)
-                no_space_pattern = regex_module.compile(r'([.?!])(\*\*[A-Za-z])')
-                sanitized = no_space_pattern.sub(r'\1\n\n\2', sanitized)
-
-                # AFTER heading: **text** + whitespace + word → **text** + \n\n + word
-                # Uses non-greedy .+? to properly match heading content
-                after_pattern = regex_module.compile(r'(\*\*.+?\*\*)[ \t\u00a0]+([A-Za-z0-9\'\"\(])')
+                # AFTER: Add \n\n after **Heading** when followed by letter
+                # Matches: "**Heading** The" or "**Heading**  The"
+                after_pattern = regex_module.compile(r'(\*\*[^*]+\*\*)\s*([A-Za-z])')
                 sanitized = after_pattern.sub(r'\1\n\n\2', sanitized)
+
+                # Prevent triple+ newlines from being created
+                while '\n\n\n' in sanitized:
+                    sanitized = sanitized.replace('\n\n\n', '\n\n')
 
                 print(f"🔧 HEADING FIX APPLIED: {explanation.get('source', 'unknown')}")
 

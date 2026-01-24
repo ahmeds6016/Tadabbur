@@ -7,31 +7,35 @@ def sanitize_heading_format(text: str) -> str:
     Insert line breaks BEFORE and AFTER bold subheadings.
 
     Handles both **Bold** and __Bold__ markdown syntax.
-    Uses robust patterns to match various whitespace types (spaces, tabs, non-breaking spaces).
+    Uses \s* to match ANY whitespace (including unicode spaces).
     """
     if not text:
         return text
 
     if '**' in text:
-        # BEFORE heading: punctuation + any whitespace + ** → punctuation + \n\n + **
-        before_pattern = re.compile(r'([.?!])[ \t\u00a0]+(\*\*)')
+        # BEFORE: Add \n\n before **Heading** when preceded by punctuation
+        before_pattern = re.compile(r'([.?!:;,\)\]\'\"])\s*(\*\*[A-Z])')
         text = before_pattern.sub(r'\1\n\n\2', text)
 
-        # Handle case with NO space between punctuation and **
-        no_space_pattern = re.compile(r'([.?!])(\*\*[A-Za-z])')
-        text = no_space_pattern.sub(r'\1\n\n\2', text)
-
-        # AFTER heading: **text** + whitespace + word → **text** + \n\n + word
-        after_pattern = re.compile(r'(\*\*.+?\*\*)[ \t\u00a0]+([A-Za-z0-9\'\"\(])')
+        # AFTER: Add \n\n after **Heading** when followed by letter
+        after_pattern = re.compile(r'(\*\*[^*]+\*\*)\s*([A-Za-z])')
         text = after_pattern.sub(r'\1\n\n\2', text)
+
+        # Prevent triple+ newlines
+        while '\n\n\n' in text:
+            text = text.replace('\n\n\n', '\n\n')
 
     if '__' in text:
         # BEFORE heading for underscore syntax
-        before_underscore = re.compile(r'([.?!])[ \t\u00a0]+(__)')
+        before_underscore = re.compile(r'([.?!:;,\)\]\'\"])\s*(__[A-Z])')
         text = before_underscore.sub(r'\1\n\n\2', text)
 
         # AFTER heading for underscore syntax
-        after_underscore = re.compile(r'(__.+?__)[ \t\u00a0]+([A-Za-z0-9\'\"\(])')
+        after_underscore = re.compile(r'(__.+?__)\s*([A-Za-z])')
         text = after_underscore.sub(r'\1\n\n\2', text)
+
+        # Prevent triple+ newlines
+        while '\n\n\n' in text:
+            text = text.replace('\n\n\n', '\n\n')
 
     return text
