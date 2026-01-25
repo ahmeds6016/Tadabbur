@@ -11,7 +11,12 @@ const milestones = [
 ];
 
 export default function OnboardingProgress({ onboardingState, onResumeTour, onHide }) {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('onboarding_minimized') !== 'true';
+    }
+    return true;
+  });
   const [showCelebration, setShowCelebration] = useState(false);
 
   const completedCount = milestones.filter(m => onboardingState[m.id]).length;
@@ -37,7 +42,10 @@ export default function OnboardingProgress({ onboardingState, onResumeTour, onHi
       {isExpanded && (
         <div
           className="onboarding-backdrop"
-          onClick={() => setIsExpanded(false)}
+          onClick={() => {
+            setIsExpanded(false);
+            localStorage.setItem('onboarding_minimized', 'true');
+          }}
           style={{
             position: 'fixed',
             top: 0,
@@ -52,7 +60,14 @@ export default function OnboardingProgress({ onboardingState, onResumeTour, onHi
       )}
 
       <div className={`onboarding-progress ${isExpanded ? 'expanded' : 'collapsed'}`}>
-        <div className="progress-header" onClick={() => setIsExpanded(!isExpanded)}>
+        <div
+          className="progress-header"
+          onClick={() => {
+            const nextState = !isExpanded;
+            setIsExpanded(nextState);
+            localStorage.setItem('onboarding_minimized', (!nextState).toString());
+          }}
+        >
           <div className="progress-title">
             <span className="progress-icon">🎯</span>
             <span className="progress-text">Getting Started</span>

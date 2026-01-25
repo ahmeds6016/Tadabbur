@@ -45,7 +45,7 @@ export default function BottomNav({ user }) {
             <button
               key={item.path}
               onClick={() => router.push(item.path)}
-              className={`nav-item ${item.active ? 'active' : ''}`}
+              className={`nav-item bottom-nav-item ${item.active ? 'active' : ''}`}
               aria-label={item.label}
               aria-current={item.active ? 'page' : undefined}
             >

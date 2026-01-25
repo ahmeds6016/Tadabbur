@@ -125,7 +125,13 @@ export default function HomePage() {
     return <OnboardingComponent user={user} onProfileComplete={setUserProfile} />;
   }
 
-  return <MainApp user={user} userProfile={userProfile} />;
+  return (
+    <MainApp
+      user={user}
+      userProfile={userProfile}
+      onResetProfile={() => setUserProfile(null)}
+    />
+  );
 }
 
 // ============================================================================
@@ -573,7 +579,7 @@ function OnboardingComponent({ user, onProfileComplete }) {
 // MAIN APPLICATION COMPONENT - ENHANCED
 // ============================================================================
 
-function MainApp({ user, userProfile }) {
+function MainApp({ user, userProfile, onResetProfile }) {
   const searchParams = useSearchParams();
   // Deep Tafsir mode only - Explore is disabled for now
   const approach = 'tafsir';
@@ -724,6 +730,9 @@ function MainApp({ user, userProfile }) {
 
       if (res.ok) {
         showSuccess('Answer saved! View it in your Saved Searches.');
+        if (!onboardingState.hasViewedSaved) {
+          markStepComplete('hasViewedSaved');
+        }
       } else {
         showError('Failed to save search. Please try again.');
       }
@@ -731,7 +740,7 @@ function MainApp({ user, userProfile }) {
       console.error('Failed to save search:', err);
       showError('Failed to save search. Please try again.');
     }
-  }, [response, query, user, approach]);
+  }, [response, query, user, approach, onboardingState.hasViewedSaved, markStepComplete, showSuccess, showError]);
 
   // Keyboard shortcuts for desktop and mobile
   useEffect(() => {
@@ -916,6 +925,9 @@ function MainApp({ user, userProfile }) {
       }
 
       setResponse(data);
+      if (!onboardingState.hasSearched) {
+        markStepComplete('hasSearched');
+      }
 
       // Save to query history
       await saveQueryToHistory(query, approach, userProfile?.persona || '', true);
@@ -1044,7 +1056,10 @@ function MainApp({ user, userProfile }) {
     setCurrentVerse(null);
     setEditingAnnotation(null);
     clearSelection();
-  }, [clearSelection]);
+    if (!onboardingState.hasUsedAnnotations) {
+      markStepComplete('hasUsedAnnotations');
+    }
+  }, [clearSelection, onboardingState.hasUsedAnnotations, markStepComplete]);
 
   const handleAnnotationClose = useCallback(() => {
     setAnnotationDialogOpen(false);
@@ -1155,6 +1170,9 @@ function MainApp({ user, userProfile }) {
 
           button.innerHTML = '✅ Shared!';
           button.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+          if (!onboardingState.hasSharedContent) {
+            markStepComplete('hasSharedContent');
+          }
 
           setTimeout(() => {
             button.innerHTML = originalText;
@@ -1182,6 +1200,9 @@ function MainApp({ user, userProfile }) {
 
           button.innerHTML = '✅ Link Copied!';
           button.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+          if (!onboardingState.hasSharedContent) {
+            markStepComplete('hasSharedContent');
+          }
 
           setTimeout(() => {
             button.innerHTML = originalText;
@@ -1211,6 +1232,9 @@ function MainApp({ user, userProfile }) {
           if (successful) {
             button.innerHTML = '✅ Link Copied!';
             button.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+            if (!onboardingState.hasSharedContent) {
+              markStepComplete('hasSharedContent');
+            }
 
             setTimeout(() => {
               button.innerHTML = originalText;
@@ -1278,7 +1302,18 @@ function MainApp({ user, userProfile }) {
           </div>
           <div className="user-info" data-persona-icon={personaIcon}>
             <span>{user.email}</span>
-            <span className="persona-badge">{getProfileDisplay()}</span>
+            <button
+              className="persona-badge clickable"
+              onClick={() => {
+                if (window.confirm('Would you like to change your learning persona?')) {
+                  onResetProfile?.();
+                }
+              }}
+              title="Click to change persona"
+              type="button"
+            >
+              {getProfileDisplay()} ✎
+            </button>
             <button onClick={() => signOut(auth)} className="logout-button">
               Sign Out
             </button>
