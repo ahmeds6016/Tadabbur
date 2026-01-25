@@ -436,7 +436,7 @@ export default function DesktopNav({ user, stats = {}, collapsed = false, onTogg
         }
 
         /* Hide on mobile */
-        @media (max-width: 768px) {
+        @media (max-width: 1024px) {
           .desktop-nav {
             display: none;
           }

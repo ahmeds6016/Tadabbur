@@ -285,7 +285,7 @@ export default function SurahVersePicker({ onSelect, initialSurah = null, initia
 
   return (
     <div className="surah-verse-picker" style={{
-      background: 'linear-gradient(135deg, #ffffff 0%, rgba(250, 246, 240, 1) 100%)',
+      background: 'white',
       borderRadius: '16px',
       border: '2px solid var(--border-light)',
       padding: '20px',
@@ -328,7 +328,8 @@ export default function SurahVersePicker({ onSelect, initialSurah = null, initia
               type="button"
               onClick={() => handleQuickSelect(item)}
               style={{
-                padding: '6px 12px',
+                padding: '10px 16px',
+                minHeight: '44px',
                 background: item.isAnalysis ? 'rgba(139, 92, 246, 0.1)' : 'white',
                 border: `1px solid ${item.isAnalysis ? 'rgba(139, 92, 246, 0.3)' : 'var(--border-light)'}`,
                 borderRadius: '20px',
@@ -395,7 +396,7 @@ export default function SurahVersePicker({ onSelect, initialSurah = null, initia
               top: '100%',
               left: 0,
               right: 0,
-              maxHeight: '250px',
+              maxHeight: 'min(250px, 50vh)',
               overflowY: 'auto',
               background: 'white',
               border: '2px solid var(--border-light)',
