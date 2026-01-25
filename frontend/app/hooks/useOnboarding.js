@@ -50,10 +50,10 @@ export function useOnboarding(userId) {
 
   // Save state to localStorage whenever it changes
   useEffect(() => {
-    if (userId) {
+    if (userId && isLoaded) {
       localStorage.setItem(`onboarding-${userId}`, JSON.stringify(onboardingState));
     }
-  }, [onboardingState, userId]);
+  }, [onboardingState, userId, isLoaded]);
 
   const markStepComplete = (step) => {
     setOnboardingState(prev => ({

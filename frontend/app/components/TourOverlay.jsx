@@ -16,10 +16,10 @@ const tourContent = {
       position: 'bottom'
     },
     {
-      target: '.nav-link',
+      target: '.nav-link, .bottom-nav-item',
       title: 'Track Your Learning',
       content: 'Access your History to review past searches, Saved answers for bookmarked content, and Notes for your personal reflections.',
-      position: 'bottom'
+      position: 'top'
     },
     {
       target: '.persona-badge',
@@ -68,10 +68,10 @@ const tourContent = {
       position: 'bottom'
     },
     {
-      target: '.nav-link',
+      target: '.nav-link, .bottom-nav-item',
       title: 'Review Your Notes',
       content: 'Visit the Notes page to see all your reflections in one place, filtered by date, type, or tags.',
-      position: 'bottom'
+      position: 'top'
     }
   ]
 };
@@ -99,7 +99,7 @@ export default function TourOverlay({
     if (!isOpen || !currentTourStep) return;
 
     let retryCount = 0;
-    const maxRetries = 10; // Maximum 5 seconds of retrying
+    const maxRetries = 4; // Maximum 2 seconds of retrying
 
     const findAndHighlight = () => {
       const target = document.querySelector(currentTourStep.target);
@@ -131,7 +131,7 @@ export default function TourOverlay({
         width: rect.width + 16,
         height: rect.height + 16,
         borderRadius: '12px',
-        zIndex: 10001,
+        zIndex: 12001,
         boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.7)',
         pointerEvents: 'none',
         transition: 'all 0.3s ease'
@@ -188,7 +188,7 @@ export default function TourOverlay({
         position: 'fixed',
         top: tooltipTop,
         left: tooltipLeft,
-        zIndex: 10002,
+        zIndex: 12002,
         maxWidth: tooltipWidth,
         animation: 'slideIn 0.3s ease'
       });
@@ -241,7 +241,7 @@ export default function TourOverlay({
           right: 0,
           bottom: 0,
           background: 'rgba(0, 0, 0, 0.7)',
-          zIndex: 10000,
+          zIndex: 12000,
           animation: 'fadeIn 0.3s ease'
         }}
         onClick={onSkip}
@@ -320,7 +320,7 @@ export default function TourOverlay({
           left: 0;
           right: 0;
           bottom: 0;
-          z-index: 10000;
+          z-index: 12000;
         }
 
         .tour-tooltip {
