@@ -26,7 +26,7 @@ export default function BottomNav({ user }) {
       active: pathname === '/saved'
     },
     user && {
-      label: 'Notes',
+      label: 'Reflections',
       icon: FileText,
       path: '/annotations',
       active: pathname === '/annotations'
@@ -36,7 +36,7 @@ export default function BottomNav({ user }) {
   return (
     <>
       {/* Spacer to prevent content from being hidden behind bottom nav */}
-      <div style={{ height: '60px' }} />
+      <div style={{ height: 'var(--nav-height-with-safe, calc(72px + env(safe-area-inset-bottom)))' }} />
 
       <nav className="bottom-nav">
         {navItems.map((item) => {
@@ -64,15 +64,15 @@ export default function BottomNav({ user }) {
             left: 50%;
             transform: translateX(-50%);
             width: min(1200px, 100%);
-            background: linear-gradient(to top, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.95));
+            background: rgba(255, 255, 255, 0.98);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
             border-top: 1px solid var(--border-light, #e5e7eb);
             display: flex;
             justify-content: space-around;
             align-items: center;
-            height: 60px;
-            z-index: 1000;
+            height: var(--nav-height, 72px);
+            z-index: var(--z-fixed, 1000);
             box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
             padding-bottom: env(safe-area-inset-bottom);
             border-radius: 16px 16px 0 0;
@@ -87,7 +87,7 @@ export default function BottomNav({ user }) {
             gap: 4px;
             background: none;
             border: none;
-            padding: 8px;
+            padding: 10px 8px;
             cursor: pointer;
             color: var(--text-muted, #6b7280);
             transition: all 0.2s ease;
@@ -160,33 +160,9 @@ export default function BottomNav({ user }) {
             }
           }
 
-          /* Desktop-friendly PWA layout */
           @media (min-width: 1024px) {
             .bottom-nav {
-              gap: 8px;
-              padding-left: 24px;
-              padding-right: 24px;
-              height: 70px;
-            }
-
-            .nav-item {
-              flex-direction: row;
-              gap: 10px;
-              justify-content: center;
-              align-items: center;
-              font-size: 0.95rem;
-              padding: 10px 14px;
-            }
-
-            .nav-label {
-              font-size: 0.85rem;
-            }
-
-            .nav-item.active::before {
-              top: auto;
-              bottom: -2px;
-              height: 3px;
-              width: 48px;
+              display: none;
             }
           }
         `}</style>
