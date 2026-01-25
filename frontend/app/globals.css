@@ -4,6 +4,8 @@
    UPDATED: Fixed search bar alignment + UI enhancements
    ============================================================================ */
 
+@import './styles/tokens.css';
+
 :root {
   /* Islamic Color Palette - Inspired by traditional Islamic art */
   --background: #FDFBF7; /* Warm paper/parchment */
@@ -41,7 +43,7 @@
   /* Text hierarchy with AA compliance */
   --text-primary: #2C3E50; /* Main text */
   --text-secondary: #64748B; /* Secondary text - AA compliant */
-  --text-muted: #94A3B8; /* De-emphasized text */
+  --text-muted: #6B7280; /* De-emphasized text (AA compliant) */
   --text-on-teal: #FFFFFF; /* White on teal backgrounds */
   --text-on-gold: #1F2937; /* Dark text on gold backgrounds */
   
@@ -104,20 +106,6 @@ body {
   position: relative;
 }
 
-/* Islamic Geometric Pattern Overlay - Subtle for clean aesthetic */
-body::before {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0.015; /* Reduced from 0.03 for cleaner look */
-  z-index: -1;
-  background-image:
-    repeating-linear-gradient(45deg, transparent, transparent 30px, var(--primary-teal) 30px, var(--primary-teal) 31px);
-  pointer-events: none;
-}
 
 a {
   color: inherit;
@@ -153,44 +141,21 @@ a {
 }
 
 .card {
-  background: var(--gradient-manuscript);
-  border-radius: 24px;
+  background: var(--cream);
+  border-radius: var(--radius-xl, 24px);
   padding: 40px;
   box-shadow: var(--shadow-medium);
   border: 2px solid var(--border-light);
   margin-bottom: 32px;
   position: relative;
   overflow: hidden;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Decorative corner ornaments */
-.card::before,
-.card::after {
-  content: '';
-  position: absolute;
-  width: 60px;
-  height: 60px;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0,0 Q0,30 30,30 Q0,30 0,60' fill='none' stroke='%23D4AF37' stroke-width='2' opacity='0.3'/%3E%3C/svg%3E");
-  background-size: contain;
-  background-repeat: no-repeat;
-}
-
-.card::before {
-  top: 0;
-  left: 0;
-}
-
-.card::after {
-  bottom: 0;
-  right: 0;
-  transform: rotate(180deg);
+  transition: all 0.3s ease;
 }
 
 .card:hover {
-  transform: translateY(-4px);
+  transform: translateY(-2px);
   box-shadow: var(--shadow-strong);
-  border-color: var(--gold);
+  border-color: var(--border-medium);
 }
 
 .main-app {
@@ -208,25 +173,11 @@ a {
   align-items: center;
   margin-bottom: 48px;
   padding: 32px;
-  background: linear-gradient(135deg, rgba(13, 148, 136, 0.05) 0%, rgba(212, 175, 55, 0.05) 100%);
+  background: var(--cream);
   border-radius: 20px;
   border: 2px solid var(--border-light);
   position: relative;
   overflow: hidden;
-}
-
-/* Islamic arch decoration */
-.header::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 200px;
-  height: 200px;
-  background: radial-gradient(circle, rgba(212, 175, 55, 0.1) 0%, transparent 70%);
-  border-radius: 50%;
-  pointer-events: none;
 }
 
 .header-logo {
@@ -238,10 +189,7 @@ a {
 .header h1 {
   font-size: 2.75rem;
   font-weight: 800;
-  background: var(--gradient-teal-gold);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--deep-blue);
   position: relative;
   letter-spacing: -0.02em;
   margin: 0;
@@ -305,11 +253,11 @@ a {
    ============================================================================ */
 
 .nav-link:hover {
-  background: var(--gradient-teal-gold) !important;
+  background: var(--primary-teal) !important;
   color: white !important;
   transform: translateY(-2px);
   box-shadow: var(--shadow-medium);
-  border-color: var(--gold) !important;
+  border-color: var(--primary-teal) !important;
 }
 
 /* ============================================================================
@@ -335,7 +283,7 @@ a {
 }
 
 .suggestions-toggle {
-  background: linear-gradient(135deg, var(--cream) 0%, rgba(212, 175, 55, 0.05) 100%);
+  background: var(--cream);
   border: 2px solid var(--border-light);
   border-radius: 16px;
   padding: 18px 28px;
@@ -356,11 +304,11 @@ a {
 }
 
 .suggestions-toggle:hover {
-  background: var(--gradient-teal-gold);
+  background: var(--primary-teal);
   color: white;
   transform: translateY(-2px);
   box-shadow: var(--shadow-medium);
-  border-color: var(--gold);
+  border-color: var(--primary-teal);
 }
 
 .suggestions-grid {
@@ -369,7 +317,7 @@ a {
   gap: 12px;
   margin-top: 24px;
   padding: 32px;
-  background: linear-gradient(135deg, var(--cream) 0%, rgba(212, 175, 55, 0.05) 100%);
+  background: var(--cream);
   border-radius: 20px;
   border: 2px solid var(--border-light);
   position: relative;
@@ -411,35 +359,12 @@ a {
   box-shadow: var(--shadow-soft);
 }
 
-.suggestion-chip::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0;
-  height: 0;
-  background: var(--gradient-teal-gold);
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  transition: all 0.4s ease;
-  z-index: 0;
-}
-
-.suggestion-chip:hover::before {
-  width: 200%;
-  height: 200%;
-}
-
 .suggestion-chip:hover {
   color: white;
-  transform: translateY(-4px) scale(1.05);
+  background: var(--primary-teal);
+  transform: translateY(-2px);
   box-shadow: var(--shadow-medium);
-  border-color: var(--gold);
-}
-
-.suggestion-chip span {
-  position: relative;
-  z-index: 1;
+  border-color: var(--primary-teal);
 }
 
 /* ============================================================================
@@ -455,7 +380,7 @@ a {
   gap: 16px;
   margin-bottom: 40px;
   padding: 32px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(250, 246, 240, 0.9) 100%);
+  background: var(--cream);
   backdrop-filter: blur(10px);
   border-radius: 20px;
   border: 2px solid var(--border-light);
@@ -553,7 +478,7 @@ a {
 
 /* SEARCH BUTTON - Icon Only */
 .tafsir-form button.search-button {
-  background: var(--gradient-teal-gold);
+  background: var(--primary-teal);
   border: none;
   border-radius: 50%;
   width: 64px;
@@ -590,7 +515,7 @@ a {
 }
 
 .tafsir-form button.search-button:hover:not(:disabled) {
-  transform: translateY(-3px) scale(1.05);
+  transform: translateY(-2px);
   box-shadow: var(--shadow-strong);
 }
 
@@ -608,13 +533,13 @@ a {
 
 /* Cancel button state during loading */
 .tafsir-form button.search-button.loading {
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  background: #dc2626;
   animation: pulse 1.5s ease-in-out infinite;
   cursor: pointer;
 }
 
 .tafsir-form button.search-button.loading:hover {
-  transform: translateY(-3px) scale(1.05);
+  transform: translateY(-2px);
   box-shadow: var(--shadow-strong);
 }
 
@@ -646,7 +571,7 @@ button:hover:not(:disabled) {
 }
 
 .logout-button {
-  background: var(--gradient-night);
+  background: var(--deep-blue);
   font-size: 13px;
   padding: 8px 16px;
   border-radius: 20px;
@@ -679,37 +604,20 @@ button:hover:not(:disabled) {
   gap: 24px;
 }
 
-/* Islamic geometric spinner */
+/* Minimal spinner */
 .loading-spinner::after {
   content: '';
-  width: 60px;
-  height: 60px;
-  border: 6px solid var(--cream-dark);
-  border-top: 6px solid var(--primary-teal);
-  border-right: 6px solid var(--gold);
+  width: 48px;
+  height: 48px;
+  border: 4px solid var(--cream-dark);
+  border-top-color: var(--primary-teal);
   border-radius: 50%;
-  animation: spin 1.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
-  box-shadow: 0 0 20px rgba(13, 148, 136, 0.2);
-}
-
-.loading-spinner::before {
-  content: 'جاري التحميل...';
-  font-family: var(--font-amiri), 'Amiri', 'Traditional Arabic', serif;
-  font-size: 1.2rem;
-  color: var(--primary-teal);
-  font-weight: 600;
-  animation: pulse 2s ease-in-out infinite;
+  animation: spin 1s linear infinite;
 }
 
 @keyframes spin {
-  0% {
-    transform: rotate(0deg) scale(1);
-  }
-  50% {
-    transform: rotate(180deg) scale(1.1);
-  }
-  100% {
-    transform: rotate(360deg) scale(1);
+  to {
+    transform: rotate(360deg);
   }
 }
 
@@ -737,7 +645,7 @@ button:hover:not(:disabled) {
 }
 
 .rate-limit-warning {
-  background: linear-gradient(135deg, rgba(217, 119, 6, 0.1) 0%, rgba(217, 119, 6, 0.05) 100%);
+  background: rgba(217, 119, 6, 0.08);
   border: 2px solid var(--warning-color);
   color: var(--warning-color);
   border-radius: 12px;
@@ -765,7 +673,7 @@ button:hover:not(:disabled) {
   font-size: 1rem;
   font-weight: 600;
   border-radius: 16px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, var(--cream) 100%);
+  background: white;
   color: var(--foreground);
   border: 2px solid var(--border-light);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -775,35 +683,12 @@ button:hover:not(:disabled) {
   box-shadow: var(--shadow-soft);
 }
 
-.level-buttons button::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0;
-  height: 0;
-  background: var(--gradient-teal-gold);
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  transition: all 0.4s ease;
-  z-index: 0;
-}
-
-.level-buttons button:hover::before {
-  width: 200%;
-  height: 200%;
-}
-
 .level-buttons button:hover {
   color: white;
-  transform: translateY(-3px);
+  background: var(--primary-teal);
+  transform: translateY(-2px);
   box-shadow: var(--shadow-medium);
-  border-color: var(--gold);
-}
-
-.level-buttons button > * {
-  position: relative;
-  z-index: 1;
+  border-color: var(--primary-teal);
 }
 
 /* ============================================================================
@@ -823,7 +708,7 @@ button:hover:not(:disabled) {
 .result-section {
   margin-bottom: 48px;
   padding: 40px;
-  background: linear-gradient(135deg, rgba(253, 251, 247, 0.95) 0%, rgba(250, 246, 240, 0.95) 100%);
+  background: var(--cream);
   backdrop-filter: blur(10px);
   border-radius: 24px;
   border: 2px solid var(--border-light);
@@ -839,22 +724,8 @@ button:hover:not(:disabled) {
   left: 0;
   width: 6px;
   height: 100%;
-  background: var(--gradient-teal-gold);
+  background: var(--color-primary, var(--primary-teal));
   border-radius: 24px 0 0 24px;
-}
-
-/* Decorative top ornament - Subtle */
-.result-section::after {
-  content: '✦';
-  position: absolute;
-  top: -12px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 1.25rem; /* Reduced from 2.5rem */
-  color: var(--gold-text);
-  background: var(--background);
-  padding: 0 16px;
-  opacity: 0.7; /* Subtle instead of prominent */
 }
 
 .result-section h2 {
@@ -865,8 +736,8 @@ button:hover:not(:disabled) {
   padding-bottom: 16px;
   border-bottom: 3px solid var(--border-light);
   position: relative;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  text-transform: none;
+  letter-spacing: 0.01em;
 }
 
 .result-section h2::after {
@@ -876,7 +747,7 @@ button:hover:not(:disabled) {
   left: 0;
   width: 80px;
   height: 3px;
-  background: var(--gradient-teal-gold);
+  background: var(--primary-teal);
   border-radius: 3px;
 }
 
@@ -903,28 +774,8 @@ button:hover:not(:disabled) {
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Gold leaf corner decorations */
-.verse-card::before,
-.verse-card::after {
-  content: '';
-  position: absolute;
-  width: 80px;
-  height: 80px;
-  background: radial-gradient(circle at center, rgba(212, 175, 55, 0.2) 0%, transparent 70%);
-}
-
-.verse-card::before {
-  top: -20px;
-  right: -20px;
-}
-
-.verse-card::after {
-  bottom: -20px;
-  left: -20px;
-}
-
 .verse-card.enhanced {
-  background: linear-gradient(135deg, #ffffff 0%, rgba(250, 246, 240, 1) 100%);
+  background: white;
   border-left: 6px solid var(--primary-teal);
 }
 
@@ -942,10 +793,6 @@ button:hover:not(:disabled) {
   50% {
     transform: translateY(-10px) rotate(5deg);
   }
-}
-
-.verse-card:hover::before {
-  animation: float 3s ease-in-out infinite;
 }
 
 .verse-ref {
@@ -968,37 +815,17 @@ button:hover:not(:disabled) {
 
 .arabic-text {
   font-family: var(--font-amiri), 'Amiri Quran', 'Scheherazade New', 'Traditional Arabic', serif;
-  font-size: 2.5rem;
+  font-size: clamp(1.6rem, 4vw, 2.4rem);
   line-height: 2.2;
   margin: 32px 0;
   padding: 32px;
-  background: linear-gradient(135deg, rgba(13, 148, 136, 0.03) 0%, rgba(212, 175, 55, 0.05) 100%);
+  background: var(--cream);
   border-radius: 16px;
   text-align: center;
   direction: rtl;
   border: 2px solid var(--border-light);
   position: relative;
   box-shadow: inset 0 2px 8px rgba(212, 175, 55, 0.1);
-}
-
-/* Decorative corners */
-.arabic-text::before,
-.arabic-text::after {
-  content: '۞';
-  position: absolute;
-  font-size: 1.5rem;
-  color: var(--gold);
-  opacity: 0.6;
-}
-
-.arabic-text::before {
-  top: 16px;
-  left: 16px;
-}
-
-.arabic-text::after {
-  bottom: 16px;
-  right: 16px;
 }
 
 .translation {
@@ -1048,7 +875,7 @@ button:hover:not(:disabled) {
 .tafsir-details summary {
   padding: 24px 28px;
   cursor: pointer;
-  background: linear-gradient(135deg, var(--cream) 0%, rgba(212, 175, 55, 0.05) 100%);
+  background: var(--cream);
   font-weight: 700;
   font-size: 1.15rem;
   display: flex;
@@ -1067,7 +894,7 @@ button:hover:not(:disabled) {
   left: 0;
   width: 0;
   height: 2px;
-  background: var(--gradient-teal-gold);
+  background: var(--primary-teal);
   transition: width 0.4s ease;
 }
 
@@ -1076,7 +903,7 @@ button:hover:not(:disabled) {
 }
 
 .tafsir-details summary:hover {
-  background: linear-gradient(135deg, rgba(13, 148, 136, 0.08) 0%, rgba(212, 175, 55, 0.08) 100%);
+  background: rgba(13, 148, 136, 0.08);
   color: var(--primary-teal);
   padding-left: 32px;
 }
@@ -1095,9 +922,9 @@ button:hover:not(:disabled) {
 }
 
 .tafsir-details[open] summary {
-  background: var(--gradient-teal-gold);
+  background: var(--primary-teal);
   color: white;
-  border-bottom-color: var(--gold);
+  border-bottom-color: var(--primary-teal-light);
 }
 
 .tafsir-details[open] summary::after {
@@ -1119,7 +946,7 @@ button:hover:not(:disabled) {
 .explanation-content {
   padding: 32px;
   line-height: 1.9;
-  background: linear-gradient(to bottom, white 0%, var(--cream) 100%);
+  background: white;
   font-size: 1.05rem;
 }
 
@@ -1201,7 +1028,7 @@ button:hover:not(:disabled) {
    ============================================================================ */
 
 .summary-content {
-  background: linear-gradient(135deg, rgba(13, 148, 136, 0.05) 0%, rgba(212, 175, 55, 0.05) 100%);
+  background: var(--cream);
   border-radius: 12px;
   padding: 24px;
   border: 2px solid var(--border-light);
@@ -1216,7 +1043,7 @@ button:hover:not(:disabled) {
 .export-section {
   margin-top: 48px;
   padding: 40px;
-  background: linear-gradient(135deg, rgba(30, 58, 95, 0.95) 0%, rgba(13, 148, 136, 0.95) 100%);
+  background: var(--deep-blue);
   border-radius: 24px;
   border: 2px solid var(--gold);
   position: relative;
@@ -1224,26 +1051,13 @@ button:hover:not(:disabled) {
   box-shadow: var(--shadow-strong);
 }
 
-/* Decorative pattern overlay */
-.export-section::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 0l5 10h10l-8 8 5 10-12-8-12 8 5-10-8-8h10z' fill='%23ffffff' fill-opacity='0.05'/%3E%3C/svg%3E");
-  opacity: 0.3;
-  pointer-events: none;
-}
-
 .export-section h3 {
   color: white;
   margin-bottom: 24px;
   font-size: 1.5rem;
   font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  text-transform: none;
+  letter-spacing: 0.02em;
   position: relative;
   z-index: 1;
 }
@@ -1263,7 +1077,7 @@ button:hover:not(:disabled) {
 }
 
 .export-btn {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 100%);
+  background: rgba(255, 255, 255, 0.12);
   backdrop-filter: blur(10px);
   color: white;
   padding: 16px 28px;
@@ -1275,16 +1089,16 @@ button:hover:not(:disabled) {
   gap: 10px;
   transition: all 0.3s ease;
   cursor: pointer;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  text-transform: none;
+  letter-spacing: 0.02em;
   font-size: 0.9rem;
   box-shadow: var(--shadow-soft);
 }
 
 .export-btn:hover {
-  background: linear-gradient(135deg, rgba(212, 175, 55, 0.9) 0%, rgba(212, 175, 55, 0.7) 100%);
+  background: var(--gold);
   border-color: white;
-  transform: translateY(-3px) scale(1.05);
+  transform: translateY(-2px);
   box-shadow: var(--shadow-strong);
 }
 
@@ -1401,7 +1215,7 @@ button:hover:not(:disabled) {
 
 @media (max-width: 768px) {
   .container {
-    padding: 12px 8px; /* Reduced padding to use more screen width */
+    padding: 12px; /* Consistent padding without negative margins */
     max-width: 100%; /* Remove max-width constraint on mobile */
   }
 
@@ -1437,7 +1251,7 @@ button:hover:not(:disabled) {
     flex-direction: column;
     gap: 12px;
     padding: 28px 16px 20px 16px; /* Less horizontal padding */
-    margin: 0 -4px; /* Negative margin to use more width */
+    margin: 0;
   }
 
   .tafsir-form::before {
@@ -1467,7 +1281,7 @@ button:hover:not(:disabled) {
     grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); /* Wider minimum */
     gap: 10px;
     padding: 16px 12px;
-    margin: 0 -4px; /* Use more available width */
+    margin: 0;
   }
 
   /* Hide decorative Islamic symbol on mobile */
@@ -1486,15 +1300,14 @@ button:hover:not(:disabled) {
   }
 
   .arabic-text {
-    font-size: 1.8rem;
     padding: 20px 12px; /* Less horizontal padding */
-    margin: 0 -8px; /* Expand into available space */
+    margin: 0;
   }
 
   .result-section {
     padding: 20px 16px; /* Reduced padding */
     padding-top: 28px; /* Add extra top padding since we're removing the symbol */
-    margin: 0 -4px; /* Slight negative margin for width */
+    margin: 0;
   }
 
   /* Hide the crescent moon symbol on mobile to prevent overlap */
@@ -1519,7 +1332,7 @@ button:hover:not(:disabled) {
   .verse-card {
     padding: 16px 14px; /* Less padding */
     position: relative; /* Ensure proper positioning context */
-    margin: 0 -4px 16px -4px; /* Use more width */
+    margin: 0 0 16px 0;
   }
 
   /* Fix Add Note button positioning on mobile */
@@ -1537,7 +1350,7 @@ button:hover:not(:disabled) {
 
   /* Tafsir details mobile optimization */
   .tafsir-details {
-    margin: 0 -4px 20px -4px; /* Use more width */
+    margin: 0 0 20px 0;
   }
 
   .tafsir-details summary {
@@ -1554,17 +1367,17 @@ button:hover:not(:disabled) {
   /* Export section mobile */
   .export-section {
     padding: 24px 16px;
-    margin: 32px -8px 0 -8px; /* Expand width */
+    margin: 32px 0 0 0;
   }
 }
 
 @media (max-width: 480px) {
   .container {
-    padding: 8px 4px; /* Minimal padding on small screens */
+    padding: 12px; /* Maintain consistent side padding */
   }
 
   .main-app {
-    padding: 12px 8px; /* Very minimal padding */
+    padding: 12px; /* Consistent padding */
   }
 
   .header {
@@ -1583,19 +1396,19 @@ button:hover:not(:disabled) {
 
   .tafsir-form {
     padding: 24px 12px 16px 12px;
-    margin: 0 -6px; /* More negative margin for width */
+    margin: 0;
   }
 
   .suggestions-grid {
     padding: 12px 8px;
     gap: 8px;
-    margin: 0 -6px;
+    margin: 0;
   }
 
   .result-section {
     padding: 16px 12px;
     padding-top: 24px; /* Ensure proper spacing */
-    margin: 0 -6px; /* More width usage */
+    margin: 0;
   }
 
   /* Extra insurance - hide all decorative absolute positioned elements */
@@ -1606,14 +1419,13 @@ button:hover:not(:disabled) {
 
   .verse-card {
     padding: 14px 12px;
-    margin: 0 -6px 12px -6px;
+    margin: 0 0 12px 0;
   }
 
   .arabic-text {
-    font-size: 1.5rem;
     line-height: 2;
     padding: 16px 10px;
-    margin: 0 -10px;
+    margin: 0;
   }
 
   .translation {
@@ -1645,7 +1457,7 @@ button:hover:not(:disabled) {
 
   /* Tafsir details on small screens */
   .tafsir-details {
-    margin: 0 -6px 16px -6px;
+    margin: 0 0 16px 0;
   }
 
   .tafsir-details summary {
@@ -1674,7 +1486,7 @@ button:hover:not(:disabled) {
   /* Export section on small screens */
   .export-section {
     padding: 20px 12px;
-    margin: 24px -10px 0 -10px;
+    margin: 24px 0 0 0;
   }
 
   .export-section h3 {
@@ -1684,6 +1496,29 @@ button:hover:not(:disabled) {
   .export-btn {
     padding: 12px 20px;
     font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .header h1 {
+    font-size: 1.6rem;
+  }
+
+  .tafsir-form {
+    padding: 20px 12px 14px;
+  }
+
+  .tafsir-form input,
+  .tafsir-form select {
+    padding: 12px 14px;
+  }
+
+  .result-section {
+    padding: 14px 12px;
+  }
+
+  .verse-card {
+    padding: 12px 10px;
   }
 }
 
@@ -1707,6 +1542,22 @@ select:focus-visible,
 summary:focus-visible {
   outline: 2px solid var(--primary-teal);
   outline-offset: 2px;
+}
+
+[dir="rtl"] .chevron {
+  transform: scaleX(-1) rotate(0deg);
+}
+
+[dir="rtl"] .chevron.expanded {
+  transform: scaleX(-1) rotate(90deg);
+}
+
+.chevron {
+  transform: rotate(0deg);
+}
+
+.chevron.expanded {
+  transform: rotate(90deg);
 }
 
 /* ============================================================================

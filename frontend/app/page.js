@@ -1310,6 +1310,7 @@ function MainApp({ user, userProfile, onResetProfile }) {
                 }
               }}
               title="Click to change persona"
+              aria-label="View profile settings"
               type="button"
             >
               {getProfileDisplay()} ✎
@@ -1484,9 +1485,9 @@ function MainApp({ user, userProfile, onResetProfile }) {
             {/* Sticky Result Navigation */}
             <div style={{
               position: 'sticky',
-              top: 0,
-              zIndex: 200,
-              background: 'linear-gradient(135deg, white 0%, var(--cream) 100%)',
+              top: 'calc(env(safe-area-inset-top) + 56px)',
+              zIndex: 'var(--z-sticky, 200)',
+              background: 'white',
               borderBottom: '2px solid var(--border-light)',
               padding: '12px 16px',
               marginBottom: '24px',
@@ -2300,9 +2301,7 @@ function EnhancedResultsDisplay({
         {/* General Reflection Button */}
       {user && (
         <div style={{
-          position: 'sticky',
-          top: '20px',
-          zIndex: 100,
+          position: 'relative',
           display: 'flex',
           justifyContent: 'flex-end',
           marginBottom: '20px',
@@ -2315,7 +2314,7 @@ function EnhancedResultsDisplay({
               ensureShareId().catch(err => console.error('Failed to create share link:', err));
             }}
             style={{
-              background: 'var(--gradient-teal-gold)',
+              background: 'var(--primary-teal)',
               border: 'none',
               color: 'white',
               padding: '12px 24px',

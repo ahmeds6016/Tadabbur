@@ -98,13 +98,12 @@ export default function CollapsibleSection({
           flex: 1
         }}>
           <span
-            className="chevron"
+            className={`chevron ${isExpanded ? 'expanded' : ''}`}
             style={{
               display: 'inline-block',
               width: '20px',
               height: '20px',
               transition: 'transform 0.3s',
-              transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
               fontSize: '16px',
               color: '#6b7280'
             }}
