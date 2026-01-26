@@ -331,13 +331,16 @@ export default function SurahVersePicker({ onSelect, initialSurah = null, initia
                 padding: '10px 16px',
                 minHeight: '44px',
                 background: item.isAnalysis ? 'rgba(139, 92, 246, 0.1)' : 'white',
-                border: `1px solid ${item.isAnalysis ? 'rgba(139, 92, 246, 0.3)' : 'var(--border-light)'}`,
-                borderRadius: '20px',
-                fontSize: '0.8rem',
-                color: item.isAnalysis ? '#7c3aed' : 'var(--primary-teal)',
+                border: `1px solid ${item.isAnalysis ? 'rgba(139, 92, 246, 0.3)' : 'var(--color-border, #e5e7eb)'}`,
+                borderRadius: '8px',
+                fontSize: '0.875rem',
+                color: item.isAnalysis ? '#7c3aed' : 'var(--color-primary, #1E3A5F)',
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
-                fontWeight: '500'
+                fontWeight: '500',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
               }}
               onMouseEnter={(e) => {
                 e.target.style.borderColor = 'var(--gold)';
@@ -399,11 +402,11 @@ export default function SurahVersePicker({ onSelect, initialSurah = null, initia
               maxHeight: 'min(250px, 50vh)',
               overflowY: 'auto',
               background: 'white',
-              border: '2px solid var(--border-light)',
+              border: '1px solid var(--color-border, #e5e7eb)',
               borderTop: 'none',
               borderRadius: '0 0 10px 10px',
-              zIndex: 100,
-              boxShadow: 'var(--shadow-medium)'
+              zIndex: 'var(--z-dropdown, 100)',
+              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.07)'
             }}>
               {filteredSurahs.length > 0 ? (
                 filteredSurahs.map(surah => (
