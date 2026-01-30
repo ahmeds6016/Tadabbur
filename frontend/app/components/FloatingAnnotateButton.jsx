@@ -79,7 +79,7 @@ export default function FloatingAnnotateButton({
         className="annotate-btn"
         title="Add a reflection on this text"
       >
-        📝 Annotate
+        Annotate
       </button>
       <button
         onClick={handleDismiss}

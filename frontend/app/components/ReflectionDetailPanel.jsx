@@ -2,23 +2,23 @@
 import { useEffect, useCallback } from 'react';
 
 const ANNOTATION_TYPE_CONFIG = {
-  personal_insight: { icon: '💡', label: 'Insight', color: '#0D9488' },
-  question: { icon: '❓', label: 'Question', color: '#8B5CF6' },
-  application: { icon: '✅', label: 'Application', color: '#059669' },
-  memory: { icon: '💭', label: 'Memory', color: '#3B82F6' },
-  connection: { icon: '🔗', label: 'Connection', color: '#D97706' },
-  dua: { icon: '🤲', label: 'Dua/Prayer', color: '#10B981' },
-  gratitude: { icon: '🙏', label: 'Gratitude', color: '#F59E0B' },
-  reminder: { icon: '⏰', label: 'Reminder', color: '#EF4444' },
-  story: { icon: '📚', label: 'Story', color: '#6366F1' },
-  linguistic: { icon: '📝', label: 'Linguistic', color: '#84CC16' },
-  historical: { icon: '📜', label: 'Historical', color: '#A78BFA' },
-  scientific: { icon: '🔬', label: 'Scientific', color: '#06B6D4' },
-  personal_experience: { icon: '💭', label: 'Experience', color: '#EC4899' },
-  teaching_point: { icon: '👨‍🏫', label: 'Teaching', color: '#F97316' },
-  warning: { icon: '⚠️', label: 'Warning', color: '#DC2626' },
-  goal: { icon: '🎯', label: 'Goal', color: '#059669' },
-  contemplation: { icon: '🤔', label: 'Contemplation', color: '#7C3AED' }
+  personal_insight: { label: 'Insight', color: '#0D9488' },
+  question: { label: 'Question', color: '#8B5CF6' },
+  application: { label: 'Application', color: '#059669' },
+  memory: { label: 'Memory', color: '#3B82F6' },
+  connection: { label: 'Connection', color: '#D97706' },
+  dua: { label: 'Dua/Prayer', color: '#10B981' },
+  gratitude: { label: 'Gratitude', color: '#F59E0B' },
+  reminder: { label: 'Reminder', color: '#EF4444' },
+  story: { label: 'Story', color: '#6366F1' },
+  linguistic: { label: 'Linguistic', color: '#84CC16' },
+  historical: { label: 'Historical', color: '#A78BFA' },
+  scientific: { label: 'Scientific', color: '#06B6D4' },
+  personal_experience: { label: 'Experience', color: '#EC4899' },
+  teaching_point: { label: 'Teaching', color: '#F97316' },
+  warning: { label: 'Warning', color: '#DC2626' },
+  goal: { label: 'Goal', color: '#059669' },
+  contemplation: { label: 'Contemplation', color: '#7C3AED' }
 };
 
 const getTypeConfig = (type) => {
@@ -26,7 +26,6 @@ const getTypeConfig = (type) => {
     return ANNOTATION_TYPE_CONFIG[type];
   }
   return {
-    icon: '✨',
     label: type ? type.charAt(0).toUpperCase() + type.slice(1).replace(/_/g, ' ') : 'Custom',
     color: '#6B7280'
   };

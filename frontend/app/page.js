@@ -465,21 +465,18 @@ function OnboardingComponent({ user, onProfileComplete }) {
             </p>
             <div className="level-buttons">
               <button onClick={() => handleKnowledgeLevelSelect('beginner')}>
-                <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>📚</div>
                 <div style={{ fontWeight: '700', fontSize: '1.1rem' }}>Beginner</div>
                 <div style={{ fontSize: '0.85rem', marginTop: '4px', opacity: 0.7 }}>
                   New to Islamic studies
                 </div>
               </button>
               <button onClick={() => handleKnowledgeLevelSelect('intermediate')}>
-                <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>🎓</div>
                 <div style={{ fontWeight: '700', fontSize: '1.1rem' }}>Intermediate</div>
                 <div style={{ fontSize: '0.85rem', marginTop: '4px', opacity: 0.7 }}>
                   Some Islamic background
                 </div>
               </button>
               <button onClick={() => handleKnowledgeLevelSelect('advanced')}>
-                <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>📖</div>
                 <div style={{ fontWeight: '700', fontSize: '1.1rem' }}>Advanced</div>
                 <div style={{ fontSize: '0.85rem', marginTop: '4px', opacity: 0.7 }}>
                   Strong Islamic knowledge
@@ -515,21 +512,18 @@ function OnboardingComponent({ user, onProfileComplete }) {
             </p>
             <div className="level-buttons">
               <button onClick={() => handleLearningGoalSelect('application')}>
-                <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>🤲</div>
                 <div style={{ fontWeight: '700', fontSize: '1.1rem' }}>Practical Application</div>
                 <div style={{ fontSize: '0.85rem', marginTop: '4px', opacity: 0.7 }}>
                   Focus on how to apply teachings in daily life
                 </div>
               </button>
               <button onClick={() => handleLearningGoalSelect('understanding')}>
-                <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>📖</div>
                 <div style={{ fontWeight: '700', fontSize: '1.1rem' }}>Deep Understanding</div>
                 <div style={{ fontSize: '0.85rem', marginTop: '4px', opacity: 0.7 }}>
                   Focus on scholarly depth and theological context
                 </div>
               </button>
               <button onClick={() => handleLearningGoalSelect('balanced')}>
-                <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>⚖️</div>
                 <div style={{ fontWeight: '700', fontSize: '1.1rem' }}>Balanced Approach</div>
                 <div style={{ fontSize: '0.85rem', marginTop: '4px', opacity: 0.7 }}>
                   Mix of practical insights and scholarly depth
@@ -1103,7 +1097,7 @@ function MainApp({ user, userProfile, onResetProfile }) {
 
       if (successful) {
         // Show success notification
-        button.innerHTML = '✅ Copied!';
+        button.innerHTML = 'Copied!';
         button.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
 
         setTimeout(() => {
@@ -1118,7 +1112,7 @@ function MainApp({ user, userProfile, onResetProfile }) {
       document.body.removeChild(textArea);
 
       // Show error in button
-      button.innerHTML = '❌ Copy Failed';
+      button.innerHTML = 'Copy Failed';
       button.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
 
       setTimeout(() => {
@@ -1168,7 +1162,7 @@ function MainApp({ user, userProfile, onResetProfile }) {
             url: shareUrl
           });
 
-          button.innerHTML = '✅ Shared!';
+          button.innerHTML = 'Shared!';
           button.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
           if (!onboardingState.hasSharedContent) {
             markStepComplete('hasSharedContent');
@@ -1198,7 +1192,7 @@ function MainApp({ user, userProfile, onResetProfile }) {
         try {
           await navigator.clipboard.writeText(shareUrl);
 
-          button.innerHTML = '✅ Link Copied!';
+          button.innerHTML = 'Link Copied!';
           button.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
           if (!onboardingState.hasSharedContent) {
             markStepComplete('hasSharedContent');
@@ -1230,7 +1224,7 @@ function MainApp({ user, userProfile, onResetProfile }) {
           document.body.removeChild(textArea);
 
           if (successful) {
-            button.innerHTML = '✅ Link Copied!';
+            button.innerHTML = 'Link Copied!';
             button.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
             if (!onboardingState.hasSharedContent) {
               markStepComplete('hasSharedContent');
@@ -1253,7 +1247,7 @@ function MainApp({ user, userProfile, onResetProfile }) {
       console.error('Share link failed:', err);
 
       // Show error in button
-      button.innerHTML = '❌ Share Failed - Tap to retry';
+      button.innerHTML = 'Share Failed - Tap to retry';
       button.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
 
       setTimeout(() => {
@@ -1312,7 +1306,7 @@ function MainApp({ user, userProfile, onResetProfile }) {
               title="Click to change persona"
               type="button"
             >
-              {getProfileDisplay()} ✎
+              {getProfileDisplay()}
             </button>
             <button onClick={() => signOut(auth)} className="logout-button">
               Sign Out
@@ -1343,7 +1337,7 @@ function MainApp({ user, userProfile, onResetProfile }) {
               }}
               className="nav-link"
             >
-              🕒 Query History
+              Query History
             </a>
             <a
               href="/saved"
@@ -1359,7 +1353,7 @@ function MainApp({ user, userProfile, onResetProfile }) {
               }}
               className="nav-link"
             >
-              ⭐ Saved Answers
+              Saved Answers
             </a>
             <a
               href="/annotations"
@@ -1375,7 +1369,7 @@ function MainApp({ user, userProfile, onResetProfile }) {
               }}
               className="nav-link"
             >
-              📝 Notes
+              Reflections
             </a>
           </div>
         )}
@@ -1407,17 +1401,17 @@ function MainApp({ user, userProfile, onResetProfile }) {
             title={isTafsirLoading ? "Cancel search" : "Search"}
             aria-label={isTafsirLoading ? "Cancel search" : "Search Quran"}
           >
-            {isTafsirLoading ? '✕' : '🔍'}
+            {isTafsirLoading ? '×' : 'Search'}
           </button>
         </form>
         
         {rateLimitWarning && (
           <div className="rate-limit-warning">
-            ⚠️ {rateLimitWarning}
+            {rateLimitWarning}
           </div>
         )}
         
-        {error && <p className="error">❌ {error}</p>}
+        {error && <p className="error">{error}</p>}
         {isTafsirLoading && (
           <div className="loading-spinner"></div>
         )}
@@ -1537,7 +1531,7 @@ function MainApp({ user, userProfile, onResetProfile }) {
                   onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
                   title={!isMobile ? 'Clear Results (Esc)' : 'Clear Results'}
                 >
-                  {isTafsirLoading ? '✕ Stop' : '← New Search'}
+                  {isTafsirLoading ? 'Stop' : 'Back'}
                   {!isMobile && <kbd style={{
                     background: 'rgba(255,255,255,0.2)',
                     padding: '2px 6px',
@@ -1576,7 +1570,7 @@ function MainApp({ user, userProfile, onResetProfile }) {
                   onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
                   title={!isMobile ? 'New Search (Ctrl+K)' : 'New Search'}
                 >
-                  🔍 New Search
+                  New Search
                   {!isMobile && <kbd style={{
                     background: 'rgba(255,255,255,0.2)',
                     padding: '2px 6px',
@@ -1626,7 +1620,7 @@ function MainApp({ user, userProfile, onResetProfile }) {
                   boxShadow: '0 2px 6px rgba(245, 158, 11, 0.3)',
                   transition: 'all 0.3s ease'
                 }}>
-                  ⭐ Save
+                  Save
                 </button>
                 <button onClick={handleShareLink} className="export-btn" style={{
                   padding: '10px 20px',
@@ -1640,7 +1634,7 @@ function MainApp({ user, userProfile, onResetProfile }) {
                   boxShadow: '0 2px 6px rgba(139, 92, 246, 0.3)',
                   transition: 'all 0.3s ease'
                 }}>
-                  🔗 Share Link
+                  Share Link
                 </button>
               </div>
             </div>
@@ -1782,24 +1776,24 @@ function InlineAnnotationForm({ verse, user, onSaved, onCancel }) {
   const [error, setError] = useState('');
 
   const ANNOTATION_TYPES = [
-    { value: 'personal_insight', label: '💡 Insight', icon: '💡' },
-    { value: 'question', label: '❓ Question', icon: '❓' },
-    { value: 'application', label: '✅ Application', icon: '✅' },
-    { value: 'memory', label: '💭 Memory', icon: '💭' },
-    { value: 'connection', label: '🔗 Connection', icon: '🔗' },
-    { value: 'dua', label: '🤲 Dua/Prayer', icon: '🤲' },
-    { value: 'gratitude', label: '🙏 Gratitude', icon: '🙏' },
-    { value: 'reminder', label: '⏰ Reminder', icon: '⏰' },
-    { value: 'story', label: '📚 Story/Example', icon: '📚' },
-    { value: 'linguistic', label: '📝 Linguistic Note', icon: '📝' },
-    { value: 'historical', label: '📜 Historical Context', icon: '📜' },
-    { value: 'scientific', label: '🔬 Scientific Reflection', icon: '🔬' },
-    { value: 'personal_experience', label: '💭 Personal Experience', icon: '💭' },
-    { value: 'teaching_point', label: '👨‍🏫 Teaching Point', icon: '👨‍🏫' },
-    { value: 'warning', label: '⚠️ Warning/Caution', icon: '⚠️' },
-    { value: 'goal', label: '🎯 Goal/Action Item', icon: '🎯' },
-    { value: 'contemplation', label: '🤔 Deep Contemplation', icon: '🤔' },
-    { value: 'custom', label: '✨ Custom', icon: '✨' }
+    { value: 'personal_insight', label: 'Insight' },
+    { value: 'question', label: 'Question' },
+    { value: 'application', label: 'Application' },
+    { value: 'memory', label: 'Memory' },
+    { value: 'connection', label: 'Connection' },
+    { value: 'dua', label: 'Dua/Prayer' },
+    { value: 'gratitude', label: 'Gratitude' },
+    { value: 'reminder', label: 'Reminder' },
+    { value: 'story', label: 'Story/Example' },
+    { value: 'linguistic', label: 'Linguistic Note' },
+    { value: 'historical', label: 'Historical Context' },
+    { value: 'scientific', label: 'Scientific Reflection' },
+    { value: 'personal_experience', label: 'Personal Experience' },
+    { value: 'teaching_point', label: 'Teaching Point' },
+    { value: 'warning', label: 'Warning/Caution' },
+    { value: 'goal', label: 'Goal/Action Item' },
+    { value: 'contemplation', label: 'Deep Contemplation' },
+    { value: 'custom', label: 'Custom' }
   ];
 
   const handleSave = async () => {
@@ -2051,7 +2045,7 @@ function InlineAnnotationForm({ verse, user, onSaved, onCancel }) {
               marginBottom: '6px',
               fontWeight: '600'
             }}>
-              💡 Suggested tags based on your reflection:
+              Suggested tags based on your reflection:
             </div>
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
               {suggestedTags.map(tag => (
@@ -2138,7 +2132,7 @@ function InlineAnnotationForm({ verse, user, onSaved, onCancel }) {
             transition: 'all 0.2s ease'
           }}
         >
-          {isSaving ? '💾 Saving...' : '💾 Save Reflection'}
+          {isSaving ? 'Saving...' : 'Save Reflection'}
         </button>
       </div>
 
@@ -2331,7 +2325,7 @@ function EnhancedResultsDisplay({
             onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
             onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
           >
-            ✨ Reflect on Entire Response
+            Reflect on Entire Response
           </button>
         </div>
       )}
@@ -2344,7 +2338,7 @@ function EnhancedResultsDisplay({
           // Verses Tab
           verses.length > 0 && {
             label: 'Verses',
-            icon: '📖',
+            icon: '',
             count: verses.length,
             content: (
               <div className="verses-section">
@@ -2396,7 +2390,7 @@ function EnhancedResultsDisplay({
           // Tafsir Tab (includes related verses)
           tafsir_explanations.length > 0 && {
             label: 'Tafsir',
-            icon: '📚',
+            icon: '',
             count: tafsir_explanations.length,
             content: (
               <div className="tafsir-section">
@@ -2423,7 +2417,7 @@ function EnhancedResultsDisplay({
                       onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
                       onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
                     >
-                      💭 Reflect
+                      Reflect
                     </button>
                   </div>
                 )}
@@ -2480,7 +2474,7 @@ function EnhancedResultsDisplay({
                   }}
                   title={`Click to view Tafsir of verse ${ref.verse}`}
                 >
-                  <strong style={{ color: '#4a5568' }}>📖 {ref.verse}</strong>
+                  <strong style={{ color: '#4a5568' }}>{ref.verse}</strong>
                   <span style={{ color: '#718096', display: 'block', marginTop: '4px' }}>
                     {ref.relevance}
                   </span>
@@ -2536,7 +2530,7 @@ function EnhancedResultsDisplay({
           // Lessons Tab
           lessons_practical_applications.length > 0 && {
             label: 'Lessons',
-            icon: '💡',
+            icon: '',
             count: lessons_practical_applications.length,
             content: (
               <div className="lessons-section">
@@ -2563,7 +2557,7 @@ function EnhancedResultsDisplay({
                       onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
                       onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
                     >
-                      💭 Reflect
+                      Reflect
                     </button>
                   </div>
                 )}
@@ -2628,7 +2622,7 @@ function EnhancedResultsDisplay({
           // Summary Tab
           summary && {
             label: 'Summary',
-            icon: '📝',
+            icon: '',
             content: (
               <div className="summary-section">
                 {/* Summary Reflection Button */}
@@ -2654,7 +2648,7 @@ function EnhancedResultsDisplay({
                       onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
                       onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
                     >
-                      💭 Reflect
+                      Reflect
                     </button>
                   </div>
                 )}

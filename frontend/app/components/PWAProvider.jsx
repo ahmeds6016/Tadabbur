@@ -81,7 +81,7 @@ export default function PWAProvider({ children }) {
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-xl">📖</span>
+                  
                   <p className="font-semibold text-white">Install Tafsir Simplified</p>
                 </div>
                 <p className="text-xs text-white/90 mt-1">

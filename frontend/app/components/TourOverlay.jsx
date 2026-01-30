@@ -290,7 +290,7 @@ export default function TourOverlay({
               </button>
             ) : (
               <button onClick={onComplete} className="tour-btn primary">
-                Get Started! 🚀
+                Get Started!
               </button>
             )}
           </div>

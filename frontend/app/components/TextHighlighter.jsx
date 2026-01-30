@@ -165,7 +165,7 @@ export default function TextHighlighter({ children, onHighlight, enabled = true 
               preventClearRef.current = true;
             }}
           >
-            <span style={{ fontSize: '1.1rem' }}>✨</span>
+            +
             <span>Reflect</span>
           </button>
         </div>

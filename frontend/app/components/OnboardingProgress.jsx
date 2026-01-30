@@ -2,12 +2,12 @@
 import { useState } from 'react';
 
 const milestones = [
-  { id: 'hasSeenWelcome', label: 'Welcome Tour', icon: '👋' },
-  { id: 'hasSearched', label: 'First Search', icon: '🔍' },
-  { id: 'hasUsedAnnotations', label: 'First Reflection', icon: '📝' },
-  { id: 'hasViewedSaved', label: 'Saved an Answer', icon: '⭐' },
-  { id: 'hasViewedHistory', label: 'Viewed History', icon: '📜' },
-  { id: 'hasSharedContent', label: 'Shared Content', icon: '🔗' }
+  { id: 'hasSeenWelcome', label: 'Welcome Tour', number: 1 },
+  { id: 'hasSearched', label: 'First Search', number: 2 },
+  { id: 'hasUsedAnnotations', label: 'First Reflection', number: 3 },
+  { id: 'hasViewedSaved', label: 'Saved an Answer', number: 4 },
+  { id: 'hasViewedHistory', label: 'Viewed History', number: 5 },
+  { id: 'hasSharedContent', label: 'Shared Content', number: 6 }
 ];
 
 export default function OnboardingProgress({ onboardingState, onResumeTour, onHide }) {
@@ -69,7 +69,7 @@ export default function OnboardingProgress({ onboardingState, onResumeTour, onHi
           }}
         >
           <div className="progress-title">
-            <span className="progress-icon">🎯</span>
+            <span className="progress-icon">•</span>
             <span className="progress-text">Getting Started</span>
             <span className="progress-count">{completedCount}/{milestones.length}</span>
           </div>
@@ -101,7 +101,7 @@ export default function OnboardingProgress({ onboardingState, onResumeTour, onHi
                   className={`milestone-item ${isCompleted ? 'completed' : ''}`}
                 >
                   <div className="milestone-icon">
-                    {isCompleted ? '✓' : milestone.icon}
+                    {isCompleted ? 'Done' : milestone.number}
                   </div>
                   <div className="milestone-content">
                     <span className="milestone-label">{milestone.label}</span>
@@ -139,7 +139,7 @@ export default function OnboardingProgress({ onboardingState, onResumeTour, onHi
           {showCelebration && (
             <div className="celebration">
               <div className="celebration-content">
-                <span className="celebration-emoji">🎉</span>
+                <span className="celebration-emoji">Complete</span>
                 <h3>Congratulations!</h3>
                 <p>You've completed the onboarding!</p>
               </div>

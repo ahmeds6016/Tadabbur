@@ -30,37 +30,30 @@ export const APP_CONSTANTS = {
 export const PERSONA_THEMES = {
   new_revert: {
     gradient: 'linear-gradient(135deg, #10B981 0%, #34D399 100%)',
-    icon: '🌱',
     color: '#10B981'
   },
   revert: {
     gradient: 'linear-gradient(135deg, #059669 0%, #10B981 100%)',
-    icon: '📗',
     color: '#059669'
   },
   seeker: {
     gradient: 'linear-gradient(135deg, #8B5CF6 0%, #A78BFA 100%)',
-    icon: '🔍',
     color: '#8B5CF6'
   },
   practicing_muslim: {
     gradient: 'linear-gradient(135deg, #0D9488 0%, #14B8A6 100%)',
-    icon: '🕌',
     color: '#0D9488'
   },
   teacher: {
     gradient: 'linear-gradient(135deg, #D97706 0%, #F59E0B 100%)',
-    icon: '👨‍🏫',
     color: '#D97706'
   },
   scholar: {
     gradient: 'linear-gradient(135deg, #1E3A5F 0%, #3B5A7F 100%)',
-    icon: '📚',
     color: '#1E3A5F'
   },
   student: {
     gradient: 'linear-gradient(135deg, #3B82F6 0%, #60A5FA 100%)',
-    icon: '🎓',
     color: '#3B82F6'
   }
 };
@@ -70,6 +63,6 @@ export const getPersonaTheme = (persona) => {
 };
 
 export const getPersonaIcon = (persona) => {
-  const theme = getPersonaTheme(persona);
-  return theme.icon;
+  // Icons removed - return empty string for compatibility
+  return '';
 };

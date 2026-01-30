@@ -7,13 +7,13 @@ import { Flame, Trophy, Calendar, BookOpen, Clock, TrendingUp, Lightbulb, HelpCi
 import { auth } from '../lib/firebase';
 import { BACKEND_URL } from '../lib/config';
 
-// Core 5 reflection types with Lucide icons (reduced from 17 emoji types)
+// Core 5 reflection types with Lucide icons
 const ANNOTATION_TYPE_CONFIG = {
-  insight: { iconComponent: Lightbulb, icon: '💡', label: 'Insight', color: '#0D9488' },
-  question: { iconComponent: HelpCircle, icon: '❓', label: 'Question', color: '#8B5CF6' },
-  application: { iconComponent: CheckSquare, icon: '✅', label: 'Application', color: '#059669' },
-  dua: { iconComponent: Heart, icon: '🤲', label: 'Dua/Prayer', color: '#10B981' },
-  connection: { iconComponent: Link2, icon: '🔗', label: 'Connection', color: '#D97706' }
+  insight: { iconComponent: Lightbulb, label: 'Insight', color: '#0D9488' },
+  question: { iconComponent: HelpCircle, label: 'Question', color: '#8B5CF6' },
+  application: { iconComponent: CheckSquare, label: 'Application', color: '#059669' },
+  dua: { iconComponent: Heart, label: 'Dua/Prayer', color: '#10B981' },
+  connection: { iconComponent: Link2, label: 'Connection', color: '#D97706' }
 };
 
 // Legacy type mapping for backward compatibility (map old 17 types to new 5)
@@ -48,7 +48,6 @@ const getTypeConfig = (type) => {
   // For unknown/custom types, use default styling
   return {
     iconComponent: BookOpen,
-    icon: '✨',
     label: type ? type.charAt(0).toUpperCase() + type.slice(1).replace(/_/g, ' ') : 'Custom',
     color: '#6B7280'
   };
@@ -696,7 +695,7 @@ export default function MyReflectionsPage() {
     <div className="container">
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-          <h1>📝 My Reflections</h1>
+          <h1>My Reflections</h1>
           <Link href="/">
             <button>← Back to Search</button>
           </Link>
@@ -731,7 +730,7 @@ export default function MyReflectionsPage() {
                 cursor: 'pointer'
               }}
             >
-              🔍 Search
+              Search
             </button>
           </div>
         </div>
@@ -814,7 +813,7 @@ export default function MyReflectionsPage() {
                 cursor: 'pointer'
               }}
             >
-              ✕ Clear Filters
+              Clear Filters
             </button>
           )}
         </div>
@@ -869,7 +868,7 @@ export default function MyReflectionsPage() {
               gap: '8px'
             }}
           >
-            📊 {showAnalytics ? 'Hide' : 'Show'} Analytics Dashboard
+            {showAnalytics ? 'Hide' : 'Show'} Analytics Dashboard
           </button>
 
           <button
@@ -888,7 +887,7 @@ export default function MyReflectionsPage() {
               gap: '8px'
             }}
           >
-            📅 {showCalendar ? 'Hide' : 'Show'} Reflection Calendar
+            {showCalendar ? 'Hide' : 'Show'} Reflection Calendar
           </button>
         </div>
 
@@ -911,7 +910,7 @@ export default function MyReflectionsPage() {
               alignItems: 'center',
               gap: '12px'
             }}>
-              📊 Your Reflection Journey Analytics
+              Your Reflection Journey Analytics
             </h2>
 
             {(() => {
@@ -1085,7 +1084,7 @@ export default function MyReflectionsPage() {
                         marginBottom: '16px',
                         color: 'var(--primary-teal)'
                       }}>
-                        🏷️ Top Tags
+                        Top Tags
                       </h3>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                         {Object.entries(stats.topTags).map(([tag, count]) => (
@@ -1131,7 +1130,7 @@ export default function MyReflectionsPage() {
                       marginBottom: '16px',
                       color: 'var(--primary-teal)'
                     }}>
-                      📅 Most Active Days
+                      Most Active Days
                     </h3>
                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                       {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => {
@@ -1252,7 +1251,7 @@ export default function MyReflectionsPage() {
               alignItems: 'center',
               gap: '12px'
             }}>
-              📅 Reflection Calendar
+              Reflection Calendar
             </h2>
 
             <ReflectionCalendar annotations={annotations} />
@@ -1321,7 +1320,7 @@ export default function MyReflectionsPage() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                        <span style={{ fontSize: '1.4rem' }}>{typeConfig.icon}</span>
+                        {typeConfig.iconComponent && <typeConfig.iconComponent size={20} style={{ color: typeConfig.color }} />}
                         <span
                           style={{
                             background: typeConfig.color,
@@ -1340,14 +1339,14 @@ export default function MyReflectionsPage() {
                       {/* Context based on reflection type */}
                       {annotation.reflection_type === 'verse' && annotation.verseRef && (
                         <div style={{ fontWeight: '700', fontSize: '1.1rem', color: 'var(--primary-teal)' }}>
-                          📖 Verse {annotation.verseRef}
+                          Verse {annotation.verseRef}
                         </div>
                       )}
 
                       {annotation.reflection_type === 'section' && (
                         <div>
                           <div style={{ fontWeight: '700', fontSize: '1.1rem', color: '#8b5cf6', marginBottom: '4px' }}>
-                            📑 Section: {annotation.section_name}
+                            Section: {annotation.section_name}
                           </div>
                           {annotation.query_context && (
                             <div style={{ fontSize: '0.9rem', color: '#666', fontStyle: 'italic' }}>
@@ -1360,7 +1359,7 @@ export default function MyReflectionsPage() {
                       {annotation.reflection_type === 'general' && (
                         <div>
                           <div style={{ fontWeight: '700', fontSize: '1.1rem', color: '#10b981', marginBottom: '4px' }}>
-                            🌟 General Reflection
+                            General Reflection
                           </div>
                           {annotation.query_context && (
                             <div style={{ fontSize: '0.9rem', color: '#666', fontStyle: 'italic' }}>
@@ -1373,7 +1372,7 @@ export default function MyReflectionsPage() {
                       {annotation.reflection_type === 'highlight' && (
                         <div>
                           <div style={{ fontWeight: '700', fontSize: '1.1rem', color: '#f59e0b', marginBottom: '4px' }}>
-                            ✨ Highlighted Text
+                            Highlighted Text
                           </div>
                           {annotation.highlighted_text && (
                             <div style={{

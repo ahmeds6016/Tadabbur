@@ -37,7 +37,7 @@ export default function DesktopNav({ user, stats = {}, collapsed = false, onTogg
     },
     {
       id: 'notes',
-      label: 'Notes',
+      label: 'Reflections',
       icon: FileText,
       href: '/annotations',
       shortcut: 'Alt+N',

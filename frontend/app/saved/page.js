@@ -147,7 +147,7 @@ export default function SavedSearchesPage() {
     <div className="container">
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-          <h1>⭐ Saved Answers</h1>
+          <h1>Saved Answers</h1>
           <Link href="/">
             <button>← Back to Search</button>
           </Link>
@@ -195,7 +195,7 @@ export default function SavedSearchesPage() {
 
         {saved.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px 20px', color: '#999' }}>
-            <p style={{ fontSize: '3rem', marginBottom: '16px' }}>⭐</p>
+            <p style={{ fontSize: '1.5rem', marginBottom: '16px', color: 'var(--primary-teal)' }}>No saved items</p>
             <p style={{ fontSize: '1.2rem' }}>No saved answers yet</p>
             <p style={{ marginTop: '8px' }}>
               {selectedFolder
@@ -251,7 +251,7 @@ export default function SavedSearchesPage() {
                       cursor: 'pointer'
                     }}
                   >
-                    🗑️ Delete
+                    Delete
                   </button>
                 </div>
 
@@ -358,7 +358,7 @@ export default function SavedSearchesPage() {
                       </div>
                     ) : (
                       <div style={{ padding: '16px', background: '#fff3cd', borderRadius: '12px', color: '#856404' }}>
-                        ⚠️ Full response data not available for this saved answer. Only the snippet was saved.
+                        Full response data not available for this saved answer. Only the snippet was saved.
                       </div>
                     )}
                   </div>

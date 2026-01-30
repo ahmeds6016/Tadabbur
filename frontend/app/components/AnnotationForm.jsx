@@ -3,11 +3,11 @@ import { useState, useEffect, useRef } from 'react';
 import { BACKEND_URL } from '../lib/config';
 
 const ANNOTATION_TYPES = [
-  { value: 'personal_insight', label: '💡 Personal Insight', icon: '💡' },
-  { value: 'question', label: '❓ Question', icon: '❓' },
-  { value: 'application', label: '✅ Application', icon: '✅' },
-  { value: 'memory', label: '💭 Memory', icon: '💭' },
-  { value: 'connection', label: '🔗 Connection', icon: '🔗' }
+  { value: 'personal_insight', label: 'Personal Insight' },
+  { value: 'question', label: 'Question' },
+  { value: 'application', label: 'Application' },
+  { value: 'memory', label: 'Memory' },
+  { value: 'connection', label: 'Connection' }
 ];
 
 /**
@@ -206,7 +206,7 @@ export default function AnnotationForm({
         <div className="form-group">
           <label>Type:</label>
           <div className="type-buttons">
-            {ANNOTATION_TYPES.map(({ value, label, icon }) => (
+            {ANNOTATION_TYPES.map(({ value, label }) => (
               <button
                 key={value}
                 type="button"
@@ -214,8 +214,7 @@ export default function AnnotationForm({
                 onClick={() => setType(value)}
                 title={label}
               >
-                <span className="type-icon">{icon}</span>
-                <span className="type-label">{label.substring(label.indexOf(' ') + 1)}</span>
+                <span className="type-label">{label}</span>
               </button>
             ))}
           </div>

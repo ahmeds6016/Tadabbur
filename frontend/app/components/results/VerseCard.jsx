@@ -97,7 +97,7 @@ export function VerseCard({
 
         {annotationCount > 0 && (
           <div className={styles.annotationIndicator}>
-            <span>Notes</span>
+            <span>Reflections</span>
             <span className={styles.annotationCount}>
               {annotationCount}
             </span>

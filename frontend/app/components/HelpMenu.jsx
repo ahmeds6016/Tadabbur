@@ -9,19 +9,16 @@ const helpContent = {
         title: 'How to Search',
         items: [
           {
-            icon: '📖',
             label: 'Search by Verse',
             description: 'Enter verse references like "2:255" or "Al-Baqarah 255"',
             tour: 'search'
           },
           {
-            icon: '🔍',
             label: 'Search by Topic',
             description: 'Ask questions like "What does the Quran say about patience?"',
             tour: 'search'
           },
           {
-            icon: '📚',
             label: 'Deep Tafsir Commentary',
             description: 'Classical scholarly insights with historical and linguistic analysis',
             tour: 'search'
@@ -32,19 +29,16 @@ const helpContent = {
         title: 'Features',
         items: [
           {
-            icon: '📝',
             label: 'Add Reflections',
             description: 'Select any text to add personal notes',
             tour: 'annotations'
           },
           {
-            icon: '⭐',
             label: 'Save Answers',
             description: 'Bookmark important responses for later',
             tour: 'save'
           },
           {
-            icon: '🔗',
             label: 'Share Insights',
             description: 'Generate links to share with others',
             tour: 'share'
@@ -57,7 +51,7 @@ const helpContent = {
       { keys: ['Esc'], action: 'Clear search results' },
       { keys: ['Alt', 'H'], action: 'Go to Home' },
       { keys: ['Alt', 'S'], action: 'Go to Saved' },
-      { keys: ['Alt', 'N'], action: 'Go to Notes' },
+      { keys: ['Alt', 'N'], action: 'Go to Reflections' },
       { keys: ['Alt', 'B'], action: 'Toggle sidebar' }
     ]
   },
@@ -68,25 +62,21 @@ const helpContent = {
         title: 'Result Sections',
         items: [
           {
-            icon: '📜',
             label: 'Verses',
             description: 'Quranic verses with Arabic text and translation',
             tour: 'verses'
           },
           {
-            icon: '📚',
             label: 'Tafsir',
             description: 'Classical commentary from multiple scholars',
             tour: 'tafsir'
           },
           {
-            icon: '💡',
             label: 'Lessons',
             description: 'Practical applications for daily life',
             tour: 'lessons'
           },
           {
-            icon: '📋',
             label: 'Summary',
             description: 'Key takeaways from the response',
             tour: 'summary'
@@ -97,19 +87,16 @@ const helpContent = {
         title: 'Actions',
         items: [
           {
-            icon: '✏️',
             label: 'Annotate Text',
             description: 'Select any text to add your thoughts',
             tour: 'annotations'
           },
           {
-            icon: '💾',
             label: 'Save Answer',
             description: 'Keep this response for future reference',
             tour: 'save'
           },
           {
-            icon: '📤',
             label: 'Export',
             description: 'Download as PDF or copy as text',
             tour: 'export'
@@ -129,31 +116,28 @@ const helpContent = {
       {
         title: 'Annotation Types',
         items: [
-          { icon: '💡', label: 'Insight', description: 'Personal understanding or revelation' },
-          { icon: '❓', label: 'Question', description: 'Something to explore further' },
-          { icon: '🎯', label: 'Application', description: 'How to apply in daily life' },
-          { icon: '🤲', label: "Du'a", description: 'Personal supplication or prayer' },
-          { icon: '🔗', label: 'Connection', description: 'Link to other verses or concepts' },
-          { icon: '📝', label: 'Memorization', description: 'Verses to memorize' }
+          { label: 'Insight', description: 'Personal understanding or revelation' },
+          { label: 'Question', description: 'Something to explore further' },
+          { label: 'Application', description: 'How to apply in daily life' },
+          { label: "Du'a", description: 'Personal supplication or prayer' },
+          { label: 'Connection', description: 'Link to other verses or concepts' },
+          { label: 'Memorization', description: 'Verses to memorize' }
         ]
       },
       {
         title: 'Organization',
         items: [
           {
-            icon: '🏷️',
             label: 'Use Tags',
             description: 'Add tags to categorize your notes',
             tour: 'tags'
           },
           {
-            icon: '📅',
             label: 'Calendar View',
             description: 'See your reflection journey over time',
             tour: 'calendar'
           },
           {
-            icon: '🔍',
             label: 'Search Notes',
             description: 'Find specific reflections quickly',
             tour: 'search-notes'
@@ -282,7 +266,7 @@ export default function HelpMenu({ currentPage = 'home', isOpen, onClose, onStar
                   className="start-tour-btn"
                   onClick={() => handleStartTour('welcome')}
                 >
-                  🎯 Take a Quick Tour
+                  Take a Quick Tour
                 </button>
               </div>
             </>
@@ -643,7 +627,7 @@ export function FloatingHelpButton({ onClick }) {
       aria-label="Open help menu"
       title="Need help? (F1)"
     >
-      {isHovered ? '?' : '💡'}
+      ?
 
       <style jsx>{`
         .floating-help-button {

@@ -121,11 +121,11 @@ export default function SharedPage() {
                 {query}
               </p>
               <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#666' }}>
-                📖 Deep Tafsir Commentary
+                Deep Tafsir Commentary
               </p>
             </div>
             <div style={{ fontSize: '0.85rem', color: '#666' }}>
-              👁️ {view_count} {view_count === 1 ? 'view' : 'views'}
+              {view_count} {view_count === 1 ? 'view' : 'views'}
             </div>
           </div>
         </div>
@@ -152,7 +152,7 @@ export default function SharedPage() {
               display: 'inline-block'
             }}
           >
-            🏠 Go to Home
+            Go to Home
           </Link>
         </div>
 

@@ -102,7 +102,7 @@ export default function QueryHistoryPage() {
     <div className="container">
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-          <h1>🕒 Query History</h1>
+          <h1>Query History</h1>
           <Link href="/">
             <button>← Back to Search</button>
           </Link>
@@ -114,7 +114,7 @@ export default function QueryHistoryPage() {
 
         {history.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px 20px', color: '#999' }}>
-            <p style={{ fontSize: '3rem', marginBottom: '16px' }}>📝</p>
+            <p style={{ fontSize: '1.5rem', marginBottom: '16px', color: 'var(--primary-teal)' }}>No history yet</p>
             <p style={{ fontSize: '1.2rem' }}>No queries yet</p>
             <p style={{ marginTop: '8px' }}>Your tafsir search history will appear here as you use the app.</p>
           </div>
@@ -140,7 +140,7 @@ export default function QueryHistoryPage() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: '700', fontSize: '1.1rem', marginBottom: '8px', color: 'var(--primary-teal)' }}>
-                        📖 {item.query}
+                        {item.query}
                       </div>
                       <div style={{ fontSize: '0.85rem', color: '#999' }}>
                         {formatTimestamp(item.timestamp)}
@@ -149,11 +149,11 @@ export default function QueryHistoryPage() {
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
                       {item.hasResult ? (
                         <span style={{ background: 'var(--success-color)', color: 'white', padding: '4px 12px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: '600' }}>
-                          ✓ Success
+                          Success
                         </span>
                       ) : (
                         <span style={{ background: 'var(--error-color)', color: 'white', padding: '4px 12px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: '600' }}>
-                          ✗ Failed
+                          Failed
                         </span>
                       )}
                       <span style={{ fontSize: '0.75rem', color: 'var(--primary-teal)', fontWeight: '600' }}>

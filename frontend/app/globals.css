@@ -326,7 +326,7 @@ a {
 
 /* Decorative divider */
 .suggestions-grid::before {
-  content: '◈◈◈';
+  content: '---';
   position: absolute;
   top: -12px;
   left: 50%;
@@ -752,7 +752,7 @@ button:hover:not(:disabled) {
 }
 
 .result-section h2::before {
-  content: '◈';
+  content: '';
   margin-right: 12px;
   color: var(--gold-text); /* WCAG AA compliant */
   font-size: 1.2rem;
@@ -808,7 +808,7 @@ button:hover:not(:disabled) {
 }
 
 .verse-ref::before {
-  content: '❖';
+  content: '';
   margin-right: 8px;
   color: var(--gold-text); /* WCAG AA compliant */
 }
@@ -910,7 +910,7 @@ button:hover:not(:disabled) {
 
 /* Icon transition */
 .tafsir-details summary::before {
-  content: '◆';
+  content: '';
   margin-right: 12px;
   color: var(--gold-text); /* WCAG AA compliant */
   transition: transform 0.3s ease;
@@ -1000,7 +1000,7 @@ button:hover:not(:disabled) {
 }
 
 .lesson-item::before {
-  content: '✓';
+  content: '';
   position: absolute;
   left: 16px;
   top: 50%;
@@ -1063,7 +1063,7 @@ button:hover:not(:disabled) {
 }
 
 .export-section h3::before {
-  content: '⬇';
+  content: '';
   margin-right: 12px;
   color: var(--gold);
 }
@@ -1246,6 +1246,32 @@ button:hover:not(:disabled) {
     font-size: 0.9rem;
   }
 
+  /* Mobile user info - stacked layout for PWA */
+  .user-info {
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 16px;
+    width: 100%;
+    text-align: center;
+  }
+
+  .user-info > span {
+    font-size: 0.8rem;
+    opacity: 0.8;
+  }
+
+  .persona-badge {
+    font-size: 0.9rem !important;
+    padding: 6px 12px !important;
+    background: var(--cream) !important;
+    border-radius: 8px !important;
+  }
+
+  .logout-button {
+    padding: 8px 16px !important;
+    font-size: 0.8rem !important;
+  }
+
   /* ENHANCED: Better mobile form styling */
   .tafsir-form {
     flex-direction: column;
@@ -1373,20 +1399,52 @@ button:hover:not(:disabled) {
 
 @media (max-width: 480px) {
   .container {
-    padding: 12px; /* Maintain consistent side padding */
+    padding: 8px; /* Tighter padding on small screens */
   }
 
   .main-app {
-    padding: 12px; /* Consistent padding */
+    padding: 8px; /* Tighter padding */
   }
 
   .header {
-    padding: 16px 12px;
+    padding: 12px 10px;
+    gap: 10px;
+    margin-bottom: 12px;
   }
 
   .header h1 {
-    font-size: 1.75rem;
+    font-size: 1.5rem;
     line-height: 1.2;
+  }
+
+  .header h1::after {
+    font-size: 0.8rem;
+    margin-top: 4px;
+  }
+
+  /* Even more compact user info on small screens */
+  .user-info {
+    padding: 10px 12px;
+    gap: 6px;
+    border-radius: 12px;
+  }
+
+  .user-info::before {
+    font-size: 1.2rem;
+  }
+
+  .user-info > span {
+    font-size: 0.75rem;
+  }
+
+  .persona-badge {
+    font-size: 0.85rem !important;
+    padding: 4px 10px !important;
+  }
+
+  .logout-button {
+    padding: 6px 12px !important;
+    font-size: 0.75rem !important;
   }
 
   .card {
@@ -1449,7 +1507,7 @@ button:hover:not(:disabled) {
 
   /* Make the decorative diamond inline on small screens */
   .result-section h2::before {
-    content: '◈';
+    content: '';
     position: static !important;
     display: inline-block;
     margin-right: 8px;
@@ -1500,25 +1558,72 @@ button:hover:not(:disabled) {
 }
 
 @media (max-width: 360px) {
+  .container {
+    padding: 6px;
+  }
+
+  .main-app {
+    padding: 6px;
+  }
+
+  .header {
+    padding: 10px 8px;
+    gap: 8px;
+    margin-bottom: 10px;
+    border-radius: 12px;
+  }
+
   .header h1 {
-    font-size: 1.6rem;
+    font-size: 1.3rem;
+  }
+
+  .header h1::after {
+    font-size: 0.7rem;
+  }
+
+  .user-info {
+    padding: 8px 10px;
+    gap: 4px;
+  }
+
+  .user-info::before {
+    font-size: 1rem;
+  }
+
+  .persona-badge {
+    font-size: 0.8rem !important;
+    padding: 4px 8px !important;
+  }
+
+  .logout-button {
+    padding: 5px 10px !important;
+    font-size: 0.7rem !important;
   }
 
   .tafsir-form {
-    padding: 20px 12px 14px;
+    padding: 16px 10px 12px;
+    border-radius: 12px;
   }
 
   .tafsir-form input,
   .tafsir-form select {
-    padding: 12px 14px;
+    padding: 10px 12px;
+    font-size: 14px;
   }
 
   .result-section {
-    padding: 14px 12px;
+    padding: 12px 10px;
+    border-radius: 12px;
   }
 
   .verse-card {
+    padding: 10px 8px;
+    border-radius: 10px;
+  }
+
+  .card {
     padding: 12px 10px;
+    border-radius: 12px;
   }
 }
 
@@ -1593,17 +1698,32 @@ summary:focus-visible {
     padding-top: env(safe-area-inset-top);
     padding-left: env(safe-area-inset-left);
     padding-right: env(safe-area-inset-right);
-    padding-bottom: env(safe-area-inset-bottom);
   }
 
   /* Ensure header doesn't go under notch */
   .header {
-    padding-top: calc(24px + env(safe-area-inset-top));
+    padding-top: calc(12px + env(safe-area-inset-top));
+    margin-top: 0;
   }
 
-  /* Ensure bottom content isn't hidden by home bar */
+  /* Ensure bottom content isn't hidden by home bar - reduce padding since we have bottom nav */
   .container {
-    padding-bottom: calc(24px + env(safe-area-inset-bottom));
+    padding-bottom: 8px;
+  }
+
+  /* More compact header in PWA */
+  .header h1 {
+    font-size: 1.5rem;
+  }
+
+  .header h1::after {
+    font-size: 0.75rem;
+    margin-top: 4px;
+  }
+
+  /* Compact card padding in PWA */
+  .card.main-app {
+    padding: 12px;
   }
 }
 
