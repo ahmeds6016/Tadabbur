@@ -359,10 +359,10 @@ export default function AnnotationForm({
           color: #374151;
         }
 
-        /* Type Buttons */
+        /* Type Buttons - All visible */
         .type-buttons {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+          display: flex;
+          flex-wrap: wrap;
           gap: 8px;
         }
 
@@ -370,31 +370,27 @@ export default function AnnotationForm({
           display: flex;
           align-items: center;
           gap: 6px;
-          padding: 8px 12px;
-          border: 2px solid #e5e7eb;
+          padding: 8px 14px;
+          border: 2px solid var(--primary-teal, #0D9488);
           border-radius: 8px;
-          background: white;
+          background: var(--cream, #faf6f0);
+          color: var(--primary-teal, #0D9488);
           cursor: pointer;
           transition: all 0.2s;
+          font-weight: 500;
         }
 
         .type-button:hover {
-          border-color: #0D9488;
-          background: #f0fdfa;
+          background: rgba(13, 148, 136, 0.1);
         }
 
         .type-button.active {
-          border-color: #0D9488;
-          background: #0D9488;
+          background: var(--primary-teal, #0D9488);
           color: white;
         }
 
-        .type-icon {
-          font-size: 1.25rem;
-        }
-
         .type-label {
-          font-size: 0.875rem;
+          font-size: 0.8rem;
         }
 
         /* Content Textarea */

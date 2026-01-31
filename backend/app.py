@@ -149,7 +149,8 @@ analytics_lock = threading.Lock()
 # NEW: PERSONA SYSTEM FOR ADAPTIVE RESPONSES
 # ============================================================================
 
-# Comprehensive persona system (7 personas) - UPDATED: removed response_length
+# Comprehensive persona system (7 personas) - UPDATED: standardized format_style
+# All personas now use academic_prose format for consistent parsing
 PERSONAS = {
     "new_revert": {
         "name": "New Revert",
@@ -157,7 +158,7 @@ PERSONAS = {
         "vocabulary": "simple, everyday",
         "include_hadith": False,
         "scholarly_debates": False,
-        "format_style": "bullets_emojis"  # Bullets + emojis
+        "format_style": "academic_prose"
     },
     "revert": {
         "name": "Revert Muslim (1-5 years)",
@@ -165,7 +166,7 @@ PERSONAS = {
         "vocabulary": "moderate",
         "include_hadith": True,
         "scholarly_debates": False,
-        "format_style": "bullets_emojis"
+        "format_style": "academic_prose"
     },
     "seeker": {
         "name": "Spiritual Seeker",
@@ -173,7 +174,7 @@ PERSONAS = {
         "vocabulary": "accessible",
         "include_hadith": True,
         "scholarly_debates": False,
-        "format_style": "bullets_emojis"
+        "format_style": "academic_prose"
     },
     "practicing_muslim": {
         "name": "Practicing Muslim",
@@ -181,7 +182,7 @@ PERSONAS = {
         "vocabulary": "moderate",
         "include_hadith": True,
         "scholarly_debates": True,
-        "format_style": "balanced"  # Mix of paragraphs + bullets
+        "format_style": "academic_prose"
     },
     "teacher": {
         "name": "Teacher/Imam/Educator",
@@ -189,7 +190,7 @@ PERSONAS = {
         "vocabulary": "accessible",
         "include_hadith": True,
         "scholarly_debates": True,
-        "format_style": "balanced"
+        "format_style": "academic_prose"
     },
     "scholar": {
         "name": "Scholar/Advanced Student",
@@ -197,7 +198,7 @@ PERSONAS = {
         "vocabulary": "advanced, technical",
         "include_hadith": True,
         "scholarly_debates": True,
-        "format_style": "academic_prose"  # Dense prose, no bullets
+        "format_style": "academic_prose"
     },
     "student": {
         "name": "Islamic Studies Student",
@@ -4452,75 +4453,36 @@ IMPORTANT: Even if more verses are provided in the source material, you MUST:
 4. For broad queries, focus on the most foundational or representative verses
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-RESPONSE FORMAT - PERSONA-ADAPTIVE CONTENT STRUCTURE
+RESPONSE FORMAT - STANDARDIZED STRUCTURE (ALL PERSONAS)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-CRITICAL: Return valid JSON, but ADAPT THE CONTENT FORMAT based on user persona:
+CRITICAL: Return valid JSON with CONSISTENT formatting across ALL personas.
 
-📱 FOR BEGINNER PERSONAS (new_revert, revert, seeker) - Format: {format_style}
-   Use VISUAL, SCANNABLE format with:
-   • Short bullet points (use • character for bullets)
-   • Clear section headers with MINIMAL emoji use (ONE emoji in main headers ONLY, ZERO in body text)
-   • Short sentences (10-15 words max)
-   • Encouraging language (avoid excessive emoji decoration)
-   • Visual breaks between concepts
+UNIVERSAL FORMAT RULES (applies to ALL personas):
+- Use SHORT PARAGRAPH format (2-4 sentences per paragraph)
+- Use **Bolded Sub-Headers** before each paragraph for scannability
+- NO bullet points (no •, -, or numbered lists)
+- NO emojis anywhere in the response
+- Vocabulary adapts to persona level, but structure remains consistent
+- Scholarly citations integrated naturally where appropriate
 
-   Example for beginner (UPDATED - minimal emojis):
-   "🌟 **Key Point: Allah Never Sleeps**
+STANDARD EXAMPLE (all personas follow this structure):
+"**Theological Significance**
+Ayat al-Kursi (2:255) represents a comprehensive theological statement regarding divine attributes. This verse contains a concentrated exposition of tawhid (divine oneness) in the Quran.
 
-   This verse (Ayat al-Kursi) teaches us that:
-   • Allah is always awake and aware
-   • He never gets tired or needs rest
-   • He protects us 24/7
+**Divine Attributes**
+The verse presents both positive attributes (al-Hayy, al-Qayyum) and negative attributes (no slumber, no fatigue) to establish Allah's absolute transcendence. It moves systematically from Allah's essence to His knowledge to His power.
 
-   **What This Means for You:**
-   When you feel alone or scared, remember Allah is always there watching over you.
+**Practical Application**
+The Prophet (peace be upon him) taught that reciting this verse provides spiritual protection. Many Muslims incorporate it into their daily remembrance, especially before sleep.
 
-   **Quick Tip:**
-   Many Muslims say this verse before sleeping for protection. You can too!"
+**Key Insight**
+This verse reminds us that Allah's care never ceases. When we feel alone, we can find comfort in knowing He is always aware and present."
 
-📚 FOR INTERMEDIATE PERSONAS (practicing_muslim, teacher) - Format: {format_style}
-   Use BALANCED format with:
-   • Mix of short paragraphs (3-5 sentences) and bullet points
-   • Clear subheadings (use **Bold** for headers)
-   • NO emojis
-   • Some detail but not overwhelming
-   • Practical focus
-
-   Example for intermediate:
-   "**Overview of Ayat al-Kursi**
-
-   This verse is considered one of the greatest in the Quran. It describes Allah's attributes of absolute power and perfect knowledge.
-
-   **Key Themes:**
-   • Divine sovereignty - Allah's throne extends over all creation
-   • Perfect attributes - Al-Hayy (Ever-Living) and Al-Qayyum (Self-Sustaining)
-   • Effortless preservation - Maintaining the universe requires no effort from Allah
-
-   **Practical Application:**
-   The Prophet ﷺ taught that reciting this verse provides spiritual protection. Many Muslims incorporate it into their daily dhikr, especially before sleep."
-
-🎓 FOR ADVANCED/SCHOLAR PERSONAS (scholar, student) - Format: {format_style}
-   Use SHORT PARAGRAPH format with:
-   • Short, focused paragraphs (2-4 sentences each)
-   • **Bolded sub-headers** before each paragraph for scannability
-   • Technical terminology appropriate for advanced students
-   • Scholarly citations integrated naturally
-   • Debates and nuances discussed
-   • NO bullet points or emojis
-
-   Example for scholar (UPDATED - short paragraphs with sub-headers):
-   "**Theological Significance**
-   Ayat al-Kursi (2:255) represents a comprehensive theological statement regarding divine attributes. Classical exegetes have identified this verse as containing the most concentrated exposition of tawhid in the Quran.
-
-   **Ibn Kathir's Interpretation**
-   Ibn Kathir (d. 774 AH) notes in his tafsir that the verse systematically presents both positive attributes (al-Hayy, al-Qayyum) and negative attributes (no slumber, no fatigue) to establish Allah's absolute transcendence. He emphasizes the pedagogical structure of moving from Allah's essence to His knowledge to His power.
-
-   **Al-Qurtubi's Jurisprudential Perspective**
-   Al-Qurtubi approaches the verse differently, extracting legal implications from each phrase. He discusses the controversy regarding the nature of the Kursi, presenting three interpretive schools: those who equate it with knowledge, those who see it as a physical entity beneath the Throne, and those who consider it metaphorical.
-
-   **Scholarly Debates**
-   The controversy regarding the nature of the Kursi has been extensively discussed by medieval scholars. The Ash'ari school tends toward metaphorical interpretation, while the Hanbali school maintains a more literal reading while affirming tanzih (transcendence)."
+VOCABULARY ADAPTATION BY PERSONA:
+- Beginner personas (new_revert, revert, seeker): Use simple, everyday language while maintaining paragraph structure
+- Intermediate personas (practicing_muslim, teacher): Use moderate vocabulary with some Arabic terms explained
+- Advanced personas (scholar, student): Use technical terminology and scholarly citations
 
 JSON Structure (verse text ALREADY provided by backend - you focus on tafsir):
 
@@ -4551,11 +4513,11 @@ ONLY use the source material provided above. DO NOT generate additional explanat
     "tafsir_explanations": [
         {{
             "source": "al-Qurtubi",
-            "explanation": "FORMAT BASED ON PERSONA: Bullets + MINIMAL emojis for beginners ({format_style}), balanced with NO emojis for intermediate, short paragraphs with **bolded sub-headers** for scholars. Use **Bold Header** format for headers. Fix all grammar, improve clarity, preserve accuracy. If verse beyond Surah 4:22, state: 'Al-Qurtubi's tafsir is not available for this verse.'"
+            "explanation": "Use short paragraphs (2-4 sentences) with **bolded sub-headers**. NO bullets, NO emojis. Fix all grammar, improve clarity, preserve accuracy. If verse beyond Surah 4:22, state: 'Al-Qurtubi's tafsir is not available for this verse.'"
         }},
         {{
             "source": "Ibn Kathir",
-            "explanation": "FORMAT BASED ON PERSONA: Bullets + MINIMAL emojis for beginners ({format_style}), balanced with NO emojis for intermediate, short paragraphs with **bolded sub-headers** for scholars. Use **Bold Header** format for headers. Fix all grammar, improve clarity, preserve accuracy."
+            "explanation": "Use short paragraphs (2-4 sentences) with **bolded sub-headers**. NO bullets, NO emojis. Fix all grammar, improve clarity, preserve accuracy."
         }}
     ],
 
@@ -4595,10 +4557,10 @@ ONLY use the source material provided above. DO NOT generate additional explanat
     "summary": "2-3 sentences directly answering the query"
 }}
 
-FORMATTING DECISION:
-• If persona = new_revert, revert, or seeker → Use bullets (•), ONE emoji in main headers ONLY, short sentences
-• If persona = practicing_muslim or teacher → Use balanced: **bold headers**, short paragraphs + some bullets, NO emojis
-• If persona = scholar or student → Use short paragraphs (2-4 sentences) with **bolded sub-headers**, NO bullets, NO emojis
+FORMATTING RULES (ALL PERSONAS):
+- Use short paragraphs (2-4 sentences each) with **bolded sub-headers**
+- NO bullet points, NO numbered lists, NO emojis
+- Vocabulary complexity adapts to persona, structure stays consistent
 
 IMPORTANT: Always use **Bold Header** format for sub-headers (e.g., **Divine Will and Human Diversity**)
 
@@ -4607,7 +4569,7 @@ CRITICAL REMINDERS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 1. **ENFORCE VERSE LIMITS** - {persona_name} gets MAXIMUM {PERSONA_VERSE_LIMITS.get(persona_name, 8)} verses. Select only the MOST relevant ones.
-2. **ADAPT FORMAT TO PERSONA** - Beginners get bullets + MINIMAL emojis, scholars get short paragraphs with sub-headers
+2. **CONSISTENT FORMAT** - ALL personas use short paragraphs with **bolded sub-headers**. NO bullets, NO emojis.
 3. **You are an EDITOR, not an author** - Polish what's there, don't create new interpretations
 4. **PRESERVE ACCURACY** - Never change meanings, attributions, or theological positions
 5. **ENHANCE CLARITY** - Fix grammar, improve structure, make readable
@@ -4619,7 +4581,7 @@ CRITICAL REMINDERS
 11. **MATCH LEARNING GOAL** - {goal_instruction}
 
 Current persona: **{persona_name}** ({knowledge_level} level)
-Apply formatting rules for: {'BEGINNER (bullets + MINIMAL emojis)' if format_style == 'bullets_emojis' else 'INTERMEDIATE (balanced, NO emojis)' if format_style == 'balanced' else 'SCHOLAR (short paragraphs with sub-headers, NO bullets)'}
+Apply formatting: Short paragraphs with **bolded sub-headers**. NO bullets. NO emojis. Vocabulary adapted to {persona_name} level.
 
 Begin your persona-adapted, clarity-enhanced response now.
 """

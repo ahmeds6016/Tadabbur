@@ -169,19 +169,12 @@ export default function TabNavigation({
 
         .tab-headers {
           display: flex;
-          overflow-x: auto;
-          scrollbar-width: none;
-          -webkit-overflow-scrolling: touch;
-        }
-
-        .tab-headers::-webkit-scrollbar {
-          display: none;
+          width: 100%;
         }
 
         .tab-header {
           flex: 1;
-          min-width: 100px;
-          padding: 12px 16px;
+          padding: 8px 4px;
           background: none;
           border: none;
           border-bottom: 2px solid transparent;
@@ -189,7 +182,7 @@ export default function TabNavigation({
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 4px;
+          gap: 2px;
           transition: all 0.2s;
           color: #6b7280;
           position: relative;
@@ -200,56 +193,44 @@ export default function TabNavigation({
         }
 
         .tab-header.active {
-          color: #10b981;
-          border-bottom-color: #10b981;
-          background: linear-gradient(to bottom, rgba(16, 185, 129, 0.05), transparent);
+          color: var(--primary-teal, #0d9488);
+          border-bottom-color: var(--primary-teal, #0d9488);
         }
 
         .tab-icon {
-          font-size: 1.25rem;
+          font-size: 1rem;
+          display: none;
         }
 
         .tab-label {
-          font-size: 0.75rem;
-          font-weight: 500;
+          font-size: 0.7rem;
+          font-weight: 600;
+          white-space: nowrap;
         }
 
         .tab-count {
           position: absolute;
-          top: 8px;
-          right: 8px;
-          background: linear-gradient(135deg, #fbbf24, #f59e0b);
-          color: #7c2d12;
-          font-size: 0.625rem;
+          top: 2px;
+          right: 2px;
+          background: var(--gold, #d97706);
+          color: white;
+          font-size: 0.55rem;
           font-weight: 600;
-          padding: 2px 6px;
-          border-radius: 10px;
-          min-width: 18px;
+          padding: 1px 4px;
+          border-radius: 8px;
+          min-width: 14px;
           text-align: center;
-          box-shadow: 0 1px 2px rgba(251, 191, 36, 0.3);
         }
 
         .tab-header.active .tab-count {
-          background: #10b981;
-          color: white;
+          background: var(--primary-teal, #0d9488);
         }
 
         .tab-content {
           flex: 1;
           overflow-y: auto;
-          padding: 16px;
+          padding: 12px;
           -webkit-overflow-scrolling: touch;
-        }
-
-        /* Swipe hint animation on first load */
-        @keyframes swipeHint {
-          0% { transform: translateX(0); }
-          50% { transform: translateX(-20px); }
-          100% { transform: translateX(0); }
-        }
-
-        .tab-headers.show-hint {
-          animation: swipeHint 1s ease-in-out;
         }
       `}</style>
     </div>

@@ -439,17 +439,17 @@ a {
   transform: translateY(-2px);
 }
 
-/* INPUT FIELD - FIXED & ENHANCED */
+/* INPUT FIELD - COMPACT */
 .tafsir-form input {
   flex: 1 1 180px;
   min-width: 120px;
-  padding: 14px 16px;
-  border: 2px solid var(--border-medium);
-  border-radius: 12px;
-  font-size: 1rem;
+  padding: 8px 12px;
+  border: 1px solid var(--border-medium);
+  border-radius: 8px;
+  font-size: 0.9rem;
   font-weight: 500;
-  line-height: 1.4;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  line-height: 1.2;
+  transition: all 0.2s ease;
   background: white;
   color: var(--foreground);
   vertical-align: middle;
@@ -476,18 +476,17 @@ a {
   box-shadow: 0 0 0 6px rgba(13, 148, 136, 0.15), var(--shadow-soft);
 }
 
-/* SEARCH BUTTON - Icon Only */
+/* SEARCH BUTTON - Compact Icon */
 .tafsir-form button.search-button {
   background: var(--primary-teal);
   border: none;
-  border-radius: 50%;
-  width: 48px;
-  height: 48px;
+  border-radius: 8px;
+  width: 36px;
+  height: 36px;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s ease;
   position: relative;
   overflow: hidden;
-  box-shadow: var(--shadow-soft);
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -676,18 +675,28 @@ button:hover:not(:disabled) {
   background: white;
   color: var(--foreground);
   border: 2px solid var(--border-light);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background 0.2s ease, border-color 0.2s ease;
   cursor: pointer;
   position: relative;
   overflow: hidden;
   box-shadow: var(--shadow-soft);
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
-.level-buttons button:hover {
-  color: white;
+/* Only apply hover on devices that support it */
+@media (hover: hover) and (pointer: fine) {
+  .level-buttons button:hover {
+    color: white;
+    background: var(--primary-teal);
+    border-color: var(--primary-teal);
+  }
+}
+
+/* Active state for touch devices */
+.level-buttons button:active {
   background: var(--primary-teal);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-medium);
+  color: white;
   border-color: var(--primary-teal);
 }
 
@@ -1299,19 +1308,19 @@ button:hover:not(:disabled) {
   .tafsir-form input {
     min-width: auto;
     font-size: 16px; /* Prevents iOS zoom on focus */
-    padding: 14px 16px; /* Better touch targets */
+    padding: 10px 12px;
   }
 
   .tafsir-form select {
     font-size: 16px; /* Prevents iOS zoom on focus */
     min-width: auto;
-    padding: 14px 16px;
+    padding: 10px 12px;
   }
 
-  .tafsir-form button {
-    width: 100%; /* Full width button on mobile */
-    padding: 14px 20px;
-    font-size: 1rem;
+  .tafsir-form button.search-button {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
   }
 
   .suggestions-grid {

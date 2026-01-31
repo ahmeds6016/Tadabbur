@@ -1594,35 +1594,35 @@ function MainApp({ user, userProfile, onResetProfile }) {
               </div>
             </div>
 
-            {/* Save & Share - Compact horizontal row */}
+            {/* Save & Share - Subtle outline buttons, spaced apart */}
             <div className="export-section" style={{
-              marginBottom: '16px',
+              marginBottom: '12px',
               display: 'flex',
-              gap: '8px',
-              justifyContent: 'flex-end'
+              justifyContent: 'space-between',
+              gap: '16px'
             }}>
               <button onClick={handleSaveSearch} className="export-btn" style={{
-                padding: '8px 16px',
-                background: 'var(--primary-teal, #0d9488)',
-                border: 'none',
+                padding: '6px 14px',
+                background: 'transparent',
+                border: '1px solid var(--primary-teal, #0d9488)',
                 borderRadius: '6px',
                 cursor: 'pointer',
-                fontWeight: '600',
-                color: '#fff',
-                fontSize: '0.85rem',
+                fontWeight: '500',
+                color: 'var(--primary-teal, #0d9488)',
+                fontSize: '0.8rem',
                 transition: 'all 0.2s ease'
               }}>
                 Save
               </button>
               <button onClick={handleShareLink} className="export-btn" style={{
-                padding: '8px 16px',
-                background: 'var(--gold, #d97706)',
-                border: 'none',
+                padding: '6px 14px',
+                background: 'transparent',
+                border: '1px solid var(--text-muted, #6b7280)',
                 borderRadius: '6px',
                 cursor: 'pointer',
-                fontWeight: '600',
-                color: '#fff',
-                fontSize: '0.85rem',
+                fontWeight: '500',
+                color: 'var(--text-muted, #6b7280)',
+                fontSize: '0.8rem',
                 transition: 'all 0.2s ease'
               }}>
                 Share

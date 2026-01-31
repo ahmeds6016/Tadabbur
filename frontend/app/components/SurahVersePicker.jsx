@@ -359,7 +359,7 @@ export default function SurahVersePicker({ onSelect, initialSurah = null, initia
                   top: '100%',
                   left: 0,
                   right: 0,
-                  maxHeight: 'min(200px, 40vh)',
+                  maxHeight: 'min(300px, 50vh)',
                   overflowY: 'auto',
                   background: 'white',
                   border: '1px solid var(--border-light, #e5e7eb)',
@@ -368,7 +368,7 @@ export default function SurahVersePicker({ onSelect, initialSurah = null, initia
                   zIndex: 100,
                   boxShadow: '0 4px 6px rgba(0, 0, 0, 0.07)'
                 }}>
-                  {filteredSurahs.slice(0, 20).map(surah => (
+                  {filteredSurahs.map(surah => (
                     <div
                       key={surah.number}
                       onClick={() => handleSurahSelect(surah)}
