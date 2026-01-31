@@ -153,18 +153,6 @@ export default function DesktopNav({ user, stats = {}, collapsed = false, onTogg
               </div>
             )}
           </div>
-          {!collapsed && (
-            <div className="nav-shortcuts">
-              <div className="shortcut-title">Keyboard Shortcuts</div>
-              <div className="shortcut-list">
-                <div><kbd>Alt+H</kbd> Home</div>
-                <div><kbd>Alt+S</kbd> Saved</div>
-                <div><kbd>Alt+B</kbd> Toggle Sidebar</div>
-                <div><kbd>Ctrl+K</kbd> Search</div>
-                <div><kbd>Esc</kbd> Clear Results</div>
-              </div>
-            </div>
-          )}
         </div>
       )}
 
@@ -346,7 +334,6 @@ export default function DesktopNav({ user, stats = {}, collapsed = false, onTogg
           display: flex;
           align-items: center;
           gap: 12px;
-          margin-bottom: 16px;
         }
 
         .collapsed .user-section {
@@ -393,46 +380,6 @@ export default function DesktopNav({ user, stats = {}, collapsed = false, onTogg
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
-        }
-
-        .nav-shortcuts {
-          margin-top: 16px;
-          padding-top: 16px;
-          border-top: 1px solid var(--border-light);
-        }
-
-        .shortcut-title {
-          font-size: 0.75rem;
-          font-weight: 600;
-          color: #999;
-          text-transform: uppercase;
-          margin-bottom: 8px;
-        }
-
-        .shortcut-list {
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-        }
-
-        .shortcut-list div {
-          font-size: 0.8rem;
-          color: #666;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-
-        .shortcut-list kbd {
-          background: var(--cream);
-          padding: 2px 6px;
-          border-radius: 4px;
-          border: 1px solid var(--border-light);
-          font-family: monospace;
-          font-size: 0.7rem;
-          color: var(--deep-blue);
-          min-width: 40px;
-          text-align: center;
         }
 
         /* Hide on mobile */

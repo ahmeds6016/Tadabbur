@@ -441,14 +441,14 @@ a {
 
 /* INPUT FIELD - FIXED & ENHANCED */
 .tafsir-form input {
-  flex: 1 1 300px;
-  min-width: 250px;
-  padding: 18px 24px;
+  flex: 1 1 180px;
+  min-width: 120px;
+  padding: 14px 16px;
   border: 2px solid var(--border-medium);
-  border-radius: 16px;
-  font-size: 1.05rem;
+  border-radius: 12px;
+  font-size: 1rem;
   font-weight: 500;
-  line-height: 1.5;
+  line-height: 1.4;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   background: white;
   color: var(--foreground);
@@ -481,19 +481,19 @@ a {
   background: var(--primary-teal);
   border: none;
   border-radius: 50%;
-  width: 64px;
-  height: 64px;
-  font-size: 1.8rem;
+  width: 48px;
+  height: 48px;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
-  box-shadow: var(--shadow-medium);
+  box-shadow: var(--shadow-soft);
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0;
+  color: white;
 }
 
 .tafsir-form button.search-button::before {
@@ -1246,29 +1246,40 @@ button:hover:not(:disabled) {
     font-size: 0.9rem;
   }
 
-  /* Mobile user info - stacked layout for PWA */
+  /* Mobile user info - horizontal layout for PWA */
   .user-info {
-    flex-direction: column;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
     gap: 8px;
-    padding: 12px 16px;
+    padding: 10px 12px;
     width: 100%;
-    text-align: center;
+  }
+
+  .user-info::before {
+    display: none; /* Hide persona icon on mobile - save space */
   }
 
   .user-info > span {
-    font-size: 0.8rem;
-    opacity: 0.8;
+    font-size: 0.75rem;
+    opacity: 0.7;
+    width: 100%;
+    text-align: center;
+    margin-bottom: 4px;
   }
 
   .persona-badge {
-    font-size: 0.9rem !important;
-    padding: 6px 12px !important;
-    background: var(--cream) !important;
+    font-size: 0.8rem !important;
+    padding: 8px 14px !important;
+    background: var(--primary-teal) !important;
+    color: white !important;
     border-radius: 8px !important;
+    border: none !important;
+    cursor: pointer;
   }
 
   .logout-button {
-    padding: 8px 16px !important;
+    padding: 8px 14px !important;
     font-size: 0.8rem !important;
   }
 
@@ -1422,29 +1433,25 @@ button:hover:not(:disabled) {
     margin-top: 4px;
   }
 
-  /* Even more compact user info on small screens */
+  /* Compact user info on small screens */
   .user-info {
-    padding: 10px 12px;
+    padding: 8px 10px;
     gap: 6px;
-    border-radius: 12px;
-  }
-
-  .user-info::before {
-    font-size: 1.2rem;
+    border-radius: 10px;
   }
 
   .user-info > span {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
   }
 
   .persona-badge {
-    font-size: 0.85rem !important;
-    padding: 4px 10px !important;
+    font-size: 0.75rem !important;
+    padding: 6px 12px !important;
   }
 
   .logout-button {
-    padding: 6px 12px !important;
-    font-size: 0.75rem !important;
+    padding: 6px 10px !important;
+    font-size: 0.7rem !important;
   }
 
   .card {
@@ -1582,22 +1589,18 @@ button:hover:not(:disabled) {
   }
 
   .user-info {
-    padding: 8px 10px;
+    padding: 6px 8px;
     gap: 4px;
   }
 
-  .user-info::before {
-    font-size: 1rem;
-  }
-
   .persona-badge {
-    font-size: 0.8rem !important;
-    padding: 4px 8px !important;
+    font-size: 0.7rem !important;
+    padding: 5px 10px !important;
   }
 
   .logout-button {
-    padding: 5px 10px !important;
-    font-size: 0.7rem !important;
+    padding: 5px 8px !important;
+    font-size: 0.65rem !important;
   }
 
   .tafsir-form {

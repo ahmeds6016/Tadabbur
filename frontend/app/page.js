@@ -32,6 +32,7 @@ import { useToast } from './hooks/useToast';
 import useTextSelection from './hooks/useTextSelection';
 import { useOnboarding } from './hooks/useOnboarding';
 import onboardingConfig from '../config/onboarding-messages.json';
+import { Search as SearchIcon, X } from 'lucide-react';
 
 // ============================================================================
 // MAIN COMPONENT
@@ -1401,7 +1402,7 @@ function MainApp({ user, userProfile, onResetProfile }) {
             title={isTafsirLoading ? "Cancel search" : "Search"}
             aria-label={isTafsirLoading ? "Cancel search" : "Search Quran"}
           >
-            {isTafsirLoading ? '×' : 'Search'}
+            {isTafsirLoading ? <X size={24} /> : <SearchIcon size={24} />}
           </button>
         </form>
         
@@ -1593,50 +1594,39 @@ function MainApp({ user, userProfile, onResetProfile }) {
               </div>
             </div>
 
-            {/* Save & Export Section - Moved to top for better accessibility */}
+            {/* Save & Share - Compact horizontal row */}
             <div className="export-section" style={{
-              marginBottom: '24px',
-              padding: '16px 20px',
-              background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
-              border: '2px solid #0ea5e9',
-              borderRadius: '12px',
-              boxShadow: '0 2px 8px rgba(14, 165, 233, 0.15)'
+              marginBottom: '16px',
+              display: 'flex',
+              gap: '8px',
+              justifyContent: 'flex-end'
             }}>
-              <div className="export-controls" style={{
-                display: 'flex',
-                gap: '12px',
-                flexWrap: 'wrap',
-                alignItems: 'center'
+              <button onClick={handleSaveSearch} className="export-btn" style={{
+                padding: '8px 16px',
+                background: 'var(--primary-teal, #0d9488)',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontWeight: '600',
+                color: '#fff',
+                fontSize: '0.85rem',
+                transition: 'all 0.2s ease'
               }}>
-                <button onClick={handleSaveSearch} className="export-btn" style={{
-                  padding: '10px 20px',
-                  background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontWeight: '600',
-                  color: '#fff',
-                  fontSize: '0.9rem',
-                  boxShadow: '0 2px 6px rgba(245, 158, 11, 0.3)',
-                  transition: 'all 0.3s ease'
-                }}>
-                  Save
-                </button>
-                <button onClick={handleShareLink} className="export-btn" style={{
-                  padding: '10px 20px',
-                  background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontWeight: '600',
-                  color: '#fff',
-                  fontSize: '0.9rem',
-                  boxShadow: '0 2px 6px rgba(139, 92, 246, 0.3)',
-                  transition: 'all 0.3s ease'
-                }}>
-                  Share Link
-                </button>
-              </div>
+                Save
+              </button>
+              <button onClick={handleShareLink} className="export-btn" style={{
+                padding: '8px 16px',
+                background: 'var(--gold, #d97706)',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontWeight: '600',
+                color: '#fff',
+                fontSize: '0.85rem',
+                transition: 'all 0.2s ease'
+              }}>
+                Share
+              </button>
             </div>
 
             <EnhancedResultsDisplay

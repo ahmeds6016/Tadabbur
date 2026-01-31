@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 export default function CollapsibleSection({
   title,
@@ -8,8 +8,11 @@ export default function CollapsibleSection({
   defaultExpanded = false,
   sectionKey = null,
   className = '',
-  headerAction = null // For buttons like "Reflect"
+  headerAction = null
 }) {
+  const contentRef = useRef(null);
+  const [contentHeight, setContentHeight] = useState(0);
+
   // Use localStorage to remember expand/collapse state
   const [isExpanded, setIsExpanded] = useState(() => {
     if (typeof window === 'undefined') return defaultExpanded;
@@ -27,6 +30,13 @@ export default function CollapsibleSection({
       localStorage.setItem(`section-${sectionKey}`, isExpanded.toString());
     }
   }, [isExpanded, sectionKey]);
+
+  // Update content height when expanded
+  useEffect(() => {
+    if (contentRef.current && isExpanded) {
+      setContentHeight(contentRef.current.scrollHeight);
+    }
+  }, [isExpanded, children]);
 
   // Check if we're on mobile
   const [isMobile, setIsMobile] = useState(false);
@@ -76,97 +86,83 @@ export default function CollapsibleSection({
       <button
         className="section-header"
         onClick={() => setIsExpanded(!isExpanded)}
+        aria-expanded={isExpanded}
         style={{
           width: '100%',
-          background: 'none',
+          background: isExpanded ? 'var(--cream, #faf6f0)' : 'white',
           border: 'none',
-          padding: '16px',
+          padding: '12px 16px',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           cursor: 'pointer',
-          borderBottom: '1px solid #e5e7eb',
-          transition: 'background 0.2s'
+          borderBottom: '1px solid var(--border-light, #e5e7eb)',
+          transition: 'background 0.2s ease'
         }}
-        onMouseEnter={(e) => e.currentTarget.style.background = '#f9fafb'}
-        onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
       >
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '12px',
+          gap: '10px',
           flex: 1
         }}>
           <span
-            className="chevron"
             style={{
-              display: 'inline-block',
-              width: '20px',
-              height: '20px',
-              transition: 'transform 0.3s',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '18px',
+              height: '18px',
+              transition: 'transform 0.2s ease',
               transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
-              fontSize: '16px',
-              color: '#6b7280'
+              fontSize: '12px',
+              color: 'var(--primary-teal, #0d9488)'
             }}
           >
             ▶
           </span>
           <h2 style={{
             margin: 0,
-            fontSize: '1.125rem',
+            fontSize: '1rem',
             fontWeight: '600',
-            color: '#1f2937'
+            color: 'var(--deep-blue, #1e293b)'
           }}>
             {title}
             {count !== null && (
               <span style={{
-                fontSize: '0.875rem',
+                fontSize: '0.8rem',
                 color: '#6b7280',
                 marginLeft: '8px',
-                fontWeight: 'normal',
-                background: '#f3f4f6',
-                padding: '2px 8px',
-                borderRadius: '12px',
-                display: 'inline-block'
+                fontWeight: 'normal'
               }}>
-                {count}
+                ({count})
               </span>
             )}
           </h2>
         </div>
-        {headerAction && !isExpanded && (
-          <div onClick={(e) => e.stopPropagation()}>
+        {headerAction && (
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ marginLeft: '8px' }}
+          >
             {headerAction}
           </div>
         )}
       </button>
 
       <div
+        ref={contentRef}
         className="section-content"
         style={{
-          maxHeight: isExpanded ? '100000px' : '0',
+          height: isExpanded ? 'auto' : '0',
           overflow: 'hidden',
-          transition: 'max-height 0.3s ease-in-out',
-          opacity: isExpanded ? 1 : 0
+          transition: 'height 0.2s ease',
+          visibility: isExpanded ? 'visible' : 'hidden'
         }}
       >
-        {isExpanded && (
-          <>
-            {headerAction && (
-              <div style={{
-                padding: '12px 16px',
-                borderBottom: '1px solid #e5e7eb',
-                display: 'flex',
-                justifyContent: 'flex-end'
-              }}>
-                {headerAction}
-              </div>
-            )}
-            <div style={{ padding: '16px' }}>
-              {children}
-            </div>
-          </>
-        )}
+        <div style={{ padding: '12px 16px' }}>
+          {children}
+        </div>
       </div>
     </div>
   );

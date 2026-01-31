@@ -273,59 +273,35 @@ export default function SurahVersePicker({ onSelect, initialSurah = null, initia
       padding: '12px',
       marginBottom: '12px'
     }}>
-      {/* Compact Header with Quick Selects */}
+      {/* Quick Select Row - 3 horizontal buttons */}
       <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: '8px',
-        flexWrap: 'wrap'
+        display: 'grid',
+        gridTemplateColumns: 'repeat(3, 1fr)',
+        gap: '8px'
       }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px'
-        }}>
-          <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--primary-teal)' }}>Browse</span>
-          <span style={{
-            fontSize: '0.85rem',
-            fontWeight: '600',
-            color: 'var(--primary-teal, #0d9488)'
-          }}>
-            Quick:
-          </span>
-        </div>
-
-        {/* 3 Randomized Quick Select Buttons */}
-        <div style={{
-          display: 'flex',
-          gap: '6px',
-          flex: 1,
-          justifyContent: 'flex-end',
-          flexWrap: 'wrap'
-        }}>
-          {randomQuickSelects.map((item, index) => (
-            <button
-              key={index}
-              type="button"
-              onClick={() => handleQuickSelect(item)}
-              style={{
-                padding: '6px 10px',
-                minHeight: '32px',
-                background: 'var(--cream, #faf6f0)',
-                border: '1px solid var(--border-light, #e5e7eb)',
-                borderRadius: '6px',
-                fontSize: '0.75rem',
-                color: 'var(--primary-teal, #0d9488)',
-                cursor: 'pointer',
-                fontWeight: '500',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
+        {randomQuickSelects.map((item, index) => (
+          <button
+            key={index}
+            type="button"
+            onClick={() => handleQuickSelect(item)}
+            style={{
+              padding: '8px 6px',
+              background: 'var(--cream, #faf6f0)',
+              border: '1px solid var(--border-light, #e5e7eb)',
+              borderRadius: '8px',
+              fontSize: '0.8rem',
+              color: 'var(--primary-teal, #0d9488)',
+              cursor: 'pointer',
+              fontWeight: '500',
+              textAlign: 'center',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            {item.label}
+          </button>
+        ))}
       </div>
 
       {/* Expandable Browse Section */}
