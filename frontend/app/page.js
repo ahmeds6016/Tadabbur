@@ -1617,11 +1617,11 @@ function MainApp({ user, userProfile, onResetProfile }) {
               <button onClick={handleShareLink} className="export-btn" style={{
                 padding: '6px 14px',
                 background: 'transparent',
-                border: '1px solid var(--text-muted, #6b7280)',
+                border: '1px solid var(--primary-teal, #0d9488)',
                 borderRadius: '6px',
                 cursor: 'pointer',
                 fontWeight: '500',
-                color: 'var(--text-muted, #6b7280)',
+                color: 'var(--primary-teal, #0d9488)',
                 fontSize: '0.8rem',
                 transition: 'all 0.2s ease'
               }}>

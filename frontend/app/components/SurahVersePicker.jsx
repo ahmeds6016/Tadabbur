@@ -187,8 +187,9 @@ export default function SurahVersePicker({ onSelect, initialSurah = null, initia
   const handleApply = () => {
     if (!selectedSurah || !startVerse) return;
 
-    if (endVerse && parseInt(endVerse) > parseInt(startVerse)) {
-      onSelect(`${selectedSurah}:${startVerse}-${endVerse}`);
+    const end = endVerse || startVerse;
+    if (parseInt(end) > parseInt(startVerse)) {
+      onSelect(`${selectedSurah}:${startVerse}-${end}`);
     } else {
       onSelect(`${selectedSurah}:${startVerse}`);
     }
@@ -283,17 +284,17 @@ export default function SurahVersePicker({ onSelect, initialSurah = null, initia
 
       {isExpanded && (
         <div style={{ marginTop: '12px' }}>
-          {/* Surah Dropdown */}
-          <div style={{ marginBottom: '10px' }}>
+          {/* Surah Dropdown - Centered */}
+          <div style={{ marginBottom: '10px', display: 'flex', justifyContent: 'center' }}>
             <select
               value={selectedSurah}
               onChange={handleSurahChange}
-              style={selectStyle}
+              style={{ ...selectStyle, flex: 'none', width: '200px', textAlign: 'center' }}
             >
               <option value="">Select Surah</option>
               {SURAHS.map(surah => (
                 <option key={surah.number} value={surah.number}>
-                  {surah.number}. {surah.name} ({surah.verseCount} verses)
+                  {surah.number}. {surah.name}
                 </option>
               ))}
             </select>
@@ -330,12 +331,11 @@ export default function SurahVersePicker({ onSelect, initialSurah = null, initia
               {/* End Verse - Only show when start verse is selected */}
               {startVerse && (
                 <select
-                  value={endVerse}
+                  value={endVerse || startVerse}
                   onChange={handleEndVerseChange}
                   style={{ ...selectStyle, flex: 1 }}
                 >
-                  <option value="">Same</option>
-                  {endVerseOptions.slice(1).map(v => (
+                  {endVerseOptions.map(v => (
                     <option key={v} value={v}>{v}</option>
                   ))}
                 </select>
@@ -361,7 +361,7 @@ export default function SurahVersePicker({ onSelect, initialSurah = null, initia
             }}
           >
             {canApply
-              ? `Get ${selectedSurah}:${startVerse}${endVerse && parseInt(endVerse) > parseInt(startVerse) ? `-${endVerse}` : ''}`
+              ? `Get ${selectedSurah}:${startVerse}${(endVerse || startVerse) !== startVerse && parseInt(endVerse || startVerse) > parseInt(startVerse) ? `-${endVerse}` : ''}`
               : 'Select Surah & Verse'}
           </button>
         </div>
