@@ -2327,7 +2327,7 @@ function EnhancedResultsDisplay({
         tabs={[
           // Verses Tab
           verses.length > 0 && {
-            label: 'Verses',
+            label: verses.length === 1 ? 'Verse' : 'Verses',
             icon: '',
             count: verses.length,
             content: (
@@ -2431,7 +2431,7 @@ function EnhancedResultsDisplay({
                 {cross_references.length > 0 && (
                   <div style={{ marginTop: '24px' }}>
                     <h3 style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '12px' }}>
-                      Related Verses ({cross_references.length})
+                      {cross_references.length === 1 ? 'Related Verse' : 'Related Verses'}
                     </h3>
           <div className="cross-references">
             {cross_references.map((ref, index) => (
@@ -2479,7 +2479,7 @@ function EnhancedResultsDisplay({
                 {hadith.length > 0 && (
                   <div style={{ marginTop: '24px' }}>
                     <h3 style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '12px' }}>
-                      Hadith ({hadith.length})
+                      Hadith
                     </h3>
                     <div className="hadith-references" style={{ display: 'grid', gap: '12px' }}>
                       {hadith.map((h, index) => (
@@ -2519,7 +2519,7 @@ function EnhancedResultsDisplay({
 
           // Lessons Tab
           lessons_practical_applications.length > 0 && {
-            label: 'Lessons',
+            label: lessons_practical_applications.length === 1 ? 'Lesson' : 'Lessons',
             icon: '',
             count: lessons_practical_applications.length,
             content: (

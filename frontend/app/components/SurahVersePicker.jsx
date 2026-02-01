@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 
 // Complete list of all 114 surahs with their verse counts
 const SURAHS = [
@@ -139,16 +139,10 @@ const ALL_QUICK_SELECTS = [
 ];
 
 export default function SurahVersePicker({ onSelect, initialSurah = null, initialVerse = null }) {
-  const [selectedSurah, setSelectedSurah] = useState(initialSurah);
+  const [selectedSurah, setSelectedSurah] = useState(initialSurah || '');
   const [startVerse, setStartVerse] = useState(initialVerse || '');
   const [endVerse, setEndVerse] = useState('');
-  const [isRangeMode, setIsRangeMode] = useState(false);
-  const [surahSearch, setSurahSearch] = useState('');
-  const [showSurahDropdown, setShowSurahDropdown] = useState(false);
-  const [validationError, setValidationError] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
-  const dropdownRef = useRef(null);
-  const inputRef = useRef(null);
 
   // Randomize 3 quick selects on mount
   const randomQuickSelects = useMemo(() => {
@@ -156,113 +150,73 @@ export default function SurahVersePicker({ onSelect, initialSurah = null, initia
     return shuffled.slice(0, 3);
   }, []);
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setShowSurahDropdown(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  // Get verse count for selected surah
+  const maxVerses = selectedSurah ? SURAHS.find(s => s.number === parseInt(selectedSurah))?.verseCount || 0 : 0;
 
-  // Filter surahs based on search
-  const filteredSurahs = SURAHS.filter(surah => {
-    const search = surahSearch.toLowerCase();
-    return (
-      surah.number.toString().includes(search) ||
-      surah.name.toLowerCase().includes(search) ||
-      surah.englishName.toLowerCase().includes(search)
-    );
-  });
+  // Generate verse options array
+  const verseOptions = useMemo(() => {
+    if (!maxVerses) return [];
+    return Array.from({ length: maxVerses }, (_, i) => i + 1);
+  }, [maxVerses]);
 
-  const maxVerses = selectedSurah ? SURAHS.find(s => s.number === selectedSurah)?.verseCount || 0 : 0;
+  // Generate end verse options (from startVerse to min(startVerse + MAX_VERSE_RANGE - 1, maxVerses))
+  const endVerseOptions = useMemo(() => {
+    if (!startVerse || !maxVerses) return [];
+    const start = parseInt(startVerse);
+    const maxEnd = Math.min(start + MAX_VERSE_RANGE - 1, maxVerses);
+    return Array.from({ length: maxEnd - start + 1 }, (_, i) => start + i);
+  }, [startVerse, maxVerses]);
 
-  const handleSurahSelect = (surah) => {
-    setSelectedSurah(surah.number);
-    setSurahSearch(`${surah.number}. ${surah.name}`);
-    setShowSurahDropdown(false);
+  const handleSurahChange = (e) => {
+    const value = e.target.value;
+    setSelectedSurah(value);
     setStartVerse('');
     setEndVerse('');
-    setValidationError('');
   };
 
-  const handleStartVerseChange = (value) => {
-    if (value === '' || /^\d*$/.test(value)) {
-      setStartVerse(value);
-      setValidationError('');
-    }
+  const handleStartVerseChange = (e) => {
+    const value = e.target.value;
+    setStartVerse(value);
+    setEndVerse('');
   };
 
-  const handleEndVerseChange = (value) => {
-    if (value === '' || /^\d*$/.test(value)) {
-      setEndVerse(value);
-      setValidationError('');
-    }
+  const handleEndVerseChange = (e) => {
+    setEndVerse(e.target.value);
   };
 
-  const handleStartVerseBlur = () => {
-    if (!startVerse) return;
-    const num = parseInt(startVerse);
-    if (isNaN(num) || num < 1) {
-      setStartVerse('1');
-    } else if (num > maxVerses) {
-      setStartVerse(maxVerses.toString());
-    }
-  };
+  const handleApply = () => {
+    if (!selectedSurah || !startVerse) return;
 
-  const handleEndVerseBlur = () => {
-    if (!endVerse) return;
-    const num = parseInt(endVerse);
-    const start = parseInt(startVerse) || 1;
-    if (isNaN(num) || num < start) {
-      setEndVerse(start.toString());
-    } else if (num > maxVerses) {
-      setEndVerse(maxVerses.toString());
-    }
-    if (num - start + 1 > MAX_VERSE_RANGE) {
-      setValidationError(`Max ${MAX_VERSE_RANGE} verses. Range will be limited.`);
-    }
-  };
-
-  const validateAndApply = () => {
-    if (!selectedSurah) {
-      setValidationError('Please select a surah');
-      return;
-    }
-    if (!startVerse) {
-      setValidationError('Please enter a verse number');
-      return;
-    }
-    const start = parseInt(startVerse);
-    if (start < 1 || start > maxVerses) {
-      setValidationError(`Verse must be between 1 and ${maxVerses}`);
-      return;
-    }
-    if (isRangeMode) {
-      if (!endVerse) {
-        setValidationError('Please enter an end verse');
-        return;
-      }
-      let end = parseInt(endVerse);
-      if (isNaN(end) || end < start) {
-        setValidationError('End verse must be >= start verse');
-        return;
-      }
-      if (end > maxVerses) end = maxVerses;
-      if (end - start + 1 > MAX_VERSE_RANGE) {
-        end = start + MAX_VERSE_RANGE - 1;
-        if (end > maxVerses) end = maxVerses;
-      }
-      onSelect(`${selectedSurah}:${start}-${end}`);
+    if (endVerse && parseInt(endVerse) > parseInt(startVerse)) {
+      onSelect(`${selectedSurah}:${startVerse}-${endVerse}`);
     } else {
-      onSelect(`${selectedSurah}:${start}`);
+      onSelect(`${selectedSurah}:${startVerse}`);
     }
   };
 
   const handleQuickSelect = (item) => {
     onSelect(item.query);
+  };
+
+  const canApply = selectedSurah && startVerse;
+
+  // Shared select styles
+  const selectStyle = {
+    flex: 1,
+    padding: '10px 12px',
+    border: '1px solid var(--border-light, #e5e7eb)',
+    borderRadius: '8px',
+    fontSize: '16px', // Prevent iOS zoom
+    background: 'white',
+    color: '#333',
+    outline: 'none',
+    cursor: 'pointer',
+    appearance: 'none',
+    WebkitAppearance: 'none',
+    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 8L1 3h10z'/%3E%3C/svg%3E")`,
+    backgroundRepeat: 'no-repeat',
+    backgroundPosition: 'right 12px center',
+    paddingRight: '32px'
   };
 
   return (
@@ -324,174 +278,90 @@ export default function SurahVersePicker({ onSelect, initialSurah = null, initia
           gap: '6px'
         }}
       >
-        {isExpanded ? '▲ Hide' : '▼ Browse by Surah & Verse'}
+        {isExpanded ? 'Hide' : 'Browse by Surah & Verse'}
       </button>
 
       {isExpanded && (
         <div style={{ marginTop: '12px' }}>
-          {/* Surah Selector */}
-          <div style={{ marginBottom: '10px' }} ref={dropdownRef}>
-            <div style={{ position: 'relative' }}>
-              <input
-                ref={inputRef}
-                type="text"
-                value={surahSearch}
-                onChange={(e) => {
-                  setSurahSearch(e.target.value);
-                  setShowSurahDropdown(true);
-                  if (!e.target.value) setSelectedSurah(null);
-                }}
-                onFocus={() => setShowSurahDropdown(true)}
-                placeholder="Search surah..."
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  border: '1px solid var(--border-light, #e5e7eb)',
-                  borderRadius: '8px',
-                  fontSize: '0.9rem',
-                  outline: 'none',
-                  boxSizing: 'border-box'
-                }}
-              />
-              {showSurahDropdown && (
-                <div style={{
-                  position: 'absolute',
-                  top: '100%',
-                  left: 0,
-                  right: 0,
-                  maxHeight: 'min(300px, 50vh)',
-                  overflowY: 'auto',
-                  background: 'white',
-                  border: '1px solid var(--border-light, #e5e7eb)',
-                  borderTop: 'none',
-                  borderRadius: '0 0 8px 8px',
-                  zIndex: 100,
-                  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.07)'
-                }}>
-                  {filteredSurahs.map(surah => (
-                    <div
-                      key={surah.number}
-                      onClick={() => handleSurahSelect(surah)}
-                      style={{
-                        padding: '8px 12px',
-                        cursor: 'pointer',
-                        fontSize: '0.85rem',
-                        borderBottom: '1px solid #f0f0f0',
-                        display: 'flex',
-                        justifyContent: 'space-between'
-                      }}
-                    >
-                      <span><b>{surah.number}.</b> {surah.name}</span>
-                      <span style={{ color: '#999', fontSize: '0.75rem' }}>{surah.verseCount}v</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+          {/* Surah Dropdown */}
+          <div style={{ marginBottom: '10px' }}>
+            <select
+              value={selectedSurah}
+              onChange={handleSurahChange}
+              style={selectStyle}
+            >
+              <option value="">Select Surah</option>
+              {SURAHS.map(surah => (
+                <option key={surah.number} value={surah.number}>
+                  {surah.number}. {surah.name} ({surah.verseCount} verses)
+                </option>
+              ))}
+            </select>
           </div>
 
-          {/* Verse Selection */}
+          {/* Verse Dropdowns - Only show when surah is selected */}
           {selectedSurah && (
-            <div style={{ marginBottom: '10px' }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                marginBottom: '6px'
-              }}>
-                <input
-                  type="number"
-                  min="1"
-                  max={maxVerses}
-                  value={startVerse}
-                  onChange={(e) => handleStartVerseChange(e.target.value)}
-                  onBlur={handleStartVerseBlur}
-                  placeholder={`Verse (1-${maxVerses})`}
-                  style={{
-                    flex: 1,
-                    padding: '8px 10px',
-                    border: '1px solid var(--border-light, #e5e7eb)',
-                    borderRadius: '6px',
-                    fontSize: '0.9rem',
-                    outline: 'none'
-                  }}
-                />
-                <label style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  fontSize: '0.8rem',
-                  color: '#666'
-                }}>
-                  <input
-                    type="checkbox"
-                    checked={isRangeMode}
-                    onChange={(e) => {
-                      setIsRangeMode(e.target.checked);
-                      if (!e.target.checked) {
-                        setEndVerse('');
-                        setValidationError('');
-                      }
-                    }}
-                  />
-                  Range
-                </label>
-                {isRangeMode && (
-                  <input
-                    type="number"
-                    min={parseInt(startVerse) || 1}
-                    max={maxVerses}
-                    value={endVerse}
-                    onChange={(e) => handleEndVerseChange(e.target.value)}
-                    onBlur={handleEndVerseBlur}
-                    placeholder="End"
-                    style={{
-                      width: '70px',
-                      padding: '8px 10px',
-                      border: '1px solid var(--border-light, #e5e7eb)',
-                      borderRadius: '6px',
-                      fontSize: '0.9rem',
-                      outline: 'none'
-                    }}
-                  />
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Validation Error */}
-          {validationError && (
             <div style={{
-              padding: '6px 10px',
-              background: 'rgba(239, 68, 68, 0.1)',
-              borderRadius: '6px',
-              marginBottom: '8px',
-              fontSize: '0.8rem',
-              color: '#dc2626'
+              display: 'flex',
+              gap: '8px',
+              marginBottom: '10px'
             }}>
-              {validationError}
+              {/* Start Verse */}
+              <select
+                value={startVerse}
+                onChange={handleStartVerseChange}
+                style={{ ...selectStyle, flex: 1 }}
+              >
+                <option value="">Verse</option>
+                {verseOptions.map(v => (
+                  <option key={v} value={v}>{v}</option>
+                ))}
+              </select>
+
+              {/* Separator */}
+              {startVerse && (
+                <span style={{
+                  alignSelf: 'center',
+                  color: '#666',
+                  fontSize: '0.9rem'
+                }}>to</span>
+              )}
+
+              {/* End Verse - Only show when start verse is selected */}
+              {startVerse && (
+                <select
+                  value={endVerse}
+                  onChange={handleEndVerseChange}
+                  style={{ ...selectStyle, flex: 1 }}
+                >
+                  <option value="">Same</option>
+                  {endVerseOptions.slice(1).map(v => (
+                    <option key={v} value={v}>{v}</option>
+                  ))}
+                </select>
+              )}
             </div>
           )}
 
           {/* Apply Button */}
           <button
             type="button"
-            onClick={validateAndApply}
-            disabled={!selectedSurah}
+            onClick={handleApply}
+            disabled={!canApply}
             style={{
               width: '100%',
               padding: '10px',
-              background: selectedSurah ? 'var(--primary-teal, #0d9488)' : '#e5e7eb',
-              color: selectedSurah ? 'white' : '#9ca3af',
+              background: canApply ? 'var(--primary-teal, #0d9488)' : '#e5e7eb',
+              color: canApply ? 'white' : '#9ca3af',
               border: 'none',
               borderRadius: '8px',
               fontSize: '0.9rem',
               fontWeight: '600',
-              cursor: selectedSurah ? 'pointer' : 'not-allowed'
+              cursor: canApply ? 'pointer' : 'not-allowed'
             }}
           >
-            {selectedSurah && startVerse
-              ? `Get ${selectedSurah}:${startVerse}${isRangeMode && endVerse ? `-${endVerse}` : ''}`
+            {canApply
+              ? `Get ${selectedSurah}:${startVerse}${endVerse && parseInt(endVerse) > parseInt(startVerse) ? `-${endVerse}` : ''}`
               : 'Select Surah & Verse'}
           </button>
         </div>

@@ -61,7 +61,7 @@ export default function TabNavigation({
           <section key={index} className="desktop-section" aria-label={tab.label}>
             <header className="desktop-section-header">
               <span className="tab-icon">{tab.icon}</span>
-              <h2 className="tab-label">{tab.label}{tab.count !== undefined ? ` (${tab.count})` : ''}</h2>
+              <h2 className="tab-label">{tab.label}</h2>
             </header>
             <div className="desktop-section-body">
               {tab.content}

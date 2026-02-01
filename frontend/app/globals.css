@@ -1086,29 +1086,23 @@ button:hover:not(:disabled) {
 }
 
 .export-btn {
-  background: rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(10px);
-  color: white;
-  padding: 16px 28px;
-  border-radius: 16px;
-  font-weight: 700;
-  border: 2px solid rgba(255, 255, 255, 0.3);
+  background: transparent;
+  color: var(--primary-teal, #0d9488);
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-weight: 500;
+  border: 1px solid var(--primary-teal, #0d9488);
   display: flex;
   align-items: center;
-  gap: 10px;
-  transition: all 0.3s ease;
+  gap: 6px;
+  transition: all 0.2s ease;
   cursor: pointer;
-  text-transform: none;
-  letter-spacing: 0.02em;
-  font-size: 0.9rem;
-  box-shadow: var(--shadow-soft);
+  font-size: 0.8rem;
 }
 
 .export-btn:hover {
-  background: var(--gold);
-  border-color: white;
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-strong);
+  background: var(--primary-teal, #0d9488);
+  color: white;
 }
 
 /* ============================================================================
@@ -1568,8 +1562,8 @@ button:hover:not(:disabled) {
   }
 
   .export-btn {
-    padding: 12px 20px;
-    font-size: 0.9rem;
+    padding: 6px 12px;
+    font-size: 0.75rem;
   }
 }
 
