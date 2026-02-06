@@ -142,7 +142,6 @@ export default function SurahVersePicker({ onSelect, initialSurah = null, initia
   const [selectedSurah, setSelectedSurah] = useState(initialSurah || '');
   const [startVerse, setStartVerse] = useState(initialVerse || '');
   const [endVerse, setEndVerse] = useState('');
-  const [isExpanded, setIsExpanded] = useState(false);
 
   // Randomize 3 quick selects on mount
   const randomQuickSelects = useMemo(() => {
@@ -203,11 +202,10 @@ export default function SurahVersePicker({ onSelect, initialSurah = null, initia
 
   // Shared select styles
   const selectStyle = {
-    flex: 1,
-    padding: '10px 12px',
+    padding: '10px 14px',
     border: '1px solid var(--border-light, #e5e7eb)',
     borderRadius: '8px',
-    fontSize: '16px', // Prevent iOS zoom
+    fontSize: '16px',
     background: 'white',
     color: '#333',
     outline: 'none',
@@ -217,22 +215,22 @@ export default function SurahVersePicker({ onSelect, initialSurah = null, initia
     backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 8L1 3h10z'/%3E%3C/svg%3E")`,
     backgroundRepeat: 'no-repeat',
     backgroundPosition: 'right 12px center',
-    paddingRight: '32px'
+    paddingRight: '36px'
   };
 
   return (
-    <div className="surah-verse-picker" style={{
-      background: 'white',
+    <div style={{
+      background: 'var(--cream, #faf6f0)',
       borderRadius: '12px',
-      border: '1px solid var(--border-light, #e5e7eb)',
-      padding: '12px',
-      marginBottom: '12px'
+      padding: '16px',
+      marginBottom: '16px'
     }}>
-      {/* Quick Select Row - 3 horizontal buttons */}
+      {/* Quick Select Buttons */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(3, 1fr)',
-        gap: '8px'
+        gap: '8px',
+        marginBottom: '16px'
       }}>
         {randomQuickSelects.map((item, index) => (
           <button
@@ -240,18 +238,27 @@ export default function SurahVersePicker({ onSelect, initialSurah = null, initia
             type="button"
             onClick={() => handleQuickSelect(item)}
             style={{
-              padding: '8px 6px',
-              background: 'var(--cream, #faf6f0)',
-              border: '1px solid var(--border-light, #e5e7eb)',
+              padding: '10px 8px',
+              background: 'white',
+              border: '1px solid var(--primary-teal, #0d9488)',
               borderRadius: '8px',
-              fontSize: '0.8rem',
+              fontSize: '0.85rem',
               color: 'var(--primary-teal, #0d9488)',
               cursor: 'pointer',
-              fontWeight: '500',
+              fontWeight: '600',
               textAlign: 'center',
+              transition: 'all 0.2s ease',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'var(--primary-teal, #0d9488)';
+              e.currentTarget.style.color = 'white';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'white';
+              e.currentTarget.style.color = 'var(--primary-teal, #0d9488)';
             }}
           >
             {item.label}
@@ -259,89 +266,64 @@ export default function SurahVersePicker({ onSelect, initialSurah = null, initia
         ))}
       </div>
 
-      {/* Expandable Browse Section */}
-      <button
-        type="button"
-        onClick={() => setIsExpanded(!isExpanded)}
-        style={{
-          width: '100%',
-          marginTop: '8px',
-          padding: '8px 12px',
-          background: 'transparent',
-          border: '1px dashed var(--border-light, #e5e7eb)',
-          borderRadius: '8px',
-          fontSize: '0.8rem',
-          color: '#666',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '6px'
-        }}
-      >
-        {isExpanded ? 'Hide' : 'Browse by Surah & Verse'}
-      </button>
+      {/* Surah Dropdown */}
+      <div style={{ marginBottom: '12px' }}>
+        <select
+          value={selectedSurah}
+          onChange={handleSurahChange}
+          style={{ ...selectStyle, width: '100%', fontWeight: '500' }}
+        >
+          <option value="">Select Surah</option>
+          {SURAHS.map(surah => (
+            <option key={surah.number} value={surah.number}>
+              {surah.number}. {surah.name}
+            </option>
+          ))}
+        </select>
+      </div>
 
-      {isExpanded && (
-        <div style={{ marginTop: '12px' }}>
-          {/* Surah Dropdown - Centered */}
-          <div style={{ marginBottom: '10px', display: 'flex', justifyContent: 'center' }}>
+      {/* Verse Dropdowns - Only show when surah is selected */}
+      {selectedSurah && (
+        <>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr auto 1fr',
+            gap: '10px',
+            alignItems: 'center',
+            marginBottom: '12px'
+          }}>
+            {/* Start Verse */}
             <select
-              value={selectedSurah}
-              onChange={handleSurahChange}
-              style={{ ...selectStyle, flex: 'none', width: '200px', textAlign: 'center' }}
+              value={startVerse}
+              onChange={handleStartVerseChange}
+              style={selectStyle}
             >
-              <option value="">Select Surah</option>
-              {SURAHS.map(surah => (
-                <option key={surah.number} value={surah.number}>
-                  {surah.number}. {surah.name}
-                </option>
+              <option value="">From</option>
+              {verseOptions.map(v => (
+                <option key={v} value={v}>{v}</option>
+              ))}
+            </select>
+
+            {/* Separator */}
+            <span style={{
+              color: 'var(--text-muted, #6b7280)',
+              fontSize: '0.9rem',
+              fontWeight: '500'
+            }}>—</span>
+
+            {/* End Verse */}
+            <select
+              value={endVerse || startVerse}
+              onChange={handleEndVerseChange}
+              style={selectStyle}
+              disabled={!startVerse}
+            >
+              <option value="">To</option>
+              {startVerse && endVerseOptions.map(v => (
+                <option key={v} value={v}>{v}</option>
               ))}
             </select>
           </div>
-
-          {/* Verse Dropdowns - Only show when surah is selected */}
-          {selectedSurah && (
-            <div style={{
-              display: 'flex',
-              gap: '8px',
-              marginBottom: '10px'
-            }}>
-              {/* Start Verse */}
-              <select
-                value={startVerse}
-                onChange={handleStartVerseChange}
-                style={{ ...selectStyle, flex: 1 }}
-              >
-                <option value="">Verse</option>
-                {verseOptions.map(v => (
-                  <option key={v} value={v}>{v}</option>
-                ))}
-              </select>
-
-              {/* Separator */}
-              {startVerse && (
-                <span style={{
-                  alignSelf: 'center',
-                  color: '#666',
-                  fontSize: '0.9rem'
-                }}>to</span>
-              )}
-
-              {/* End Verse - Only show when start verse is selected */}
-              {startVerse && (
-                <select
-                  value={endVerse || startVerse}
-                  onChange={handleEndVerseChange}
-                  style={{ ...selectStyle, flex: 1 }}
-                >
-                  {endVerseOptions.map(v => (
-                    <option key={v} value={v}>{v}</option>
-                  ))}
-                </select>
-              )}
-            </div>
-          )}
 
           {/* Apply Button */}
           <button
@@ -350,21 +332,32 @@ export default function SurahVersePicker({ onSelect, initialSurah = null, initia
             disabled={!canApply}
             style={{
               width: '100%',
-              padding: '10px',
-              background: canApply ? 'var(--primary-teal, #0d9488)' : '#e5e7eb',
-              color: canApply ? 'white' : '#9ca3af',
+              padding: '12px',
+              background: canApply ? 'var(--primary-teal, #0d9488)' : '#cbd5e0',
+              color: 'white',
               border: 'none',
               borderRadius: '8px',
-              fontSize: '0.9rem',
+              fontSize: '0.95rem',
               fontWeight: '600',
-              cursor: canApply ? 'pointer' : 'not-allowed'
+              cursor: canApply ? 'pointer' : 'not-allowed',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              if (canApply) {
+                e.currentTarget.style.transform = 'translateY(-1px)';
+                e.currentTarget.style.boxShadow = '0 4px 8px rgba(13, 148, 136, 0.3)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = 'none';
             }}
           >
             {canApply
               ? `Get ${selectedSurah}:${startVerse}${(endVerse || startVerse) !== startVerse && parseInt(endVerse || startVerse) > parseInt(startVerse) ? `-${endVerse}` : ''}`
               : 'Select Surah & Verse'}
           </button>
-        </div>
+        </>
       )}
     </div>
   );
