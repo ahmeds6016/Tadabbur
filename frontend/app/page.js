@@ -690,11 +690,7 @@ function MainApp({ user, userProfile, onResetProfile }) {
     setError('');
     clearSearchState(); // Clear persisted search
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    setTimeout(() => {
-      const inputEl = document.querySelector('.tafsir-form input');
-      inputEl?.focus();
-      inputEl?.select();
-    }, 100);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
   const handleSaveSearch = useCallback(async () => {
@@ -747,10 +743,9 @@ function MainApp({ user, userProfile, onResetProfile }) {
                       activeElement?.tagName === 'TEXTAREA' ||
                       activeElement?.contentEditable === 'true';
 
-      // Ctrl+K or Cmd+K for search focus (always available)
+      // Ctrl+K or Cmd+K to scroll to picker (always available)
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
         e.preventDefault();
-        document.querySelector('.tafsir-form input')?.focus();
         window.scrollTo({ top: 0, behavior: 'smooth' });
         return;
       }
@@ -770,12 +765,10 @@ function MainApp({ user, userProfile, onResetProfile }) {
           setIsTafsirLoading(false);
           setError('');
         } else if (response) {
-          // Clear results and focus input for editing
+          // Clear results and scroll to picker
           setResponse(null);
           setError('');
-          const inputEl = document.querySelector('.tafsir-form input');
-          inputEl?.focus();
-          inputEl?.select(); // Select text for easy editing
+          window.scrollTo({ top: 0, behavior: 'smooth' });
         } else {
           // Just blur if no results
           activeElement?.blur();
@@ -881,11 +874,6 @@ function MainApp({ user, userProfile, onResetProfile }) {
         setIsTafsirLoading(false);
       }
     }, timeoutMs);
-
-    // NEW: Add submitting animation class
-    const formElement = e.target;
-    formElement.classList.add('submitting');
-    setTimeout(() => formElement.classList.remove('submitting'), 300);
 
     setIsTafsirLoading(true);
     setResponse(null);
@@ -1386,24 +1374,9 @@ function MainApp({ user, userProfile, onResetProfile }) {
           }}
         />
 
-        {/* Search Form - Deep Tafsir Mode */}
-        <form onSubmit={handleGetTafsir} className="tafsir-form" role="search" aria-label="Search Quran verses">
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Or type: verse (2:255), range (1:1-7), or analysis query (historical context of 17:23)..."
-            maxLength={200}
-          />
-
-          <button
-            type="submit"
-            className={`search-button ${isTafsirLoading ? 'loading' : ''}`}
-            title={isTafsirLoading ? "Cancel search" : "Search"}
-            aria-label={isTafsirLoading ? "Cancel search" : "Search Quran"}
-          >
-            {isTafsirLoading ? <X size={24} /> : <SearchIcon size={24} />}
-          </button>
+        {/* Hidden form - auto-submitted by SurahVersePicker */}
+        <form onSubmit={handleGetTafsir} className="tafsir-form" style={{ display: 'none' }}>
+          <input type="hidden" value={query} readOnly />
         </form>
         
         {rateLimitWarning && (
@@ -1503,15 +1476,10 @@ function MainApp({ user, userProfile, onResetProfile }) {
                       setIsTafsirLoading(false);
                       setError('');
                     } else {
-                      // Clear results and focus input (keep query)
+                      // Clear results and scroll to picker
                       setResponse(null);
                       setError('');
                       window.scrollTo({ top: 0, behavior: 'smooth' });
-                      setTimeout(() => {
-                        const inputEl = document.querySelector('.tafsir-form input');
-                        inputEl?.focus();
-                        inputEl?.select();
-                      }, 300);
                     }
                   }}
                   style={{
@@ -1549,9 +1517,6 @@ function MainApp({ user, userProfile, onResetProfile }) {
                     }
                     setIsTafsirLoading(false);
                     window.scrollTo({ top: 0, behavior: 'smooth' });
-                    setTimeout(() => {
-                      document.querySelector('.tafsir-form input')?.focus();
-                    }, 300);
                   }}
                   style={{
                     padding: '8px 16px',
@@ -1594,14 +1559,14 @@ function MainApp({ user, userProfile, onResetProfile }) {
               </div>
             </div>
 
-            {/* Save & Share - Subtle outline buttons, spaced apart */}
-            <div className="export-section" style={{
+            {/* Save & Share */}
+            <div style={{
               marginBottom: '12px',
               display: 'flex',
-              justifyContent: 'space-between',
-              gap: '16px'
+              justifyContent: 'flex-end',
+              gap: '10px'
             }}>
-              <button onClick={handleSaveSearch} className="export-btn" style={{
+              <button onClick={handleSaveSearch} style={{
                 padding: '6px 14px',
                 background: 'transparent',
                 border: '1px solid var(--primary-teal, #0d9488)',
@@ -1614,7 +1579,7 @@ function MainApp({ user, userProfile, onResetProfile }) {
               }}>
                 Save
               </button>
-              <button onClick={handleShareLink} className="export-btn" style={{
+              <button onClick={handleShareLink} style={{
                 padding: '6px 14px',
                 background: 'transparent',
                 border: '1px solid var(--primary-teal, #0d9488)',
