@@ -1,0 +1,29 @@
+{
+  "chapter_number": 67,
+  "chapter_title": "About the Desirability of Isolation",
+  "book_number": 1,
+  "hadith_entries": [
+    {
+      "hadith_number": 271,
+      "narrator": "Sa'ad",
+      "text": "271. Narrated Sa'ad ibn Abu-Waqqas : 'I heard Allah's\nMessenger saying: \"Allah loves the pious rich man who is\ninconspicuous.\" (Muslim)",
+      "source_collection": "Muslim",
+      "char_count": 135
+    },
+    {
+      "hadith_number": 272,
+      "narrator": "Abu-Sa'eed",
+      "text": "272. Narrated Abu-Sa'eed Al-Khudri : \"Allah's\nMessenger said: \"A time will come when the best property\nof a Muslim will be sheep, which he will take on the top of\nthe mountains and to the places of rainfall (valleys), so as to\nflee with his religion from the trials.\" (Bukhari)\n*\n-",
+      "source_collection": "Bukhari",
+      "char_count": 281
+    }
+  ],
+  "quran_refs": [
+    {
+      "surah": 51,
+      "verse": 50
+    }
+  ],
+  "total_hadith": 2,
+  "total_chars": 731
+}

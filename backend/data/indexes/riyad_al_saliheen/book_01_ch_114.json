@@ -1,0 +1,31 @@
+{
+  "chapter_number": 114,
+  "chapter_title": "About the Forbiddance of Silky",
+  "book_number": 1,
+  "hadith_entries": [
+    {
+      "hadith_number": 395,
+      "narrator": "Ibn",
+      "text": "395. Narrated Ibn Omar: 'I heard Omar saying that the\nProphet said: \"He who wore silk garments in life will not\nwear them in the Hereafter.\" (At-Termizi)",
+      "source_collection": "",
+      "char_count": 153
+    },
+    {
+      "hadith_number": 396,
+      "narrator": "Abu-Musa",
+      "text": "396. Narrated Abu-Musa Al-Asha'ari: 'The Messenger of\nAllah said: \"Wearing silk clothes and gold is unlawful for\nthe males of my followers and lawful for their females.\"\n(At-Termizi)",
+      "source_collection": "",
+      "char_count": 182
+    },
+    {
+      "hadith_number": 397,
+      "narrator": "Hozayfa",
+      "text": "397. Narrated Hozayfa ibn Al-Yaman : 'The Prophet\nforbade us to drink out of gold and silver vessels, or eat off\nthem, and also forbade the wearing of silk and Dibaj (thick\nsilk) or sitting on it.' (Bukhari)",
+      "source_collection": "Bukhari",
+      "char_count": 207
+    }
+  ],
+  "quran_refs": [],
+  "total_hadith": 3,
+  "total_chars": 607
+}

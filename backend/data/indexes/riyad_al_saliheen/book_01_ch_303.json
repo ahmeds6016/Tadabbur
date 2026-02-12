@@ -1,0 +1,31 @@
+{
+  "chapter_number": 303,
+  "chapter_title": "About the Forbiddance",
+  "book_number": 1,
+  "hadith_entries": [
+    {
+      "hadith_number": 986,
+      "narrator": "Abu",
+      "text": "986. Narrated Abu Al-Darda'a ; 'Allah's Messenger\nsaid: \"Allah hates the profligate and the obscene person.\"\n(At-Termizi graded it Saheeh (sound).",
+      "source_collection": "",
+      "char_count": 146
+    },
+    {
+      "hadith_number": 987,
+      "narrator": "Ibn",
+      "text": "987. Narrated Ibn Mas'oud ; 'The Prophet said: \"A\nbeliever is not given to accusing others or cursing them, nor is\nhe immoral or shameless.\" (At-Termizi graded it Hasan; Al\nHakim graded it Saheeh (sound), but Ad-Daraqotni\npreponderated it as Mawqoof (untraceable).",
+      "source_collection": "",
+      "char_count": 264
+    },
+    {
+      "hadith_number": 988,
+      "narrator": "Anas",
+      "text": "988. Narrated Anas; 'The Messenger of Allah said:\n\"Shamelessness defiles whichever it mixes with and shyness\nembellishes whichever it mixes with.\" (At-Termizi).\nRiyadhos-Saliheen (The Meadows of the Righteous)",
+      "source_collection": "",
+      "char_count": 209
+    }
+  ],
+  "quran_refs": [],
+  "total_hadith": 3,
+  "total_chars": 5942
+}

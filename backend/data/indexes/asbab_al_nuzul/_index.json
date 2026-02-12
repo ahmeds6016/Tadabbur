@@ -1,0 +1,422 @@
+{
+  "source": "asbab_al_nuzul",
+  "total_surahs": 83,
+  "total_entries": 446,
+  "surahs": {
+    "1": {
+      "name": "Al-Fâtihah",
+      "entries": 1,
+      "chars": 3603
+    },
+    "2": {
+      "name": "Al-Baqarah",
+      "entries": 80,
+      "chars": 136486
+    },
+    "3": {
+      "name": "Al-Baqarah",
+      "entries": 48,
+      "chars": 88972
+    },
+    "4": {
+      "name": "Al-Baqarah",
+      "entries": 45,
+      "chars": 85617
+    },
+    "5": {
+      "name": "Al-Baqarah",
+      "entries": 22,
+      "chars": 46536
+    },
+    "6": {
+      "name": "Al-Baqarah",
+      "entries": 16,
+      "chars": 21380
+    },
+    "7": {
+      "name": "Al-Baqarah",
+      "entries": 6,
+      "chars": 9148
+    },
+    "8": {
+      "name": "Al-Anfâl",
+      "entries": 10,
+      "chars": 20992
+    },
+    "9": {
+      "name": "Al-Anfâl",
+      "entries": 26,
+      "chars": 47974
+    },
+    "10": {
+      "name": "Al-Anfâl",
+      "entries": 2,
+      "chars": 1104
+    },
+    "11": {
+      "name": "Al-Anfâl",
+      "entries": 2,
+      "chars": 6310
+    },
+    "12": {
+      "name": "Al-Anfâl",
+      "entries": 1,
+      "chars": 1971
+    },
+    "13": {
+      "name": "Al-Anfâl",
+      "entries": 4,
+      "chars": 8087
+    },
+    "15": {
+      "name": "Al-Anfâl",
+      "entries": 4,
+      "chars": 3813
+    },
+    "16": {
+      "name": "An-Nahl",
+      "entries": 12,
+      "chars": 19199
+    },
+    "17": {
+      "name": "An-Nahl",
+      "entries": 10,
+      "chars": 19530
+    },
+    "18": {
+      "name": "An-Nahl",
+      "entries": 5,
+      "chars": 9945
+    },
+    "19": {
+      "name": "An-Nahl",
+      "entries": 3,
+      "chars": 5061
+    },
+    "20": {
+      "name": "Tâ-Hâ",
+      "entries": 2,
+      "chars": 2267
+    },
+    "21": {
+      "name": "Tâ-Hâ",
+      "entries": 1,
+      "chars": 1851
+    },
+    "22": {
+      "name": "Tâ-Hâ",
+      "entries": 4,
+      "chars": 8100
+    },
+    "23": {
+      "name": "Tâ-Hâ",
+      "entries": 4,
+      "chars": 4626
+    },
+    "24": {
+      "name": "Tâ-Hâ",
+      "entries": 10,
+      "chars": 36002
+    },
+    "25": {
+      "name": "Tâ-Hâ",
+      "entries": 3,
+      "chars": 9792
+    },
+    "28": {
+      "name": "Tâ-Hâ",
+      "entries": 4,
+      "chars": 4247
+    },
+    "29": {
+      "name": "Tâ-Hâ",
+      "entries": 4,
+      "chars": 4969
+    },
+    "30": {
+      "name": "Ar-Rûm",
+      "entries": 1,
+      "chars": 1987
+    },
+    "31": {
+      "name": "Ar-Rûm",
+      "entries": 4,
+      "chars": 6345
+    },
+    "32": {
+      "name": "Ar-Rûm",
+      "entries": 2,
+      "chars": 3139
+    },
+    "33": {
+      "name": "Al-Ahzâb",
+      "entries": 10,
+      "chars": 23755
+    },
+    "36": {
+      "name": "Al-Ahzâb",
+      "entries": 2,
+      "chars": 2305
+    },
+    "38": {
+      "name": "Al-Ahzâb",
+      "entries": 1,
+      "chars": 2591
+    },
+    "39": {
+      "name": "Al-Ahzâb",
+      "entries": 6,
+      "chars": 6738
+    },
+    "41": {
+      "name": "Al-Ahzâb",
+      "entries": 2,
+      "chars": 2603
+    },
+    "42": {
+      "name": "Al-Ahzâb",
+      "entries": 3,
+      "chars": 2526
+    },
+    "43": {
+      "name": "Al-Ahzâb",
+      "entries": 1,
+      "chars": 1003
+    },
+    "44": {
+      "name": "Al-Ahzâb",
+      "entries": 1,
+      "chars": 866
+    },
+    "45": {
+      "name": "Al-Ahzâb",
+      "entries": 1,
+      "chars": 1870
+    },
+    "46": {
+      "name": "Al-Ahzâb",
+      "entries": 2,
+      "chars": 2408
+    },
+    "48": {
+      "name": "Al-Fath",
+      "entries": 3,
+      "chars": 4408
+    },
+    "49": {
+      "name": "Al-Hujurât",
+      "entries": 9,
+      "chars": 25250
+    },
+    "50": {
+      "name": "Al-Hujurât",
+      "entries": 1,
+      "chars": 1417
+    },
+    "53": {
+      "name": "Al-Hujurât",
+      "entries": 3,
+      "chars": 3376
+    },
+    "54": {
+      "name": "Al-Qamar",
+      "entries": 2,
+      "chars": 4138
+    },
+    "56": {
+      "name": "Al-Qamar",
+      "entries": 4,
+      "chars": 5036
+    },
+    "57": {
+      "name": "Al-Qamar",
+      "entries": 2,
+      "chars": 3145
+    },
+    "58": {
+      "name": "Al-Mujâdilah",
+      "entries": 8,
+      "chars": 16829
+    },
+    "59": {
+      "name": "Al-Hashr",
+      "entries": 2,
+      "chars": 9410
+    },
+    "60": {
+      "name": "Al-Mumtahanah",
+      "entries": 4,
+      "chars": 10825
+    },
+    "61": {
+      "name": "As-Saff",
+      "entries": 1,
+      "chars": 1423
+    },
+    "62": {
+      "name": "As-Saff",
+      "entries": 1,
+      "chars": 2120
+    },
+    "63": {
+      "name": "As-Saff",
+      "entries": 1,
+      "chars": 9842
+    },
+    "64": {
+      "name": "As-Saff",
+      "entries": 1,
+      "chars": 1560
+    },
+    "65": {
+      "name": "At-Talâq",
+      "entries": 3,
+      "chars": 5195
+    },
+    "66": {
+      "name": "At-Tahrîm",
+      "entries": 2,
+      "chars": 5752
+    },
+    "67": {
+      "name": "At-Tahrîm",
+      "entries": 1,
+      "chars": 400
+    },
+    "68": {
+      "name": "At-Tahrîm",
+      "entries": 2,
+      "chars": 1720
+    },
+    "69": {
+      "name": "At-Tahrîm",
+      "entries": 1,
+      "chars": 630
+    },
+    "70": {
+      "name": "At-Tahrîm",
+      "entries": 2,
+      "chars": 1017
+    },
+    "74": {
+      "name": "Al-Muddaththir",
+      "entries": 2,
+      "chars": 3387
+    },
+    "75": {
+      "name": "Al-Muddaththir",
+      "entries": 1,
+      "chars": 578
+    },
+    "76": {
+      "name": "Al-Muddaththir",
+      "entries": 1,
+      "chars": 892
+    },
+    "80": {
+      "name": "Al-Muddaththir",
+      "entries": 2,
+      "chars": 2505
+    },
+    "81": {
+      "name": "Al-Muddaththir",
+      "entries": 1,
+      "chars": 607
+    },
+    "83": {
+      "name": "Al-Mutaffifîn",
+      "entries": 1,
+      "chars": 1452
+    },
+    "86": {
+      "name": "At-Târiq",
+      "entries": 1,
+      "chars": 611
+    },
+    "92": {
+      "name": "At-Târiq",
+      "entries": 1,
+      "chars": 3213
+    },
+    "93": {
+      "name": "Ad-Dhuhâ",
+      "entries": 3,
+      "chars": 4441
+    },
+    "96": {
+      "name": "Ad-Dhuhâ",
+      "entries": 1,
+      "chars": 897
+    },
+    "97": {
+      "name": "Al-Qadr",
+      "entries": 1,
+      "chars": 818
+    },
+    "99": {
+      "name": "Al-Qadr",
+      "entries": 1,
+      "chars": 988
+    },
+    "100": {
+      "name": "Al-Qadr",
+      "entries": 1,
+      "chars": 898
+    },
+    "102": {
+      "name": "At-Takâthur",
+      "entries": 1,
+      "chars": 932
+    },
+    "105": {
+      "name": "Al-Fîl",
+      "entries": 1,
+      "chars": 324
+    },
+    "106": {
+      "name": "Quraysh",
+      "entries": 1,
+      "chars": 1184
+    },
+    "107": {
+      "name": "Quraysh",
+      "entries": 1,
+      "chars": 515
+    },
+    "108": {
+      "name": "Al-Kawthar",
+      "entries": 1,
+      "chars": 1662
+    },
+    "109": {
+      "name": "Al-Kâfirûn",
+      "entries": 1,
+      "chars": 900
+    },
+    "110": {
+      "name": "An-Nasr",
+      "entries": 1,
+      "chars": 889
+    },
+    "111": {
+      "name": "Al-Masad",
+      "entries": 1,
+      "chars": 2716
+    },
+    "112": {
+      "name": "Al-Ikhlâs",
+      "entries": 1,
+      "chars": 1766
+    },
+    "113": {
+      "name": "Al-Falaq",
+      "entries": 1,
+      "chars": 4068
+    },
+    "114": {
+      "name": "An-Nâs",
+      "entries": 1,
+      "chars": 4062
+    }
+  }
+}

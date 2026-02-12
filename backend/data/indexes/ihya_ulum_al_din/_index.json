@@ -1,0 +1,226 @@
+{
+  "source": "ihya_ulum_al_din",
+  "total_volumes": 4,
+  "volumes": {
+    "1": {
+      "quarter_name": "Acts of Worship",
+      "chapters": {
+        "10": {
+          "title": "DIVISION OF TIMES FOR ACTIONS",
+          "sections": 14,
+          "chars": 44015
+        },
+        "1": {
+          "title": "invocation: O God, I wish to know its good or bad with the help",
+          "sections": 1,
+          "chars": 1458
+        },
+        "2": {
+          "title": "SECTION 1",
+          "sections": 9,
+          "chars": 54527
+        },
+        "3": {
+          "title": "MYSTERIES OF CLEANLINESS",
+          "sections": 12,
+          "chars": 25938
+        },
+        "4": {
+          "title": "PRAYER",
+          "sections": 21,
+          "chars": 61102
+        },
+        "5": {
+          "title": "ZAKAT",
+          "sections": 6,
+          "chars": 38455
+        },
+        "6": {
+          "title": "FASTING",
+          "sections": 4,
+          "chars": 13106
+        },
+        "7": {
+          "title": "SECRETS OF PILGRIMAGE",
+          "sections": 18,
+          "chars": 49719
+        },
+        "8": {
+          "title": "RECITATION OF THE QURAN",
+          "sections": 9,
+          "chars": 48135
+        },
+        "9": {
+          "title": "ZIKR AND INVOCATIONS",
+          "sections": 12,
+          "chars": 48367
+        }
+      }
+    },
+    "2": {
+      "quarter_name": "Worldly Usages",
+      "chapters": {
+        "10": {
+          "title": "ENJOINING GOOD AND FORBIDDING EVIL",
+          "sections": 18,
+          "chars": 108156
+        },
+        "1": {
+          "title": "RULES OF EATING AND DRINKING.",
+          "sections": 10,
+          "chars": 31361
+        },
+        "2": {
+          "title": "SECRETS OF MARRIAGE",
+          "sections": 9,
+          "chars": 59255
+        },
+        "3": {
+          "title": "SECTION I",
+          "sections": 10,
+          "chars": 39042
+        },
+        "4": {
+          "title": "HALAL AND HARAM",
+          "sections": 14,
+          "chars": 61772
+        },
+        "5": {
+          "title": "LOVE AND BROTHERHOOD",
+          "sections": 8,
+          "chars": 73607
+        },
+        "6": {
+          "title": "DUTIES TO RELATIVES, NEIGHBOURS,",
+          "sections": 7,
+          "chars": 55007
+        },
+        "7": {
+          "title": "RULES OF LIVING IN SECLUSION",
+          "sections": 7,
+          "chars": 28244
+        },
+        "8": {
+          "title": "RULES AND REGULATIONS OF JOURNEY",
+          "sections": 6,
+          "chars": 26861
+        },
+        "9": {
+          "title": "MUSIC AND ECSTASY",
+          "sections": 8,
+          "chars": 42034
+        }
+      }
+    },
+    "3": {
+      "quarter_name": "Destructive Evils",
+      "chapters": {
+        "1": {
+          "title": "SOUL AND ITS ATTRIBUTES",
+          "sections": 4,
+          "chars": 100577
+        },
+        "2": {
+          "title": "GOOD CONDUCT",
+          "sections": 4,
+          "chars": 54260
+        },
+        "3": {
+          "title": "GREED FOR FOOD SEXUAL PASSION",
+          "sections": 5,
+          "chars": 53860
+        },
+        "4": {
+          "title": "HARMS OF TONGUE",
+          "sections": 4,
+          "chars": 90286
+        },
+        "5": {
+          "title": "ANGER, HATRED AND ENVY",
+          "sections": 10,
+          "chars": 62529
+        },
+        "6": {
+          "title": "ATTACHMENT OF THE WORLD",
+          "sections": 10,
+          "chars": 51368
+        },
+        "7": {
+          "title": "LOVE FOR WEALTH",
+          "sections": 13,
+          "chars": 83731
+        },
+        "8": {
+          "title": "LOVE OF POWER AND SHOW",
+          "sections": 15,
+          "chars": 96031
+        },
+        "9": {
+          "title": "PRIDE AND SELF-PRAISE",
+          "sections": 12,
+          "chars": 75430
+        },
+        "10": {
+          "title": "CONDEMNATION ERROR",
+          "sections": 5,
+          "chars": 38804
+        }
+      }
+    },
+    "4": {
+      "quarter_name": "Constructive Virtues",
+      "chapters": {
+        "10": {
+          "title": "DEATH AND SUBSEQUENT EVENTS",
+          "sections": 83,
+          "chars": 128555
+        },
+        "1": {
+          "title": "TAUBA (REPENTANCE)",
+          "sections": 43,
+          "chars": 130921
+        },
+        "2": {
+          "title": "PATIENCE AND GRATEFULNESS",
+          "sections": 58,
+          "chars": 126566
+        },
+        "3": {
+          "title": "FEAR AND HOPE",
+          "sections": 34,
+          "chars": 79095
+        },
+        "4": {
+          "title": "POVERTY AND RENUNCIATION",
+          "sections": 50,
+          "chars": 118659
+        },
+        "5": {
+          "title": "TAUHID AND TAWAKKAL",
+          "sections": 47,
+          "chars": 120630
+        },
+        "6": {
+          "title": "LOVE AND ATTACHMENT",
+          "sections": 78,
+          "chars": 175534
+        },
+        "7": {
+          "title": "WILL OR INTENTION",
+          "sections": 20,
+          "chars": 35461
+        },
+        "8": {
+          "title": "MEDITATION AND INTROSPECTION",
+          "sections": 34,
+          "chars": 86418
+        },
+        "9": {
+          "title": "PONDERING OVER GOOD",
+          "sections": 17,
+          "chars": 29508
+        }
+      }
+    }
+  }
+}

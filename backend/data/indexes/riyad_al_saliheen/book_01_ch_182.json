@@ -1,0 +1,31 @@
+{
+  "chapter_number": 182,
+  "chapter_title": "About not Neglecting the two",
+  "book_number": 1,
+  "hadith_entries": [
+    {
+      "hadith_number": 578,
+      "narrator": "A'isha",
+      "text": "578. Narrated A'isha: 'The Prophet\nnever missed\nfour raka'as before zohr Prayer and two raka'as before\nfajr Prayer.' (Bukhari)",
+      "source_collection": "Bukhari",
+      "char_count": 126
+    },
+    {
+      "hadith_number": 579,
+      "narrator": "A'isha",
+      "text": "579. Narrated A'isha: 'The Prophet was never\nmore regular and punctual in offering any voluntary\nprayer than the two raka'as before fajr prayer.' (Bukhari)",
+      "source_collection": "Bukhari",
+      "char_count": 155
+    },
+    {
+      "hadith_number": 580,
+      "narrator": "A'isha",
+      "text": "580. Narrated A'isha 'The Prophet used to perform\nthe two (optional) raka'as before fajr Prayer more\npunctually than any other voluntary prayer.' (Agreed upon)\n581. In the version compiled by Imam Muslim, it is\nmentioned: \"The two raka'as before fajr Prayer are better\nthan life and what it contains.\"",
+      "source_collection": "Agreed upon",
+      "char_count": 301
+    }
+  ],
+  "quran_refs": [],
+  "total_hadith": 3,
+  "total_chars": 712
+}

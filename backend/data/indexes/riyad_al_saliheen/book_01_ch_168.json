@@ -1,0 +1,36 @@
+{
+  "chapter_number": 168,
+  "chapter_title": "About Enhancing One's",
+  "book_number": 1,
+  "hadith_entries": [
+    {
+      "hadith_number": 523,
+      "narrator": "Abu-Huraira",
+      "text": "523. Narrated Abu-Huraira: 'Allah's Messenger\nsaid: \"Allah does not allow for anything as He allows\nthe Prophet to recite the Koran in a nice singing pleasant\ntone.\" The sub-narrator (Abu- Salama) said: 'It means,\nreciting it aloud.' (Bukhari)\nsaid to\n524. Abu-Musa narrated that the Prophet\nhim: “O Abu- Musa! You have been gifted with a voice as\nnice as that of the family of David.\" (Bukhari)",
+      "source_collection": "Bukhari",
+      "char_count": 395
+    },
+    {
+      "hadith_number": 525,
+      "narrator": "Al",
+      "text": "525. Narrated Al Bara'a : 'On a journey, the Prophet\nrecited Wa Al-Teen Wa Al-Zaytoon (chapter number\n95) in Al-isha Prayer.' In another quotation he said: ‘I\nRiyadhos-Saliheen (The Meadows of the Righteous)\nnever heard a sweeter voice or a better way of recitation\nthan that of the Prophet .' (Bukhari)",
+      "source_collection": "Bukhari",
+      "char_count": 303
+    },
+    {
+      "hadith_number": 526,
+      "narrator": "Abdullah",
+      "text": "526. Narrated Abdullah ibn Mas'oud : 'The Prophet\nsaid to me: \"Recite (of the Koran) for me.\" I said: \"Shall\nI recite it to you although it had been revealed to you?\" He\nsaid: “I like to hear (the Koran) from others.” So I recited\nSurat Al-Nisa'a (chapter number 4) until I reached the\nverse that says: \"How (will it be) then, when We bring\nfrom each nation a witness and We bring you (O\nMuhammad!) a witness against these people? *\" (4:41)\nThereupon, the Prophet said: \"Stop!\" Abdullahsaid:\n'And behold, his eyes were overflowing with tears.'\n(Bukhari)",
+      "source_collection": "Bukhari",
+      "char_count": 553
+    }
+  ],
+  "quran_refs": [
+    {
+      "surah": 4,
+      "verse": 41
+    }
+  ],
+  "total_hadith": 3,
+  "total_chars": 1319
+}

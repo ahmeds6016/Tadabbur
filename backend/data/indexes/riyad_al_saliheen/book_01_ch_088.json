@@ -1,0 +1,36 @@
+{
+  "chapter_number": 88,
+  "chapter_title": "About Keeping Religious Speeches Brief",
+  "book_number": 1,
+  "hadith_entries": [
+    {
+      "hadith_number": 330,
+      "narrator": "Ibn",
+      "text": "330. Narrated Ibn Mas'oud : The Prophet used to\ntake care of us when preaching by selecting a suitable time,\nso that we would not get bored. (He abstained from pestering\nus with religious talk and knowledge all the time).\" (Bukhari).\nرَوَاهُ مُسْلِمٌ",
+      "source_collection": "Bukhari",
+      "char_count": 250
+    },
+    {
+      "hadith_number": 331,
+      "narrator": "Mu'aweya",
+      "text": "331. Narrated Mu'aweya ibn Al-Hakam : 'Allah's\nMessenger said: \"Talking is not befitting during the prayer,\nfor it (the prayer) consists only of glorifying Allah, declaring\nHis Greatness, and the recitation of the Koran.\"\" (Muslim)\nRiyadhos-Saliheen (The Meadows of the Righteous)",
+      "source_collection": "Muslim",
+      "char_count": 280
+    },
+    {
+      "hadith_number": 332,
+      "narrator": "Al-Irbadh",
+      "text": "332. Narrated Al-Irbadh ibn Sariya: 'The Messenger of\nAllah delivered an eloquent speech that caused our eyes to\nshed tears and our hearts to be greatly moved. A man said:\n\"This is a speech of a man who will depart from this life soon.\nWhat would you recommend us Messenger of Allah!\" He\nsaid: \"I recommend you to the fear of Allah, and hearing and\nobeying even if an Ethiopian slave is your ruler. For he of you\nwill live long, will see great disputes. And keep away from\ninnovated practices, for they are misleading. Let he of you\nwho would witness this, adhere to my Sunna and that of the\nrightly guided caliphs. Stick to it very firmly\" (At-Termizi)",
+      "source_collection": "",
+      "char_count": 653
+    }
+  ],
+  "quran_refs": [
+    {
+      "surah": 16,
+      "verse": 125
+    }
+  ],
+  "total_hadith": 3,
+  "total_chars": 2494
+}

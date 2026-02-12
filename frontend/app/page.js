@@ -2171,7 +2171,8 @@ function EnhancedResultsDisplay({
     cross_references = [],
     hadith = [],
     lessons_practical_applications = [],
-    summary = ''
+    summary = '',
+    scholarly_sources = [],
   } = data || {};
 
   // Fetch annotations for all verses when component mounts
@@ -2286,6 +2287,52 @@ function EnhancedResultsDisplay({
       )}
 
       {/* All annotation panels are now handled by the unified AnnotationDialog at the bottom */}
+
+      {/* Scholarly Sources Attribution */}
+      {scholarly_sources.length > 0 && (
+        <div style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '6px',
+          alignItems: 'center',
+          marginBottom: '12px',
+          padding: '8px 12px',
+          background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+          borderRadius: '8px',
+          border: '1px solid #e2e8f0',
+        }}>
+          <span style={{
+            fontSize: '0.75rem',
+            fontWeight: '600',
+            color: '#64748b',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+            marginRight: '4px',
+          }}>
+            Scholarly Sources
+          </span>
+          {scholarly_sources.map((source, idx) => (
+            <span
+              key={idx}
+              title={`${source.name} by ${source.author} — ${source.type}`}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                padding: '2px 8px',
+                background: 'white',
+                border: '1px solid #cbd5e1',
+                borderRadius: '12px',
+                fontSize: '0.7rem',
+                fontWeight: '500',
+                color: '#475569',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {source.name}
+            </span>
+          ))}
+        </div>
+      )}
 
       <TabNavigation
         resetKey={query}  // Reset to first tab (verses) on new query

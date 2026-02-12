@@ -1,0 +1,31 @@
+{
+  "chapter_number": 283,
+  "chapter_title": "About the Forbiddance of Believing in bad Omens",
+  "book_number": 1,
+  "hadith_entries": [
+    {
+      "hadith_number": 946,
+      "narrator": "Anas",
+      "text": "946. Narrated Anas ibn Malek 'The Prophet\n\"No infection or Tiyarah, but I like Al Fa'l.\" They said; \"What\nis AlFa'l?' He said: \"A good word.\" (Bukhari).",
+      "source_collection": "Bukhari",
+      "char_count": 152
+    },
+    {
+      "hadith_number": 947,
+      "narrator": "Abdullah",
+      "text": "947. Narrated Abdullah ibn Omar may Allah be pleased\nwith them; 'I heard the Prophet saying: \"(If there is) evil\nomen, it would be in three things; the horse, the women, and\nthe house.\" (Bukhari).\nRiyadhos-Saliheen (The Meadows of the Righteous)",
+      "source_collection": "Bukhari",
+      "char_count": 245
+    },
+    {
+      "hadith_number": 948,
+      "narrator": "Abdullah",
+      "text": "948. Narrated Abdullah ibn Mas'oud; 'The Messenger of\nAllah said: \"Evil omen is a form of polytheism. And none\nof us except that he has a portion of it, but Allah eliminates it\nthrough putting one's trust in Him.\"",
+      "source_collection": "",
+      "char_count": 213
+    }
+  ],
+  "quran_refs": [],
+  "total_hadith": 3,
+  "total_chars": 681
+}

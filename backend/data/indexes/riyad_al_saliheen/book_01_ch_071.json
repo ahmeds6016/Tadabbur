@@ -1,0 +1,61 @@
+{
+  "chapter_number": 71,
+  "chapter_title": "About Good Character",
+  "book_number": 1,
+  "hadith_entries": [
+    {
+      "hadith_number": 282,
+      "narrator": "Anas",
+      "text": "282. Narrated Anas: 'I served the Prophet for ten\nyears, and he never said to me: \"Ugh!\" (a minor harsh word\nthat denotes impatience) and he never criticized me by\nsaying: \"Why did you do so or why didn't you do so?\"\"\n(Bukhari)\nRiyadhos-Saliheen (The Meadows of the Righteous)",
+      "source_collection": "Bukhari",
+      "char_count": 276
+    },
+    {
+      "hadith_number": 283,
+      "narrator": "Al-Nawwas",
+      "text": "283. Narrated Al-Nawwas ibn Sama'an: 'I asked Allah's\nMessenger about righteousness and sin and he replied:\n\"Righteousness is good character and sin is what revolves in\nyour heart, and that you hate that people would know about.\"\n(Muslim)",
+      "source_collection": "Muslim",
+      "char_count": 238
+    },
+    {
+      "hadith_number": 284,
+      "narrator": "Abdullah",
+      "text": "284. Narrated Abdullah ibn Amr may Allah be pleased\nwith them': 'The Prophet never used bad language. He used\nto say: \"The best amongst you are those who have the best.\nmanners and character.\" (Bukhari)",
+      "source_collection": "Bukhari",
+      "char_count": 202
+    },
+    {
+      "hadith_number": 285,
+      "narrator": "Abu-Huraira",
+      "text": "285. Narrated Abu-Huraira: 'The Messenger of Allah\nsaid: \"The most perfect believers are those having the finest\ncharacters. And the best of you are those who are best to their\nwomen.\"\nRiyadhos-Saliheen (The Meadows of the Righteous)",
+      "source_collection": "",
+      "char_count": 233
+    },
+    {
+      "hadith_number": 286,
+      "narrator": "Anas",
+      "text": "286. Narrated Anas ibn Malek: 'The Messenger of Allah\nsaid: \"He who ceased futile lying (while wrangling), a\nbuilding will be built for him in the lowest ranks of Paradise;\nand he who left off wrangling while having right to it, a\nbuilding will be built for him in the middle ranks of Paradise:\nand he that enhanced his manners, a building will be built for\nhim in the highest ranks of Paradise.\" (At-Termizi)\nsaid:",
+      "source_collection": "",
+      "char_count": 415
+    },
+    {
+      "hadith_number": 287,
+      "narrator": "Jaber",
+      "text": "287. Narrated Jaber: 'The Messenger of Allah\n\"Indeed, the nearest and the most beloved to me among you\non the Day of Judgment are those having the best characters.\nAnd the farthest and the most disliked to me among you on\nthe Day of Judgment are those who talk much, paying no\nattention to what they utter, and the arrogant.\"\"\nRiyadhos-Saliheen (The Meadows of the Righteous)",
+      "source_collection": "",
+      "char_count": 375
+    }
+  ],
+  "quran_refs": [
+    {
+      "surah": 68,
+      "verse": 4
+    },
+    {
+      "surah": 3,
+      "verse": 134
+    }
+  ],
+  "total_hadith": 6,
+  "total_chars": 2061
+}

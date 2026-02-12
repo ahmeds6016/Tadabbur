@@ -1,0 +1,38 @@
+{
+  "chapter_number": 183,
+  "chapter_title": "About Performing the Two",
+  "book_number": 1,
+  "hadith_entries": [
+    {
+      "hadith_number": 582,
+      "narrator": "Hafsa",
+      "text": "582. Narrated\nHafsa:\n'When\nAl-Mo'azin¹4\npronounced azan for fajr prayer and the dawn became\nevident the Prophet would offer a short two-raka'a\nprayer before pronouncing iqama for the compulsory\n(congregational prayer).' (Bukhari)",
+      "source_collection": "Bukhari",
+      "char_count": 229
+    },
+    {
+      "hadith_number": 583,
+      "narrator": "Abu-Huraira",
+      "text": "583. Narrated Abu-Huraira: 'The Prophet recited\nSurat Al-Kafiroon (chapter number 109), and Surat Al-\nIkhlas (chapter number 112) in the two (voluntary)\nraka'a of fajr Prayer.' (Muslim)",
+      "source_collection": "Muslim",
+      "char_count": 185
+    },
+    {
+      "hadith_number": 584,
+      "narrator": "A'isha",
+      "text": "584. Narrated A'isha: 'The Prophet used to perform\nthe two (voluntary) raka'as before fajr Prayer so briefly that\nI would wonder whether he had recited Surat Al-Fatiha (or\nnot).' (Agreed upon)\n14 Al-mo'azin is the one who delivers azan, the call to the\nprayer.\nRiyadhos-Saliheen (The Meadows of the Righteous)",
+      "source_collection": "Agreed upon",
+      "char_count": 309
+    },
+    {
+      "hadith_number": 585,
+      "narrator": "Abu-Huraira",
+      "text": "585. Narrated Abu-Huraira: \"Allah's Messenger said:\n\"If any of you performs the two raka'as before fajr Prayer,\nhe should lie on his right side.\" (Ahmad, Abu-Dawood\nand At-Termizi, the latter graded it Saheeh (sound).)\n*",
+      "source_collection": "",
+      "char_count": 220
+    }
+  ],
+  "quran_refs": [],
+  "total_hadith": 4,
+  "total_chars": 1078
+}

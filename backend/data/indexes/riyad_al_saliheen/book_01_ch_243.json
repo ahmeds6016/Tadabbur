@@ -1,0 +1,36 @@
+{
+  "chapter_number": 243,
+  "chapter_title": "About being Sure of What One",
+  "book_number": 1,
+  "hadith_entries": [
+    {
+      "hadith_number": 835,
+      "narrator": "Hafs",
+      "text": "835. Narrated Hafs ibn Asem; 'The Messenger of Allah *\nsaid: \"It a sufficient sin for a man to narrate wholly what he\nhas heard.\"\nRiyadhos-Saliheen (The Meadows of the Righteous)",
+      "source_collection": "",
+      "char_count": 178
+    },
+    {
+      "hadith_number": 836,
+      "narrator": "Al-Mogheera",
+      "text": "836. Narrated Al-Mogheera ibn Sho'aba; 'The Prophet *\nsaid: “He that narrated a Hadith knowing that it is fabricated\nis one of the liars.\" (At-Termizi).\nThis does not apply to the one who narrates a Hadith of\nthe Messenger of Allah but with imprecise chain of\nnarrators. It applies to what is falsely attributed to the\nMessenger of Allah.\nRiyadhos-Saliheen (The Meadows of the Righteous)\n.",
+      "source_collection": "",
+      "char_count": 389
+    },
+    {
+      "hadith_number": 837,
+      "narrator": "Asma'a",
+      "text": "837. Narrated Asma'a; 'A woman said; ‘O Allah's\nMessenger! My husband has another wife, so is it sinful to claim\nthat he has given me what he has not given me (in order to tease\nsaid: “The one who pretends that he ﷺ her)? Allah's Messenger\nhas been given what he has not been given, is just like the one\nwho wears two garments of falsehood.\" (Muslim)",
+      "source_collection": "Muslim",
+      "char_count": 350
+    }
+  ],
+  "quran_refs": [
+    {
+      "surah": 17,
+      "verse": 36
+    }
+  ],
+  "total_hadith": 3,
+  "total_chars": 1260
+}

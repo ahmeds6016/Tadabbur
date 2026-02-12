@@ -1,0 +1,15 @@
+# OCR images (1.9GB) - not needed at runtime
+data/sources/ocr_images/
+
+# Raw extracted text - not needed at runtime (parsed indexes are used)
+data/sources/raw/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Scripts only needed for offline processing
+scripts/run_ocr.py
+scripts/run_ocr_vision.py
+scripts/extract_sources.py

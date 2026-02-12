@@ -1,0 +1,44 @@
+{
+  "chapter_number": 27,
+  "chapter_title": "About the Inviolability of the Muslims' Honors",
+  "book_number": 1,
+  "hadith_entries": [
+    {
+      "hadith_number": 146,
+      "narrator": "Abu-Musa",
+      "text": "146. Narrated Abu-Musa : 'The Prophet said: \"A\nfaithful believer to a faithful believer is like the bricks of a\nwall, reinforcing each other. While (saying that) the\nProphet clasped his hands, by interlocking his fingers.\"\"\n(Bukhari)",
+      "source_collection": "Bukhari",
+      "char_count": 233
+    },
+    {
+      "hadith_number": 147,
+      "narrator": "Abdullah",
+      "text": "147. Narrated Abdullah ibn Omar: 'Allah's Messenger\nsaid: \"A Muslim is the brother of another Muslim, so he\nshould not oppress him nor should he hand him over to an\noppressor. Whoever fulfills the needs of his brother, Allah\nwill fulfill his needs; whoever brings his (Muslim) brother\nout of discomfort, Allah will bring him out of the\ndiscomforts of the Day of Resurrection, and whoever veils.\nthe defects of a Muslim, Allah will screen his defects on\nthe Day of Resurrection.\" (Bukhari)\nرَوَاهُ مُسْلِمٌ.\nRiyadhos-Saliheen (The Meadows of the Righteous)",
+      "source_collection": "Muslim",
+      "char_count": 555
+    },
+    {
+      "hadith_number": 148,
+      "narrator": "Abu-Huraira",
+      "text": "148. Narrated Abu-Huraira: 'Allah's Messenger\nsaid: \"A Muslim has six duties towards another Muslim:\nwhen you meet him greet him, when he invites you accept\nhis invitation, when he asks your advice give it to him,\nwhen he sneezes and praises Allah say to him: 'May Allah\nhave mercy on you,' when he is ill visit him, and when he\ndies follow his funeral procession.\" (Muslim)\n*\n-",
+      "source_collection": "Muslim",
+      "char_count": 378
+    }
+  ],
+  "quran_refs": [
+    {
+      "surah": 22,
+      "verse": 30
+    },
+    {
+      "surah": 15,
+      "verse": 88
+    },
+    {
+      "surah": 5,
+      "verse": 32
+    }
+  ],
+  "total_hadith": 3,
+  "total_chars": 2810
+}

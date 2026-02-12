@@ -1,0 +1,38 @@
+{
+  "chapter_number": 234,
+  "chapter_title": "About Miscellaneous Invocations",
+  "book_number": 1,
+  "hadith_entries": [
+    {
+      "hadith_number": 802,
+      "narrator": "Osama",
+      "text": "802. Narrated Osama ibn Zayd: 'Allah's Messenger\nsaid: \"If a kind act was done to one of you and one of you\nexpressed thanks for that act as saying to the good doer:\n\"Jazak Allah Khayran (May Allah reward you\nbountifully),\" he is considered to have highly estimated the\nfavor done to him.\" (At-Termizi)",
+      "source_collection": "",
+      "char_count": 302
+    },
+    {
+      "hadith_number": 803,
+      "narrator": "Abu-Huraira",
+      "text": "803. Narrated Abu-Huraira: 'Allah's Messenger said:\n\"The invocation of anyone of you is granted (by Allah) if he\ndoes not show impatience by saying: 'I have prayed to Allah\nbut my prayer has not been granted.\"\"\" (Bukhari)",
+      "source_collection": "Bukhari",
+      "char_count": 221
+    },
+    {
+      "hadith_number": 804,
+      "narrator": "Jaber",
+      "text": "804. Narrated Jaber: 'I heard the Messenger of Allah *\nsaying: \"There is no one who invokes Allah with an\nRiyadhos-Saliheen (The Meadows of the Righteous)\ninvocation except that Allah\ngrants his prayer or withhold a\nharm equal (to what he has invoked), as long as he does not\nmake a sinful invocation or an invocation against one of his kith\nand kin.\" (At-Termizi)",
+      "source_collection": "",
+      "char_count": 364
+    },
+    {
+      "hadith_number": 805,
+      "narrator": "Ibn",
+      "text": "805. Narrated Ibn Abbas, may Allah be pleased with them\n: 'The Prophet used to invoke Allah at the time of\ndistress: \"La illaha illa Allaho Al-Azim Al-Haleem (None has\nthe right to be worshipped except Allah, the Most Great, the\nBenign) La ilaha illa Allah Rabb Al-Arsh Al-Azim (None\nhas the right to be worshipped except Allah, the Lord of the\nGreat throne). La illaha illa Allah Rabb Al-Samawati Wa\nRabb Al-Ardhi Wa rabb Al-Arsh Kareem (None has the right\nto be worshipped except Allah, the Sustainer of the heavens\nand the earth and the Lord of the Great Throne).\" (Bukhari)",
+      "source_collection": "Bukhari",
+      "char_count": 577
+    }
+  ],
+  "quran_refs": [],
+  "total_hadith": 4,
+  "total_chars": 1512
+}

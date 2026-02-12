@@ -1,0 +1,1032 @@
+{
+  "source": "thematic_commentary",
+  "total_surahs": 114,
+  "surahs": {
+    "1": {
+      "name": "Al-Fatihah",
+      "name_transliterated": "Al-F¥ti^ah",
+      "name_english": "The Opening Chapter",
+      "page_start": 1,
+      "page_end": 5,
+      "sections": 1,
+      "chars": 8583
+    },
+    "2": {
+      "name": "Al-Baqarah",
+      "name_transliterated": "Al-Baqarah",
+      "name_english": "The Cow",
+      "page_start": 6,
+      "page_end": 29,
+      "sections": 6,
+      "chars": 45156
+    },
+    "3": {
+      "name": "Al Imran",
+      "name_transliterated": "®l ¢Imr¥n",
+      "name_english": "House of ¢Imr¥n",
+      "page_start": 30,
+      "page_end": 54,
+      "sections": 4,
+      "chars": 48301
+    },
+    "4": {
+      "name": "Al-Nisa",
+      "name_transliterated": "Al-Nis¥’",
+      "name_english": "Women",
+      "page_start": 55,
+      "page_end": 87,
+      "sections": 6,
+      "chars": 61911
+    },
+    "5": {
+      "name": "Al-Maidah",
+      "name_transliterated": "Al-M¥’idah",
+      "name_english": "The Table",
+      "page_start": 88,
+      "page_end": 114,
+      "sections": 5,
+      "chars": 48275
+    },
+    "6": {
+      "name": "Al-Anam",
+      "name_transliterated": "Al-An¢¥m",
+      "name_english": "The Cattle",
+      "page_start": 115,
+      "page_end": 137,
+      "sections": 5,
+      "chars": 42687
+    },
+    "7": {
+      "name": "Al-Araf",
+      "name_transliterated": "Al-A¢r¥f",
+      "name_english": "The Heights",
+      "page_start": 138,
+      "page_end": 159,
+      "sections": 3,
+      "chars": 41009
+    },
+    "8": {
+      "name": "Al-Anfal",
+      "name_transliterated": "Al-Anf¥l",
+      "name_english": "The Spoils of War",
+      "page_start": 160,
+      "page_end": 176,
+      "sections": 4,
+      "chars": 31237
+    },
+    "9": {
+      "name": "Al-Tawbah",
+      "name_transliterated": "Al-Tawbah",
+      "name_english": "Repentance",
+      "page_start": 177,
+      "page_end": 196,
+      "sections": 3,
+      "chars": 36308
+    },
+    "10": {
+      "name": "Yunus",
+      "name_transliterated": "Y‰nus",
+      "name_english": " Jonah",
+      "page_start": 197,
+      "page_end": 215,
+      "sections": 4,
+      "chars": 33702
+    },
+    "11": {
+      "name": "Hud",
+      "name_transliterated": "H‰d",
+      "name_english": "H‰d",
+      "page_start": 216,
+      "page_end": 233,
+      "sections": 7,
+      "chars": 30565
+    },
+    "12": {
+      "name": "Yusuf",
+      "name_transliterated": "Y‰suf",
+      "name_english": " Joseph",
+      "page_start": 234,
+      "page_end": 249,
+      "sections": 5,
+      "chars": 28962
+    },
+    "13": {
+      "name": "Al-Rad",
+      "name_transliterated": "Al-Ra¢d",
+      "name_english": "Thunder",
+      "page_start": 250,
+      "page_end": 257,
+      "sections": 4,
+      "chars": 14614
+    },
+    "14": {
+      "name": "Ibrahim",
+      "name_transliterated": "Ibr¥hÏm",
+      "name_english": "Abraham",
+      "page_start": 258,
+      "page_end": 265,
+      "sections": 5,
+      "chars": 14366
+    },
+    "15": {
+      "name": "Al-Hijr",
+      "name_transliterated": "Al-¤ijr",
+      "name_english": "",
+      "page_start": 266,
+      "page_end": 273,
+      "sections": 3,
+      "chars": 13703
+    },
+    "16": {
+      "name": "Al-Nahl",
+      "name_transliterated": "Al-Na^l",
+      "name_english": "Bees",
+      "page_start": 274,
+      "page_end": 291,
+      "sections": 8,
+      "chars": 30952
+    },
+    "17": {
+      "name": "Al-Isra",
+      "name_transliterated": "Al-Isr¥’",
+      "name_english": "The Night Journey",
+      "page_start": 292,
+      "page_end": 307,
+      "sections": 5,
+      "chars": 29287
+    },
+    "18": {
+      "name": "Al-Kahf",
+      "name_transliterated": "Al-Kahf",
+      "name_english": "The Cave",
+      "page_start": 308,
+      "page_end": 322,
+      "sections": 3,
+      "chars": 26500
+    },
+    "19": {
+      "name": "Maryam",
+      "name_transliterated": "Maryam",
+      "name_english": "Mary",
+      "page_start": 323,
+      "page_end": 332,
+      "sections": 6,
+      "chars": 16012
+    },
+    "20": {
+      "name": "Ta Ha",
+      "name_transliterated": ">¥ H¥",
+      "name_english": "",
+      "page_start": 333,
+      "page_end": 342,
+      "sections": 5,
+      "chars": 16314
+    },
+    "21": {
+      "name": "Al-Anbiya",
+      "name_transliterated": "Al-Anbiy¥’",
+      "name_english": "The Prophets",
+      "page_start": 343,
+      "page_end": 351,
+      "sections": 7,
+      "chars": 15037
+    },
+    "22": {
+      "name": "Al-Hajj",
+      "name_transliterated": "Al-¤ajj",
+      "name_english": "ThePilgrimage",
+      "page_start": 352,
+      "page_end": 365,
+      "sections": 11,
+      "chars": 22479
+    },
+    "23": {
+      "name": "Al-Muminun",
+      "name_transliterated": "Al-Mu’min‰n",
+      "name_english": "The Believers",
+      "page_start": 366,
+      "page_end": 374,
+      "sections": 8,
+      "chars": 14273
+    },
+    "24": {
+      "name": "Al-Nur",
+      "name_transliterated": "Al-N‰r",
+      "name_english": "Light",
+      "page_start": 375,
+      "page_end": 384,
+      "sections": 7,
+      "chars": 16485
+    },
+    "25": {
+      "name": "Al-Furqan",
+      "name_transliterated": "Al-Furq¥n",
+      "name_english": "The Criterion",
+      "page_start": 385,
+      "page_end": 393,
+      "sections": 3,
+      "chars": 15150
+    },
+    "26": {
+      "name": "Al-Shuara",
+      "name_transliterated": "Al-Shu¢ar¥’",
+      "name_english": "The Poets",
+      "page_start": 394,
+      "page_end": 402,
+      "sections": 4,
+      "chars": 15215
+    },
+    "27": {
+      "name": "Al-Naml",
+      "name_transliterated": "Al-Naml",
+      "name_english": "The Ants",
+      "page_start": 403,
+      "page_end": 412,
+      "sections": 3,
+      "chars": 16121
+    },
+    "28": {
+      "name": "Al-Qasas",
+      "name_transliterated": "Al-Qa|a|",
+      "name_english": "The Story",
+      "page_start": 413,
+      "page_end": 424,
+      "sections": 3,
+      "chars": 20665
+    },
+    "29": {
+      "name": "Al-Ankabut",
+      "name_transliterated": "Al-¢Ankab‰t",
+      "name_english": "The Spider",
+      "page_start": 425,
+      "page_end": 432,
+      "sections": 4,
+      "chars": 13824
+    },
+    "30": {
+      "name": "Al-Rum",
+      "name_transliterated": "Al-R‰m",
+      "name_english": "The Romans",
+      "page_start": 433,
+      "page_end": 441,
+      "sections": 1,
+      "chars": 14811
+    },
+    "31": {
+      "name": "Luqman",
+      "name_transliterated": "Luqm¥n",
+      "name_english": "33",
+      "page_start": 442,
+      "page_end": 446,
+      "sections": 1,
+      "chars": 1300
+    },
+    "32": {
+      "name": "Al-Sajdah",
+      "name_transliterated": "Al-Sajdah",
+      "name_english": "The Prostration",
+      "page_start": 447,
+      "page_end": 451,
+      "sections": 1,
+      "chars": 7908
+    },
+    "33": {
+      "name": "Al-Ahzab",
+      "name_transliterated": "Al-A^z¥b",
+      "name_english": "The Confederate Tribes",
+      "page_start": 452,
+      "page_end": 462,
+      "sections": 2,
+      "chars": 19380
+    },
+    "34": {
+      "name": "Saba",
+      "name_transliterated": "Saba’",
+      "name_english": "Sheba",
+      "page_start": 463,
+      "page_end": 470,
+      "sections": 1,
+      "chars": 13555
+    },
+    "35": {
+      "name": "Fatir",
+      "name_transliterated": "F¥~ir",
+      "name_english": "The Creator",
+      "page_start": 471,
+      "page_end": 477,
+      "sections": 1,
+      "chars": 12367
+    },
+    "36": {
+      "name": "Ya Sin",
+      "name_transliterated": "Y¥ SÏn",
+      "name_english": "60‒62",
+      "page_start": 478,
+      "page_end": 485,
+      "sections": 1,
+      "chars": 1394
+    },
+    "37": {
+      "name": "Al-Saffat",
+      "name_transliterated": "Al-ß¥ff¥t",
+      "name_english": "The Ranks",
+      "page_start": 486,
+      "page_end": 493,
+      "sections": 1,
+      "chars": 14292
+    },
+    "38": {
+      "name": "Sad",
+      "name_transliterated": "ß¥d",
+      "name_english": "",
+      "page_start": 494,
+      "page_end": 501,
+      "sections": 1,
+      "chars": 13879
+    },
+    "39": {
+      "name": "Al-Zumar",
+      "name_transliterated": "Al-Zumar",
+      "name_english": "The Crowds",
+      "page_start": 502,
+      "page_end": 512,
+      "sections": 1,
+      "chars": 18771
+    },
+    "40": {
+      "name": "Ghafir",
+      "name_transliterated": "Gh¥ﬁr",
+      "name_english": "The Forgiver",
+      "page_start": 513,
+      "page_end": 521,
+      "sections": 1,
+      "chars": 15835
+    },
+    "41": {
+      "name": "Fussilat",
+      "name_transliterated": "Fu||ilat",
+      "name_english": "Revelation Well-Expounded",
+      "page_start": 522,
+      "page_end": 529,
+      "sections": 1,
+      "chars": 13883
+    },
+    "42": {
+      "name": "Al-Shura",
+      "name_transliterated": "Al-Sh‰r¥",
+      "name_english": "Counsel",
+      "page_start": 530,
+      "page_end": 537,
+      "sections": 1,
+      "chars": 13271
+    },
+    "43": {
+      "name": "Al-Zukhruf",
+      "name_transliterated": "Al-Zukhruf",
+      "name_english": "Ornaments",
+      "page_start": 538,
+      "page_end": 545,
+      "sections": 1,
+      "chars": 12623
+    },
+    "44": {
+      "name": "Al-Dukhan",
+      "name_transliterated": "Al-Dukh¥n",
+      "name_english": "Smoke",
+      "page_start": 546,
+      "page_end": 550,
+      "sections": 1,
+      "chars": 7552
+    },
+    "45": {
+      "name": "Al-Jathiyah",
+      "name_transliterated": "Al-J¥thiyah",
+      "name_english": "The Kneeling One",
+      "page_start": 551,
+      "page_end": 555,
+      "sections": 1,
+      "chars": 7772
+    },
+    "46": {
+      "name": "Al-Ahqaf",
+      "name_transliterated": "Al-A^q¥f",
+      "name_english": "Sand Dunes",
+      "page_start": 556,
+      "page_end": 563,
+      "sections": 1,
+      "chars": 13500
+    },
+    "47": {
+      "name": "Muhammad",
+      "name_transliterated": "Mu^ammad",
+      "name_english": "",
+      "page_start": 564,
+      "page_end": 568,
+      "sections": 1,
+      "chars": 7660
+    },
+    "48": {
+      "name": "Al-Fath",
+      "name_transliterated": "Al-Fat^",
+      "name_english": "Victory",
+      "page_start": 569,
+      "page_end": 576,
+      "sections": 1,
+      "chars": 13818
+    },
+    "49": {
+      "name": "Al-Hujurat",
+      "name_transliterated": "Al-¤ujur¥t",
+      "name_english": "The Chambers",
+      "page_start": 577,
+      "page_end": 580,
+      "sections": 1,
+      "chars": 6470
+    },
+    "50": {
+      "name": "Qaf",
+      "name_transliterated": "Q¥f",
+      "name_english": "",
+      "page_start": 581,
+      "page_end": 584,
+      "sections": 1,
+      "chars": 6718
+    },
+    "51": {
+      "name": "Al-Dhariyat",
+      "name_transliterated": "Al-Dh¥riy¥t",
+      "name_english": "The Dust-Scattering Winds",
+      "page_start": 585,
+      "page_end": 588,
+      "sections": 1,
+      "chars": 5793
+    },
+    "52": {
+      "name": "Al-Tur",
+      "name_transliterated": "Al->‰r",
+      "name_english": "The Mount",
+      "page_start": 589,
+      "page_end": 593,
+      "sections": 1,
+      "chars": 7405
+    },
+    "53": {
+      "name": "Al-Najm",
+      "name_transliterated": "Al-Najm",
+      "name_english": "The Star",
+      "page_start": 594,
+      "page_end": 598,
+      "sections": 1,
+      "chars": 7304
+    },
+    "54": {
+      "name": "Al-Qamar",
+      "name_transliterated": "Al-Qamar",
+      "name_english": "The Moon",
+      "page_start": 599,
+      "page_end": 602,
+      "sections": 1,
+      "chars": 6043
+    },
+    "55": {
+      "name": "Al-Rahman",
+      "name_transliterated": "Al-Ra^m¥n",
+      "name_english": "The Merciful",
+      "page_start": 603,
+      "page_end": 606,
+      "sections": 1,
+      "chars": 6478
+    },
+    "56": {
+      "name": "Al-Waqiah",
+      "name_transliterated": "Al-W¥qi¢ah",
+      "name_english": "The Inevitable Event",
+      "page_start": 607,
+      "page_end": 612,
+      "sections": 1,
+      "chars": 34808
+    },
+    "57": {
+      "name": "Al-Hadid",
+      "name_transliterated": "Al-¤adÏd",
+      "name_english": "Iron",
+      "page_start": 626,
+      "page_end": 632,
+      "sections": 1,
+      "chars": 12044
+    },
+    "58": {
+      "name": "Al-Mujadilah",
+      "name_transliterated": "Al-Muj¥dilah",
+      "name_english": "She Who Pleaded",
+      "page_start": 633,
+      "page_end": 637,
+      "sections": 1,
+      "chars": 6395
+    },
+    "59": {
+      "name": "Al-Hashr",
+      "name_transliterated": "Al-¤ashr",
+      "name_english": "The Gathering",
+      "page_start": 638,
+      "page_end": 642,
+      "sections": 1,
+      "chars": 6610
+    },
+    "60": {
+      "name": "Al-Mumtahanah",
+      "name_transliterated": "Al-Mumta^anah",
+      "name_english": "The Tested Woman",
+      "page_start": 643,
+      "page_end": 648,
+      "sections": 1,
+      "chars": 6742
+    },
+    "61": {
+      "name": "Al-Saff",
+      "name_transliterated": "Al-ßaff",
+      "name_english": "The Ranks",
+      "page_start": 649,
+      "page_end": 652,
+      "sections": 1,
+      "chars": 5668
+    },
+    "62": {
+      "name": "Al-Jumuah",
+      "name_transliterated": "Al-Jumu¢ah",
+      "name_english": "Friday",
+      "page_start": 653,
+      "page_end": 656,
+      "sections": 1,
+      "chars": 3623
+    },
+    "63": {
+      "name": "Al-Munafiqun",
+      "name_transliterated": "Al-Mun¥ﬁq‰n",
+      "name_english": "The Hypocrites",
+      "page_start": 657,
+      "page_end": 659,
+      "sections": 1,
+      "chars": 3161
+    },
+    "64": {
+      "name": "Al-Taghabun",
+      "name_transliterated": "Al-Tagh¥bun",
+      "name_english": "Loss and Gain",
+      "page_start": 660,
+      "page_end": 664,
+      "sections": 1,
+      "chars": 6000
+    },
+    "65": {
+      "name": "Al-Talaq",
+      "name_transliterated": "Al->al¥q",
+      "name_english": "Divorce",
+      "page_start": 665,
+      "page_end": 670,
+      "sections": 1,
+      "chars": 5372
+    },
+    "66": {
+      "name": "Al-Tahrim",
+      "name_transliterated": "Al-Ta^rÏm",
+      "name_english": "The Prohibition",
+      "page_start": 671,
+      "page_end": 675,
+      "sections": 1,
+      "chars": 6300
+    },
+    "67": {
+      "name": "Al-Mulk",
+      "name_transliterated": "Al-Mulk",
+      "name_english": "Dominion",
+      "page_start": 676,
+      "page_end": 680,
+      "sections": 1,
+      "chars": 6001
+    },
+    "68": {
+      "name": "Al-Qalam",
+      "name_transliterated": "Al-Qalam",
+      "name_english": "The Pen",
+      "page_start": 681,
+      "page_end": 686,
+      "sections": 1,
+      "chars": 3666
+    },
+    "69": {
+      "name": "Al-Haqqah",
+      "name_transliterated": "Al-¤¥qqah",
+      "name_english": "The Reality",
+      "page_start": 687,
+      "page_end": 690,
+      "sections": 1,
+      "chars": 3673
+    },
+    "70": {
+      "name": "Al-Maarij",
+      "name_transliterated": "Al-Ma¢¥rij",
+      "name_english": "The Ways of Ascent",
+      "page_start": 691,
+      "page_end": 694,
+      "sections": 1,
+      "chars": 3097
+    },
+    "71": {
+      "name": "Nuh",
+      "name_transliterated": "N‰^",
+      "name_english": "Noah",
+      "page_start": 695,
+      "page_end": 698,
+      "sections": 1,
+      "chars": 2992
+    },
+    "72": {
+      "name": "Al-Jinn",
+      "name_transliterated": "Al-Jinn",
+      "name_english": "The Jinn",
+      "page_start": 699,
+      "page_end": 702,
+      "sections": 1,
+      "chars": 5965
+    },
+    "73": {
+      "name": "Al-Muzzammil",
+      "name_transliterated": "Al-Muzzammil",
+      "name_english": "The Mantled One",
+      "page_start": 703,
+      "page_end": 706,
+      "sections": 1,
+      "chars": 3314
+    },
+    "74": {
+      "name": "Al-Muddaththir",
+      "name_transliterated": "Al-Muddaththir",
+      "name_english": "The Cloaked One",
+      "page_start": 707,
+      "page_end": 712,
+      "sections": 1,
+      "chars": 4116
+    },
+    "75": {
+      "name": "Al-Qiyamah",
+      "name_transliterated": "Al-Qiy¥mah",
+      "name_english": "The Resurrection",
+      "page_start": 713,
+      "page_end": 715,
+      "sections": 1,
+      "chars": 3145
+    },
+    "76": {
+      "name": "Al-Insan",
+      "name_transliterated": "Al-Ins¥n",
+      "name_english": "Man",
+      "page_start": 716,
+      "page_end": 719,
+      "sections": 1,
+      "chars": 3179
+    },
+    "77": {
+      "name": "Al-Mursalat",
+      "name_transliterated": "Al-Mursal¥t",
+      "name_english": "Those Sent Forth",
+      "page_start": 720,
+      "page_end": 723,
+      "sections": 1,
+      "chars": 4872
+    },
+    "78": {
+      "name": "Al-Naba",
+      "name_transliterated": "Al-Naba’",
+      "name_english": "The Great News",
+      "page_start": 724,
+      "page_end": 727,
+      "sections": 1,
+      "chars": 3548
+    },
+    "79": {
+      "name": "Al-Naziat",
+      "name_transliterated": "Al-N¥zi¢¥t",
+      "name_english": "The Setting Stars",
+      "page_start": 728,
+      "page_end": 729,
+      "sections": 1,
+      "chars": 4150
+    },
+    "80": {
+      "name": "Abasa",
+      "name_transliterated": "¢Abasa",
+      "name_english": "He Frowned",
+      "page_start": 730,
+      "page_end": 731,
+      "sections": 1,
+      "chars": 3761
+    },
+    "81": {
+      "name": "Al-Takwir",
+      "name_transliterated": "Al-TakwÏr",
+      "name_english": "The Folding Up",
+      "page_start": 732,
+      "page_end": 733,
+      "sections": 1,
+      "chars": 3797
+    },
+    "82": {
+      "name": "Al-Infitar",
+      "name_transliterated": "Al-Inﬁ~¥r",
+      "name_english": "The Cataclysm",
+      "page_start": 734,
+      "page_end": 735,
+      "sections": 1,
+      "chars": 1944
+    },
+    "83": {
+      "name": "Al-Mutaffifin",
+      "name_transliterated": "Al-Mu~afﬁfÏn",
+      "name_english": "The Stinters",
+      "page_start": 736,
+      "page_end": 738,
+      "sections": 1,
+      "chars": 4964
+    },
+    "84": {
+      "name": "Al-Inshiqaq",
+      "name_transliterated": "Al-Inshiq¥q",
+      "name_english": "The Rending",
+      "page_start": 739,
+      "page_end": 740,
+      "sections": 1,
+      "chars": 3370
+    },
+    "85": {
+      "name": "Al-Buruj",
+      "name_transliterated": "Al-Bur‰j",
+      "name_english": "The Constellations",
+      "page_start": 741,
+      "page_end": 743,
+      "sections": 1,
+      "chars": 1406
+    },
+    "86": {
+      "name": "Al-Tariq",
+      "name_transliterated": "Al->¥riq",
+      "name_english": "The Night-Visitor",
+      "page_start": 744,
+      "page_end": 745,
+      "sections": 1,
+      "chars": 2341
+    },
+    "87": {
+      "name": "Al-Ala",
+      "name_transliterated": "Al-A¢l¥",
+      "name_english": "The Most High",
+      "page_start": 746,
+      "page_end": 747,
+      "sections": 1,
+      "chars": 3101
+    },
+    "88": {
+      "name": "Al-Ghashiyah",
+      "name_transliterated": "Al-Gh¥shiyah",
+      "name_english": "The Overwhelming Event",
+      "page_start": 748,
+      "page_end": 748,
+      "sections": 1,
+      "chars": 3101
+    },
+    "89": {
+      "name": "Al-Fajr",
+      "name_transliterated": "Al-Fajr",
+      "name_english": "The Dawn",
+      "page_start": 749,
+      "page_end": 750,
+      "sections": 1,
+      "chars": 5985
+    },
+    "90": {
+      "name": "Al-Balad",
+      "name_transliterated": "Al-Balad",
+      "name_english": "The City",
+      "page_start": 751,
+      "page_end": 752,
+      "sections": 1,
+      "chars": 3598
+    },
+    "91": {
+      "name": "Al-Shams",
+      "name_transliterated": "Al-Shams",
+      "name_english": "The Sun",
+      "page_start": 753,
+      "page_end": 753,
+      "sections": 1,
+      "chars": 2142
+    },
+    "92": {
+      "name": "Al-Layl",
+      "name_transliterated": "Al-Layl",
+      "name_english": "The Night",
+      "page_start": 754,
+      "page_end": 755,
+      "sections": 1,
+      "chars": 1902
+    },
+    "93": {
+      "name": "Al-Duha",
+      "name_transliterated": "Al-™u^¥",
+      "name_english": "Daylight",
+      "page_start": 756,
+      "page_end": 756,
+      "sections": 1,
+      "chars": 3881
+    },
+    "94": {
+      "name": "Al-Sharh",
+      "name_transliterated": "Al-Shar^",
+      "name_english": "The Consolation",
+      "page_start": 757,
+      "page_end": 757,
+      "sections": 1,
+      "chars": 2952
+    },
+    "95": {
+      "name": "Al-Tin",
+      "name_transliterated": "Al-TÏn",
+      "name_english": "TheFig",
+      "page_start": 758,
+      "page_end": 759,
+      "sections": 1,
+      "chars": 3061
+    },
+    "96": {
+      "name": "Al-Alaq",
+      "name_transliterated": "Al-¢Alaq",
+      "name_english": "The Blood Clot",
+      "page_start": 760,
+      "page_end": 761,
+      "sections": 1,
+      "chars": 3707
+    },
+    "97": {
+      "name": "Al-Qadr",
+      "name_transliterated": "Al-Qadr",
+      "name_english": "Power",
+      "page_start": 762,
+      "page_end": 763,
+      "sections": 1,
+      "chars": 1933
+    },
+    "98": {
+      "name": "Al-Bayyinah",
+      "name_transliterated": "Al-Bayyinah",
+      "name_english": "The Proof ",
+      "page_start": 764,
+      "page_end": 765,
+      "sections": 1,
+      "chars": 4646
+    },
+    "99": {
+      "name": "Al-Zalzalah",
+      "name_transliterated": "Al-Zalzalah",
+      "name_english": "The Earthquake",
+      "page_start": 766,
+      "page_end": 767,
+      "sections": 1,
+      "chars": 1916
+    },
+    "100": {
+      "name": "Al-Adiyat",
+      "name_transliterated": "Al-¢®diy¥t",
+      "name_english": "The War Steeds",
+      "page_start": 768,
+      "page_end": 768,
+      "sections": 1,
+      "chars": 1982
+    },
+    "101": {
+      "name": "Al-Qariah",
+      "name_transliterated": "Al-Q¥ri¢ah",
+      "name_english": "The Calamity",
+      "page_start": 769,
+      "page_end": 769,
+      "sections": 1,
+      "chars": 1374
+    },
+    "102": {
+      "name": "Al-Takathur",
+      "name_transliterated": "Al-Tak¥thur",
+      "name_english": "Worldly Gain",
+      "page_start": 749,
+      "page_end": 750,
+      "sections": 1,
+      "chars": 2040
+    },
+    "103": {
+      "name": "Al-Asr",
+      "name_transliterated": "Al-¢A|r",
+      "name_english": "The Flight of Time",
+      "page_start": 751,
+      "page_end": 751,
+      "sections": 1,
+      "chars": 1737
+    },
+    "104": {
+      "name": "Al-Humazah",
+      "name_transliterated": "Al-Humazah",
+      "name_english": "The Slanderer",
+      "page_start": 753,
+      "page_end": 753,
+      "sections": 1,
+      "chars": 1547
+    },
+    "105": {
+      "name": "Al-Fil",
+      "name_transliterated": "Al-FÏl",
+      "name_english": "The Elephant",
+      "page_start": 754,
+      "page_end": 755,
+      "sections": 1,
+      "chars": 1652
+    },
+    "106": {
+      "name": "Quraysh",
+      "name_transliterated": "Quraysh",
+      "name_english": "",
+      "page_start": 756,
+      "page_end": 756,
+      "sections": 1,
+      "chars": 1236
+    },
+    "107": {
+      "name": "Al-Maun",
+      "name_transliterated": "Al-M¥¢‰n",
+      "name_english": "Charity",
+      "page_start": 757,
+      "page_end": 757,
+      "sections": 1,
+      "chars": 1030
+    },
+    "108": {
+      "name": "Al-Kawthar",
+      "name_transliterated": "Al-Kawthar",
+      "name_english": "Good in Abundance",
+      "page_start": 758,
+      "page_end": 759,
+      "sections": 1,
+      "chars": 1685
+    },
+    "109": {
+      "name": "Al-Kafirun",
+      "name_transliterated": "Al-K¥ﬁr‰n",
+      "name_english": "The Unbelievers",
+      "page_start": 760,
+      "page_end": 761,
+      "sections": 1,
+      "chars": 2149
+    },
+    "110": {
+      "name": "Al-Nasr",
+      "name_transliterated": "Al-Na|r",
+      "name_english": "Victory",
+      "page_start": 762,
+      "page_end": 763,
+      "sections": 1,
+      "chars": 2386
+    },
+    "111": {
+      "name": "Al-Masad",
+      "name_transliterated": "Al-Masad",
+      "name_english": "The Fiber",
+      "page_start": 764,
+      "page_end": 765,
+      "sections": 1,
+      "chars": 2628
+    },
+    "112": {
+      "name": "Al-Ikhlas",
+      "name_transliterated": "Al-Ikhl¥|",
+      "name_english": "Purity of Faith",
+      "page_start": 766,
+      "page_end": 767,
+      "sections": 1,
+      "chars": 3129
+    },
+    "113": {
+      "name": "Al-Falaq",
+      "name_transliterated": "Al-Falaq",
+      "name_english": "Daybreak",
+      "page_start": 768,
+      "page_end": 768,
+      "sections": 1,
+      "chars": 1447
+    },
+    "114": {
+      "name": "Al-Nas",
+      "name_transliterated": "Al-N¥s",
+      "name_english": "Mankind",
+      "page_start": 769,
+      "page_end": 770,
+      "sections": 1,
+      "chars": 4017
+    }
+  }
+}

@@ -38,6 +38,7 @@ from vertexai.language_models import TextEmbeddingModel
 from google.cloud import aiplatform
 from google.cloud import storage
 from utils.text_cleaning import sanitize_heading_format
+from services.source_service import get_relevant_scholarly_context, extract_topic_keywords_from_query, get_scholarly_sources_metadata
 
 # --- App Initialization ---
 app = Flask(__name__)
@@ -4246,10 +4247,74 @@ def build_structured_context(context_by_source, arabic_text=None, cross_refs=Non
     return "\n\n" + "\n\n".join(context_sections)
 
 # ============================================================================
+# SCHOLARLY SOURCE CONTEXT HELPER
+# ============================================================================
+
+def _get_scholarly_context_for_prompt(query, verse_data=None):
+    """Extract surah/verse info from verse_data and fetch scholarly context."""
+    try:
+        surah_number = None
+        verse_start = None
+        verse_end = None
+
+        if verse_data:
+            if isinstance(verse_data, list) and len(verse_data) > 0:
+                surah_number = verse_data[0].get('surah_number')
+                verse_start = verse_data[0].get('verse_number')
+                verse_end = verse_data[-1].get('verse_number')
+            elif isinstance(verse_data, dict):
+                surah_number = verse_data.get('surah_number')
+                verse_start = verse_data.get('verse_number')
+
+        # Also extract topic keywords from query for topic-based retrieval
+        topic_keywords = extract_topic_keywords_from_query(query)
+
+        ctx = get_relevant_scholarly_context(
+            surah_number=surah_number,
+            verse_start=verse_start,
+            verse_end=verse_end,
+            topic_keywords=topic_keywords,
+        )
+        return ctx
+    except Exception as e:
+        print(f"⚠️ Scholarly source retrieval error (non-fatal): {e}")
+        return ""
+
+
+def _get_scholarly_sources_metadata(query, verse_data=None):
+    """Get metadata about which scholarly sources were used for this query."""
+    try:
+        surah_number = None
+        verse_start = None
+        verse_end = None
+
+        if verse_data:
+            if isinstance(verse_data, list) and len(verse_data) > 0:
+                surah_number = verse_data[0].get('surah_number')
+                verse_start = verse_data[0].get('verse_number')
+                verse_end = verse_data[-1].get('verse_number')
+            elif isinstance(verse_data, dict):
+                surah_number = verse_data.get('surah_number')
+                verse_start = verse_data.get('verse_number')
+
+        topic_keywords = extract_topic_keywords_from_query(query)
+
+        return get_scholarly_sources_metadata(
+            surah_number=surah_number,
+            verse_start=verse_start,
+            verse_end=verse_end,
+            topic_keywords=topic_keywords,
+        )
+    except Exception as e:
+        print(f"⚠️ Scholarly sources metadata error (non-fatal): {e}")
+        return []
+
+
+# ============================================================================
 # UPDATED: PERSONA-ADAPTIVE CLARITY-ENHANCED PROMPT WITH NEW PROFILE DATA
 # ============================================================================
 
-def build_enhanced_prompt(query, context_by_source, user_profile, arabic_text=None, cross_refs=None, query_type="default", verse_data=None, approach="tafsir"):
+def build_enhanced_prompt(query, context_by_source, user_profile, arabic_text=None, cross_refs=None, query_type="default", verse_data=None, approach="tafsir", scholarly_context=""):
     """
     ENHANCED VERSION: Gemini as Scholarly Editor with Persona-Adaptive Formatting
     UPDATED: Now includes learning_goal, knowledge_level, and refined formatting rules
@@ -4381,6 +4446,7 @@ SOURCE MATERIAL (Classical Tafsir - May Have Issues)
 
 ⚠️ NOTE: This source material comes from JSON-structured classical tafsir texts.
 It may contain grammar errors, typos, run-on sentences, missing punctuation, and awkward phrasing from translation/OCR.
+{scholarly_context}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 YOUR ROLE AS SCHOLARLY EDITOR
@@ -4496,8 +4562,13 @@ CRITICAL: The tafsir_explanations array MUST contain EXACTLY TWO sources and NO 
 1. al-Qurtubi
 2. Ibn Kathir
 
-DO NOT add any additional sources like "General Scholarly Analysis", "Additional Commentary", or any other source names.
-ONLY use the source material provided above. DO NOT generate additional explanations from your own knowledge.
+DO NOT add any additional sources to tafsir_explanations like "General Scholarly Analysis", "Additional Commentary", or any other source names.
+ONLY use the source material provided above for tafsir_explanations. DO NOT generate additional explanations from your own knowledge.
+
+However, USE the Additional Scholarly Sources (if provided above) to enrich:
+- The "lessons_practical_applications" section with grounded spiritual teachings
+- The "hadith" section with relevant hadith references from Riyad al-Saliheen
+- Always attribute clearly when using scholarly sources (e.g., "As Imam al-Ghazali teaches in Ihya Ulum al-Din...")
 
 {{
     "verses": [
@@ -6566,8 +6637,9 @@ def tafsir_handler_enhanced():
 
                 # Build prompt for AI formatting (skip RAG, use direct context)
                 arabic_text = get_arabic_text_from_verse_data(verse_data) if verse_data else None
+                scholarly_ctx = _get_scholarly_context_for_prompt(query, verse_data)
                 prompt = build_enhanced_prompt(query, context_by_source, user_profile,
-                                             arabic_text, None, 'metadata', verse_data, approach)
+                                             arabic_text, None, 'metadata', verse_data, approach, scholarly_ctx)
 
                 # Get auth token
                 credentials, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
@@ -6661,6 +6733,9 @@ def tafsir_handler_enhanced():
 
                     # Filter out unavailable sources before caching and returning
                     final_json = filter_unavailable_sources(final_json)
+
+                    # Add scholarly source attribution metadata
+                    final_json["scholarly_sources"] = _get_scholarly_sources_metadata(query, verse_data)
 
                     # Keep only requested verse(s) in main list; move extras to cross references
                     final_json = keep_requested_verses_primary(
@@ -6846,8 +6921,9 @@ def tafsir_handler_enhanced():
                             cross_refs = first_item['metadata'].get('cross_references', [])
 
                     # CRITICAL FIX: Pass correct verse data to prompt
+                    scholarly_ctx = _get_scholarly_context_for_prompt(query, verses_for_ai)
                     prompt = build_enhanced_prompt(query, context_by_source, user_profile,
-                                                 arabic_text, cross_refs, 'direct_verse', verses_for_ai, approach)
+                                                 arabic_text, cross_refs, 'direct_verse', verses_for_ai, approach, scholarly_ctx)
 
                     # CRITICAL LOGGING: Verify verse_data being passed to Gemini
                     if isinstance(verses_for_ai, list):
@@ -6950,6 +7026,9 @@ def tafsir_handler_enhanced():
 
                         # Filter out unavailable sources before caching and returning
                         final_json = filter_unavailable_sources(final_json)
+
+                        # Add scholarly source attribution metadata
+                        final_json["scholarly_sources"] = _get_scholarly_sources_metadata(query, verses_for_ai)
 
                         # Keep only requested verse(s) in main list; move extras to cross references
                         final_json = keep_requested_verses_primary(
@@ -7096,8 +7175,9 @@ def tafsir_handler_enhanced():
             # Build prompt (approach-aware)
             stage_start = time.time()
             rag_query_type = "default"
+            scholarly_ctx = _get_scholarly_context_for_prompt(query, verse_data)
             prompt = build_enhanced_prompt(query, context_by_source, user_profile,
-                                         arabic_text, cross_refs, rag_query_type, verse_data, approach)
+                                         arabic_text, cross_refs, rag_query_type, verse_data, approach, scholarly_ctx)
             perf_metrics['stages']['prompt_building'] = (time.time() - stage_start) * 1000
 
             # Truncate prompt if needed to fit token limits (50K max - typical: 6K-25K)
@@ -7280,6 +7360,9 @@ def tafsir_handler_enhanced():
 
                 # Filter out unavailable sources before caching and returning
                 final_json = filter_unavailable_sources(final_json)
+
+                # Add scholarly source attribution metadata
+                final_json["scholarly_sources"] = _get_scholarly_sources_metadata(query, verse_data)
 
                 # Keep only requested verse(s) in main list; move extras to cross references
                 final_json = keep_requested_verses_primary(
@@ -7646,8 +7729,9 @@ def debug_query(query):
                 # Build prompt
                 step_start = time.time()
                 arabic_text = get_arabic_text_from_verse_data(verse_data) if verse_data else None
+                scholarly_ctx = _get_scholarly_context_for_prompt(query, verse_data)
                 prompt = build_enhanced_prompt(query, context_by_source, user_profile,
-                                             arabic_text, None, 'metadata', verse_data, approach)
+                                             arabic_text, None, 'metadata', verse_data, approach, scholarly_ctx)
 
                 # LOG COMPLETE PROMPT
                 print("🔵 === COMPLETE PROMPT TO GEMINI ===")
@@ -7832,8 +7916,9 @@ def debug_query(query):
                 # Build prompt
                 step_start = time.time()
                 arabic_text = get_arabic_text_from_verse_data(verse_data) if verse_data else None
+                scholarly_ctx = _get_scholarly_context_for_prompt(query, verse_data)
                 prompt = build_enhanced_prompt(query, context_by_source, user_profile,
-                                             arabic_text, None, 'direct_verse', verse_data, approach)
+                                             arabic_text, None, 'direct_verse', verse_data, approach, scholarly_ctx)
 
                 # LOG COMPLETE PROMPT
                 print("🔵 === COMPLETE PROMPT TO GEMINI ===")
@@ -8030,8 +8115,9 @@ def debug_query(query):
 
             # Build prompt and call Gemini
             step_start = time.time()
+            scholarly_ctx = _get_scholarly_context_for_prompt(query, None)
             prompt = build_enhanced_prompt(query, chunks_by_source, user_profile,
-                                         None, None, 'semantic', None, approach)
+                                         None, None, 'semantic', None, approach, scholarly_ctx)
 
             log_step("10. Build AI Prompt", {
                 "prompt_length": len(prompt),

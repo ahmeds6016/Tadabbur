@@ -1,0 +1,61 @@
+{
+  "sources": {
+    "thematic_commentary": {
+      "description": "A Thematic Commentary on the Qur'an (Shaykh Muhammad al-Ghazali)",
+      "type": "surah_level",
+      "surahs": 114,
+      "sections": 228,
+      "total_chars": 1279463,
+      "app_tabs": [
+        "tafsir",
+        "lessons"
+      ]
+    },
+    "ihya_ulum_al_din": {
+      "description": "Ihya Ulum al-Din (Imam al-Ghazali, Vols 1-4)",
+      "type": "topic_level",
+      "volumes": 4,
+      "chapters": 40,
+      "total_chars": 2648384,
+      "app_tabs": [
+        "lessons"
+      ]
+    },
+    "madarij_al_salikin": {
+      "description": "Madarij al-Salikin (Ibn Qayyim, Vols 1-2)",
+      "type": "station_level",
+      "volumes": 2,
+      "stations": 35,
+      "total_chars": 3111094,
+      "app_tabs": [
+        "lessons"
+      ]
+    },
+    "asbab_al_nuzul": {
+      "description": "Asbab al-Nuzul (Al-Wahidi)",
+      "type": "verse_level",
+      "surahs": 83,
+      "entries": 446,
+      "total_chars": 819516,
+      "app_tabs": [
+        "tafsir"
+      ]
+    },
+    "riyad_al_saliheen": {
+      "description": "Riyad al-Saliheen (Imam al-Nawawi)",
+      "type": "hadith_collection",
+      "books": 1,
+      "chapters": 687,
+      "hadith": 1015,
+      "total_chars": 1227228,
+      "app_tabs": [
+        "hadith",
+        "lessons"
+      ]
+    }
+  },
+  "totals": {
+    "verse_map_entries": 2675,
+    "topic_map_entries": 1058
+  }
+}

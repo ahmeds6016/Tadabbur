@@ -1,0 +1,189 @@
+{
+  "source": "madarij_al_salikin",
+  "total_volumes": 2,
+  "volumes": {
+    "1": {
+      "stations": {
+        "awakening": {
+          "name": "Awakening",
+          "subsections": 2,
+          "chars": 3071
+        },
+        "insight": {
+          "name": "Insight",
+          "subsections": 13,
+          "chars": 38476
+        },
+        "purpose": {
+          "name": "Purpose",
+          "subsections": 2,
+          "chars": 4940
+        },
+        "resolve": {
+          "name": "Resolve",
+          "subsections": 19,
+          "chars": 70200
+        },
+        "reflection": {
+          "name": "Reflection",
+          "subsections": 1,
+          "chars": 3200
+        },
+        "annihilation": {
+          "name": "Annihilation",
+          "subsections": 32,
+          "chars": 110725
+        },
+        "self_reckoning": {
+          "name": "Self-Reckoning",
+          "subsections": 16,
+          "chars": 39477
+        },
+        "repentance": {
+          "name": "Repentance",
+          "subsections": 395,
+          "chars": 1338939
+        }
+      }
+    },
+    "2": {
+      "stations": {
+        "oft_returning": {
+          "name": "Oft-Returning",
+          "subsections": 14,
+          "chars": 39164
+        },
+        "remembrance": {
+          "name": "Remembrance",
+          "subsections": 34,
+          "chars": 100221
+        },
+        "holding_fast": {
+          "name": "Holding Fast",
+          "subsections": 16,
+          "chars": 32241
+        },
+        "fleeing": {
+          "name": "Fleeing",
+          "subsections": 11,
+          "chars": 33747
+        },
+        "disciplining": {
+          "name": "Disciplining",
+          "subsections": 6,
+          "chars": 18381
+        },
+        "listening": {
+          "name": "Listening",
+          "subsections": 48,
+          "chars": 117590
+        },
+        "grief": {
+          "name": "Grief",
+          "subsections": 8,
+          "chars": 26641
+        },
+        "fear": {
+          "name": "Fear",
+          "subsections": 11,
+          "chars": 26112
+        },
+        "trembling": {
+          "name": "Trembling",
+          "subsections": 3,
+          "chars": 11592
+        },
+        "humility": {
+          "name": "Humility",
+          "subsections": 15,
+          "chars": 39878
+        },
+        "meekness": {
+          "name": "Meekness",
+          "subsections": 7,
+          "chars": 23720
+        },
+        "renunciation": {
+          "name": "Renunciation",
+          "subsections": 15,
+          "chars": 50053
+        },
+        "scrupulousness": {
+          "name": "Scrupulousness",
+          "subsections": 11,
+          "chars": 34945
+        },
+        "devotion": {
+          "name": "Devotion",
+          "subsections": 6,
+          "chars": 24356
+        },
+        "hope": {
+          "name": "Hope",
+          "subsections": 21,
+          "chars": 89466
+        },
+        "desire": {
+          "name": "Desire",
+          "subsections": 4,
+          "chars": 14515
+        },
+        "shepherding": {
+          "name": "Shepherding",
+          "subsections": 8,
+          "chars": 20026
+        },
+        "watchfulness": {
+          "name": "Watchfulness",
+          "subsections": 33,
+          "chars": 115027
+        },
+        "purification": {
+          "name": "Purification",
+          "subsections": 11,
+          "chars": 40510
+        },
+        "refinement_and_correction": {
+          "name": "Refinement and Correction",
+          "subsections": 8,
+          "chars": 20597
+        },
+        "standing_firm": {
+          "name": "Standing Firm",
+          "subsections": 13,
+          "chars": 31435
+        },
+        "trusting_reliance": {
+          "name": "Trusting Reliance",
+          "subsections": 43,
+          "chars": 110675
+        },
+        "relegation": {
+          "name": "Relegation",
+          "subsections": 6,
+          "chars": 16774
+        },
+        "trust_in_god": {
+          "name": "Trust in God",
+          "subsections": 5,
+          "chars": 10600
+        },
+        "submission": {
+          "name": "Submission",
+          "subsections": 8,
+          "chars": 24918
+        },
+        "patience": {
+          "name": "Patience",
+          "subsections": 25,
+          "chars": 81666
+        },
+        "joyful_contentment": {
+          "name": "Joyful Contentment",
+          "subsections": 101,
+          "chars": 347216
+        }
+      }
+    }
+  }
+}
