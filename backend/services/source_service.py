@@ -24,10 +24,10 @@ _INDEX_DIR = _SCRIPT_DIR.parent / "data" / "indexes"
 # (to avoid exceeding model token limits)
 MAX_ASBAB_CHARS = 2000
 MAX_THEMATIC_CHARS = 3000
-MAX_IHYA_CHARS = 2000
-MAX_MADARIJ_CHARS = 2000
-MAX_RIYAD_CHARS = 2000
-MAX_TOTAL_SCHOLARLY_CHARS = 8000
+MAX_IHYA_CHARS = 3000
+MAX_MADARIJ_CHARS = 3000
+MAX_RIYAD_CHARS = 2500
+MAX_TOTAL_SCHOLARLY_CHARS = 12000
 
 
 @lru_cache(maxsize=1)
@@ -820,7 +820,7 @@ STATIONS (use ONLY these slugs):
          patience, joyful_contentment
 
 Rule: ONLY emit if the verse discusses a spiritual state matching a station
-  above. Max 1 pointer.
+  above. Max 2 pointers.
 
 ━━━ SOURCE 5: RIYAD AL-SALIHEEN (Imam al-Nawawi) ━━━
 Purpose: Authenticated hadith organized by moral/ethical topics.
@@ -846,7 +846,7 @@ ROUTING TABLE (use ONLY these mappings):
   generosity → riyad:book=1:ch=58:hadith=0
 
 Rule: ONLY emit if a keyword matches. Prefer this over the model generating
-  hadith from memory. Max 2 pointers.
+  hadith from memory. Max 3 pointers.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 POINTER GRAMMAR (STRICT — no other formats accepted):
@@ -998,7 +998,7 @@ def _resolve_thematic(params):
 
 
 def _resolve_ihya(params):
-    """Resolve ihya:vol=V:ch=C:sec=S → text excerpt."""
+    """Resolve ihya:vol=V:ch=C:sec=S → text excerpt (up to 2 sections)."""
     vol = params.get("vol")
     ch_num = params.get("ch")
     sec_idx = params.get("sec", 0)
@@ -1012,19 +1012,27 @@ def _resolve_ihya(params):
     for ch in vol_data.get("chapters", []):
         if ch["chapter_number"] == ch_num:
             sections = ch.get("sections", [])
-            # Try requested section; if trivially short (heading only), try next
-            for try_idx in range(sec_idx if isinstance(sec_idx, int) else 0,
-                                 min((sec_idx if isinstance(sec_idx, int) else 0) + 3, len(sections))):
+            start = sec_idx if isinstance(sec_idx, int) else 0
+            collected = []
+            total_len = 0
+            for try_idx in range(start, min(start + 5, len(sections))):
                 text = sections[try_idx].get("text", "")
                 if len(text.strip()) < 50:
                     continue  # skip headings
-                if len(text) > MAX_IHYA_CHARS:
-                    text = text[:MAX_IHYA_CHARS] + "..."
+                if total_len + len(text) > MAX_IHYA_CHARS:
+                    text = text[:MAX_IHYA_CHARS - total_len] + "..."
+                    collected.append(text)
+                    break
+                collected.append(text)
+                total_len += len(text)
+                if len(collected) >= 2:
+                    break
+            if collected:
                 return {
                     "source_id": "ihya",
                     "source": "Ihya Ulum al-Din (Imam al-Ghazali)",
                     "title": ch["chapter_title"],
-                    "text": text,
+                    "text": "\n\n".join(collected),
                 }
             break
 
@@ -1032,7 +1040,7 @@ def _resolve_ihya(params):
 
 
 def _resolve_madarij(params):
-    """Resolve madarij:vol=V:station=SLUG:sub=S → text excerpt."""
+    """Resolve madarij:vol=V:station=SLUG:sub=S → text excerpt (up to 2 subsections)."""
     vol = params.get("vol")
     station_slug = params.get("station")
     sub_idx = params.get("sub", 0)
@@ -1046,24 +1054,33 @@ def _resolve_madarij(params):
     for st in vol_data.get("stations", []):
         if st.get("station_slug", "").lower() == str(station_slug).lower():
             subsections = st.get("subsections", [])
-            if isinstance(sub_idx, int) and 0 <= sub_idx < len(subsections):
-                text = subsections[sub_idx].get("text", "")
-                if len(text) > MAX_MADARIJ_CHARS:
-                    text = text[:MAX_MADARIJ_CHARS] + "..."
-                if text.strip():
-                    return {
-                        "source_id": "madarij",
-                        "source": "Madarij al-Salikin (Ibn Qayyim al-Jawziyyah)",
-                        "title": f"Station of {st['station_name']}",
-                        "text": text,
-                    }
+            start = sub_idx if isinstance(sub_idx, int) else 0
+            collected = []
+            total_len = 0
+            for i in range(start, min(start + 2, len(subsections))):
+                text = subsections[i].get("text", "")
+                if not text.strip():
+                    continue
+                if total_len + len(text) > MAX_MADARIJ_CHARS:
+                    text = text[:MAX_MADARIJ_CHARS - total_len] + "..."
+                    collected.append(text)
+                    break
+                collected.append(text)
+                total_len += len(text)
+            if collected:
+                return {
+                    "source_id": "madarij",
+                    "source": "Madarij al-Salikin (Ibn Qayyim al-Jawziyyah)",
+                    "title": f"Station of {st['station_name']}",
+                    "text": "\n\n".join(collected),
+                }
             break
 
     return None
 
 
 def _resolve_riyad(params):
-    """Resolve riyad:book=B:ch=C:hadith=H → text excerpt."""
+    """Resolve riyad:book=B:ch=C:hadith=H → text excerpt (up to 2 hadiths)."""
     book = params.get("book", 1)
     ch_num = params.get("ch")
     hadith_idx = params.get("hadith", 0)
@@ -1075,28 +1092,48 @@ def _resolve_riyad(params):
         return None
 
     entries = ch_data.get("hadith_entries", [])
-    if isinstance(hadith_idx, int) and 0 <= hadith_idx < len(entries):
-        h = entries[hadith_idx]
+    start = hadith_idx if isinstance(hadith_idx, int) else 0
+    collected = []
+    total_len = 0
+    title = None
+
+    for i in range(start, min(start + 2, len(entries))):
+        h = entries[i]
         text = h.get("text", "")
-        if len(text) > MAX_RIYAD_CHARS:
-            text = text[:MAX_RIYAD_CHARS] + "..."
-        if text.strip():
+        if not text.strip():
+            continue
+        if total_len + len(text) > MAX_RIYAD_CHARS:
+            text = text[:MAX_RIYAD_CHARS - total_len] + "..."
+            collected.append(text)
+            if title is None:
+                narrator = h.get("narrator", "")
+                h_num = h.get("hadith_number", "")
+                title = f"Hadith #{h_num}" if h_num else "Hadith"
+                if narrator:
+                    title += f" (narrated by {narrator})"
+            break
+        collected.append(text)
+        total_len += len(text)
+        if title is None:
             narrator = h.get("narrator", "")
             h_num = h.get("hadith_number", "")
             title = f"Hadith #{h_num}" if h_num else "Hadith"
             if narrator:
                 title += f" (narrated by {narrator})"
-            ch_title = ch_data.get("chapter_title", "")
-            if ch_title:
-                title += f" — {ch_title}"
-            return {
-                "source_id": "riyad",
-                "source": "Riyad al-Saliheen (Imam al-Nawawi)",
-                "title": title,
-                "text": text,
-            }
 
-    return None
+    if not collected:
+        return None
+
+    ch_title = ch_data.get("chapter_title", "")
+    if ch_title and title:
+        title += f" — {ch_title}"
+
+    return {
+        "source_id": "riyad",
+        "source": "Riyad al-Saliheen (Imam al-Nawawi)",
+        "title": title or "Hadith",
+        "text": "\n\n".join(collected),
+    }
 
 
 # --- Main pointer dispatcher ---
@@ -1289,7 +1326,7 @@ DETERMINISTIC RULES (follow exactly):
 4. For each keyword match, emit the EXACT pointer from the routing table.
    Do NOT modify or invent pointers.
 5. If NO keywords match any routing table, emit ONLY the asbab + thematic pointers.
-6. Maximum 7 pointers total.
+6. Maximum 10 pointers total.
 7. Every pointer MUST follow the grammar: source_id:key=value:key=value:...
 
 OUTPUT (strict JSON, nothing else):
@@ -1336,6 +1373,15 @@ _IHYA_ROUTING = [
     ({"intention", "niyyah", "sincerity", "ikhlas"}, "ihya:vol=4:ch=7:sec=0"),
     ({"meditation", "introspection", "contemplation", "reflect"}, "ihya:vol=4:ch=8:sec=0"),
     ({"death", "afterlife", "hereafter", "akhirah", "grave", "dying", "judgment"}, "ihya:vol=4:ch=10:sec=0"),
+    # Expanded Ihya routing
+    ({"knowledge", "scholar", "learning", "ilm", "teach"}, "ihya:vol=1:ch=1:sec=0"),
+    ({"hypocrisy", "hypocrite", "munafiq", "nifaq", "show"}, "ihya:vol=3:ch=8:sec=0"),
+    ({"worship", "ibadah", "obedience", "obey"}, "ihya:vol=1:ch=3:sec=0"),
+    ({"charity", "sadaqah", "zakat", "alms", "giving"}, "ihya:vol=1:ch=5:sec=0"),
+    ({"food", "eating", "appetite", "meal"}, "ihya:vol=2:ch=1:sec=0"),
+    ({"travel", "journey", "seclusion"}, "ihya:vol=2:ch=7:sec=0"),
+    ({"self-deception", "delusion", "ghurur"}, "ihya:vol=3:ch=10:sec=0"),
+    ({"truthfulness", "truth", "sidq"}, "ihya:vol=4:ch=9:sec=0"),
 ]
 
 _MADARIJ_ROUTING = [
@@ -1363,6 +1409,13 @@ _MADARIJ_ROUTING = [
     ({"submission", "surrender", "islam"}, "madarij:vol=2:station=submission:sub=0"),
     ({"patience", "sabr", "patient", "steadfast"}, "madarij:vol=2:station=patience:sub=0"),
     ({"contentment", "rida", "satisfied", "content"}, "madarij:vol=2:station=joyful_contentment:sub=0"),
+    # Expanded Madarij routing
+    ({"discipline", "training", "riyadah"}, "madarij:vol=2:station=disciplining:sub=0"),
+    ({"listen", "listening", "heed"}, "madarij:vol=2:station=listening:sub=0"),
+    ({"trembling", "awe", "reverence"}, "madarij:vol=2:station=trembling:sub=0"),
+    ({"scrupulous", "wara", "caution"}, "madarij:vol=2:station=scrupulousness:sub=0"),
+    ({"relegate", "relegation", "entrust"}, "madarij:vol=2:station=relegation:sub=0"),
+    ({"standing firm", "steadfast", "istiqamah"}, "madarij:vol=2:station=standing_firm:sub=0"),
 ]
 
 _RIYAD_ROUTING = [
@@ -1382,9 +1435,88 @@ _RIYAD_ROUTING = [
     ({"renunciation", "zuhd", "asceticism"}, "riyad:book=1:ch=54:hadith=0"),
     ({"contentment", "rida", "satisfied"}, "riyad:book=1:ch=56:hadith=0"),
     ({"generosity", "charity", "sadaqah", "generous", "giving"}, "riyad:book=1:ch=58:hadith=0"),
+    # Expanded routing (from verse-map analysis)
+    ({"supplication", "dua", "invoke", "call upon"}, "riyad:book=1:ch=15:hadith=0"),
+    ({"enjoin", "forbid", "commanding"}, "riyad:book=1:ch=22:hadith=0"),
+    ({"oppression", "injustice", "zulm", "tyrant"}, "riyad:book=1:ch=26:hadith=0"),
+    ({"parent", "parents", "mother", "father", "filial"}, "riyad:book=1:ch=40:hadith=0"),
+    ({"neighbor", "neighbours", "neighbour"}, "riyad:book=1:ch=43:hadith=0"),
+    ({"orphan", "orphans", "yateem"}, "riyad:book=1:ch=44:hadith=0"),
+    ({"elderly", "aged", "respect"}, "riyad:book=1:ch=45:hadith=0"),
+    ({"sick", "illness", "visiting", "disease"}, "riyad:book=1:ch=46:hadith=0"),
+    ({"clothing", "dress", "garment"}, "riyad:book=1:ch=112:hadith=0"),
+    ({"greeting", "salam", "peace"}, "riyad:book=1:ch=130:hadith=0"),
+    ({"travel", "journey", "traveler"}, "riyad:book=1:ch=168:hadith=0"),
+    ({"obligation", "command", "duty", "obey", "obedience"}, "riyad:book=1:ch=179:hadith=0"),
+    ({"zakat", "alms", "zakah"}, "riyad:book=1:ch=200:hadith=0"),
+    ({"knowledge", "scholar", "learning", "ilm"}, "riyad:book=1:ch=241:hadith=0"),
+    ({"dream", "vision"}, "riyad:book=1:ch=243:hadith=0"),
+    ({"paradise", "jannah", "garden", "heaven"}, "riyad:book=1:ch=244:hadith=0"),
+    ({"hellfire", "jahannam", "fire", "punishment"}, "riyad:book=1:ch=344:hadith=0"),
+    ({"food", "eating", "drink", "meal"}, "riyad:book=1:ch=100:hadith=0"),
+    ({"fasting", "ramadan", "fast"}, "riyad:book=1:ch=201:hadith=0"),
 ]
 
-MAX_POINTERS = 7
+MAX_POINTERS = 10
+
+
+def _station_name_to_slug(name):
+    """Convert Madarij display name to station slug: 'Oft-Returning' → 'oft_returning'."""
+    return name.lower().replace(" ", "_").replace("-", "_")
+
+
+def _get_verse_map_pointers(surah_number, verse_start):
+    """
+    Look up pre-indexed verse→source references from the unified verse map.
+
+    Returns up to 5 pointer strings for ihya/madarij/riyad entries
+    that have been pre-computed for this specific verse.
+    """
+    verse_map = _load_unified_verse_map()
+    key = f"{surah_number}:{verse_start}"
+    refs = verse_map.get(key, [])
+
+    if not refs:
+        return []
+
+    pointers = []
+    seen = set()
+
+    for ref in refs:
+        source = ref.get("source", "")
+
+        if source == "ihya_ulum_al_din":
+            vol = ref.get("volume")
+            ch = ref.get("chapter")
+            if vol and ch:
+                p = f"ihya:vol={vol}:ch={ch}:sec=0"
+                if p not in seen:
+                    seen.add(p)
+                    pointers.append(p)
+
+        elif source == "madarij_al_salikin":
+            vol = ref.get("volume")
+            station = ref.get("station")
+            if vol and station:
+                slug = _station_name_to_slug(station)
+                p = f"madarij:vol={vol}:station={slug}:sub=0"
+                if p not in seen:
+                    seen.add(p)
+                    pointers.append(p)
+
+        elif source == "riyad_al_saliheen":
+            book = ref.get("book", 1)
+            ch = ref.get("chapter")
+            if ch:
+                p = f"riyad:book={book}:ch={ch}:hadith=0"
+                if p not in seen:
+                    seen.add(p)
+                    pointers.append(p)
+
+        if len(pointers) >= 5:
+            break
+
+    return pointers
 
 
 def plan_scholarly_retrieval_deterministic(surah_number, verse_start, verse_end,
@@ -1409,8 +1541,8 @@ def plan_scholarly_retrieval_deterministic(surah_number, verse_start, verse_end,
 
     # Track which sources we've already added pointers for (dedup)
     ihya_added = set()
-    madarij_added = False  # max 1
-    riyad_added = set()  # max 2
+    madarij_added = set()  # max 2
+    riyad_added = set()  # max 3
     matched_keywords = []
 
     # Scan Ihya (up to 3 pointers)
@@ -1428,24 +1560,26 @@ def plan_scholarly_retrieval_deterministic(surah_number, verse_start, verse_end,
                 matched_keywords.append(kw)
                 break
 
-    # Scan Madarij (max 1 pointer)
+    # Scan Madarij (max 2 pointers)
     for keywords, pointer in _MADARIJ_ROUTING:
         if len(pointers) >= MAX_POINTERS:
             break
-        if madarij_added:
+        if len(madarij_added) >= 2:
             break
+        if pointer in madarij_added:
+            continue
         for kw in keywords:
             if kw in search_text:
                 pointers.append(pointer)
-                madarij_added = True
+                madarij_added.add(pointer)
                 matched_keywords.append(kw)
                 break
 
-    # Scan Riyad (max 2 pointers)
+    # Scan Riyad (max 3 pointers)
     for keywords, pointer in _RIYAD_ROUTING:
         if len(pointers) >= MAX_POINTERS:
             break
-        if len(riyad_added) >= 2:
+        if len(riyad_added) >= 3:
             break
         if pointer in riyad_added:
             continue
@@ -1461,5 +1595,18 @@ def plan_scholarly_retrieval_deterministic(surah_number, verse_start, verse_end,
         reasoning = f"Matched keywords: {', '.join(matched_keywords[:8])}"
     else:
         reasoning = "No topical keywords matched routing tables; asbab + thematic only."
+
+    # --- Stage 2: Verse-map discovery (precise references from pre-indexed data) ---
+    verse_map_ptrs = _get_verse_map_pointers(surah_number, verse_start)
+    existing = set(pointers)
+    vm_added = 0
+    for vp in verse_map_ptrs:
+        if vp not in existing and len(pointers) < MAX_POINTERS:
+            pointers.append(vp)
+            existing.add(vp)
+            vm_added += 1
+
+    if vm_added:
+        reasoning += f" + {vm_added} verse-map refs"
 
     return {"pointers": pointers, "reasoning": reasoning}

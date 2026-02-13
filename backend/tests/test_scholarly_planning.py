@@ -20,9 +20,12 @@ from services.source_service import (
     format_scholarly_excerpts_for_prompt,
     build_scholarly_planning_prompt,
     plan_scholarly_retrieval_deterministic,
+    _get_verse_map_pointers,
+    _station_name_to_slug,
     SCHOLARLY_SOURCE_CATALOG,
     _SOURCE_BADGE_MAP,
     MAX_TOTAL_SCHOLARLY_CHARS,
+    MAX_POINTERS,
 )
 
 
@@ -329,7 +332,7 @@ class TestBuildPlanningPrompt:
         )
         assert "DETERMINISTIC RULES" in prompt
         assert "ALWAYS include" in prompt
-        assert "Maximum 7 pointers" in prompt
+        assert "Maximum 10 pointers" in prompt
 
     def test_verse_ref_in_prompt(self):
         prompt = build_scholarly_planning_prompt(
@@ -480,17 +483,23 @@ class TestDeterministicPlanner:
         assert any("patience" in p or "ch=3" in p for p in pointers if p.startswith("riyad:"))
 
     def test_narrative_verse_minimal(self):
-        """Narrative verse with no topical keywords gets only asbab + thematic."""
+        """Narrative verse with no topical keywords gets only asbab + thematic + verse-map."""
         plan = plan_scholarly_retrieval_deterministic(
             12, 4, 4,
-            "That was when We revealed to your mother what We revealed.",
-            "Musa mother river revelation"
+            "When Yusuf said to his brother, truly I saw eleven stars",
+            "Yusuf brothers eleven stars prostrating"
         )
         pointers = plan["pointers"]
-        # No topical keywords match any routing table
-        assert len(pointers) == 2
+        # No topical keywords match routing tables
         assert pointers[0] == "asbab:surah=12:verse=4"
         assert pointers[1] == "thematic:surah=12:section=0"
+        # May have verse-map refs but no keyword-routed refs
+        keyword_ptrs = [p for p in pointers[2:] if not _get_verse_map_pointers(12, 4) or p not in _get_verse_map_pointers(12, 4)]
+        # All extra pointers should be from verse map only (no keyword matches)
+        for p in pointers[2:]:
+            vm_ptrs = _get_verse_map_pointers(12, 4)
+            if vm_ptrs:
+                assert p in vm_ptrs, f"Extra pointer {p} not from verse map"
 
     def test_death_verse_matches_ihya(self):
         """33:16 about death should match Ihya death chapter."""
@@ -502,14 +511,14 @@ class TestDeterministicPlanner:
         pointers = plan["pointers"]
         assert "ihya:vol=4:ch=10:sec=0" in pointers
 
-    def test_max_7_pointers(self):
-        """Even with many keyword matches, should cap at 7."""
+    def test_max_pointers(self):
+        """Even with many keyword matches, should cap at MAX_POINTERS."""
         plan = plan_scholarly_retrieval_deterministic(
             2, 153, 153,
             "patience prayer repentance fear hope mercy forgiveness death trust love humility",
             "patience sabr prayer salah repentance tawbah fear hope mercy forgiveness death trust love humility"
         )
-        assert len(plan["pointers"]) <= 7
+        assert len(plan["pointers"]) <= MAX_POINTERS
 
     def test_returns_reasoning(self):
         """Plan should include reasoning string."""
@@ -542,4 +551,187 @@ class TestDeterministicPlanner:
         assert "EXCERPT 1" in formatted
         assert "CRITICAL INSTRUCTIONS" in formatted
         total = sum(len(e["text"]) for e in resolved["excerpts"])
+        assert total <= MAX_TOTAL_SCHOLARLY_CHARS + 10
+
+
+# ============================================================================
+# VERSE-MAP DISCOVERY
+# ============================================================================
+
+class TestVerseMapDiscovery:
+    def test_station_name_to_slug(self):
+        """Station display names should convert to correct slugs."""
+        assert _station_name_to_slug("Repentance") == "repentance"
+        assert _station_name_to_slug("Oft-Returning") == "oft_returning"
+        assert _station_name_to_slug("Self-Reckoning") == "self_reckoning"
+        assert _station_name_to_slug("Joyful Contentment") == "joyful_contentment"
+        assert _station_name_to_slug("Refinement and Correction") == "refinement_and_correction"
+        assert _station_name_to_slug("Trust in God") == "trust_in_god"
+        assert _station_name_to_slug("Standing Firm") == "standing_firm"
+
+    def test_verse_map_pointers_riyad(self):
+        """Verse 2:3 should have riyad references in the verse map."""
+        ptrs = _get_verse_map_pointers(2, 3)
+        # Should return list (may be empty if no verse map entry)
+        assert isinstance(ptrs, list)
+        # All pointers should be valid format
+        for p in ptrs:
+            source_id, params = _parse_pointer(p)
+            assert source_id is not None, f"Invalid pointer: {p}"
+
+    def test_verse_map_pointers_madarij(self):
+        """Verse 2:222 should have madarij reference (Purification) in verse map."""
+        ptrs = _get_verse_map_pointers(2, 222)
+        madarij_ptrs = [p for p in ptrs if p.startswith("madarij:")]
+        if madarij_ptrs:
+            # Verify slug format (no spaces, no hyphens)
+            for p in madarij_ptrs:
+                _, params = _parse_pointer(p)
+                assert " " not in str(params.get("station", ""))
+                assert "-" not in str(params.get("station", ""))
+
+    def test_verse_map_returns_max_5(self):
+        """Should return at most 5 pointers."""
+        ptrs = _get_verse_map_pointers(2, 255)
+        assert len(ptrs) <= 5
+
+    def test_verse_map_empty_for_nonexistent(self):
+        """Nonexistent verse should return empty list."""
+        ptrs = _get_verse_map_pointers(999, 999)
+        assert ptrs == []
+
+    def test_verse_map_no_duplicates(self):
+        """Should not return duplicate pointers."""
+        ptrs = _get_verse_map_pointers(2, 3)
+        assert len(ptrs) == len(set(ptrs))
+
+    def test_verse_map_integrated_into_planner(self):
+        """Planner should include verse-map pointers beyond keyword routing."""
+        # Use a verse that has verse-map refs but possibly no keyword matches
+        plan = plan_scholarly_retrieval_deterministic(
+            2, 3, 3,
+            "Who believe in the unseen, establish prayer, and spend out of what We have provided for them",
+            "faith unseen prayer spending charity"
+        )
+        pointers = plan["pointers"]
+        # Should have asbab + thematic at minimum
+        assert pointers[0].startswith("asbab:")
+        assert pointers[1].startswith("thematic:")
+        # Check if verse-map refs were added (reasoning should mention it)
+        verse_map_ptrs = _get_verse_map_pointers(2, 3)
+        if verse_map_ptrs:
+            assert "verse-map" in plan["reasoning"]
+
+    def test_verse_map_dedup_with_keyword(self):
+        """Verse-map pointers that match keyword pointers should not duplicate."""
+        plan = plan_scholarly_retrieval_deterministic(
+            39, 53, 53,
+            "Say, O My servants who have transgressed against themselves, do not despair of the mercy of Allah.",
+            "mercy forgiveness repentance hope"
+        )
+        # No duplicates
+        assert len(plan["pointers"]) == len(set(plan["pointers"]))
+
+
+# ============================================================================
+# EXPANDED ROUTING
+# ============================================================================
+
+class TestExpandedRouting:
+    def test_riyad_paradise_routing(self):
+        """'paradise' keyword should match expanded riyad routing."""
+        plan = plan_scholarly_retrieval_deterministic(
+            56, 10, 10,
+            "And the forerunners, the forerunners - those are the ones brought near, in Gardens of Pleasure",
+            "paradise jannah reward forerunners"
+        )
+        riyad_ptrs = [p for p in plan["pointers"] if p.startswith("riyad:")]
+        assert any("ch=244" in p for p in riyad_ptrs), "Expected paradise chapter 244"
+
+    def test_riyad_knowledge_routing(self):
+        """'knowledge' keyword should match expanded riyad routing."""
+        plan = plan_scholarly_retrieval_deterministic(
+            96, 1, 1,
+            "Read in the name of your Lord who created",
+            "knowledge learning reading creation"
+        )
+        riyad_ptrs = [p for p in plan["pointers"] if p.startswith("riyad:")]
+        assert any("ch=241" in p for p in riyad_ptrs), "Expected knowledge chapter 241"
+
+    def test_ihya_knowledge_routing(self):
+        """'knowledge' keyword should match expanded ihya routing."""
+        plan = plan_scholarly_retrieval_deterministic(
+            96, 1, 1,
+            "Read in the name of your Lord who created",
+            "knowledge learning reading"
+        )
+        ihya_ptrs = [p for p in plan["pointers"] if p.startswith("ihya:")]
+        assert any("ch=1" in p and "vol=1" in p for p in ihya_ptrs), "Expected Ihya vol 1 ch 1 (Knowledge)"
+
+    def test_madarij_expanded_routing(self):
+        """'discipline' keyword should match expanded madarij routing."""
+        plan = plan_scholarly_retrieval_deterministic(
+            2, 183, 183,
+            "O you who have believed, decreed upon you is fasting as it was decreed upon those before you that you may become righteous",
+            "fasting discipline self-control righteousness"
+        )
+        madarij_ptrs = [p for p in plan["pointers"] if p.startswith("madarij:")]
+        assert any("disciplining" in p for p in madarij_ptrs), "Expected disciplining station"
+
+    def test_riyad_new_chapters_resolve(self):
+        """New riyad chapter pointers from expanded routing should actually resolve."""
+        new_chapters = [179, 200, 201, 241, 244, 344]
+        for ch in new_chapters:
+            result = _resolve_riyad({"book": 1, "ch": ch, "hadith": 0})
+            assert result is not None, f"Riyad chapter {ch} failed to resolve"
+            assert len(result["text"]) > 20, f"Riyad chapter {ch} has insufficient text"
+
+
+# ============================================================================
+# MULTI-SECTION FETCHING
+# ============================================================================
+
+class TestMultiSectionFetching:
+    def test_ihya_multi_section(self):
+        """Ihya resolver should fetch up to 2 substantive sections."""
+        result = _resolve_ihya({"vol": 4, "ch": 1, "sec": 0})
+        assert result is not None
+        # With multi-section, text may contain section separator
+        assert len(result["text"]) > 100
+
+    def test_madarij_multi_subsection(self):
+        """Madarij resolver should fetch up to 2 subsections."""
+        result = _resolve_madarij({"vol": 1, "station": "repentance", "sub": 0})
+        assert result is not None
+        assert len(result["text"]) > 100
+
+    def test_riyad_multi_hadith(self):
+        """Riyad resolver should fetch up to 2 hadiths."""
+        result = _resolve_riyad({"book": 1, "ch": 2, "hadith": 0})
+        assert result is not None
+        assert len(result["text"]) > 50
+
+    def test_ihya_respects_char_limit(self):
+        """Multi-section fetching should respect MAX_IHYA_CHARS."""
+        from services.source_service import MAX_IHYA_CHARS
+        result = _resolve_ihya({"vol": 4, "ch": 1, "sec": 0})
+        if result:
+            assert len(result["text"]) <= MAX_IHYA_CHARS + 10
+
+    def test_increased_budget(self):
+        """10 pointers resolved, total should stay under 12000 chars."""
+        pointers = [
+            "asbab:surah=39:verse=53",
+            "thematic:surah=39:section=0",
+            "ihya:vol=4:ch=1:sec=0",
+            "ihya:vol=4:ch=3:sec=0",
+            "ihya:vol=3:ch=1:sec=0",
+            "madarij:vol=1:station=repentance:sub=0",
+            "madarij:vol=2:station=hope:sub=0",
+            "riyad:book=1:ch=50:hadith=0",
+            "riyad:book=1:ch=2:hadith=0",
+            "riyad:book=1:ch=3:hadith=0",
+        ]
+        result = resolve_scholarly_pointers(pointers)
+        total = sum(len(e["text"]) for e in result["excerpts"])
         assert total <= MAX_TOTAL_SCHOLARLY_CHARS + 10

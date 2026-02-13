@@ -146,7 +146,7 @@ TAFSIR_CHUNKS = {}
 CHUNK_SOURCE_MAP = {}  # Maps chunk_id to source name
 VERSE_METADATA = {}  # NEW: Stores structured metadata for direct queries
 RESPONSE_CACHE = {}  # In-memory cache
-SCHOLARLY_PIPELINE_VERSION = "4.0"  # Bump: lessons trilogy + scholarly synthesis + no asterisks
+SCHOLARLY_PIPELINE_VERSION = "5.0"  # Bump: verse-map discovery + expanded routing + multi-section fetch
 USER_RATE_LIMITS = defaultdict(list)  # Rate limiting
 ANALYTICS = defaultdict(int)  # Usage analytics
 
@@ -4337,11 +4337,11 @@ def _get_scholarly_context_two_stage(query, verse_data, context_by_source):
             gemini_status = f"error: {type(ge).__name__}"
             print(f"  [SCHOLARLY-2STAGE] Gemini error: {type(ge).__name__}: {str(ge)[:200]}")
 
-        # --- Merge: union of pointers, deduplicated, capped at 7 ---
+        # --- Merge: union of pointers, deduplicated, capped at 10 ---
         seen = set()
         merged_pointers = []
         for p in det_pointers + gemini_pointers:
-            if p not in seen and len(merged_pointers) < 7:
+            if p not in seen and len(merged_pointers) < 10:
                 seen.add(p)
                 merged_pointers.append(p)
 
