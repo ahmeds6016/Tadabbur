@@ -2583,36 +2583,162 @@ function EnhancedResultsDisplay({
                 }}>
                   {lesson.point}
                 </div>
-                {lesson.example && (
+
+                {/* Synthesis type: single narrative body */}
+                {lesson.type === 'synthesis' && lesson.body && (
                   <div style={{
-                    background: '#f0fdf4',
-                    borderLeft: '3px solid #10b981',
-                    padding: '10px 12px',
-                    marginBottom: '12px',
-                    borderRadius: '4px'
+                    background: '#f0f9ff',
+                    borderLeft: '3px solid #0ea5e9',
+                    padding: '12px 14px',
+                    borderRadius: '4px',
+                    fontSize: '0.95rem',
+                    color: '#0c4a6e',
+                    lineHeight: '1.7'
                   }}>
-                    <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#059669', marginBottom: '4px', textTransform: 'uppercase' }}>
-                      Example
-                    </div>
-                    <div style={{ fontSize: '0.9rem', color: '#065f46', lineHeight: '1.6' }}>
-                      {lesson.example}
-                    </div>
+                    {lesson.body}
                   </div>
                 )}
-                {lesson.action && (
-                  <div style={{
-                    background: '#fefce8',
-                    borderLeft: '3px solid #eab308',
-                    padding: '10px 12px',
-                    borderRadius: '4px'
-                  }}>
-                    <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#ca8a04', marginBottom: '4px', textTransform: 'uppercase' }}>
-                      Action Step
-                    </div>
-                    <div style={{ fontSize: '0.9rem', color: '#713f12', lineHeight: '1.6' }}>
-                      {lesson.action}
-                    </div>
+
+                {/* Contemplation type: principle + question + anchor */}
+                {lesson.type === 'contemplation' && (
+                  <div style={{ display: 'grid', gap: '10px' }}>
+                    {lesson.core_principle && (
+                      <div style={{
+                        background: '#f0fdf4',
+                        borderLeft: '3px solid #10b981',
+                        padding: '10px 12px',
+                        borderRadius: '4px'
+                      }}>
+                        <div style={{ fontSize: '0.7rem', fontWeight: '700', color: '#059669', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          Core Principle
+                        </div>
+                        <div style={{ fontSize: '0.95rem', color: '#065f46', lineHeight: '1.6' }}>
+                          {lesson.core_principle}
+                        </div>
+                      </div>
+                    )}
+                    {lesson.contemplation && (
+                      <div style={{
+                        background: '#faf5ff',
+                        borderLeft: '3px solid #a855f7',
+                        padding: '10px 12px',
+                        borderRadius: '4px'
+                      }}>
+                        <div style={{ fontSize: '0.7rem', fontWeight: '700', color: '#7c3aed', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          Contemplation
+                        </div>
+                        <div style={{ fontSize: '0.95rem', color: '#4c1d95', lineHeight: '1.6', fontStyle: 'italic' }}>
+                          {lesson.contemplation}
+                        </div>
+                      </div>
+                    )}
+                    {lesson.prophetic_anchor && (
+                      <div style={{
+                        background: '#fefce8',
+                        borderLeft: '3px solid #eab308',
+                        padding: '10px 12px',
+                        borderRadius: '4px'
+                      }}>
+                        <div style={{ fontSize: '0.7rem', fontWeight: '700', color: '#ca8a04', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          Prophetic Anchor
+                        </div>
+                        <div style={{ fontSize: '0.95rem', color: '#713f12', lineHeight: '1.6' }}>
+                          {lesson.prophetic_anchor}
+                        </div>
+                      </div>
+                    )}
                   </div>
+                )}
+
+                {/* Progression type: baseline → ascent → peak */}
+                {lesson.type === 'progression' && (
+                  <div style={{ display: 'grid', gap: '10px' }}>
+                    {lesson.baseline && (
+                      <div style={{
+                        background: '#f8fafc',
+                        borderLeft: '3px solid #94a3b8',
+                        padding: '10px 12px',
+                        borderRadius: '4px'
+                      }}>
+                        <div style={{ fontSize: '0.7rem', fontWeight: '700', color: '#64748b', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          The Baseline
+                        </div>
+                        <div style={{ fontSize: '0.95rem', color: '#334155', lineHeight: '1.6' }}>
+                          {lesson.baseline}
+                        </div>
+                      </div>
+                    )}
+                    {lesson.ascent && (
+                      <div style={{
+                        background: '#eff6ff',
+                        borderLeft: '3px solid #3b82f6',
+                        padding: '10px 12px',
+                        borderRadius: '4px'
+                      }}>
+                        <div style={{ fontSize: '0.7rem', fontWeight: '700', color: '#2563eb', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          The Ascent
+                        </div>
+                        <div style={{ fontSize: '0.95rem', color: '#1e3a5f', lineHeight: '1.6' }}>
+                          {lesson.ascent}
+                        </div>
+                      </div>
+                    )}
+                    {lesson.peak && (
+                      <div style={{
+                        background: '#fdf4ff',
+                        borderLeft: '3px solid #d946ef',
+                        padding: '10px 12px',
+                        borderRadius: '4px'
+                      }}>
+                        <div style={{ fontSize: '0.7rem', fontWeight: '700', color: '#c026d3', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          The Peak
+                        </div>
+                        <div style={{ fontSize: '0.95rem', color: '#701a75', lineHeight: '1.6' }}>
+                          {lesson.peak}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Fallback for old format or untyped lessons */}
+                {!lesson.type && (
+                  <>
+                    {lesson.example && (
+                      <div style={{
+                        background: '#f0fdf4',
+                        borderLeft: '3px solid #10b981',
+                        padding: '10px 12px',
+                        marginBottom: '12px',
+                        borderRadius: '4px'
+                      }}>
+                        <div style={{ fontSize: '0.9rem', color: '#065f46', lineHeight: '1.6' }}>
+                          {lesson.example}
+                        </div>
+                      </div>
+                    )}
+                    {lesson.action && (
+                      <div style={{
+                        background: '#fefce8',
+                        borderLeft: '3px solid #eab308',
+                        padding: '10px 12px',
+                        borderRadius: '4px'
+                      }}>
+                        <div style={{ fontSize: '0.9rem', color: '#713f12', lineHeight: '1.6' }}>
+                          {lesson.action}
+                        </div>
+                      </div>
+                    )}
+                    {lesson.body && (
+                      <div style={{
+                        fontSize: '0.95rem',
+                        color: '#374151',
+                        lineHeight: '1.7'
+                      }}>
+                        {lesson.body}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             ))}

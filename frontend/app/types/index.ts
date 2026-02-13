@@ -49,6 +49,20 @@ export interface TafsirExplanation {
 
 export interface Lesson {
   point: string;
+  type?: 'synthesis' | 'contemplation' | 'progression';
+  // Synthesis type
+  body?: string;
+  // Contemplation type
+  core_principle?: string;
+  contemplation?: string;
+  prophetic_anchor?: string;
+  // Progression type
+  baseline?: string;
+  ascent?: string;
+  peak?: string;
+  // Legacy fields
+  example?: string;
+  action?: string;
   relevance?: string;
 }
 

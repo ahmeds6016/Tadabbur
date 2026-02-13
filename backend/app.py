@@ -146,7 +146,7 @@ TAFSIR_CHUNKS = {}
 CHUNK_SOURCE_MAP = {}  # Maps chunk_id to source name
 VERSE_METADATA = {}  # NEW: Stores structured metadata for direct queries
 RESPONSE_CACHE = {}  # In-memory cache
-SCHOLARLY_PIPELINE_VERSION = "3.0"  # Bump: two-stage with retries + deterministic baseline merge
+SCHOLARLY_PIPELINE_VERSION = "4.0"  # Bump: lessons trilogy + scholarly synthesis + no asterisks
 USER_RATE_LIMITS = defaultdict(list)  # Rate limiting
 ANALYTICS = defaultdict(int)  # Usage analytics
 
@@ -4807,10 +4807,11 @@ CRITICAL: The tafsir_explanations array MUST contain EXACTLY TWO sources and NO 
 DO NOT add any additional sources to tafsir_explanations like "General Scholarly Analysis", "Additional Commentary", or any other source names.
 ONLY use the source material provided above for tafsir_explanations. DO NOT generate additional explanations from your own knowledge.
 
-However, USE the Additional Scholarly Sources (if provided above) to enrich:
-- The "lessons_practical_applications" section with grounded spiritual teachings
-- The "hadith" section with relevant hadith references from Riyad al-Saliheen
-- Always attribute clearly when using scholarly sources (e.g., "As Imam al-Ghazali teaches in Ihya Ulum al-Din...")
+However, USE the Additional Scholarly Sources (if provided above) EXTENSIVELY to create deeply layered responses:
+- The "lessons_practical_applications" section MUST integrate scholarly sources by name ("Imam al-Ghazali explains...", "Ibn al-Qayyim describes...")
+- The "hadith" section should use hadith excerpts from Riyad al-Saliheen when provided
+- The "summary" section must connect classical tafsir with spiritual insights from scholarly sources
+- NEVER cite granular section names (e.g., "Section: SECRETS OF MARRIAGE"). Instead, cite naturally: "Imam al-Ghazali, in Ihya Ulum al-Din, discusses..."
 
 {{
     "verses": [
@@ -4843,39 +4844,45 @@ However, USE the Additional Scholarly Sources (if provided above) to enrich:
 
     "hadith": [
         {{
-            "reference": "Hadith source (e.g., 'Sahih Bukhari 1234')",
-            "text": "Brief hadith text or summary",
-            "relevance": "How this hadith relates to the verse"
+            "reference": "Source attribution (e.g., 'Sahih Bukhari 1234' or 'Riyad al-Saliheen, Imam al-Nawawi'). NEVER include section/chapter names like 'Section: X'.",
+            "text": "The hadith text or a scholarly excerpt. If from Riyad al-Saliheen data, use the provided text. Cite naturally: 'Imam al-Ghazali, in Ihya Ulum al-Din, discusses...' — NOT 'Section: SECRETS OF MARRIAGE'.",
+            "relevance": "How this connects to the verse. Weave in the scholarly perspective — why this teaching matters for the verse's message."
         }}
     ],
 
     "lessons_practical_applications": [
         {{
-            "point": "Concise lesson title (one sentence)",
-            "example": "Real-life scenario showing this principle in action",
-            "action": "One specific thing to do today (if/when/then format)"
+            "point": "Lesson title (Synthesis)",
+            "type": "synthesis",
+            "body": "A rich narrative paragraph that synthesizes the scholarly sources with the verse's themes. Reference scholars by name naturally: 'Imam al-Ghazali argues that...', 'The thematic structure of this Surah suggests...', 'Ibn al-Qayyim explains that...'. This should feel like a continuation of the scholarly tradition — authoritative and illuminating, NOT preachy or generic."
         }},
         {{
-            "point": "Concise lesson title (one sentence)",
-            "example": "Real-life scenario showing this principle in action",
-            "action": "One specific thing to do today (if/when/then format)"
+            "point": "Lesson title (Contemplation)",
+            "type": "contemplation",
+            "core_principle": "A concise statement of the ethical/spiritual principle derived from the verse.",
+            "contemplation": "A deep, probing question that forces genuine self-reflection. Example: 'If you stripped away all human witnesses to your good deeds, what would remain of your motivation?'",
+            "prophetic_anchor": "A short hadith or scholarly quote that answers or deepens the contemplation."
         }},
         {{
-            "point": "Concise lesson title (one sentence)",
-            "example": "Real-life scenario showing this principle in action",
-            "action": "One specific thing to do today (if/when/then format)"
+            "point": "Lesson title (Progression)",
+            "type": "progression",
+            "baseline": "The Baseline — what is required at the Shariah level. The external, foundational obligation or understanding.",
+            "ascent": "The Ascent — how to refine the intention at the Tariqah level. The psychological and spiritual refinement, drawing from Ihya or Madarij.",
+            "peak": "The Peak — the state of the heart once the lesson is mastered at the Haqiqah level. The transformed worldview and spiritual station."
         }}
     ],
 
-    "summary": "2-3 sentences directly answering the query"
+    "summary": "A concise scholarly synthesis (4-6 sentences). Connect the classical tafsir (Ibn Kathir/al-Qurtubi) with spiritual insights from the scholarly sources. This is NOT a blurb — it should demonstrate how the verse sits within the broader Islamic intellectual tradition. Reference specific scholars and their contributions to understanding this verse."
 }}
 
 FORMATTING RULES (ALL PERSONAS):
 - Use short paragraphs (2-4 sentences each) with **bolded sub-headers**
 - NO bullet points, NO numbered lists, NO emojis
+- NEVER use single asterisks for italics (*word*). Use only double asterisks for **bold headers**.
 - Vocabulary complexity adapts to persona, structure stays consistent
+- When citing scholarly sources, cite naturally by scholar name — NEVER cite section/chapter numbers (e.g., say "Imam al-Ghazali, in Ihya Ulum al-Din, explains..." NOT "Ihya Ulum al-Din, Section: SECRETS OF MARRIAGE")
 
-IMPORTANT: Always use **Bold Header** format for sub-headers (e.g., **Divine Will and Human Diversity**)
+IMPORTANT: Always use **Bold Header** format for sub-headers (e.g., **Divine Will and Human Diversity**). NEVER use *single asterisks* anywhere.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 CRITICAL REMINDERS
@@ -4892,9 +4899,13 @@ CRITICAL REMINDERS
 9. **NEVER FABRICATE** - If insufficient source material, acknowledge limitations
 10. **FOLLOW CONTENT GUIDELINES** - {'Include hadith' if persona['include_hadith'] else 'Avoid hadith'}, {'include scholarly debates' if persona['scholarly_debates'] else 'avoid scholarly disagreements'}
 11. **MATCH LEARNING GOAL** - {goal_instruction}
+12. **NO SINGLE ASTERISKS** - NEVER use *italic* formatting. Only use **bold** for headers.
+13. **NATURAL CITATIONS** - Say "Imam al-Ghazali explains..." not "Ihya Ulum al-Din, Section: X"
+14. **LESSONS TRILOGY** - Each response MUST have exactly 3 lessons: one synthesis, one contemplation, one progression
+15. **RICH SUMMARY** - Summary is a scholarly synthesis (4-6 sentences), NOT a 2-sentence blurb
 
 Current persona: **{persona_name}** ({knowledge_level} level)
-Apply formatting: Short paragraphs with **bolded sub-headers**. NO bullets. NO emojis. Vocabulary adapted to {persona_name} level.
+Apply formatting: Short paragraphs with **bolded sub-headers**. NO bullets. NO emojis. NO single asterisks. Vocabulary adapted to {persona_name} level.
 
 Begin your persona-adapted, clarity-enhanced response now.
 """
