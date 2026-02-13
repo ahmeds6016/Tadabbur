@@ -579,6 +579,8 @@ function MainApp({ user, userProfile, onResetProfile }) {
   // Deep Tafsir mode only - Explore is disabled for now
   const approach = 'tafsir';
   const [query, setQuery] = useState('');
+  const [pickerSurah, setPickerSurah] = useState(null);
+  const [pickerVerse, setPickerVerse] = useState(null);
   const [response, setResponse] = useState(null);
   const [urlParamsProcessed, setUrlParamsProcessed] = useState(false);
   const [error, setError] = useState('');
@@ -863,8 +865,8 @@ function MainApp({ user, userProfile, onResetProfile }) {
     // Create new AbortController for this request
     abortControllerRef.current = new AbortController();
 
-    // Set timeout for tafsir requests (45 seconds)
-    const timeoutMs = 45000;
+    // Set timeout for tafsir requests (3 minutes: scholarly planning + generation + retries)
+    const timeoutMs = 180000;
     searchTimeoutRef.current = setTimeout(() => {
       // Clear the ref BEFORE aborting so the catch handler knows it was a timeout
       searchTimeoutRef.current = null;
@@ -1372,6 +1374,8 @@ function MainApp({ user, userProfile, onResetProfile }) {
               document.querySelector('.tafsir-form')?.requestSubmit();
             }, 100);
           }}
+          externalSurah={pickerSurah}
+          externalVerse={pickerVerse}
         />
 
         {/* Hidden form - auto-submitted by SurahVersePicker */}
@@ -1468,23 +1472,17 @@ function MainApp({ user, userProfile, onResetProfile }) {
               <div style={{ display: 'flex', gap: '8px', flex: 1, alignItems: 'center' }}>
                 <button
                   onClick={() => {
-                    if (isTafsirLoading) {
-                      // Cancel in-flight request, keep query
-                      if (abortControllerRef.current) {
-                        abortControllerRef.current.abort();
-                      }
-                      setIsTafsirLoading(false);
-                      setError('');
-                    } else {
-                      // Clear results and scroll to picker
-                      setResponse(null);
-                      setError('');
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    if (abortControllerRef.current) {
+                      abortControllerRef.current.abort();
                     }
+                    setIsTafsirLoading(false);
+                    setResponse(null);
+                    setError('');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
                   style={{
                     padding: '8px 16px',
-                    background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                    background: 'var(--primary-teal)',
                     color: 'white',
                     border: 'none',
                     borderRadius: '8px',
@@ -1494,11 +1492,11 @@ function MainApp({ user, userProfile, onResetProfile }) {
                     display: 'flex',
                     alignItems: 'center',
                     gap: '6px',
-                    transition: 'transform 0.2s ease',
+                    transition: 'all 0.2s ease',
                   }}
-                  onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'}
-                  onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
-                  title={!isMobile ? 'Clear Results (Esc)' : 'Clear Results'}
+                  onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.05)'; e.currentTarget.style.opacity = '0.9'; }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.opacity = '1'; }}
+                  title={!isMobile ? 'Back (Esc)' : 'Back'}
                 >
                   {isTafsirLoading ? 'Stop' : 'Back'}
                   {!isMobile && <kbd style={{
@@ -1508,42 +1506,6 @@ function MainApp({ user, userProfile, onResetProfile }) {
                     fontSize: '0.75rem',
                     marginLeft: '4px'
                   }}>Esc</kbd>}
-                </button>
-                <button
-                  onClick={() => {
-                    // Cancel any in-flight request before starting new search
-                    if (abortControllerRef.current) {
-                      abortControllerRef.current.abort();
-                    }
-                    setIsTafsirLoading(false);
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
-                  style={{
-                    padding: '8px 16px',
-                    background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    fontSize: '0.9rem',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    transition: 'transform 0.2s ease',
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'}
-                  onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
-                  title={!isMobile ? 'New Search (Ctrl+K)' : 'New Search'}
-                >
-                  New Search
-                  {!isMobile && <kbd style={{
-                    background: 'rgba(255,255,255,0.2)',
-                    padding: '2px 6px',
-                    borderRadius: '4px',
-                    fontSize: '0.75rem',
-                    marginLeft: '4px'
-                  }}>Ctrl+K</kbd>}
                 </button>
               </div>
               <div style={{
@@ -1601,6 +1563,12 @@ function MainApp({ user, userProfile, onResetProfile }) {
               approach={approach}
               onQueryChange={(newQuery) => {
                 setQuery(newQuery);
+                // Parse verse ref (e.g., "7:189") and sync the dropdown
+                const match = newQuery.match(/^(\d+):(\d+)/);
+                if (match) {
+                  setPickerSurah(parseInt(match[1]));
+                  setPickerVerse(parseInt(match[2]));
+                }
                 // Auto-submit the form after setting the query
                 setTimeout(() => {
                   const formElement = document.querySelector('.tafsir-form');

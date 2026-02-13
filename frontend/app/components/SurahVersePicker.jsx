@@ -1,5 +1,5 @@
 'use client';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 
 // Complete list of all 114 surahs with their verse counts
 const SURAHS = [
@@ -138,10 +138,19 @@ const ALL_QUICK_SELECTS = [
   { query: '28:7-13', label: 'Baby Musa' },
 ];
 
-export default function SurahVersePicker({ onSelect, initialSurah = null, initialVerse = null }) {
+export default function SurahVersePicker({ onSelect, initialSurah = null, initialVerse = null, externalSurah = null, externalVerse = null }) {
   const [selectedSurah, setSelectedSurah] = useState(initialSurah || '');
   const [startVerse, setStartVerse] = useState(initialVerse || '');
   const [endVerse, setEndVerse] = useState('');
+
+  // Sync dropdown when navigating via cross-reference click
+  useEffect(() => {
+    if (externalSurah) {
+      setSelectedSurah(String(externalSurah));
+      setStartVerse(externalVerse ? String(externalVerse) : '');
+      setEndVerse('');
+    }
+  }, [externalSurah, externalVerse]);
 
   // Randomize 3 quick selects on mount
   const randomQuickSelects = useMemo(() => {
