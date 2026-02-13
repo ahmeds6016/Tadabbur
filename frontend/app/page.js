@@ -26,6 +26,10 @@ import ConfirmDialog from './components/ConfirmDialog';
 import ErrorBoundary from './components/ErrorBoundary';
 import TafsirLogo from './components/Logo';
 import SurahVersePicker from './components/SurahVersePicker';
+import CollectionsGrid from './components/CollectionsGrid';
+import RecommendationBar from './components/RecommendationBar';
+import ReadingPlanCard from './components/ReadingPlanCard';
+import BadgeDisplay, { BadgePopup } from './components/BadgeDisplay';
 import { ToastContainer } from './components/ui/Toast';
 import { TafsirSkeleton, Skeleton } from './components/ui/SkeletonLoader';
 import { loadSearchState, saveSearchState, clearSearchState } from './utils/searchPersistence';
@@ -595,6 +599,13 @@ function MainApp({ user, userProfile, onResetProfile }) {
     annotationCount: 0
   });
 
+  // Daily verse & streak state
+  const [dailyVerse, setDailyVerse] = useState(null);
+  const [streak, setStreak] = useState({ current_streak: 0, longest_streak: 0 });
+
+  // Badge popup state
+  const [badgePopup, setBadgePopup] = useState(null);
+
   // Toast notifications
   const { toasts, showSuccess, showError } = useToast();
 
@@ -648,6 +659,60 @@ function MainApp({ user, userProfile, onResetProfile }) {
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Fetch daily verse and streak on mount
+  useEffect(() => {
+    fetch(`${BACKEND_URL}/daily-verse`)
+      .then(res => res.ok ? res.json() : null)
+      .then(data => { if (data) setDailyVerse(data); })
+      .catch(() => {});
+
+    if (user) {
+      user.getIdToken().then(token => {
+        fetch(`${BACKEND_URL}/streak`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+          .then(res => res.ok ? res.json() : null)
+          .then(data => { if (data) setStreak(data); })
+          .catch(() => {});
+      });
+    }
+  }, [user]);
+
+  // Update streak helper
+  const updateStreak = useCallback(async () => {
+    if (!user) return;
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch(`${BACKEND_URL}/streak`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setStreak(data);
+        // Show badge popup if newly earned
+        if (data.newly_earned_badges?.length > 0) {
+          setBadgePopup(data.newly_earned_badges[0]);
+        }
+      }
+    } catch {
+      // Non-critical
+    }
+  }, [user]);
+
+  // Helper to navigate to a verse (used by collections, recommendations, reading plans)
+  const handleStudyVerse = useCallback((surah, verse) => {
+    setPickerSurah(surah);
+    setPickerVerse(verse);
+    setQuery(`${surah}:${verse}`);
+    setTimeout(() => {
+      document.querySelector('.tafsir-form')?.requestSubmit();
+    }, 100);
   }, []);
 
   // Load saved search state on mount (survives page refresh)
@@ -913,6 +978,9 @@ function MainApp({ user, userProfile, onResetProfile }) {
       if (!onboardingState.hasSearched) {
         markStepComplete('hasSearched');
       }
+
+      // Update streak on successful search
+      updateStreak();
 
       // Save to query history
       await saveQueryToHistory(query, approach, userProfile?.persona || '', true);
@@ -1268,6 +1336,14 @@ function MainApp({ user, userProfile, onResetProfile }) {
       {/* Toast Notifications */}
       <ToastContainer toasts={toasts} />
 
+      {/* Badge Popup */}
+      {badgePopup && (
+        <BadgePopup
+          badge={badgePopup}
+          onClose={() => setBadgePopup(null)}
+        />
+      )}
+
       {/* Persona Change Confirmation */}
       <ConfirmDialog
         isOpen={showPersonaConfirm}
@@ -1372,6 +1448,175 @@ function MainApp({ user, userProfile, onResetProfile }) {
           </div>
         )}
         
+        {/* Homepage Dashboard — visible when no response is showing */}
+        {!response && !isTafsirLoading && (
+          <div className="homepage-dashboard">
+            {/* Streak Display */}
+            {streak.current_streak > 0 && (
+              <div className="streak-card">
+                <div className="streak-flame">{streak.current_streak >= 7 ? '\u{1F525}' : '\u{2B50}'}</div>
+                <div className="streak-info">
+                  <span className="streak-count">{streak.current_streak} day streak</span>
+                  <span className="streak-sub">Longest: {streak.longest_streak} days</span>
+                </div>
+              </div>
+            )}
+
+            {/* Daily Verse Card */}
+            {dailyVerse && (
+              <div className="daily-verse-card">
+                <div className="daily-verse-label">Verse of the Day</div>
+                <div className="daily-verse-ref">
+                  {dailyVerse.surah_name} ({dailyVerse.surah}:{dailyVerse.verse}) — {dailyVerse.theme}
+                </div>
+                {dailyVerse.arabic_text && (
+                  <p className="daily-verse-arabic">{dailyVerse.arabic_text}</p>
+                )}
+                {dailyVerse.english_text && (
+                  <p className="daily-verse-english">{dailyVerse.english_text}</p>
+                )}
+                <button
+                  className="daily-verse-explore"
+                  onClick={() => {
+                    setPickerSurah(dailyVerse.surah);
+                    setPickerVerse(dailyVerse.verse);
+                    setQuery(`${dailyVerse.surah}:${dailyVerse.verse}`);
+                    setTimeout(() => {
+                      document.querySelector('.tafsir-form')?.requestSubmit();
+                    }, 100);
+                  }}
+                >
+                  Explore this verse
+                </button>
+              </div>
+            )}
+
+            {/* Active Reading Plan */}
+            <ReadingPlanCard user={user} onStudyVerse={handleStudyVerse} />
+
+            {/* Badge Summary + Progress Link */}
+            <div className="progress-summary-row">
+              <BadgeDisplay user={user} compact={true} />
+              <a href="/progress" className="progress-link">
+                View Quran Progress Map
+              </a>
+            </div>
+
+            {/* Themed Collections Grid */}
+            <CollectionsGrid user={user} onStudyVerse={handleStudyVerse} />
+
+            <style jsx>{`
+              .homepage-dashboard {
+                margin-bottom: 24px;
+              }
+              .progress-summary-row {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 12px;
+                padding: 12px 16px;
+                background: var(--cream, #fdfbf7);
+                border: 1px solid var(--border-light, #e5e7eb);
+                border-radius: 12px;
+                margin-bottom: 16px;
+                flex-wrap: wrap;
+              }
+              .progress-link {
+                font-size: 0.85rem;
+                font-weight: 600;
+                color: var(--primary-teal, #0d9488);
+                text-decoration: none;
+                transition: all 0.2s ease;
+              }
+              .progress-link:hover {
+                text-decoration: underline;
+              }
+              .streak-card {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 14px 18px;
+                background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+                border: 1px solid #fbbf24;
+                border-radius: 12px;
+                margin-bottom: 16px;
+              }
+              .streak-flame {
+                font-size: 1.6rem;
+              }
+              .streak-info {
+                display: flex;
+                flex-direction: column;
+              }
+              .streak-count {
+                font-weight: 700;
+                color: #92400e;
+                font-size: 1.05rem;
+              }
+              .streak-sub {
+                font-size: 0.8rem;
+                color: #a16207;
+              }
+              .daily-verse-card {
+                padding: 24px;
+                background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 50%, #f0f9ff 100%);
+                border: 1px solid #bbf7d0;
+                border-radius: 16px;
+                text-align: center;
+              }
+              .daily-verse-label {
+                text-transform: uppercase;
+                font-size: 0.7rem;
+                font-weight: 700;
+                letter-spacing: 0.1em;
+                color: var(--primary-teal, #0d9488);
+                margin-bottom: 8px;
+              }
+              .daily-verse-ref {
+                font-size: 0.85rem;
+                color: #64748b;
+                margin-bottom: 16px;
+                font-weight: 500;
+              }
+              .daily-verse-arabic {
+                font-family: 'Scheherazade New', 'Traditional Arabic', serif;
+                font-size: 1.5rem;
+                direction: rtl;
+                line-height: 2;
+                color: var(--deep-blue, #1e3a5f);
+                margin: 0 0 12px 0;
+              }
+              .daily-verse-english {
+                font-size: 0.95rem;
+                color: #374151;
+                line-height: 1.7;
+                font-style: italic;
+                margin: 0 0 20px 0;
+              }
+              .daily-verse-explore {
+                padding: 10px 24px;
+                background: var(--primary-teal, #0d9488);
+                color: white;
+                border: none;
+                border-radius: 24px;
+                font-weight: 600;
+                font-size: 0.9rem;
+                cursor: pointer;
+                transition: all 0.2s ease;
+              }
+              .daily-verse-explore:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 4px 12px rgba(13, 148, 136, 0.3);
+              }
+              @media (max-width: 768px) {
+                .daily-verse-arabic {
+                  font-size: 1.3rem;
+                }
+              }
+            `}</style>
+          </div>
+        )}
+
         {/* Surah/Verse Picker */}
         <SurahVersePicker
           onSelect={(queryStr) => {
@@ -1614,6 +1859,110 @@ function MainApp({ user, userProfile, onResetProfile }) {
               onAnnotationClose={handleAnnotationClose}
               onGeneralReflection={handleGeneralReflection}
             />
+
+            {/* Contextual Reflection Prompt */}
+            {response.reflection_prompt && user && (
+              <div className="reflection-prompt-card">
+                <div className="reflection-prompt-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M12 16v-4"/>
+                    <path d="M12 8h.01"/>
+                  </svg>
+                </div>
+                <div className="reflection-prompt-body">
+                  <p className="reflection-prompt-label">Reflect on this verse</p>
+                  <p className="reflection-prompt-text">{response.reflection_prompt}</p>
+                  <button
+                    className="reflection-prompt-btn"
+                    onClick={() => {
+                      setCurrentVerse({
+                        reflectionType: 'general',
+                        queryContext: query,
+                        prefillPrompt: response.reflection_prompt
+                      });
+                      setAnnotationDialogOpen(true);
+                      ensureShareId().catch(() => {});
+                      updateStreak();
+                    }}
+                  >
+                    Write a Reflection
+                  </button>
+                </div>
+
+                <style jsx>{`
+                  .reflection-prompt-card {
+                    display: flex;
+                    gap: 16px;
+                    padding: 20px 24px;
+                    margin-top: 24px;
+                    background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 50%, #ede9fe 100%);
+                    border: 1px solid #ddd6fe;
+                    border-radius: 16px;
+                    animation: fadeSlideIn 0.5s ease;
+                  }
+                  @keyframes fadeSlideIn {
+                    from { opacity: 0; transform: translateY(8px); }
+                    to { opacity: 1; transform: translateY(0); }
+                  }
+                  .reflection-prompt-icon {
+                    flex-shrink: 0;
+                    color: #8b5cf6;
+                    margin-top: 2px;
+                  }
+                  .reflection-prompt-body {
+                    flex: 1;
+                  }
+                  .reflection-prompt-label {
+                    font-size: 0.75rem;
+                    font-weight: 700;
+                    text-transform: uppercase;
+                    letter-spacing: 0.08em;
+                    color: #7c3aed;
+                    margin: 0 0 8px 0;
+                  }
+                  .reflection-prompt-text {
+                    font-size: 1rem;
+                    color: #374151;
+                    line-height: 1.6;
+                    margin: 0 0 16px 0;
+                  }
+                  .reflection-prompt-btn {
+                    padding: 10px 20px;
+                    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+                    color: white;
+                    border: none;
+                    border-radius: 24px;
+                    font-weight: 600;
+                    font-size: 0.9rem;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                  }
+                  .reflection-prompt-btn:hover {
+                    transform: translateY(-1px);
+                    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+                  }
+                  @media (max-width: 768px) {
+                    .reflection-prompt-card {
+                      flex-direction: column;
+                      gap: 8px;
+                      padding: 16px;
+                    }
+                    .reflection-prompt-icon {
+                      display: none;
+                    }
+                  }
+                `}</style>
+              </div>
+            )}
+
+            {/* Verse Recommendations */}
+            {response.recommendations && (
+              <RecommendationBar
+                recommendations={response.recommendations}
+                onStudyVerse={handleStudyVerse}
+              />
+            )}
           </>
         )}
       </div>

@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Clock, Star, FileText, BookOpen, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Home, Clock, Star, FileText, BarChart3, BookOpen, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export default function DesktopNav({ user, stats = {}, collapsed = false, onToggleCollapse }) {
   const pathname = usePathname();
@@ -43,6 +43,14 @@ export default function DesktopNav({ user, stats = {}, collapsed = false, onTogg
       shortcut: 'Alt+N',
       description: `${stats.annotationCount || 0} reflections`,
       badge: stats.annotationCount
+    },
+    {
+      id: 'progress',
+      label: 'Progress',
+      icon: BarChart3,
+      href: '/progress',
+      shortcut: 'Alt+P',
+      description: 'Your Quran journey'
     }
   ];
 
@@ -66,6 +74,10 @@ export default function DesktopNav({ user, stats = {}, collapsed = false, onTogg
           case 'n':
             e.preventDefault();
             window.location.href = '/annotations';
+            break;
+          case 'p':
+            e.preventDefault();
+            window.location.href = '/progress';
             break;
           case 'b':
             e.preventDefault();

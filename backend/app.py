@@ -146,7 +146,7 @@ TAFSIR_CHUNKS = {}
 CHUNK_SOURCE_MAP = {}  # Maps chunk_id to source name
 VERSE_METADATA = {}  # NEW: Stores structured metadata for direct queries
 RESPONSE_CACHE = {}  # In-memory cache
-SCHOLARLY_PIPELINE_VERSION = "5.0"  # Bump: verse-map discovery + expanded routing + multi-section fetch
+SCHOLARLY_PIPELINE_VERSION = "7.0"  # Bump: collections, badges, recommendations, reading plans
 USER_RATE_LIMITS = defaultdict(list)  # Rate limiting
 ANALYTICS = defaultdict(int)  # Usage analytics
 
@@ -4692,7 +4692,9 @@ However, USE the Additional Scholarly Sources (if provided above) EXTENSIVELY to
         }}
     ],
 
-    "summary": "A concise scholarly synthesis (4-6 sentences). Connect the classical tafsir (Ibn Kathir/al-Qurtubi) with spiritual insights from the scholarly sources. This is NOT a blurb — it should demonstrate how the verse sits within the broader Islamic intellectual tradition. Reference specific scholars and their contributions to understanding this verse."
+    "summary": "A concise scholarly synthesis (4-6 sentences). Connect the classical tafsir (Ibn Kathir/al-Qurtubi) with spiritual insights from the scholarly sources. This is NOT a blurb — it should demonstrate how the verse sits within the broader Islamic intellectual tradition. Reference specific scholars and their contributions to understanding this verse.",
+
+    "reflection_prompt": "A single, deeply personal question (1-2 sentences) that invites the reader to reflect on how THIS SPECIFIC verse applies to their life today. The question must be unique to the verse's content — reference the verse's themes, imagery, or commands directly. Examples: For a verse about charity, ask about generosity in the reader's daily life. For a verse about patience, ask about a current trial they face. NEVER use generic prompts like 'How does this verse apply to your life?' — always tie it to the verse's specific message. The tone should be warm, introspective, and non-judgmental."
 }}
 
 FORMATTING RULES (ALL PERSONAS):
@@ -4723,6 +4725,7 @@ CRITICAL REMINDERS
 13. **NATURAL CITATIONS** - Say "Imam al-Ghazali explains..." not "Ihya Ulum al-Din, Section: X"
 14. **LESSONS TRILOGY** - Each response MUST have exactly 3 lessons: one synthesis, one contemplation, one progression
 15. **RICH SUMMARY** - Summary is a scholarly synthesis (4-6 sentences), NOT a 2-sentence blurb
+16. **REFLECTION PROMPT** - The reflection_prompt MUST be specific to this verse's content. Reference the verse's themes/imagery directly. NEVER generic.
 
 Current persona: **{persona_name}** ({knowledge_level} level)
 Apply formatting: Short paragraphs with **bolded sub-headers**. NO bullets. NO emojis. NO single asterisks. Vocabulary adapted to {persona_name} level.
@@ -5623,6 +5626,1044 @@ def list_personas():
     }), 200
 
 # ============================================================================
+# DAILY VERSE ENDPOINT
+# ============================================================================
+
+# Curated list of impactful, universally resonant verses for daily rotation
+# Format: (surah_number, verse_number, brief_theme)
+DAILY_VERSE_POOL = [
+    (1, 1, "The Opening"),
+    (2, 152, "Remember Allah"),
+    (2, 155, "Patience through trials"),
+    (2, 186, "Allah is near"),
+    (2, 197, "Best provision is taqwa"),
+    (2, 216, "Hidden good in hardship"),
+    (2, 255, "Ayat al-Kursi"),
+    (2, 261, "Charity multiplied"),
+    (2, 286, "Allah does not burden"),
+    (3, 26, "Sovereignty belongs to Allah"),
+    (3, 139, "Do not grieve"),
+    (3, 159, "Mercy and consultation"),
+    (3, 185, "Every soul shall taste death"),
+    (3, 200, "Patience and perseverance"),
+    (4, 36, "Worship Allah and be kind"),
+    (5, 8, "Stand firm for justice"),
+    (6, 59, "Keys of the unseen"),
+    (6, 162, "Prayer and sacrifice for Allah"),
+    (7, 56, "Mercy of Allah is near"),
+    (7, 199, "Forgiveness and kindness"),
+    (8, 2, "Hearts tremble at Allah's mention"),
+    (9, 51, "Nothing befalls except what Allah decrees"),
+    (10, 62, "Friends of Allah have no fear"),
+    (11, 6, "Every creature's provision is from Allah"),
+    (12, 86, "Complaining only to Allah"),
+    (13, 11, "Change begins within"),
+    (13, 28, "Hearts find rest in remembrance"),
+    (14, 7, "Gratitude increases blessings"),
+    (16, 90, "Justice, kindness, and generosity"),
+    (16, 97, "Good life through faith"),
+    (17, 23, "Honor your parents"),
+    (17, 80, "Prayer for true entrance"),
+    (18, 10, "Youth of the cave"),
+    (18, 46, "Good deeds are lasting"),
+    (20, 114, "Increase me in knowledge"),
+    (21, 87, "Dua of Yunus"),
+    (23, 1, "Success of the believers"),
+    (24, 35, "Light upon light"),
+    (25, 63, "Servants of the Most Merciful"),
+    (29, 69, "Striving in Allah's way"),
+    (31, 17, "Patience in adversity"),
+    (33, 21, "Prophet as best example"),
+    (33, 41, "Remember Allah abundantly"),
+    (35, 5, "Life of this world is delusion"),
+    (36, 58, "Peace — a word from the Lord"),
+    (39, 10, "Reward for those who do good"),
+    (39, 53, "Despair not of Allah's mercy"),
+    (40, 60, "Call upon Me, I will respond"),
+    (41, 34, "Repel evil with good"),
+    (42, 30, "Afflictions from your own deeds"),
+    (49, 10, "Believers are brothers"),
+    (49, 13, "Most noble is most righteous"),
+    (50, 16, "Closer than the jugular vein"),
+    (51, 56, "Created to worship"),
+    (55, 13, "Which blessings will you deny"),
+    (57, 4, "Allah is with you wherever you are"),
+    (59, 22, "Beautiful names of Allah"),
+    (64, 16, "Fear Allah as much as you can"),
+    (65, 3, "Allah provides from unexpected sources"),
+    (67, 2, "Created life as a test"),
+    (73, 8, "Devote yourself to Allah"),
+    (87, 14, "Successful is the one who purifies"),
+    (89, 27, "O tranquil soul"),
+    (93, 5, "Your Lord will give you"),
+    (94, 5, "With hardship comes ease"),
+    (103, 1, "Time and loss"),
+    (112, 1, "Say: He is Allah, the One"),
+]
+
+
+@app.route("/daily-verse", methods=["GET"])
+def get_daily_verse():
+    """Return a verse of the day — deterministic, same for all users on a given date."""
+    try:
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        # Deterministic index: hash the date, mod by pool size
+        idx = int(hashlib.md5(today.encode()).hexdigest(), 16) % len(DAILY_VERSE_POOL)
+        surah, verse_num, theme = DAILY_VERSE_POOL[idx]
+
+        surah_meta = QURAN_METADATA.get(surah, {})
+        surah_name = surah_meta.get("name", f"Surah {surah}")
+
+        # Fetch verse text from Firestore
+        verse_data = get_verse_from_firestore(surah, verse_num)
+        arabic_text = verse_data.get("arabic", "") if verse_data else ""
+        english_text = verse_data.get("english", "") if verse_data else ""
+
+        return jsonify({
+            "surah": surah,
+            "verse": verse_num,
+            "surah_name": surah_name,
+            "theme": theme,
+            "arabic_text": arabic_text,
+            "english_text": english_text,
+            "date": today
+        }), 200
+
+    except Exception as e:
+        print(f"ERROR in /daily-verse: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+# ============================================================================
+# STREAK PERSISTENCE ENDPOINTS
+# ============================================================================
+
+@app.route("/streak", methods=["GET"])
+@firebase_auth_required
+def get_streak():
+    """Get user's streak data from Firestore."""
+    uid = request.user["uid"]
+    try:
+        user_doc = users_db.collection("users").document(uid).get()
+        if user_doc.exists:
+            data = user_doc.to_dict()
+            return jsonify({
+                "current_streak": data.get("streak_current", 0),
+                "longest_streak": data.get("streak_longest", 0),
+                "last_activity_date": data.get("streak_last_date", None),
+            }), 200
+        return jsonify({
+            "current_streak": 0,
+            "longest_streak": 0,
+            "last_activity_date": None,
+        }), 200
+    except Exception as e:
+        print(f"ERROR in GET /streak: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/streak", methods=["POST"])
+@firebase_auth_required
+def update_streak():
+    """Record activity and update streak. Called when user makes a reflection or searches a verse."""
+    uid = request.user["uid"]
+    try:
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        yesterday = (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%d")
+
+        user_ref = users_db.collection("users").document(uid)
+        user_doc = user_ref.get()
+        data = user_doc.to_dict() if user_doc.exists else {}
+
+        last_date = data.get("streak_last_date", None)
+        current = data.get("streak_current", 0)
+        longest = data.get("streak_longest", 0)
+
+        if last_date == today:
+            # Already recorded today — no change
+            return jsonify({
+                "current_streak": current,
+                "longest_streak": longest,
+                "last_activity_date": today,
+                "changed": False,
+            }), 200
+
+        if last_date == yesterday:
+            # Consecutive day — extend streak
+            current += 1
+        else:
+            # Streak broken or first activity — start fresh
+            current = 1
+
+        longest = max(longest, current)
+
+        user_ref.set({
+            "streak_current": current,
+            "streak_longest": longest,
+            "streak_last_date": today,
+        }, merge=True)
+
+        # Check for newly earned badges after streak update
+        newly_earned = []
+        try:
+            newly_earned = _check_and_award_badges(uid)
+        except Exception as badge_err:
+            print(f"[BADGES] Error checking badges after streak: {badge_err}")
+
+        return jsonify({
+            "current_streak": current,
+            "longest_streak": longest,
+            "last_activity_date": today,
+            "changed": True,
+            "newly_earned_badges": newly_earned,
+        }), 200
+
+    except Exception as e:
+        print(f"ERROR in POST /streak: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+# ============================================================================
+# VERSE EXPLORATION TRACKING
+# ============================================================================
+
+def _track_explored_verse(uid, surah, start_verse, end_verse=None):
+    """Track which verses a user has explored. Non-blocking, fire-and-forget."""
+    try:
+        if not uid:
+            return
+        end = end_verse or start_verse
+        verses = list(range(start_verse, end + 1))
+        surah_key = str(surah)
+
+        user_ref = users_db.collection("users").document(uid)
+        user_doc = user_ref.get()
+        data = user_doc.to_dict() if user_doc.exists else {}
+
+        explored = data.get("explored_verses", {})
+        existing = set(explored.get(surah_key, []))
+        new_verses = [v for v in verses if v not in existing]
+
+        if not new_verses:
+            return  # Already tracked
+
+        updated_list = sorted(existing | set(new_verses))
+        explored[surah_key] = updated_list
+
+        # Count totals
+        total = sum(len(v) for v in explored.values())
+        total_surahs = len(explored)
+
+        user_ref.set({
+            "explored_verses": explored,
+            "stats_cache": {
+                "total_explored_verses": total,
+                "total_explored_surahs": total_surahs,
+            }
+        }, merge=True)
+    except Exception as e:
+        print(f"WARNING: Failed to track explored verse: {e}")
+
+
+@app.route("/progress", methods=["GET"])
+@firebase_auth_required
+def get_progress():
+    """Get user's Quran exploration progress."""
+    uid = request.user["uid"]
+    try:
+        user_doc = users_db.collection("users").document(uid).get()
+        data = user_doc.to_dict() if user_doc.exists else {}
+        explored = data.get("explored_verses", {})
+
+        total_explored = sum(len(v) for v in explored.values())
+        total_verses = sum(s["verses"] for s in QURAN_METADATA.values())
+
+        surahs = []
+        for num, meta in QURAN_METADATA.items():
+            explored_list = explored.get(str(num), [])
+            surahs.append({
+                "number": num,
+                "name": meta["name"],
+                "total_verses": meta["verses"],
+                "explored_count": len(explored_list),
+                "explored_verses": explored_list,
+            })
+
+        return jsonify({
+            "total_explored": total_explored,
+            "total_verses": total_verses,
+            "percentage": round(total_explored / total_verses * 100, 1) if total_verses else 0,
+            "total_surahs_touched": len(explored),
+            "surahs": surahs,
+        }), 200
+    except Exception as e:
+        print(f"ERROR in GET /progress: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+# ============================================================================
+# THEMED VERSE COLLECTIONS
+# ============================================================================
+
+THEMED_COLLECTIONS = [
+    {
+        "id": "patience",
+        "title": "Patience & Perseverance",
+        "description": "How the Quran teaches steadfastness through trials and gratitude in ease",
+        "category": "Spiritual Growth",
+        "icon": "mountain",
+        "scholarly_sources": ["ihya", "madarij", "riyad"],
+        "verses": [
+            (2, 155, "Tested through loss"),
+            (2, 216, "Hidden good in hardship"),
+            (2, 286, "Allah does not burden beyond capacity"),
+            (3, 200, "Patience and perseverance"),
+            (31, 17, "Patience in adversity"),
+            (39, 10, "Reward for those who do good"),
+            (94, 5, "With hardship comes ease"),
+        ],
+    },
+    {
+        "id": "trust",
+        "title": "Trust in Allah",
+        "description": "Surrender, reliance, and finding peace in divine decree",
+        "category": "Spiritual Growth",
+        "icon": "shield",
+        "scholarly_sources": ["ihya", "madarij"],
+        "verses": [
+            (3, 159, "Mercy and consultation"),
+            (9, 51, "Nothing befalls except what Allah decrees"),
+            (11, 6, "Every creature's provision is from Allah"),
+            (57, 4, "Allah is with you wherever you are"),
+            (65, 3, "Allah provides from unexpected sources"),
+            (64, 16, "Fear Allah as much as you can"),
+        ],
+    },
+    {
+        "id": "mercy",
+        "title": "Mercy & Forgiveness",
+        "description": "The boundless mercy of Allah and the path to forgiveness",
+        "category": "Spiritual Growth",
+        "icon": "heart",
+        "scholarly_sources": ["ihya", "riyad"],
+        "verses": [
+            (7, 56, "Mercy of Allah is near"),
+            (7, 199, "Forgiveness and kindness"),
+            (39, 53, "Despair not of Allah's mercy"),
+            (40, 60, "Call upon Me, I will respond"),
+            (41, 34, "Repel evil with good"),
+            (42, 30, "Afflictions from your own deeds"),
+        ],
+    },
+    {
+        "id": "gratitude",
+        "title": "Gratitude & Blessings",
+        "description": "Recognizing and giving thanks for Allah's countless favors",
+        "category": "Faith & Worship",
+        "icon": "sun",
+        "scholarly_sources": ["ihya"],
+        "verses": [
+            (2, 152, "Remember Allah"),
+            (14, 7, "Gratitude increases blessings"),
+            (16, 97, "Good life through faith"),
+            (55, 13, "Which blessings will you deny"),
+            (93, 5, "Your Lord will give you"),
+        ],
+    },
+    {
+        "id": "knowledge",
+        "title": "Knowledge & Learning",
+        "description": "The sacred duty to seek knowledge and understanding",
+        "category": "Character & Conduct",
+        "icon": "book",
+        "scholarly_sources": ["ihya", "riyad"],
+        "verses": [
+            (20, 114, "Increase me in knowledge"),
+            (96, 1, "Read in the name of your Lord"),
+            (2, 269, "Wisdom is immense good"),
+            (58, 11, "Allah raises those with knowledge"),
+        ],
+    },
+    {
+        "id": "remembrance",
+        "title": "The Heart & Remembrance",
+        "description": "Finding tranquility through the remembrance of Allah",
+        "category": "Faith & Worship",
+        "icon": "sparkle",
+        "scholarly_sources": ["ihya", "madarij"],
+        "verses": [
+            (2, 152, "Remember Me, I will remember you"),
+            (8, 2, "Hearts tremble at Allah's mention"),
+            (13, 28, "Hearts find rest in remembrance"),
+            (33, 41, "Remember Allah abundantly"),
+            (50, 16, "Closer than the jugular vein"),
+            (73, 8, "Devote yourself to Allah"),
+        ],
+    },
+    {
+        "id": "family",
+        "title": "Family & Community",
+        "description": "Rights of parents, neighbors, and building a just society",
+        "category": "Life Guidance",
+        "icon": "users",
+        "scholarly_sources": ["riyad"],
+        "verses": [
+            (4, 36, "Worship Allah and be kind"),
+            (17, 23, "Honor your parents"),
+            (49, 10, "Believers are brothers"),
+            (49, 13, "Most noble is most righteous"),
+        ],
+    },
+    {
+        "id": "justice",
+        "title": "Justice & Righteousness",
+        "description": "Standing firm for truth, equity, and moral excellence",
+        "category": "Character & Conduct",
+        "icon": "scale",
+        "scholarly_sources": ["riyad", "ihya"],
+        "verses": [
+            (5, 8, "Stand firm for justice"),
+            (16, 90, "Justice, kindness, and generosity"),
+            (4, 135, "Stand firm for justice even against yourselves"),
+        ],
+    },
+    {
+        "id": "hereafter",
+        "title": "Death & the Hereafter",
+        "description": "Preparing the soul for the journey beyond this world",
+        "category": "Spiritual Growth",
+        "icon": "hourglass",
+        "scholarly_sources": ["ihya", "riyad"],
+        "verses": [
+            (3, 185, "Every soul shall taste death"),
+            (35, 5, "Life of this world is delusion"),
+            (67, 2, "Created life as a test"),
+            (89, 27, "O tranquil soul"),
+        ],
+    },
+    {
+        "id": "repentance",
+        "title": "Repentance & Return",
+        "description": "The door of tawbah is always open — returning to Allah",
+        "category": "Spiritual Growth",
+        "icon": "refresh",
+        "scholarly_sources": ["ihya", "madarij", "riyad"],
+        "verses": [
+            (25, 63, "Servants of the Most Merciful"),
+            (39, 53, "Despair not of Allah's mercy"),
+            (66, 8, "Sincere repentance"),
+            (2, 222, "Allah loves those who repent"),
+        ],
+    },
+    {
+        "id": "worship",
+        "title": "Worship & Devotion",
+        "description": "The essence of prayer, fasting, and devotion to Allah",
+        "category": "Faith & Worship",
+        "icon": "moon",
+        "scholarly_sources": ["ihya"],
+        "verses": [
+            (2, 186, "Allah is near"),
+            (6, 162, "Prayer and sacrifice for Allah"),
+            (23, 1, "Success of the believers"),
+            (51, 56, "Created to worship"),
+            (87, 14, "Successful is the one who purifies"),
+        ],
+    },
+    {
+        "id": "charity",
+        "title": "Charity & Generosity",
+        "description": "The rewards of giving and caring for those in need",
+        "category": "Character & Conduct",
+        "icon": "gift",
+        "scholarly_sources": ["ihya", "riyad"],
+        "verses": [
+            (2, 261, "Charity multiplied"),
+            (2, 267, "Spend from what you love"),
+            (3, 92, "You will not attain righteousness until you spend"),
+            (57, 18, "Charity is a beautiful loan"),
+        ],
+    },
+]
+
+# Pre-build lookup: verse → collection IDs
+_VERSE_TO_COLLECTIONS = {}
+for _col in THEMED_COLLECTIONS:
+    for _s, _v, _t in _col["verses"]:
+        _key = f"{_s}:{_v}"
+        _VERSE_TO_COLLECTIONS.setdefault(_key, []).append(_col["id"])
+
+
+@app.route("/collections", methods=["GET"])
+def list_collections():
+    """List all themed verse collections (metadata only)."""
+    result = []
+    for col in THEMED_COLLECTIONS:
+        result.append({
+            "id": col["id"],
+            "title": col["title"],
+            "description": col["description"],
+            "category": col["category"],
+            "icon": col["icon"],
+            "verse_count": len(col["verses"]),
+            "scholarly_sources": col["scholarly_sources"],
+        })
+    return jsonify({"collections": result}), 200
+
+
+@app.route("/collections/<collection_id>", methods=["GET"])
+def get_collection(collection_id):
+    """Get full collection with verse text."""
+    col = next((c for c in THEMED_COLLECTIONS if c["id"] == collection_id), None)
+    if not col:
+        return jsonify({"error": "Collection not found"}), 404
+
+    verses = []
+    for surah, verse_num, theme in col["verses"]:
+        verse_data = get_verse_from_firestore(surah, verse_num)
+        surah_name = QURAN_METADATA.get(surah, {}).get("name", f"Surah {surah}")
+        verses.append({
+            "surah": surah,
+            "verse": verse_num,
+            "surah_name": surah_name,
+            "theme": theme,
+            "arabic_text": verse_data.get("arabic", "") if verse_data else "",
+            "english_text": verse_data.get("english", "") if verse_data else "",
+        })
+
+    return jsonify({
+        "id": col["id"],
+        "title": col["title"],
+        "description": col["description"],
+        "category": col["category"],
+        "verses": verses,
+        "scholarly_sources": col["scholarly_sources"],
+    }), 200
+
+
+@app.route("/collections/<collection_id>/progress", methods=["GET"])
+@firebase_auth_required
+def get_collection_progress(collection_id):
+    """Get user's progress for a collection."""
+    uid = request.user["uid"]
+    col = next((c for c in THEMED_COLLECTIONS if c["id"] == collection_id), None)
+    if not col:
+        return jsonify({"error": "Collection not found"}), 404
+
+    try:
+        user_doc = users_db.collection("users").document(uid).get()
+        data = user_doc.to_dict() if user_doc.exists else {}
+        progress = data.get("collection_progress", {}).get(collection_id, {})
+        explored = progress.get("explored", [])
+
+        return jsonify({
+            "collection_id": collection_id,
+            "explored": explored,
+            "completed_count": len(explored),
+            "total_count": len(col["verses"]),
+            "percentage": round(len(explored) / len(col["verses"]) * 100) if col["verses"] else 0,
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/collections/<collection_id>/progress", methods=["POST"])
+@firebase_auth_required
+def update_collection_progress(collection_id):
+    """Mark a verse as explored in a collection."""
+    uid = request.user["uid"]
+    col = next((c for c in THEMED_COLLECTIONS if c["id"] == collection_id), None)
+    if not col:
+        return jsonify({"error": "Collection not found"}), 404
+
+    data = request.get_json() or {}
+    verse_key = data.get("verse_key")  # e.g., "2:155"
+    if not verse_key:
+        return jsonify({"error": "verse_key required"}), 400
+
+    try:
+        user_ref = users_db.collection("users").document(uid)
+        user_doc = user_ref.get()
+        user_data = user_doc.to_dict() if user_doc.exists else {}
+        collection_progress = user_data.get("collection_progress", {})
+        col_data = collection_progress.get(collection_id, {"explored": [], "started_at": datetime.now(timezone.utc).isoformat()})
+
+        if verse_key not in col_data["explored"]:
+            col_data["explored"].append(verse_key)
+
+        collection_progress[collection_id] = col_data
+        user_ref.set({"collection_progress": collection_progress}, merge=True)
+
+        return jsonify({
+            "collection_id": collection_id,
+            "explored": col_data["explored"],
+            "completed_count": len(col_data["explored"]),
+            "total_count": len(col["verses"]),
+            "is_complete": len(col_data["explored"]) >= len(col["verses"]),
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ============================================================================
+# ACHIEVEMENT / BADGE SYSTEM
+# ============================================================================
+
+BADGE_DEFINITIONS = {
+    "streak_3": {"name": "Getting Started", "description": "Maintained a 3-day learning streak", "category": "streak", "threshold": 3},
+    "streak_7": {"name": "Week of Wisdom", "description": "7 consecutive days of engagement", "category": "streak", "threshold": 7},
+    "streak_30": {"name": "Month of Devotion", "description": "30-day learning streak", "category": "streak", "threshold": 30},
+    "explore_10": {"name": "Curious Mind", "description": "Explored 10 unique verses", "category": "exploration", "threshold": 10},
+    "explore_100": {"name": "Deep Diver", "description": "Explored 100 unique verses", "category": "exploration", "threshold": 100},
+    "explore_500": {"name": "Quranic Scholar", "description": "Explored 500 unique verses", "category": "exploration", "threshold": 500},
+    "surahs_10": {"name": "Surah Explorer", "description": "Explored verses from 10 different surahs", "category": "exploration", "threshold": 10},
+    "surahs_50": {"name": "Quran Traveler", "description": "Explored verses from 50 different surahs", "category": "exploration", "threshold": 50},
+    "reflect_1": {"name": "First Reflection", "description": "Wrote your first reflection", "category": "reflection", "threshold": 1},
+    "reflect_10": {"name": "Thoughtful Heart", "description": "Wrote 10 reflections", "category": "reflection", "threshold": 10},
+    "reflect_50": {"name": "Reflection Master", "description": "Wrote 50 reflections", "category": "reflection", "threshold": 50},
+    "collection_complete": {"name": "Collection Complete", "description": "Completed a themed verse collection", "category": "special", "threshold": 1},
+    "plan_complete": {"name": "Journey Complete", "description": "Finished a reading plan", "category": "special", "threshold": 1},
+}
+
+
+def _check_and_award_badges(uid):
+    """Check all badge conditions and award any newly earned badges. Returns list of newly earned."""
+    try:
+        user_doc = users_db.collection("users").document(uid).get()
+        data = user_doc.to_dict() if user_doc.exists else {}
+
+        earned = data.get("badges_earned", {})
+        stats = data.get("stats_cache", {})
+        streak_current = data.get("streak_current", 0)
+        streak_longest = data.get("streak_longest", 0)
+        total_verses = stats.get("total_explored_verses", 0)
+        total_surahs = stats.get("total_explored_surahs", 0)
+
+        # Count annotations
+        try:
+            ann_query = users_db.collection("users").document(uid).collection("annotations").limit(51)
+            annotation_count = sum(1 for _ in ann_query.stream())
+        except Exception:
+            annotation_count = 0
+
+        # Count completed collections
+        collection_progress = data.get("collection_progress", {})
+        completed_collections = sum(
+            1 for cid, cp in collection_progress.items()
+            if len(cp.get("explored", [])) >= len(next((c["verses"] for c in THEMED_COLLECTIONS if c["id"] == cid), []))
+        )
+
+        # Count completed plans
+        active_plan = data.get("active_plan", {})
+        completed_plans = 1 if active_plan.get("completed_at") else 0
+
+        newly_earned = []
+        best_streak = max(streak_current, streak_longest)
+
+        checks = {
+            "streak_3": best_streak >= 3,
+            "streak_7": best_streak >= 7,
+            "streak_30": best_streak >= 30,
+            "explore_10": total_verses >= 10,
+            "explore_100": total_verses >= 100,
+            "explore_500": total_verses >= 500,
+            "surahs_10": total_surahs >= 10,
+            "surahs_50": total_surahs >= 50,
+            "reflect_1": annotation_count >= 1,
+            "reflect_10": annotation_count >= 10,
+            "reflect_50": annotation_count >= 50,
+            "collection_complete": completed_collections >= 1,
+            "plan_complete": completed_plans >= 1,
+        }
+
+        for badge_id, condition in checks.items():
+            if condition and badge_id not in earned:
+                earned[badge_id] = {"earned_at": datetime.now(timezone.utc).isoformat()}
+                newly_earned.append({
+                    "id": badge_id,
+                    **BADGE_DEFINITIONS[badge_id]
+                })
+
+        if newly_earned:
+            users_db.collection("users").document(uid).set(
+                {"badges_earned": earned}, merge=True
+            )
+
+        return newly_earned
+    except Exception as e:
+        print(f"WARNING: Badge check failed: {e}")
+        return []
+
+
+@app.route("/badges", methods=["GET"])
+@firebase_auth_required
+def get_badges():
+    """Get all badge definitions with user's earned status."""
+    uid = request.user["uid"]
+    try:
+        user_doc = users_db.collection("users").document(uid).get()
+        data = user_doc.to_dict() if user_doc.exists else {}
+        earned = data.get("badges_earned", {})
+
+        badges = []
+        for badge_id, defn in BADGE_DEFINITIONS.items():
+            badge = {
+                "id": badge_id,
+                **defn,
+                "earned": badge_id in earned,
+                "earned_at": earned[badge_id]["earned_at"] if badge_id in earned else None,
+            }
+            badges.append(badge)
+
+        return jsonify({
+            "badges": badges,
+            "total_earned": len(earned),
+            "total_available": len(BADGE_DEFINITIONS),
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ============================================================================
+# PERSONALIZED RECOMMENDATIONS
+# ============================================================================
+
+def _generate_recommendations(surah, verse, final_json, user_id=None):
+    """Generate deterministic verse recommendations based on cross-refs and themes."""
+    recs = []
+    seen = {f"{surah}:{verse}"}
+
+    # 1. Cross-references from the response
+    for ref in final_json.get("cross_references", [])[:3]:
+        ref_str = ref.get("verse", "")
+        match = re.match(r"(\d+):(\d+)", ref_str)
+        if match and ref_str not in seen:
+            s, v = int(match.group(1)), int(match.group(2))
+            sname = QURAN_METADATA.get(s, {}).get("name", f"Surah {s}")
+            recs.append({"surah": s, "verse": v, "surah_name": sname,
+                         "reason": ref.get("relevance", "Related verse")[:80]})
+            seen.add(ref_str)
+
+    # 2. Collection-based: if this verse is in a themed collection, suggest next verse
+    verse_key = f"{surah}:{verse}"
+    col_ids = _VERSE_TO_COLLECTIONS.get(verse_key, [])
+    for cid in col_ids[:1]:
+        col = next((c for c in THEMED_COLLECTIONS if c["id"] == cid), None)
+        if col:
+            for s, v, theme in col["verses"]:
+                vk = f"{s}:{v}"
+                if vk not in seen:
+                    sname = QURAN_METADATA.get(s, {}).get("name", f"Surah {s}")
+                    recs.append({"surah": s, "verse": v, "surah_name": sname,
+                                 "reason": f"From '{col['title']}' collection"})
+                    seen.add(vk)
+                    break
+
+    # 3. Theme-based from verse map
+    from services.source_service import _load_unified_verse_map
+    verse_map = _load_unified_verse_map()
+    refs = verse_map.get(verse_key, [])
+    source_chapters = set()
+    for ref in refs:
+        src = ref.get("source", "")
+        if src == "ihya_ulum_al_din":
+            source_chapters.add(("ihya", ref.get("volume"), ref.get("chapter")))
+        elif src == "riyad_al_saliheen":
+            source_chapters.add(("riyad", ref.get("book"), ref.get("chapter")))
+
+    if source_chapters and len(recs) < 5:
+        for map_key, map_refs in list(verse_map.items())[:500]:
+            if map_key in seen or len(recs) >= 5:
+                break
+            for mr in map_refs:
+                src = mr.get("source", "")
+                ch_key = None
+                if src == "ihya_ulum_al_din":
+                    ch_key = ("ihya", mr.get("volume"), mr.get("chapter"))
+                elif src == "riyad_al_saliheen":
+                    ch_key = ("riyad", mr.get("book"), mr.get("chapter"))
+                if ch_key and ch_key in source_chapters and map_key not in seen:
+                    parts = map_key.split(":")
+                    if len(parts) == 2:
+                        s, v = int(parts[0]), int(parts[1])
+                        sname = QURAN_METADATA.get(s, {}).get("name", f"Surah {s}")
+                        recs.append({"surah": s, "verse": v, "surah_name": sname,
+                                     "reason": "Shares scholarly theme"})
+                        seen.add(map_key)
+                        break
+
+    return recs[:5]
+
+
+# ============================================================================
+# READING PLANS
+# ============================================================================
+
+READING_PLANS = [
+    {
+        "id": "patience_7",
+        "title": "7-Day Patience Journey",
+        "description": "Explore how the Quran teaches patience through hardship, gratitude, and trust in Allah's plan",
+        "duration_days": 7,
+        "category": "Spiritual Growth",
+        "days": [
+            {"day": 1, "title": "The Promise of Patience", "verse": [2, 155], "prompt": "What trial in your life right now could be a hidden blessing?"},
+            {"day": 2, "title": "Hidden Wisdom", "verse": [2, 216], "prompt": "Think of a past difficulty that turned out to be good for you."},
+            {"day": 3, "title": "No Soul Overburdened", "verse": [2, 286], "prompt": "What burden feels heavy today? How does knowing Allah's promise change that?"},
+            {"day": 4, "title": "Persevere and Excel", "verse": [3, 200], "prompt": "Where in your life do you need more steadfastness?"},
+            {"day": 5, "title": "Patience in Action", "verse": [31, 17], "prompt": "How can you practice active patience — not just enduring, but growing?"},
+            {"day": 6, "title": "Reward Beyond Measure", "verse": [39, 10], "prompt": "What goodness are you investing in that you haven't seen the reward for yet?"},
+            {"day": 7, "title": "Ease After Hardship", "verse": [94, 5], "prompt": "Reflect on your journey this week. How has your understanding of patience deepened?"},
+        ],
+    },
+    {
+        "id": "spiritual_stations",
+        "title": "Spiritual Stations",
+        "description": "A 14-day journey through the stations of the soul, inspired by Ibn al-Qayyim's Madarij al-Salikin",
+        "duration_days": 14,
+        "category": "Spiritual Growth",
+        "days": [
+            {"day": 1, "title": "Awakening", "verse": [6, 122], "prompt": "What moment first awakened your spiritual curiosity?"},
+            {"day": 2, "title": "Insight", "verse": [24, 35], "prompt": "Where do you see Allah's light in your daily life?"},
+            {"day": 3, "title": "Purpose", "verse": [51, 56], "prompt": "How does the purpose of creation shape your priorities?"},
+            {"day": 4, "title": "Resolve", "verse": [29, 69], "prompt": "What spiritual goal requires more determination from you?"},
+            {"day": 5, "title": "Repentance", "verse": [39, 53], "prompt": "What would it feel like to truly let go of past mistakes?"},
+            {"day": 6, "title": "Remembrance", "verse": [13, 28], "prompt": "When during your day do you feel closest to Allah?"},
+            {"day": 7, "title": "Fear & Awe", "verse": [8, 2], "prompt": "What does healthy reverence for Allah look like in your life?"},
+            {"day": 8, "title": "Hope", "verse": [7, 56], "prompt": "What hope sustains you through difficult moments?"},
+            {"day": 9, "title": "Devotion", "verse": [6, 162], "prompt": "How can your daily routines become acts of devotion?"},
+            {"day": 10, "title": "Trust", "verse": [65, 3], "prompt": "What are you struggling to trust Allah with right now?"},
+            {"day": 11, "title": "Patience", "verse": [2, 155], "prompt": "How has this journey changed your relationship with difficulty?"},
+            {"day": 12, "title": "Gratitude", "verse": [14, 7], "prompt": "Name three blessings you usually overlook."},
+            {"day": 13, "title": "Submission", "verse": [3, 159], "prompt": "What does true surrender to Allah mean for you today?"},
+            {"day": 14, "title": "Contentment", "verse": [89, 27], "prompt": "Reflect on your 14-day journey. What station resonated most deeply?"},
+        ],
+    },
+    {
+        "id": "ramadan_30",
+        "title": "Ramadan Essentials",
+        "description": "30 days of verses covering fasting, charity, night prayer, and spiritual renewal",
+        "duration_days": 30,
+        "category": "Seasonal",
+        "days": [
+            {"day": 1, "title": "Fasting Prescribed", "verse": [2, 183], "prompt": "What intention are you setting for this month of fasting?"},
+            {"day": 2, "title": "Month of Quran", "verse": [2, 185], "prompt": "How will you deepen your relationship with the Quran this month?"},
+            {"day": 3, "title": "Dua is Heard", "verse": [2, 186], "prompt": "What is the one dua you want to focus on this Ramadan?"},
+            {"day": 4, "title": "Charity Multiplied", "verse": [2, 261], "prompt": "Who in your community could benefit from your generosity?"},
+            {"day": 5, "title": "Taqwa", "verse": [2, 197], "prompt": "How is fasting building your God-consciousness?"},
+            {"day": 6, "title": "Night Prayer", "verse": [73, 8], "prompt": "What would it mean to devote even a few minutes of the night to Allah?"},
+            {"day": 7, "title": "Gratitude", "verse": [14, 7], "prompt": "What blessing has fasting helped you appreciate?"},
+            {"day": 8, "title": "Patience", "verse": [2, 155], "prompt": "What is fasting teaching you about self-control?"},
+            {"day": 9, "title": "Remembrance", "verse": [33, 41], "prompt": "How can you increase your dhikr throughout the day?"},
+            {"day": 10, "title": "Forgiveness", "verse": [39, 53], "prompt": "Is there someone you need to forgive — including yourself?"},
+            {"day": 11, "title": "Brotherhood", "verse": [49, 10], "prompt": "How can you strengthen a bond with a fellow believer today?"},
+            {"day": 12, "title": "Honoring Parents", "verse": [17, 23], "prompt": "What can you do for your parents today?"},
+            {"day": 13, "title": "Purification", "verse": [87, 14], "prompt": "What habit or thought pattern do you want to purify this month?"},
+            {"day": 14, "title": "Justice", "verse": [5, 8], "prompt": "Where can you stand up for fairness in your daily life?"},
+            {"day": 15, "title": "Midpoint Reflection", "verse": [13, 28], "prompt": "Halfway through — how has your heart changed?"},
+            {"day": 16, "title": "Provision", "verse": [11, 6], "prompt": "How does trusting Allah's provision change your relationship with money?"},
+            {"day": 17, "title": "Laylat al-Qadr", "verse": [97, 1], "prompt": "What would you ask for in a night worth a thousand months?"},
+            {"day": 18, "title": "Sincerity", "verse": [112, 1], "prompt": "How can you make your worship more sincere?"},
+            {"day": 19, "title": "The Unseen", "verse": [2, 3], "prompt": "What does believing in the unseen mean practically?"},
+            {"day": 20, "title": "Success", "verse": [23, 1], "prompt": "What does true success look like beyond worldly measures?"},
+            {"day": 21, "title": "Allah's Names", "verse": [59, 22], "prompt": "Which name of Allah speaks to you most right now?"},
+            {"day": 22, "title": "Best Example", "verse": [33, 21], "prompt": "Which quality of the Prophet do you most want to embody?"},
+            {"day": 23, "title": "Inner Change", "verse": [13, 11], "prompt": "What one internal change would transform your life?"},
+            {"day": 24, "title": "Trust", "verse": [9, 51], "prompt": "What would full trust in Allah's decree look like?"},
+            {"day": 25, "title": "Knowledge", "verse": [20, 114], "prompt": "What have you learned this Ramadan that surprised you?"},
+            {"day": 26, "title": "Ease", "verse": [94, 5], "prompt": "Where has Allah brought you ease that you didn't expect?"},
+            {"day": 27, "title": "Light", "verse": [24, 35], "prompt": "How is your spiritual light growing this month?"},
+            {"day": 28, "title": "Return", "verse": [2, 156], "prompt": "How does remembering our return to Allah shape your priorities?"},
+            {"day": 29, "title": "Mercy", "verse": [7, 56], "prompt": "How can you be a vessel of Allah's mercy to others?"},
+            {"day": 30, "title": "Farewell", "verse": [3, 200], "prompt": "As Ramadan ends, what commitment will you carry forward?"},
+        ],
+    },
+    {
+        "id": "prophets_10",
+        "title": "Stories of the Prophets",
+        "description": "10 days exploring the lives and lessons of the prophets mentioned in the Quran",
+        "duration_days": 10,
+        "category": "Knowledge",
+        "days": [
+            {"day": 1, "title": "Adam — The First Human", "verse": [2, 30], "prompt": "What does being Allah's khalifah (steward) on earth mean for your daily choices?"},
+            {"day": 2, "title": "Nuh — Steadfastness", "verse": [11, 36], "prompt": "When have you held firm to truth despite others doubting you?"},
+            {"day": 3, "title": "Ibrahim — Surrender", "verse": [2, 131], "prompt": "What would it mean to submit to Allah as completely as Ibrahim?"},
+            {"day": 4, "title": "Yusuf — Beauty Through Trial", "verse": [12, 86], "prompt": "How do you maintain hope when life feels unjust?"},
+            {"day": 5, "title": "Musa — Courage", "verse": [20, 25], "prompt": "What daunting task are you being called to undertake?"},
+            {"day": 6, "title": "Dawud — Gratitude in Power", "verse": [34, 10], "prompt": "How do you use your strengths in gratitude to Allah?"},
+            {"day": 7, "title": "Sulayman — Wisdom", "verse": [27, 19], "prompt": "How does gratitude for blessings shape the way you lead and serve?"},
+            {"day": 8, "title": "Yunus — Repentance in Darkness", "verse": [21, 87], "prompt": "When have you called out to Allah from a dark place?"},
+            {"day": 9, "title": "Isa — The Word of God", "verse": [3, 45], "prompt": "What does the miraculous nature of Isa teach about Allah's power?"},
+            {"day": 10, "title": "Muhammad — Mercy to All", "verse": [33, 21], "prompt": "How can you embody the prophetic example in your relationships?"},
+        ],
+    },
+    {
+        "id": "foundations_7",
+        "title": "Foundations of Faith",
+        "description": "7 days exploring the core pillars of Islamic belief through the Quran",
+        "duration_days": 7,
+        "category": "Knowledge",
+        "days": [
+            {"day": 1, "title": "Tawhid — Oneness of Allah", "verse": [112, 1], "prompt": "How does believing in One God simplify your life?"},
+            {"day": 2, "title": "Angels — Unseen Servants", "verse": [2, 285], "prompt": "How does knowing angels surround you affect your behavior?"},
+            {"day": 3, "title": "Divine Books — Guidance Revealed", "verse": [2, 2], "prompt": "What role does the Quran play in your daily decisions?"},
+            {"day": 4, "title": "Messengers — Examples to Follow", "verse": [33, 21], "prompt": "Which prophetic quality do you most want to develop?"},
+            {"day": 5, "title": "The Last Day — Accountability", "verse": [3, 185], "prompt": "If today were your last, what would you change?"},
+            {"day": 6, "title": "Divine Decree — Trusting the Plan", "verse": [9, 51], "prompt": "What aspect of your life do you need to surrender to Allah's qadr?"},
+            {"day": 7, "title": "Ihsan — Excellence in Faith", "verse": [2, 112], "prompt": "What does it mean to worship Allah as though you see Him?"},
+        ],
+    },
+]
+
+
+@app.route("/reading-plans", methods=["GET"])
+def list_reading_plans():
+    """List all available reading plans (metadata only)."""
+    result = []
+    for plan in READING_PLANS:
+        result.append({
+            "id": plan["id"],
+            "title": plan["title"],
+            "description": plan["description"],
+            "duration_days": plan["duration_days"],
+            "category": plan["category"],
+        })
+    return jsonify({"plans": result}), 200
+
+
+@app.route("/reading-plans/<plan_id>", methods=["GET"])
+def get_reading_plan(plan_id):
+    """Get full reading plan with verse text for each day."""
+    plan = next((p for p in READING_PLANS if p["id"] == plan_id), None)
+    if not plan:
+        return jsonify({"error": "Plan not found"}), 404
+
+    days = []
+    for day in plan["days"]:
+        surah, verse_num = day["verse"]
+        verse_data = get_verse_from_firestore(surah, verse_num)
+        surah_name = QURAN_METADATA.get(surah, {}).get("name", f"Surah {surah}")
+        days.append({
+            **day,
+            "surah_name": surah_name,
+            "arabic_text": verse_data.get("arabic", "") if verse_data else "",
+            "english_text": verse_data.get("english", "") if verse_data else "",
+        })
+
+    return jsonify({
+        "id": plan["id"],
+        "title": plan["title"],
+        "description": plan["description"],
+        "duration_days": plan["duration_days"],
+        "category": plan["category"],
+        "days": days,
+    }), 200
+
+
+@app.route("/reading-plans/<plan_id>/progress", methods=["GET"])
+@firebase_auth_required
+def get_plan_progress(plan_id):
+    """Get user's progress on a reading plan."""
+    uid = request.user["uid"]
+    try:
+        user_doc = users_db.collection("users").document(uid).get()
+        data = user_doc.to_dict() if user_doc.exists else {}
+        active_plan = data.get("active_plan", {})
+
+        if active_plan.get("plan_id") != plan_id:
+            return jsonify({"active": False, "plan_id": plan_id}), 200
+
+        return jsonify({
+            "active": True,
+            "plan_id": plan_id,
+            "current_day": active_plan.get("current_day", 1),
+            "completed_days": active_plan.get("completed_days", []),
+            "started_at": active_plan.get("started_at"),
+            "completed_at": active_plan.get("completed_at"),
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/reading-plans/<plan_id>/progress", methods=["POST"])
+@firebase_auth_required
+def update_plan_progress(plan_id):
+    """Start a plan or complete a day."""
+    uid = request.user["uid"]
+    plan = next((p for p in READING_PLANS if p["id"] == plan_id), None)
+    if not plan:
+        return jsonify({"error": "Plan not found"}), 404
+
+    data = request.get_json() or {}
+    action = data.get("action")  # "start" or "complete_day"
+
+    try:
+        user_ref = users_db.collection("users").document(uid)
+
+        if action == "start":
+            user_ref.set({
+                "active_plan": {
+                    "plan_id": plan_id,
+                    "current_day": 1,
+                    "completed_days": [],
+                    "started_at": datetime.now(timezone.utc).isoformat(),
+                    "completed_at": None,
+                }
+            }, merge=True)
+            return jsonify({"status": "started", "plan_id": plan_id, "current_day": 1}), 200
+
+        elif action == "complete_day":
+            day_num = data.get("day")
+            if not day_num or day_num < 1 or day_num > plan["duration_days"]:
+                return jsonify({"error": "Invalid day number"}), 400
+
+            user_doc = user_ref.get()
+            user_data = user_doc.to_dict() if user_doc.exists else {}
+            active = user_data.get("active_plan", {})
+
+            if active.get("plan_id") != plan_id:
+                return jsonify({"error": "This plan is not active"}), 400
+
+            completed = active.get("completed_days", [])
+            if day_num not in completed:
+                completed.append(day_num)
+
+            next_day = min(day_num + 1, plan["duration_days"])
+            is_complete = len(completed) >= plan["duration_days"]
+
+            update_data = {
+                "active_plan": {
+                    "plan_id": plan_id,
+                    "current_day": next_day,
+                    "completed_days": completed,
+                    "started_at": active.get("started_at"),
+                    "completed_at": datetime.now(timezone.utc).isoformat() if is_complete else None,
+                }
+            }
+            user_ref.set(update_data, merge=True)
+
+            # Track the verse as explored
+            verse_info = plan["days"][day_num - 1]["verse"]
+            _track_explored_verse(uid, verse_info[0], verse_info[1])
+
+            # Check badges
+            newly_earned = _check_and_award_badges(uid)
+
+            return jsonify({
+                "status": "completed" if is_complete else "day_complete",
+                "day": day_num,
+                "current_day": next_day,
+                "completed_days": completed,
+                "is_complete": is_complete,
+                "newly_earned_badges": newly_earned,
+            }), 200
+
+        return jsonify({"error": "Invalid action. Use 'start' or 'complete_day'"}), 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ============================================================================
 # QUERY HISTORY & SAVED SEARCHES ENDPOINTS
 # ============================================================================
 
@@ -6079,9 +7120,17 @@ def create_annotation():
 
         doc_ref.set(annotation_data)
 
+        # Check for newly earned badges after annotation creation
+        newly_earned = []
+        try:
+            newly_earned = _check_and_award_badges(uid)
+        except Exception as badge_err:
+            print(f"[BADGES] Error checking badges after annotation: {badge_err}")
+
         return jsonify({
             'success': True,
-            'id': doc_ref.id
+            'id': doc_ref.id,
+            'newly_earned_badges': newly_earned,
         }), 201
 
     except Exception as e:
@@ -6862,6 +7911,12 @@ def tafsir_handler_enhanced():
                         store_tafsir_cache(query, user_profile, final_json, approach)
                         print(f"💾 Stored tafsir response in Firestore cache")
 
+                    # Track explored verse and generate recommendations
+                    if user_id:
+                        _track_explored_verse(user_id, surah, verse)
+                        _check_and_award_badges(user_id)
+                    final_json["recommendations"] = _generate_recommendations(surah, verse, final_json, user_id)
+
                     print(f"✅ Metadata formatted by AI from {len(verse_metadata_list)} source(s)")
                     return jsonify(final_json), 200
                 else:
@@ -7161,6 +8216,12 @@ def tafsir_handler_enhanced():
                         if approach == 'tafsir':
                             store_tafsir_cache(query, user_profile, final_json, approach)
                             print(f"💾 Stored direct verse response in Firestore cache")
+
+                        # Track explored verse and generate recommendations
+                        if user_id:
+                            _track_explored_verse(user_id, surah, start_verse, end_verse)
+                            _check_and_award_badges(user_id)
+                        final_json["recommendations"] = _generate_recommendations(surah, start_verse, final_json, user_id)
 
                         print(f"✅ Direct verse formatted by AI from {len(verse_metadata_list)} source(s)")
                         return jsonify(final_json), 200
@@ -8274,6 +9335,18 @@ def debug_query(query):
                     "scholarly_sources": scholarly_badges,
                     "_scholarly_pipeline": scholarly_pipeline,
                 }
+
+                # Track exploration + badges for Route 3 (if verse ref available)
+                if user_id:
+                    try:
+                        vr = extract_verse_range(query) or extract_verse_reference_enhanced(query)
+                        if vr and len(vr) >= 2:
+                            s, sv = int(vr[0]), int(vr[1])
+                            ev = int(vr[2]) if len(vr) >= 3 else sv
+                            _track_explored_verse(user_id, s, sv, ev)
+                            _check_and_award_badges(user_id)
+                    except Exception as track_err:
+                        print(f"[TRACKING] Route 3 tracking error: {track_err}")
 
                 # Cache it
                 with cache_lock:
