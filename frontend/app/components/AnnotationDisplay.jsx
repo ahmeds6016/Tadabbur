@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import ConfirmDialog from './ConfirmDialog';
 
 const ANNOTATION_TYPE_CONFIG = {
   personal_insight: { label: 'Insight', color: '#0D9488' },
@@ -39,6 +40,7 @@ export default function AnnotationDisplay({
   onDelete
 }) {
   const [expandedId, setExpandedId] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   if (!annotations || annotations.length === 0) {
     return null;
@@ -130,11 +132,7 @@ export default function AnnotationDisplay({
                     Edit
                   </button>
                   <button
-                    onClick={() => {
-                      if (confirm('Delete this annotation?')) {
-                        onDelete(annotation.id);
-                      }
-                    }}
+                    onClick={() => setDeleteTarget(annotation.id)}
                     style={{
                       background: 'transparent',
                       border: 'none',
@@ -218,6 +216,16 @@ export default function AnnotationDisplay({
           border-color: var(--gold);
         }
       `}</style>
+
+      <ConfirmDialog
+        isOpen={!!deleteTarget}
+        title="Delete Annotation"
+        message="Are you sure you want to delete this annotation? This cannot be undone."
+        confirmText="Delete"
+        confirmStyle="danger"
+        onConfirm={() => { onDelete(deleteTarget); setDeleteTarget(null); }}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

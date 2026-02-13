@@ -1805,18 +1805,6 @@ def format_response_with_headers(response_data):
 
     return formatted_response
 
-# --- Error Handler ---
-def handle_errors(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        try:
-            return f(*args, **kwargs)
-        except Exception as e:
-            print(f"ERROR in {f.__name__}: {type(e).__name__} - {e}")
-            traceback.print_exc()
-            return jsonify({'error': 'Internal server error'}), 500
-    return decorated_function
-
 # ============================================================================
 # NEW: PROFILE HELPER FUNCTION (Suggestion 2)
 # ============================================================================
@@ -2098,174 +2086,6 @@ def sanitize_explanation_text(text):
             # Reduce to max 4 spaces
             line = '    ' + stripped if stripped else ''
 
-        cleaned_lines.append(line)
-
-    return '\n'.join(cleaned_lines)
-
-def enforce_persona_verse_limit(response_json: Dict, persona_name: str, requested_verses: Optional[List[Tuple[int, int]]] = None) -> Tuple[Dict, bool, int, int]:
-    """
-    Enforce persona-specific verse limits while prioritizing explicitly requested verses.
-
-    Returns a tuple of:
-        (response_json, trimmed_flag, original_count, final_count)
-    """
-    if not response_json or not isinstance(response_json, dict):
-        return response_json, False, 0, 0
-
-    verses = response_json.get('verses')
-    if not verses or not isinstance(verses, list):
-        return response_json, False, 0, 0
-
-    original_count = len(verses)
-    verse_limit = PERSONA_VERSE_LIMITS.get(persona_name, 8)
-
-    requested_set = set()
-    if requested_verses:
-        for surah, verse in requested_verses:
-            try:
-                requested_set.add((int(surah), int(verse)))
-            except (TypeError, ValueError):
-                continue
-
-    def normalize_verse_id(entry: Dict) -> Optional[Tuple[int, int]]:
-        surah_val = entry.get('surah') or entry.get('surah_number')
-        verse_val = entry.get('verse_number') or entry.get('verse')
-        try:
-            return int(surah_val), int(str(verse_val).split(':')[-1])
-        except (TypeError, ValueError):
-            return None
-
-    prioritized = []
-    others = []
-    seen = set()
-
-    for verse_entry in verses:
-        verse_id = normalize_verse_id(verse_entry)
-
-        if verse_id:
-            if verse_id in seen:
-                continue  # Deduplicate identical verse entries
-            seen.add(verse_id)
-
-            if requested_set and verse_id in requested_set:
-                prioritized.append(verse_entry)
-            else:
-                others.append(verse_entry)
-        else:
-            # Keep unrecognized structures at the end (rare)
-            others.append(verse_entry)
-
-    # Always honor all explicitly requested verses, even if they exceed the persona limit
-    allowed_count = max(verse_limit, len(prioritized))
-    remaining_slots = max(0, allowed_count - len(prioritized))
-
-    limited_verses = prioritized + others[:remaining_slots]
-    trimmed = len(limited_verses) < original_count
-
-    response_json['verses'] = limited_verses
-    final_count = len(limited_verses)
-
-    import re
-
-    def add_blank_line(processed: List[str]) -> None:
-        """Insert a single blank line if the previous line isn't already blank."""
-        if processed and processed[-1].strip():
-            processed.append('')
-
-    def split_heading_and_body(raw_heading: str) -> Tuple[str, str]:
-        """
-        Separate a heading from any trailing body text that may have been kept
-        on the same line (e.g., '## Heading While the verse declares...').
-        """
-        heading_content = raw_heading.strip()
-        if not heading_content:
-            return "", ""
-
-        boundary_positions = []
-
-        # Punctuation followed by capital letter often marks the start of body text
-        punctuation_match = re.search(r'[.?!:]\s+[A-Z]', heading_content)
-        if punctuation_match:
-            boundary_positions.append(punctuation_match.start())
-
-        # Common sentence starters that indicate body text
-        sentence_starters = [
-            ' While ', ' The ', ' This ', ' It ', ' Ibn ', ' He ', ' She ',
-            ' They ', ' These ', ' Those ', ' When ', ' If ', ' As ', ' In ', ' For '
-        ]
-        for starter in sentence_starters:
-            pos = heading_content.find(starter)
-            if pos > 0:
-                boundary_positions.append(pos)
-
-        if boundary_positions:
-            split_at = min(boundary_positions)
-            return heading_content[:split_at].strip(' .:;-'), heading_content[split_at:].strip()
-
-        return heading_content, ""
-
-    processed_lines = []
-
-    for line in text.split('\n'):
-        stripped = line.strip()
-
-        # Preserve blank lines
-        if stripped == '':
-            processed_lines.append('')
-            continue
-
-        # Convert **Header** (at start of line) to ## Header
-        if stripped.startswith('**') and '**' in stripped[2:]:
-            end_pos = stripped.find('**', 2)
-            if end_pos != -1:
-                heading_text = stripped[2:end_pos].strip()
-                rest_of_line = stripped[end_pos + 2:].strip()
-
-                add_blank_line(processed_lines)
-                if heading_text:
-                    processed_lines.append(f"## {heading_text}")
-                if rest_of_line:
-                    processed_lines.append('')
-                    processed_lines.append(rest_of_line)
-                continue
-
-        # Headings already at line start but possibly with trailing text
-        if stripped.startswith('##'):
-            heading_text, trailing_text = split_heading_and_body(stripped[2:])
-            add_blank_line(processed_lines)
-            if heading_text:
-                processed_lines.append(f"## {heading_text}")
-            if trailing_text:
-                processed_lines.append('')
-                processed_lines.append(trailing_text)
-            continue
-
-        # Inline headings embedded within a paragraph
-        if '##' in stripped:
-            before, after = stripped.split('##', 1)
-            before = before.rstrip()
-            heading_text, trailing_text = split_heading_and_body(after)
-
-            if before:
-                processed_lines.append(before)
-
-            add_blank_line(processed_lines)
-            if heading_text:
-                processed_lines.append(f"## {heading_text}")
-
-            if trailing_text:
-                processed_lines.append('')
-                processed_lines.append(trailing_text)
-            continue
-
-        # No conversion needed
-        processed_lines.append(line)
-
-    # Collapse multiple consecutive blank lines
-    cleaned_lines = []
-    for line in processed_lines:
-        if line == '' and (not cleaned_lines or cleaned_lines[-1] == ''):
-            continue
         cleaned_lines.append(line)
 
     return '\n'.join(cleaned_lines)
@@ -3527,7 +3347,7 @@ def firebase_auth_optional(f):
             try:
                 decoded_token = auth.verify_id_token(id_token)
                 request.user = decoded_token
-            except:
+            except Exception:
                 # Token invalid or expired, but that's OK for optional auth
                 request.user = None
         else:
@@ -5000,7 +4820,7 @@ def get_suggestions():
             persona = user_profile.get('persona', 'practicing_muslim') if user_profile else 'practicing_muslim'
         else:
             persona = 'practicing_muslim'
-    except:
+    except Exception:
         persona = 'practicing_muslim'
 
     # Get persona-specific suggestions
@@ -5046,7 +4866,8 @@ def get_analytics():
     """Get usage analytics (admin only)"""
     try:
         user_email = request.user.get('email', '')
-        if not user_email.endswith('@yourdomain.com'): # Replace with your admin domain
+        admin_domain = os.environ.get('ADMIN_DOMAIN', '')
+        if not admin_domain or not user_email.endswith(f'@{admin_domain}'):
             return jsonify({"error": "Unauthorized"}), 403
 
         return jsonify({
@@ -6621,6 +6442,10 @@ def tafsir_handler_enhanced():
         if not query:
             return jsonify({'error': 'Query is required'}), 400
 
+        # Input validation: cap query length to prevent abuse
+        if len(query) > 500:
+            return jsonify({'error': 'Query too long. Please keep your query under 500 characters.'}), 400
+
         # Validate and normalize approach FIRST (before validation)
         # MERGE: historical + thematic + explore → semantic (same underlying mechanism)
         if approach in ['historical', 'thematic', 'explore']:
@@ -6713,7 +6538,9 @@ def tafsir_handler_enhanced():
 
         # Rate limiting
         if is_rate_limited(user_id):
-            return jsonify({'error': 'Rate limit exceeded'}), 429
+            resp = jsonify({'error': 'You have reached your query limit. Please wait a moment before trying again.'})
+            resp.headers['Retry-After'] = '60'
+            return resp, 429
 
         # Analytics
         ANALYTICS[query] += 1
@@ -7264,8 +7091,13 @@ def tafsir_handler_enhanced():
 
                     # Check finish reason to understand why generation stopped
                     finish_reason = safe_get_nested(raw_response, "candidates", 0, "finishReason")
-                    if finish_reason and finish_reason != "STOP":
-                        print(f"⚠️ Gemini finishReason: {finish_reason} (not STOP - response may be incomplete)")
+                    if finish_reason and finish_reason not in ("STOP", "MAX_TOKENS"):
+                        print(f"⚠️ Gemini finishReason: {finish_reason} — response may be blocked or incomplete")
+                        if finish_reason == "SAFETY":
+                            return jsonify({
+                                "error": "The AI could not generate a response for this query. Please try rephrasing.",
+                                "error_type": "content_blocked"
+                            }), 400
 
                     # Safely extract generated text from nested response
                     generated_text = safe_get_nested(raw_response, "candidates", 0, "content", "parts", 0, "text")
@@ -7523,8 +7355,13 @@ def tafsir_handler_enhanced():
 
                     # Check finish reason to understand why generation stopped
                     finish_reason = safe_get_nested(raw_response, "candidates", 0, "finishReason")
-                    if finish_reason and finish_reason != "STOP":
-                        print(f"⚠️ Gemini finishReason: {finish_reason} (not STOP - response may be incomplete)")
+                    if finish_reason and finish_reason not in ("STOP", "MAX_TOKENS"):
+                        print(f"⚠️ Gemini finishReason: {finish_reason} — response may be blocked or incomplete")
+                        if finish_reason == "SAFETY":
+                            return jsonify({
+                                "error": "The AI could not generate a response for this query. Please try rephrasing.",
+                                "error_type": "content_blocked"
+                            }), 400
 
                     # Safely extract generated text from nested response
                     generated_text = safe_get_nested(raw_response, "candidates", 0, "content", "parts", 0, "text")

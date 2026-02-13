@@ -109,7 +109,7 @@ export default function TourOverlay({
           retryCount++;
           setTimeout(findAndHighlight, 500);
         } else {
-          console.warn(`Tour target not found after ${maxRetries} attempts: ${currentTourStep.target}`);
+          // Tour target not found — skip step
           // Skip to next step or close tour
           if (currentStep < actualTotalSteps - 1) {
             onNext();

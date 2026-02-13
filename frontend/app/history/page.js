@@ -37,7 +37,7 @@ export default function QueryHistoryPage() {
         setHistory(tafsirHistory);
       }
     } catch (err) {
-      console.error('Failed to fetch history:', err);
+      // History fetch failed — non-critical
     }
   };
 

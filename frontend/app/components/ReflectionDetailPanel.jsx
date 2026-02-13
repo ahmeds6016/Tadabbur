@@ -1,5 +1,6 @@
 'use client';
-import { useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import ConfirmDialog from './ConfirmDialog';
 
 const ANNOTATION_TYPE_CONFIG = {
   personal_insight: { label: 'Insight', color: '#0D9488' },
@@ -64,6 +65,7 @@ const getContextLabel = (annotation) => {
 
 export default function ReflectionDetailPanel({ annotation, isOpen, onClose, onEdit, onDelete }) {
   const typeConfig = annotation ? getTypeConfig(annotation.type) : {};
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Handle escape key
   const handleEscape = useCallback((e) => {
@@ -327,12 +329,7 @@ export default function ReflectionDetailPanel({ annotation, isOpen, onClose, onE
             )}
             {onDelete && (
               <button
-                onClick={() => {
-                  if (confirm('Are you sure you want to delete this reflection?')) {
-                    onDelete(annotation.id);
-                    onClose();
-                  }
-                }}
+                onClick={() => setShowDeleteConfirm(true)}
                 style={{
                   background: 'transparent',
                   border: '1px solid var(--error-color, #DC2626)',
@@ -379,6 +376,16 @@ export default function ReflectionDetailPanel({ annotation, isOpen, onClose, onE
           }
         }
       `}</style>
+
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        title="Delete Reflection"
+        message="Are you sure you want to delete this reflection? This cannot be undone."
+        confirmText="Delete"
+        confirmStyle="danger"
+        onConfirm={() => { setShowDeleteConfirm(false); onDelete(annotation.id); onClose(); }}
+        onCancel={() => setShowDeleteConfirm(false)}
+      />
     </>
   );
 }

@@ -6,6 +6,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkBreaks from 'remark-breaks';
 import { auth } from '../lib/firebase';
 import { BACKEND_URL } from '../lib/config';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 export default function SavedSearchesPage() {
   const [user, setUser] = useState(null);
@@ -42,7 +43,7 @@ export default function SavedSearchesPage() {
         setSaved(data.saved || []);
       }
     } catch (err) {
-      console.error('Failed to fetch saved searches:', err);
+      // Fetch failed — non-critical
     }
   };
 
@@ -58,13 +59,13 @@ export default function SavedSearchesPage() {
         setFolders(data.folders || []);
       }
     } catch (err) {
-      console.error('Failed to fetch folders:', err);
+      // Folders fetch failed — non-critical
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm('Are you sure you want to delete this saved answer?')) return;
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
+  const handleDelete = async (id) => {
     try {
       const token = await user.getIdToken();
       const res = await fetch(`${BACKEND_URL}/saved-searches/${id}`, {
@@ -74,10 +75,9 @@ export default function SavedSearchesPage() {
 
       if (res.ok) {
         setSaved(saved.filter(item => item.id !== id));
-        alert('Saved answer deleted!');
       }
     } catch (err) {
-      console.error('Failed to delete:', err);
+      // Delete failed silently — user can retry
     }
   };
 
@@ -239,7 +239,7 @@ export default function SavedSearchesPage() {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleDelete(item.id);
+                      setDeleteTarget(item.id);
                     }}
                     style={{
                       background: 'transparent',
@@ -376,6 +376,16 @@ export default function SavedSearchesPage() {
           border-color: var(--gold);
         }
       `}</style>
+
+      <ConfirmDialog
+        isOpen={!!deleteTarget}
+        title="Delete Saved Answer"
+        message="Are you sure you want to delete this saved answer? This cannot be undone."
+        confirmText="Delete"
+        confirmStyle="danger"
+        onConfirm={() => { handleDelete(deleteTarget); setDeleteTarget(null); }}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

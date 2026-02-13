@@ -22,6 +22,7 @@ import Tooltip from './components/Tooltip';
 import HelpMenu, { FloatingHelpButton } from './components/HelpMenu';
 import OnboardingProgress from './components/OnboardingProgress';
 import FloatingAnnotateButton from './components/FloatingAnnotateButton';
+import ConfirmDialog from './components/ConfirmDialog';
 import ErrorBoundary from './components/ErrorBoundary';
 import TafsirLogo from './components/Logo';
 import SurahVersePicker from './components/SurahVersePicker';
@@ -32,7 +33,6 @@ import { useToast } from './hooks/useToast';
 import useTextSelection from './hooks/useTextSelection';
 import { useOnboarding } from './hooks/useOnboarding';
 import onboardingConfig from '../config/onboarding-messages.json';
-import { Search as SearchIcon, X } from 'lucide-react';
 
 // ============================================================================
 // MAIN COMPONENT
@@ -323,7 +323,7 @@ function OnboardingComponent({ user, onProfileComplete }) {
       const result = await response.json();
       onProfileComplete(result.profile);
     } catch (err) {
-      console.error('Profile error:', err);
+      // Profile fetch failed — user will be redirected to onboarding
       setError(err.message);
     }
   }, [user, profile, onProfileComplete, isDeterministicPersona]);
@@ -586,6 +586,7 @@ function MainApp({ user, userProfile, onResetProfile }) {
   const [error, setError] = useState('');
   const [isTafsirLoading, setIsTafsirLoading] = useState(false);
   const [rateLimitWarning, setRateLimitWarning] = useState('');
+  const [showPersonaConfirm, setShowPersonaConfirm] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [navCollapsed, setNavCollapsed] = useState(false);
   const [desktopStats, setDesktopStats] = useState({
@@ -692,7 +693,6 @@ function MainApp({ user, userProfile, onResetProfile }) {
     setError('');
     clearSearchState(); // Clear persisted search
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
   const handleSaveSearch = useCallback(async () => {
@@ -730,7 +730,7 @@ function MainApp({ user, userProfile, onResetProfile }) {
         showError('Failed to save search. Please try again.');
       }
     } catch (err) {
-      console.error('Failed to save search:', err);
+      // Save failed silently — non-critical
       showError('Failed to save search. Please try again.');
     }
   }, [response, query, user, approach, onboardingState.hasViewedSaved, markStepComplete, showSuccess, showError]);
@@ -961,7 +961,7 @@ function MainApp({ user, userProfile, onResetProfile }) {
         })
       });
     } catch (err) {
-      console.error('Failed to save query to history:', err);
+      // History save failed silently — non-critical
     }
   };
 
@@ -1004,7 +1004,7 @@ function MainApp({ user, userProfile, onResetProfile }) {
       pendingShareRequest.current = sharePromise;
       return await sharePromise;
     } catch (error) {
-      console.error('Error creating share:', error);
+      // Share creation failed — non-critical
       pendingShareRequest.current = null;
       return null;
     }
@@ -1023,7 +1023,7 @@ function MainApp({ user, userProfile, onResetProfile }) {
           : query
       });
       setAnnotationDialogOpen(true);
-      ensureShareId().catch(console.error);
+      ensureShareId().catch(() => {});
     }
   }, [selectedText, user, response, query, ensureShareId]);
 
@@ -1033,7 +1033,7 @@ function MainApp({ user, userProfile, onResetProfile }) {
       queryContext: query
     });
     setAnnotationDialogOpen(true);
-    ensureShareId().catch(console.error);
+    ensureShareId().catch(() => {});
   }, [query, ensureShareId]);
 
   const handleAnnotationSaved = useCallback(() => {
@@ -1099,7 +1099,7 @@ function MainApp({ user, userProfile, onResetProfile }) {
         throw new Error('Copy command failed');
       }
     } catch (err) {
-      console.error('Copy failed:', err);
+      // Copy failed — fallback already handled
       document.body.removeChild(textArea);
 
       // Show error in button
@@ -1174,7 +1174,7 @@ function MainApp({ user, userProfile, onResetProfile }) {
             return; // Exit gracefully, no error message
           }
           // For other errors, fall through to clipboard
-          console.debug('Share API unavailable, using clipboard:', shareErr.message);
+          // Share API unavailable — fall through to clipboard
         }
       }
 
@@ -1195,7 +1195,7 @@ function MainApp({ user, userProfile, onResetProfile }) {
             button.disabled = false;
           }, 2000);
         } catch (clipboardErr) {
-          console.error('Clipboard API error:', clipboardErr);
+          // Clipboard API error — textarea fallback will follow
           // Fallback to textarea method
           throw new Error('Clipboard API failed');
         }
@@ -1235,7 +1235,7 @@ function MainApp({ user, userProfile, onResetProfile }) {
         }
       }
     } catch (err) {
-      console.error('Share link failed:', err);
+      // Share link failed — button shows retry
 
       // Show error in button
       button.innerHTML = 'Share Failed - Tap to retry';
@@ -1268,6 +1268,17 @@ function MainApp({ user, userProfile, onResetProfile }) {
       {/* Toast Notifications */}
       <ToastContainer toasts={toasts} />
 
+      {/* Persona Change Confirmation */}
+      <ConfirmDialog
+        isOpen={showPersonaConfirm}
+        title="Change Persona"
+        message="Would you like to change your learning persona? This will update the style and depth of your tafsir responses."
+        confirmText="Change"
+        confirmStyle="primary"
+        onConfirm={() => { setShowPersonaConfirm(false); onResetProfile?.(); }}
+        onCancel={() => setShowPersonaConfirm(false)}
+      />
+
       {/* Desktop Navigation Sidebar */}
       {!isMobile && (
         <DesktopNav
@@ -1289,11 +1300,7 @@ function MainApp({ user, userProfile, onResetProfile }) {
             <span>{user.email}</span>
             <button
               className="persona-badge clickable"
-              onClick={() => {
-                if (window.confirm('Would you like to change your learning persona?')) {
-                  onResetProfile?.();
-                }
-              }}
+              onClick={() => setShowPersonaConfirm(true)}
               title="Click to change persona"
               type="button"
             >
@@ -1391,7 +1398,12 @@ function MainApp({ user, userProfile, onResetProfile }) {
         
         {error && <p className="error">{error}</p>}
         {isTafsirLoading && (
-          <div className="loading-spinner"></div>
+          <div style={{ textAlign: 'center', padding: '20px 0' }}>
+            <div className="loading-spinner"></div>
+            <p style={{ color: 'var(--text-secondary, #6b7280)', marginTop: '12px', fontSize: '0.95rem' }}>
+              Preparing your tafsir...
+            </p>
+          </div>
         )}
 
         {response && response.needs_clarification && (
@@ -2128,7 +2140,7 @@ function EnhancedResultsDisplay({
         }));
       }
     } catch (err) {
-      console.error('Failed to fetch annotations:', err);
+      // Annotation fetch failed — non-critical
     }
   }, [user, setAnnotations]);
 
@@ -2188,7 +2200,7 @@ function EnhancedResultsDisplay({
         fetchVerseAnnotations(surah, verse);
       }
     } catch (err) {
-      console.error('Failed to delete annotation:', err);
+      // Annotation delete failed — non-critical
     }
   };
 
@@ -2228,7 +2240,7 @@ function EnhancedResultsDisplay({
             onClick={() => {
               setCurrentVerse({ reflectionType: 'general', queryContext: query });
               setAnnotationDialogOpen(true);
-              ensureShareId().catch(err => console.error('Failed to create share link:', err));
+              ensureShareId().catch(() => {});
             }}
             style={{
               background: 'var(--primary-teal)',
@@ -2371,7 +2383,7 @@ function EnhancedResultsDisplay({
                       onClick={() => {
                         setCurrentVerse({ reflectionType: 'section', sectionName: 'Tafsir Explanations', queryContext: query });
                         setAnnotationDialogOpen(true);
-                        ensureShareId().catch(err => console.error('Failed to create share link:', err));
+                        ensureShareId().catch(() => {});
                       }}
                       style={{
                         padding: '8px 16px',
@@ -2511,7 +2523,7 @@ function EnhancedResultsDisplay({
                       onClick={() => {
                         setCurrentVerse({ reflectionType: 'section', sectionName: 'Lessons & Practical Applications', queryContext: query });
                         setAnnotationDialogOpen(true);
-                        ensureShareId().catch(err => console.error('Failed to create share link:', err));
+                        ensureShareId().catch(() => {});
                       }}
                       style={{
                         padding: '8px 16px',
@@ -2728,7 +2740,7 @@ function EnhancedResultsDisplay({
                       onClick={() => {
                         setCurrentVerse({ reflectionType: 'section', sectionName: 'Summary', queryContext: query });
                         setAnnotationDialogOpen(true);
-                        ensureShareId().catch(err => console.error('Failed to create share link:', err));
+                        ensureShareId().catch(() => {});
                       }}
                       style={{
                         padding: '8px 16px',

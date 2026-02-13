@@ -295,8 +295,7 @@ class TafsirAPI {
 
       return data;
     } catch (error) {
-      console.error('Failed to fetch suggestions:', error);
-      // Return default suggestions on error
+      // Suggestions fetch failed — return defaults
       return this.getDefaultSuggestions(persona);
     }
   }
@@ -349,7 +348,7 @@ class TafsirAPI {
 
       return { success: response.ok };
     } catch (error) {
-      console.error('Failed to save to history:', error);
+      // History save failed — non-critical
       return { success: false, error };
     }
   }
@@ -376,7 +375,7 @@ class TafsirAPI {
 
       return await response.json();
     } catch (error) {
-      console.error('Failed to fetch history:', error);
+      // History fetch failed — returning empty
       return [];
     }
   }

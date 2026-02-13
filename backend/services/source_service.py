@@ -90,16 +90,6 @@ def _load_asbab_surah(surah_number):
     return None
 
 
-@lru_cache(maxsize=1)
-def _load_riyad_index():
-    """Load Riyad al-Saliheen index (cached in memory)."""
-    path = _INDEX_DIR / "riyad_al_saliheen" / "_index.json"
-    if path.exists():
-        with open(path) as f:
-            return json.load(f)
-    return None
-
-
 @lru_cache(maxsize=20)
 def _load_riyad_chapter(book_num, ch_num):
     """Load a Riyad al-Saliheen chapter."""
@@ -1422,29 +1412,6 @@ def plan_scholarly_retrieval_deterministic(surah_number, verse_start, verse_end,
     madarij_added = False  # max 1
     riyad_added = set()  # max 2
     matched_keywords = []
-
-    def _scan_routing(routing_table, source_name, added_tracker, max_entries):
-        """Scan a routing table and emit pointers for keyword matches."""
-        nonlocal pointers
-        count = 0 if isinstance(added_tracker, bool) else len(added_tracker)
-        for keywords, pointer in routing_table:
-            if len(pointers) >= MAX_POINTERS:
-                break
-            if count >= max_entries:
-                break
-            if pointer in (ihya_added if source_name == "ihya" else
-                          riyad_added if source_name == "riyad" else set()):
-                continue
-            for kw in keywords:
-                if kw in search_text:
-                    pointers.append(pointer)
-                    matched_keywords.append(kw)
-                    if source_name == "ihya":
-                        ihya_added.add(pointer)
-                    elif source_name == "riyad":
-                        riyad_added.add(pointer)
-                    count += 1
-                    break  # one keyword match per route is enough
 
     # Scan Ihya (up to 3 pointers)
     for keywords, pointer in _IHYA_ROUTING:
