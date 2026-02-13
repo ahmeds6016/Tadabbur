@@ -146,7 +146,7 @@ TAFSIR_CHUNKS = {}
 CHUNK_SOURCE_MAP = {}  # Maps chunk_id to source name
 VERSE_METADATA = {}  # NEW: Stores structured metadata for direct queries
 RESPONSE_CACHE = {}  # In-memory cache
-SCHOLARLY_PIPELINE_VERSION = "2.0"  # Bump to invalidate old Firestore cache (was 1.0 before two-stage pipeline)
+SCHOLARLY_PIPELINE_VERSION = "3.0"  # Bump: two-stage with retries + deterministic baseline merge
 USER_RATE_LIMITS = defaultdict(list)  # Rate limiting
 ANALYTICS = defaultdict(int)  # Usage analytics
 
@@ -4327,18 +4327,17 @@ def plan_scholarly_retrieval(planning_prompt):
     """
     Call Gemini to generate a scholarly retrieval plan.
     Returns a dict with 'pointers' list, or None on failure.
+    Includes retry logic for 429/503/timeout (matching generation call pattern).
     """
     import re as _re
     plan_start = time.time()
     print(f"  [SCHOLARLY-PLAN] Starting planning call ({len(planning_prompt)} char prompt)")
-    print(f"  [SCHOLARLY-PLAN] Model: {GEMINI_MODEL_ID}, Project: {GCP_INFRASTRUCTURE_PROJECT}, Location: {LOCATION}")
+
     try:
-        cred_start = time.time()
         credentials, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
         auth_req = GoogleRequest()
         credentials.refresh(auth_req)
         token = credentials.token
-        print(f"  [SCHOLARLY-PLAN] Credentials obtained in {(time.time()-cred_start)*1000:.0f}ms")
 
         VERTEX_ENDPOINT = f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/{GCP_INFRASTRUCTURE_PROJECT}/locations/{LOCATION}/publishers/google/models/{GEMINI_MODEL_ID}:generateContent"
 
@@ -4353,50 +4352,77 @@ def plan_scholarly_retrieval(planning_prompt):
             },
         }
 
-        api_start = time.time()
-        response = requests.post(
-            VERTEX_ENDPOINT,
-            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
-            json=body,
-            timeout=35,
-        )
-        api_duration = time.time() - api_start
-        print(f"  [SCHOLARLY-PLAN] Gemini responded: HTTP {response.status_code} in {api_duration:.2f}s")
+        # Retry logic matching the generation call pattern
+        max_retries = 3
+        response = None
+        for attempt in range(max_retries):
+            retry_delay = 2 ** (attempt + 1)  # 2s, 4s, 8s
+            try:
+                api_start = time.time()
+                response = requests.post(
+                    VERTEX_ENDPOINT,
+                    headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+                    json=body,
+                    timeout=60,
+                )
+                api_duration = time.time() - api_start
+                print(f"  [SCHOLARLY-PLAN] Gemini responded: HTTP {response.status_code} in {api_duration:.2f}s (attempt {attempt+1})")
 
-        if response.status_code != 200:
-            print(f"  [SCHOLARLY-PLAN] ERROR response body: {response.text[:500]}")
-            response.raise_for_status()
+                if response.status_code == 429:
+                    if attempt < max_retries - 1:
+                        print(f"  [SCHOLARLY-PLAN] Rate limited (429), retrying in {retry_delay}s...")
+                        time.sleep(retry_delay)
+                        continue
+                    print(f"  [SCHOLARLY-PLAN] Rate limited after {max_retries} attempts")
+                    return None
+
+                if response.status_code == 503:
+                    if attempt < max_retries - 1:
+                        print(f"  [SCHOLARLY-PLAN] Service unavailable (503), retrying in {retry_delay}s...")
+                        time.sleep(retry_delay)
+                        continue
+                    print(f"  [SCHOLARLY-PLAN] Service unavailable after {max_retries} attempts")
+                    return None
+
+                response.raise_for_status()
+                break  # Success
+
+            except requests.exceptions.Timeout:
+                if attempt < max_retries - 1:
+                    print(f"  [SCHOLARLY-PLAN] Timeout on attempt {attempt+1}, retrying in {retry_delay}s...")
+                    time.sleep(retry_delay)
+                    continue
+                print(f"  [SCHOLARLY-PLAN] TIMEOUT after {max_retries} attempts ({(time.time()-plan_start)*1000:.0f}ms total)")
+                return None
+
+            except requests.exceptions.HTTPError as he:
+                print(f"  [SCHOLARLY-PLAN] HTTP ERROR: {he}")
+                return None
+
+        if not response or response.status_code != 200:
+            return None
 
         raw_response = response.json()
         generated_text = safe_get_nested(raw_response, "candidates", 0, "content", "parts", 0, "text")
         finish_reason = safe_get_nested(raw_response, "candidates", 0, "finishReason")
-        usage = safe_get_nested(raw_response, "usageMetadata")
-        print(f"  [SCHOLARLY-PLAN] finishReason={finish_reason}, usage={usage}")
+        print(f"  [SCHOLARLY-PLAN] finishReason={finish_reason}")
 
         if not generated_text:
-            # Check if blocked by safety
-            block_reason = safe_get_nested(raw_response, "candidates", 0, "finishReason")
             safety_ratings = safe_get_nested(raw_response, "candidates", 0, "safetyRatings")
-            print(f"  [SCHOLARLY-PLAN] Empty response! blockReason={block_reason}, safety={safety_ratings}")
-            print(f"  [SCHOLARLY-PLAN] Raw response keys: {list(raw_response.keys()) if isinstance(raw_response, dict) else 'not dict'}")
-            if raw_response.get("candidates"):
-                print(f"  [SCHOLARLY-PLAN] Candidate keys: {list(raw_response['candidates'][0].keys()) if raw_response['candidates'] else 'empty'}")
+            print(f"  [SCHOLARLY-PLAN] Empty response! finishReason={finish_reason}, safety={safety_ratings}")
             return None
 
-        print(f"  [SCHOLARLY-PLAN] Generated text: {len(generated_text)} chars")
-        print(f"  [SCHOLARLY-PLAN] Text preview: {generated_text[:300]}")
+        print(f"  [SCHOLARLY-PLAN] Generated: {len(generated_text)} chars — {generated_text[:200]}")
 
         try:
             plan = json.loads(generated_text)
-        except json.JSONDecodeError as je:
-            print(f"  [SCHOLARLY-PLAN] JSON parse failed: {je}")
-            print(f"  [SCHOLARLY-PLAN] Full text:\n{generated_text}")
+        except json.JSONDecodeError:
             # Try to extract JSON from markdown fences
             match = _re.search(r'\{[\s\S]*\}', generated_text)
             if match:
                 plan = json.loads(match.group())
-                print(f"  [SCHOLARLY-PLAN] Recovered JSON from regex extraction")
             else:
+                print(f"  [SCHOLARLY-PLAN] JSON parse failed, text: {generated_text[:300]}")
                 return None
 
         pointers = plan.get("pointers", [])
@@ -4406,29 +4432,26 @@ def plan_scholarly_retrieval(planning_prompt):
             print(f"    -> {p}")
         return plan
 
-    except requests.exceptions.Timeout:
-        print(f"  [SCHOLARLY-PLAN] TIMEOUT after {(time.time()-plan_start)*1000:.0f}ms")
-        return None
-    except requests.exceptions.HTTPError as he:
-        print(f"  [SCHOLARLY-PLAN] HTTP ERROR: {he}")
-        return None
     except Exception as e:
-        print(f"  [SCHOLARLY-PLAN] EXCEPTION: {type(e).__name__}: {str(e)[:300]}")
-        traceback.print_exc()
+        print(f"  [SCHOLARLY-PLAN] EXCEPTION: {type(e).__name__}: {str(e)[:200]}")
         return None
 
 
 def _get_scholarly_context_two_stage(query, verse_data, context_by_source):
     """
-    Deterministic scholarly retrieval: keyword-match → fetch → format.
-    No API calls. Returns (scholarly_ctx_string, badges_list, pipeline_info).
-    Falls back to old single-stage method only if verse_data is missing.
+    Two-stage scholarly retrieval: deterministic baseline + Gemini enrichment.
+
+    1. Deterministic keyword matcher runs instantly (guaranteed baseline)
+    2. Gemini planning call runs with retries (catches nuanced connections)
+    3. Results are MERGED: union of pointers, deduplicated, capped at 7
+
+    Returns (scholarly_ctx_string, badges_list, pipeline_info).
     """
     start = time.time()
-    print(f"\n  [SCHOLARLY] === Starting deterministic scholarly retrieval ===")
+    print(f"\n  [SCHOLARLY-2STAGE] === Starting two-stage scholarly retrieval ===")
 
     def _fallback(reason):
-        print(f"  [SCHOLARLY] FALLBACK: {reason}")
+        print(f"  [SCHOLARLY-2STAGE] FALLBACK: {reason}")
         ctx = _get_scholarly_context_for_prompt(query, verse_data)
         badges = _get_scholarly_sources_metadata(query, verse_data)
         return ctx, badges, f"single_stage_fallback: {reason}"
@@ -4466,31 +4489,65 @@ def _get_scholarly_context_two_stage(query, verse_data, context_by_source):
                         ibn_kathir_summary = texts[:500]
                     break
 
-        # Deterministic planning — no API call, just keyword matching
-        plan = plan_scholarly_retrieval_deterministic(
+        # --- Stage 1: Deterministic baseline (instant, guaranteed) ---
+        det_plan = plan_scholarly_retrieval_deterministic(
             surah_number, verse_start, verse_end,
             verse_text[:300], ibn_kathir_summary
         )
-        print(f"  [SCHOLARLY] Plan: {len(plan['pointers'])} pointers — {plan['reasoning']}")
-        for p in plan['pointers']:
-            print(f"    -> {p}")
+        det_pointers = det_plan["pointers"]
+        print(f"  [SCHOLARLY-2STAGE] Deterministic: {len(det_pointers)} pointers — {det_plan['reasoning']}")
 
-        # Resolve pointers to actual text
-        resolved = resolve_scholarly_pointers(plan["pointers"])
+        # --- Stage 2: Gemini enrichment (API call with retries) ---
+        gemini_pointers = []
+        gemini_status = "skipped"
+        try:
+            planning_prompt = build_scholarly_planning_prompt(
+                surah_number, verse_start, verse_end,
+                verse_text[:300], ibn_kathir_summary, query
+            )
+            gemini_plan = plan_scholarly_retrieval(planning_prompt)
+            if gemini_plan and gemini_plan.get("pointers"):
+                gemini_pointers = gemini_plan["pointers"]
+                gemini_status = f"ok: {len(gemini_pointers)} pointers"
+                print(f"  [SCHOLARLY-2STAGE] Gemini: {len(gemini_pointers)} pointers — {gemini_plan.get('reasoning', '')}")
+            else:
+                gemini_status = "empty_response"
+                print(f"  [SCHOLARLY-2STAGE] Gemini: returned no pointers")
+        except Exception as ge:
+            gemini_status = f"error: {type(ge).__name__}"
+            print(f"  [SCHOLARLY-2STAGE] Gemini error: {type(ge).__name__}: {str(ge)[:200]}")
+
+        # --- Merge: union of pointers, deduplicated, capped at 7 ---
+        seen = set()
+        merged_pointers = []
+        for p in det_pointers + gemini_pointers:
+            if p not in seen and len(merged_pointers) < 7:
+                seen.add(p)
+                merged_pointers.append(p)
+
+        print(f"  [SCHOLARLY-2STAGE] Merged: {len(merged_pointers)} pointers (det={len(det_pointers)}, gemini={len(gemini_pointers)}, unique={len(seen)})")
+        for p in merged_pointers:
+            src = "both" if p in det_pointers and p in gemini_pointers else ("det" if p in det_pointers else "gemini")
+            print(f"    -> [{src}] {p}")
+
+        # --- Resolve merged pointers ---
+        resolved = resolve_scholarly_pointers(merged_pointers)
 
         if not resolved["excerpts"]:
-            return _fallback(f"All {len(plan['pointers'])} pointers resolved to empty")
+            return _fallback(f"All {len(merged_pointers)} merged pointers resolved to empty")
 
         # Format for generation prompt
         scholarly_ctx = format_scholarly_excerpts_for_prompt(resolved)
         badges = resolved["sources_used"]
 
         duration = (time.time() - start) * 1000
-        print(f"  [SCHOLARLY] SUCCESS in {duration:.0f}ms: {len(resolved['excerpts'])} excerpts, {len(badges)} badges: {[b['key'] for b in badges]}")
-        return scholarly_ctx, badges, f"deterministic_ok: {len(resolved['excerpts'])} excerpts in {duration:.0f}ms"
+        pipeline_info = f"two_stage: {len(resolved['excerpts'])} excerpts, {len(badges)} badges in {duration:.0f}ms (gemini={gemini_status})"
+        print(f"  [SCHOLARLY-2STAGE] SUCCESS: {pipeline_info}")
+        print(f"  [SCHOLARLY-2STAGE] Badges: {[b['key'] for b in badges]}")
+        return scholarly_ctx, badges, pipeline_info
 
     except Exception as e:
-        print(f"  [SCHOLARLY] EXCEPTION: {type(e).__name__}: {str(e)[:300]}")
+        print(f"  [SCHOLARLY-2STAGE] EXCEPTION: {type(e).__name__}: {str(e)[:300]}")
         traceback.print_exc()
         return _fallback(f"Exception: {type(e).__name__}: {str(e)[:200]}")
 
