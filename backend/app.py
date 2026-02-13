@@ -45,6 +45,7 @@ from services.source_service import (
     build_scholarly_planning_prompt,
     resolve_scholarly_pointers,
     format_scholarly_excerpts_for_prompt,
+    plan_scholarly_retrieval_deterministic,
 )
 
 # --- App Initialization ---
@@ -145,6 +146,7 @@ TAFSIR_CHUNKS = {}
 CHUNK_SOURCE_MAP = {}  # Maps chunk_id to source name
 VERSE_METADATA = {}  # NEW: Stores structured metadata for direct queries
 RESPONSE_CACHE = {}  # In-memory cache
+SCHOLARLY_PIPELINE_VERSION = "2.0"  # Bump to invalidate old Firestore cache (was 1.0 before two-stage pipeline)
 USER_RATE_LIMITS = defaultdict(list)  # Rate limiting
 ANALYTICS = defaultdict(int)  # Usage analytics
 
@@ -4326,11 +4328,17 @@ def plan_scholarly_retrieval(planning_prompt):
     Call Gemini to generate a scholarly retrieval plan.
     Returns a dict with 'pointers' list, or None on failure.
     """
+    import re as _re
+    plan_start = time.time()
+    print(f"  [SCHOLARLY-PLAN] Starting planning call ({len(planning_prompt)} char prompt)")
+    print(f"  [SCHOLARLY-PLAN] Model: {GEMINI_MODEL_ID}, Project: {GCP_INFRASTRUCTURE_PROJECT}, Location: {LOCATION}")
     try:
+        cred_start = time.time()
         credentials, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
         auth_req = GoogleRequest()
         credentials.refresh(auth_req)
         token = credentials.token
+        print(f"  [SCHOLARLY-PLAN] Credentials obtained in {(time.time()-cred_start)*1000:.0f}ms")
 
         VERTEX_ENDPOINT = f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/{GCP_INFRASTRUCTURE_PROJECT}/locations/{LOCATION}/publishers/google/models/{GEMINI_MODEL_ID}:generateContent"
 
@@ -4345,38 +4353,86 @@ def plan_scholarly_retrieval(planning_prompt):
             },
         }
 
+        api_start = time.time()
         response = requests.post(
             VERTEX_ENDPOINT,
             headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
             json=body,
             timeout=35,
         )
-        response.raise_for_status()
+        api_duration = time.time() - api_start
+        print(f"  [SCHOLARLY-PLAN] Gemini responded: HTTP {response.status_code} in {api_duration:.2f}s")
+
+        if response.status_code != 200:
+            print(f"  [SCHOLARLY-PLAN] ERROR response body: {response.text[:500]}")
+            response.raise_for_status()
 
         raw_response = response.json()
         generated_text = safe_get_nested(raw_response, "candidates", 0, "content", "parts", 0, "text")
+        finish_reason = safe_get_nested(raw_response, "candidates", 0, "finishReason")
+        usage = safe_get_nested(raw_response, "usageMetadata")
+        print(f"  [SCHOLARLY-PLAN] finishReason={finish_reason}, usage={usage}")
 
         if not generated_text:
-            print("  ⚠️  Scholarly planning returned empty response")
+            # Check if blocked by safety
+            block_reason = safe_get_nested(raw_response, "candidates", 0, "finishReason")
+            safety_ratings = safe_get_nested(raw_response, "candidates", 0, "safetyRatings")
+            print(f"  [SCHOLARLY-PLAN] Empty response! blockReason={block_reason}, safety={safety_ratings}")
+            print(f"  [SCHOLARLY-PLAN] Raw response keys: {list(raw_response.keys()) if isinstance(raw_response, dict) else 'not dict'}")
+            if raw_response.get("candidates"):
+                print(f"  [SCHOLARLY-PLAN] Candidate keys: {list(raw_response['candidates'][0].keys()) if raw_response['candidates'] else 'empty'}")
             return None
 
-        plan = json.loads(generated_text)
+        print(f"  [SCHOLARLY-PLAN] Generated text: {len(generated_text)} chars")
+        print(f"  [SCHOLARLY-PLAN] Text preview: {generated_text[:300]}")
+
+        try:
+            plan = json.loads(generated_text)
+        except json.JSONDecodeError as je:
+            print(f"  [SCHOLARLY-PLAN] JSON parse failed: {je}")
+            print(f"  [SCHOLARLY-PLAN] Full text:\n{generated_text}")
+            # Try to extract JSON from markdown fences
+            match = _re.search(r'\{[\s\S]*\}', generated_text)
+            if match:
+                plan = json.loads(match.group())
+                print(f"  [SCHOLARLY-PLAN] Recovered JSON from regex extraction")
+            else:
+                return None
+
         pointers = plan.get("pointers", [])
         reasoning = plan.get("reasoning", "")
-        print(f"  📋 Scholarly plan: {len(pointers)} pointers — {reasoning}")
+        print(f"  [SCHOLARLY-PLAN] SUCCESS: {len(pointers)} pointers in {(time.time()-plan_start)*1000:.0f}ms — {reasoning}")
+        for p in pointers:
+            print(f"    -> {p}")
         return plan
 
+    except requests.exceptions.Timeout:
+        print(f"  [SCHOLARLY-PLAN] TIMEOUT after {(time.time()-plan_start)*1000:.0f}ms")
+        return None
+    except requests.exceptions.HTTPError as he:
+        print(f"  [SCHOLARLY-PLAN] HTTP ERROR: {he}")
+        return None
     except Exception as e:
-        print(f"  ⚠️  Scholarly planning failed: {type(e).__name__}: {str(e)[:200]}")
+        print(f"  [SCHOLARLY-PLAN] EXCEPTION: {type(e).__name__}: {str(e)[:300]}")
+        traceback.print_exc()
         return None
 
 
 def _get_scholarly_context_two_stage(query, verse_data, context_by_source):
     """
-    Two-stage scholarly retrieval: Plan → Fetch → Format.
-    Returns (scholarly_ctx_string, badges_list).
-    Falls back to old single-stage method on failure.
+    Deterministic scholarly retrieval: keyword-match → fetch → format.
+    No API calls. Returns (scholarly_ctx_string, badges_list, pipeline_info).
+    Falls back to old single-stage method only if verse_data is missing.
     """
+    start = time.time()
+    print(f"\n  [SCHOLARLY] === Starting deterministic scholarly retrieval ===")
+
+    def _fallback(reason):
+        print(f"  [SCHOLARLY] FALLBACK: {reason}")
+        ctx = _get_scholarly_context_for_prompt(query, verse_data)
+        badges = _get_scholarly_sources_metadata(query, verse_data)
+        return ctx, badges, f"single_stage_fallback: {reason}"
+
     try:
         # Extract verse info
         surah_number = None
@@ -4396,10 +4452,7 @@ def _get_scholarly_context_two_stage(query, verse_data, context_by_source):
                 verse_text = verse_data.get('english', '') or verse_data.get('text_saheeh_international', '') or ''
 
         if not surah_number or not verse_start:
-            # No verse info — fall back to old method
-            ctx = _get_scholarly_context_for_prompt(query, verse_data)
-            badges = _get_scholarly_sources_metadata(query, verse_data)
-            return ctx, badges
+            return _fallback(f"No verse info (surah={surah_number}, verse={verse_start})")
 
         # Extract Ibn Kathir summary from context_by_source
         ibn_kathir_summary = ""
@@ -4413,41 +4466,33 @@ def _get_scholarly_context_two_stage(query, verse_data, context_by_source):
                         ibn_kathir_summary = texts[:500]
                     break
 
-        # Stage 1: Build planning prompt and call Gemini
-        planning_prompt = build_scholarly_planning_prompt(
+        # Deterministic planning — no API call, just keyword matching
+        plan = plan_scholarly_retrieval_deterministic(
             surah_number, verse_start, verse_end,
-            verse_text[:300], ibn_kathir_summary, query
+            verse_text[:300], ibn_kathir_summary
         )
+        print(f"  [SCHOLARLY] Plan: {len(plan['pointers'])} pointers — {plan['reasoning']}")
+        for p in plan['pointers']:
+            print(f"    -> {p}")
 
-        plan = plan_scholarly_retrieval(planning_prompt)
-
-        if not plan or not plan.get("pointers"):
-            print("  ⚠️  No scholarly plan — falling back to single-stage")
-            ctx = _get_scholarly_context_for_prompt(query, verse_data)
-            badges = _get_scholarly_sources_metadata(query, verse_data)
-            return ctx, badges
-
-        # Stage 2: Resolve pointers deterministically
+        # Resolve pointers to actual text
         resolved = resolve_scholarly_pointers(plan["pointers"])
 
         if not resolved["excerpts"]:
-            print("  ⚠️  No excerpts resolved — falling back to single-stage")
-            ctx = _get_scholarly_context_for_prompt(query, verse_data)
-            badges = _get_scholarly_sources_metadata(query, verse_data)
-            return ctx, badges
+            return _fallback(f"All {len(plan['pointers'])} pointers resolved to empty")
 
         # Format for generation prompt
         scholarly_ctx = format_scholarly_excerpts_for_prompt(resolved)
         badges = resolved["sources_used"]
 
-        print(f"  ✅ Two-stage scholarly: {len(resolved['excerpts'])} excerpts, {len(badges)} badges")
-        return scholarly_ctx, badges
+        duration = (time.time() - start) * 1000
+        print(f"  [SCHOLARLY] SUCCESS in {duration:.0f}ms: {len(resolved['excerpts'])} excerpts, {len(badges)} badges: {[b['key'] for b in badges]}")
+        return scholarly_ctx, badges, f"deterministic_ok: {len(resolved['excerpts'])} excerpts in {duration:.0f}ms"
 
     except Exception as e:
-        print(f"  ⚠️  Two-stage scholarly failed ({type(e).__name__}): {str(e)[:200]} — falling back")
-        ctx = _get_scholarly_context_for_prompt(query, verse_data)
-        badges = _get_scholarly_sources_metadata(query, verse_data)
-        return ctx, badges
+        print(f"  [SCHOLARLY] EXCEPTION: {type(e).__name__}: {str(e)[:300]}")
+        traceback.print_exc()
+        return _fallback(f"Exception: {type(e).__name__}: {str(e)[:200]}")
 
 
 # ============================================================================
@@ -5267,6 +5312,12 @@ def get_cached_tafsir_response(query: str, user_profile: dict, approach: str = "
         if cache_doc.exists:
             cache_data = cache_doc.to_dict()
 
+            # Check pipeline version — reject old cache entries from before two-stage scholarly pipeline
+            cached_version = cache_data.get('version', '1.0')
+            if cached_version != SCHOLARLY_PIPELINE_VERSION:
+                print(f"💾 Cache STALE (version {cached_version} != {SCHOLARLY_PIPELINE_VERSION}) for key {cache_key[:8]}... — regenerating")
+                return None
+
             # Check if cache is still valid (7 days TTL for tafsir)
             created_at = cache_data.get('created_at')
             if created_at:
@@ -5369,7 +5420,7 @@ def store_tafsir_cache(query: str, user_profile: dict, response: dict, approach:
             'last_accessed': datetime.now(timezone.utc),
             'hit_count': 0,
             'response_size': len(response_str),
-            'version': '1.0',  # For cache invalidation when tafsir DB updates
+            'version': SCHOLARLY_PIPELINE_VERSION,  # Auto-invalidates old cache on pipeline upgrades
             'tokens_saved': count_tokens_approximate(response.get('response', ''))
         }
 
@@ -6777,7 +6828,7 @@ def tafsir_handler_enhanced():
 
                 # Build prompt for AI formatting (skip RAG, use direct context)
                 arabic_text = get_arabic_text_from_verse_data(verse_data) if verse_data else None
-                scholarly_ctx, scholarly_badges = _get_scholarly_context_two_stage(query, verse_data, context_by_source)
+                scholarly_ctx, scholarly_badges, scholarly_pipeline = _get_scholarly_context_two_stage(query, verse_data, context_by_source)
                 prompt = build_enhanced_prompt(query, context_by_source, user_profile,
                                              arabic_text, None, 'metadata', verse_data, approach, scholarly_ctx)
 
@@ -6876,6 +6927,7 @@ def tafsir_handler_enhanced():
 
                     # Add scholarly source attribution metadata (from two-stage resolver)
                     final_json["scholarly_sources"] = scholarly_badges
+                    final_json["_scholarly_pipeline"] = scholarly_pipeline
 
                     # Keep only requested verse(s) in main list; move extras to cross references
                     final_json = keep_requested_verses_primary(
@@ -7061,7 +7113,7 @@ def tafsir_handler_enhanced():
                             cross_refs = first_item['metadata'].get('cross_references', [])
 
                     # CRITICAL FIX: Pass correct verse data to prompt
-                    scholarly_ctx, scholarly_badges = _get_scholarly_context_two_stage(query, verses_for_ai, context_by_source)
+                    scholarly_ctx, scholarly_badges, scholarly_pipeline = _get_scholarly_context_two_stage(query, verses_for_ai, context_by_source)
                     prompt = build_enhanced_prompt(query, context_by_source, user_profile,
                                                  arabic_text, cross_refs, 'direct_verse', verses_for_ai, approach, scholarly_ctx)
 
@@ -7169,6 +7221,7 @@ def tafsir_handler_enhanced():
 
                         # Add scholarly source attribution metadata (from two-stage resolver)
                         final_json["scholarly_sources"] = scholarly_badges
+                        final_json["_scholarly_pipeline"] = scholarly_pipeline
 
                         # Keep only requested verse(s) in main list; move extras to cross references
                         final_json = keep_requested_verses_primary(
@@ -7315,7 +7368,7 @@ def tafsir_handler_enhanced():
             # Build prompt (approach-aware)
             stage_start = time.time()
             rag_query_type = "default"
-            scholarly_ctx, scholarly_badges = _get_scholarly_context_two_stage(query, verse_data, context_by_source)
+            scholarly_ctx, scholarly_badges, scholarly_pipeline = _get_scholarly_context_two_stage(query, verse_data, context_by_source)
             prompt = build_enhanced_prompt(query, context_by_source, user_profile,
                                          arabic_text, cross_refs, rag_query_type, verse_data, approach, scholarly_ctx)
             perf_metrics['stages']['prompt_building'] = (time.time() - stage_start) * 1000
@@ -7503,6 +7556,7 @@ def tafsir_handler_enhanced():
 
                 # Add scholarly source attribution metadata (from two-stage resolver)
                 final_json["scholarly_sources"] = scholarly_badges
+                final_json["_scholarly_pipeline"] = scholarly_pipeline
 
                 # Keep only requested verse(s) in main list; move extras to cross references
                 final_json = keep_requested_verses_primary(
@@ -7869,7 +7923,7 @@ def debug_query(query):
                 # Build prompt
                 step_start = time.time()
                 arabic_text = get_arabic_text_from_verse_data(verse_data) if verse_data else None
-                scholarly_ctx, scholarly_badges = _get_scholarly_context_two_stage(query, verse_data, context_by_source)
+                scholarly_ctx, scholarly_badges, scholarly_pipeline = _get_scholarly_context_two_stage(query, verse_data, context_by_source)
                 prompt = build_enhanced_prompt(query, context_by_source, user_profile,
                                              arabic_text, None, 'metadata', verse_data, approach, scholarly_ctx)
 
@@ -7946,6 +8000,8 @@ def debug_query(query):
                     final_json["route"] = "ROUTE 1"
                     if "sources" not in final_json:
                         final_json["sources"] = list(context_by_source.keys())
+                    final_json["scholarly_sources"] = scholarly_badges
+                    final_json["_scholarly_pipeline"] = scholarly_pipeline
 
                     # Cache it
                     with cache_lock:
@@ -8056,7 +8112,7 @@ def debug_query(query):
                 # Build prompt
                 step_start = time.time()
                 arabic_text = get_arabic_text_from_verse_data(verse_data) if verse_data else None
-                scholarly_ctx, scholarly_badges = _get_scholarly_context_two_stage(query, verse_data, context_by_source)
+                scholarly_ctx, scholarly_badges, scholarly_pipeline = _get_scholarly_context_two_stage(query, verse_data, context_by_source)
                 prompt = build_enhanced_prompt(query, context_by_source, user_profile,
                                              arabic_text, None, 'direct_verse', verse_data, approach, scholarly_ctx)
 
@@ -8134,6 +8190,8 @@ def debug_query(query):
                     final_json["route"] = "ROUTE 2"
                     if "sources" not in final_json:
                         final_json["sources"] = list(context_by_source.keys())
+                    final_json["scholarly_sources"] = scholarly_badges
+                    final_json["_scholarly_pipeline"] = scholarly_pipeline
 
                     # Cache it
                     with cache_lock:
@@ -8255,7 +8313,7 @@ def debug_query(query):
 
             # Build prompt and call Gemini
             step_start = time.time()
-            scholarly_ctx, scholarly_badges = _get_scholarly_context_two_stage(query, None, chunks_by_source)
+            scholarly_ctx, scholarly_badges, scholarly_pipeline = _get_scholarly_context_two_stage(query, None, chunks_by_source)
             prompt = build_enhanced_prompt(query, chunks_by_source, user_profile,
                                          None, None, 'semantic', None, approach, scholarly_ctx)
 
@@ -8307,7 +8365,9 @@ def debug_query(query):
                     "answer": answer,
                     "sources": list(chunks_by_source.keys()),
                     "route": "ROUTE 3",
-                    "num_chunks": sum(len(chunks) for chunks in chunks_by_source.values())
+                    "num_chunks": sum(len(chunks) for chunks in chunks_by_source.values()),
+                    "scholarly_sources": scholarly_badges,
+                    "_scholarly_pipeline": scholarly_pipeline,
                 }
 
                 # Cache it

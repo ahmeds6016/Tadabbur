@@ -19,6 +19,7 @@ from services.source_service import (
     resolve_scholarly_pointers,
     format_scholarly_excerpts_for_prompt,
     build_scholarly_planning_prompt,
+    plan_scholarly_retrieval_deterministic,
     SCHOLARLY_SOURCE_CATALOG,
     _SOURCE_BADGE_MAP,
     MAX_TOTAL_SCHOLARLY_CHARS,
@@ -438,3 +439,107 @@ class TestEndToEnd:
         assert any(e["source_id"] == "thematic" for e in resolved["excerpts"])
         formatted = format_scholarly_excerpts_for_prompt(resolved)
         assert len(formatted) > 50
+
+
+# ============================================================================
+# DETERMINISTIC PLANNER
+# ============================================================================
+
+class TestDeterministicPlanner:
+    def test_always_has_asbab_and_thematic(self):
+        """Every plan must include asbab + thematic pointers."""
+        plan = plan_scholarly_retrieval_deterministic(
+            39, 53, 53, "Some verse text", ""
+        )
+        assert "asbab:surah=39:verse=53" in plan["pointers"]
+        assert "thematic:surah=39:section=0" in plan["pointers"]
+
+    def test_mercy_hope_verse_matches_ihya_madarij_riyad(self):
+        """39:53 about mercy/hope should match multiple sources."""
+        plan = plan_scholarly_retrieval_deterministic(
+            39, 53, 53,
+            "Say, O My servants who have transgressed against themselves, do not despair of the mercy of Allah. Indeed, Allah forgives all sins.",
+            "mercy forgiveness repentance hope despair"
+        )
+        pointers = plan["pointers"]
+        assert len(pointers) >= 4  # asbab + thematic + at least 2 more
+        # Should have ihya match (fear/hope or repentance)
+        assert any(p.startswith("ihya:") for p in pointers)
+        # Should have riyad match (forgiveness or repentance)
+        assert any(p.startswith("riyad:") for p in pointers)
+
+    def test_patience_verse_matches(self):
+        """2:153 about patience should match patience chapters."""
+        plan = plan_scholarly_retrieval_deterministic(
+            2, 153, 153,
+            "O you who have believed, seek help through patience and prayer. Indeed, Allah is with the patient.",
+            "patience sabr prayer steadfastness"
+        )
+        pointers = plan["pointers"]
+        assert any("patience" in p or "ch=2" in p for p in pointers if p.startswith("ihya:"))
+        assert any("patience" in p or "ch=3" in p for p in pointers if p.startswith("riyad:"))
+
+    def test_narrative_verse_minimal(self):
+        """Narrative verse with no topical keywords gets only asbab + thematic."""
+        plan = plan_scholarly_retrieval_deterministic(
+            12, 4, 4,
+            "That was when We revealed to your mother what We revealed.",
+            "Musa mother river revelation"
+        )
+        pointers = plan["pointers"]
+        # No topical keywords match any routing table
+        assert len(pointers) == 2
+        assert pointers[0] == "asbab:surah=12:verse=4"
+        assert pointers[1] == "thematic:surah=12:section=0"
+
+    def test_death_verse_matches_ihya(self):
+        """33:16 about death should match Ihya death chapter."""
+        plan = plan_scholarly_retrieval_deterministic(
+            33, 16, 16,
+            "Say, Never will fleeing benefit you if you should flee from death or killing.",
+            "death fleeing battle hypocrisy divine decree"
+        )
+        pointers = plan["pointers"]
+        assert "ihya:vol=4:ch=10:sec=0" in pointers
+
+    def test_max_7_pointers(self):
+        """Even with many keyword matches, should cap at 7."""
+        plan = plan_scholarly_retrieval_deterministic(
+            2, 153, 153,
+            "patience prayer repentance fear hope mercy forgiveness death trust love humility",
+            "patience sabr prayer salah repentance tawbah fear hope mercy forgiveness death trust love humility"
+        )
+        assert len(plan["pointers"]) <= 7
+
+    def test_returns_reasoning(self):
+        """Plan should include reasoning string."""
+        plan = plan_scholarly_retrieval_deterministic(
+            39, 53, 53, "mercy", "hope"
+        )
+        assert "reasoning" in plan
+        assert isinstance(plan["reasoning"], str)
+        assert len(plan["reasoning"]) > 0
+
+    def test_no_duplicate_pointers(self):
+        """Same keyword appearing in verse and summary shouldn't create duplicates."""
+        plan = plan_scholarly_retrieval_deterministic(
+            39, 53, 53,
+            "repentance and mercy",
+            "repentance and mercy and forgiveness"
+        )
+        assert len(plan["pointers"]) == len(set(plan["pointers"]))
+
+    def test_full_pipeline_deterministic(self):
+        """Full pipeline: plan → resolve → format with deterministic planner."""
+        plan = plan_scholarly_retrieval_deterministic(
+            39, 53, 53,
+            "Say, O My servants who have transgressed against themselves, do not despair of the mercy of Allah.",
+            "mercy forgiveness repentance hope"
+        )
+        resolved = resolve_scholarly_pointers(plan["pointers"])
+        assert len(resolved["excerpts"]) >= 2
+        formatted = format_scholarly_excerpts_for_prompt(resolved)
+        assert "EXCERPT 1" in formatted
+        assert "CRITICAL INSTRUCTIONS" in formatted
+        total = sum(len(e["text"]) for e in resolved["excerpts"])
+        assert total <= MAX_TOTAL_SCHOLARLY_CHARS + 10

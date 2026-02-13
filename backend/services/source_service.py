@@ -1307,3 +1307,192 @@ OUTPUT (strict JSON, nothing else):
   "pointers": ["..."],
   "reasoning": "one sentence"
 }}"""
+
+
+# ═══════════════════════════════════════════════════════════════════
+# DETERMINISTIC SCHOLARLY PLANNER (replaces Gemini planning call)
+# ═══════════════════════════════════════════════════════════════════
+
+# Routing tables: keyword → pointer
+# Each entry: (set of trigger keywords, pointer string)
+# Keywords are checked against lowercase verse_text + ibn_kathir_summary
+
+_IHYA_ROUTING = [
+    # Vol 1 — Acts of Worship
+    ({"prayer", "salah", "salat", "pray", "praying"}, "ihya:vol=1:ch=4:sec=0"),
+    ({"fasting", "sawm", "fast", "ramadan"}, "ihya:vol=1:ch=6:sec=0"),
+    ({"pilgrimage", "hajj"}, "ihya:vol=1:ch=7:sec=0"),
+    ({"quran", "recitation", "recite", "reading"}, "ihya:vol=1:ch=8:sec=0"),
+    ({"remembrance", "dhikr", "zikr"}, "ihya:vol=1:ch=9:sec=0"),
+    # Vol 2 — Worldly Usages
+    ({"marriage", "spouse", "husband", "wife", "wives"}, "ihya:vol=2:ch=2:sec=0"),
+    ({"halal", "haram", "lawful", "unlawful", "forbidden", "permitted"}, "ihya:vol=2:ch=4:sec=0"),
+    ({"brotherhood", "friendship", "companion"}, "ihya:vol=2:ch=5:sec=0"),
+    # Vol 3 — Destructive Evils
+    ({"soul", "nafs", "heart", "qalb"}, "ihya:vol=3:ch=1:sec=0"),
+    ({"conduct", "character", "manners", "akhlaq"}, "ihya:vol=3:ch=2:sec=0"),
+    ({"greed", "desire", "appetite", "lust"}, "ihya:vol=3:ch=3:sec=0"),
+    ({"tongue", "speech", "backbiting", "slander", "gossip", "lying"}, "ihya:vol=3:ch=4:sec=0"),
+    ({"anger", "envy", "hatred", "jealousy", "hasad"}, "ihya:vol=3:ch=5:sec=0"),
+    ({"wealth", "miserliness", "money", "worldly", "dunya"}, "ihya:vol=3:ch=7:sec=0"),
+    ({"pride", "arrogance", "kibr", "vanity", "boasting"}, "ihya:vol=3:ch=9:sec=0"),
+    # Vol 4 — Constructive Virtues
+    ({"repentance", "tawbah", "repent", "forgiveness", "forgive"}, "ihya:vol=4:ch=1:sec=0"),
+    ({"patience", "sabr", "patient", "gratitude", "shukr", "grateful", "thankful"}, "ihya:vol=4:ch=2:sec=0"),
+    ({"fear", "hope", "khawf", "raja", "afraid", "mercy", "despair"}, "ihya:vol=4:ch=3:sec=0"),
+    ({"poverty", "renunciation", "zuhd", "asceticism", "worldly"}, "ihya:vol=4:ch=4:sec=0"),
+    ({"trust", "tawakkul", "reliance", "rely"}, "ihya:vol=4:ch=5:sec=0"),
+    ({"love", "devotion", "mahabbah"}, "ihya:vol=4:ch=6:sec=0"),
+    ({"intention", "niyyah", "sincerity", "ikhlas"}, "ihya:vol=4:ch=7:sec=0"),
+    ({"meditation", "introspection", "contemplation", "reflect"}, "ihya:vol=4:ch=8:sec=0"),
+    ({"death", "afterlife", "hereafter", "akhirah", "grave", "dying", "judgment"}, "ihya:vol=4:ch=10:sec=0"),
+]
+
+_MADARIJ_ROUTING = [
+    # Vol 1
+    ({"awakening", "wake", "heedless"}, "madarij:vol=1:station=awakening:sub=0"),
+    ({"insight", "knowledge", "understanding"}, "madarij:vol=1:station=insight:sub=0"),
+    ({"purpose", "determination", "resolve"}, "madarij:vol=1:station=purpose:sub=0"),
+    ({"resolve", "willpower"}, "madarij:vol=1:station=resolve:sub=0"),
+    ({"reflection", "contemplation", "tafakkur"}, "madarij:vol=1:station=reflection:sub=0"),
+    ({"self_reckoning", "accountability", "muhasabah"}, "madarij:vol=1:station=self_reckoning:sub=0"),
+    ({"repentance", "tawbah", "repent"}, "madarij:vol=1:station=repentance:sub=0"),
+    # Vol 2
+    ({"remembrance", "dhikr", "zikr"}, "madarij:vol=2:station=remembrance:sub=0"),
+    ({"fleeing", "flee", "escape"}, "madarij:vol=2:station=fleeing:sub=0"),
+    ({"grief", "sadness", "sorrow"}, "madarij:vol=2:station=grief:sub=0"),
+    ({"fear", "khawf", "afraid", "dread"}, "madarij:vol=2:station=fear:sub=0"),
+    ({"humility", "humble", "khushu"}, "madarij:vol=2:station=humility:sub=0"),
+    ({"meekness", "meek", "gentle"}, "madarij:vol=2:station=meekness:sub=0"),
+    ({"renunciation", "zuhd", "asceticism"}, "madarij:vol=2:station=renunciation:sub=0"),
+    ({"devotion", "worship", "ibadah"}, "madarij:vol=2:station=devotion:sub=0"),
+    ({"hope", "raja", "hopeful", "optimism"}, "madarij:vol=2:station=hope:sub=0"),
+    ({"watchfulness", "muraqabah", "vigilance"}, "madarij:vol=2:station=watchfulness:sub=0"),
+    ({"purification", "tazkiyah", "purify"}, "madarij:vol=2:station=purification:sub=0"),
+    ({"trust", "tawakkul", "reliance"}, "madarij:vol=2:station=trusting_reliance:sub=0"),
+    ({"submission", "surrender", "islam"}, "madarij:vol=2:station=submission:sub=0"),
+    ({"patience", "sabr", "patient", "steadfast"}, "madarij:vol=2:station=patience:sub=0"),
+    ({"contentment", "rida", "satisfied", "content"}, "madarij:vol=2:station=joyful_contentment:sub=0"),
+]
+
+_RIYAD_ROUTING = [
+    ({"sincerity", "intention", "ikhlas", "niyyah"}, "riyad:book=1:ch=1:hadith=0"),
+    ({"repentance", "tawbah", "repent"}, "riyad:book=1:ch=2:hadith=0"),
+    ({"patience", "sabr", "patient", "steadfast"}, "riyad:book=1:ch=3:hadith=0"),
+    ({"truthfulness", "truth", "honest", "sidq"}, "riyad:book=1:ch=4:hadith=0"),
+    ({"self_accountability", "muhasabah", "reckoning"}, "riyad:book=1:ch=5:hadith=0"),
+    ({"piety", "taqwa", "god-fearing", "righteous"}, "riyad:book=1:ch=6:hadith=0"),
+    ({"certitude", "yaqin", "certainty"}, "riyad:book=1:ch=7:hadith=0"),
+    ({"uprightness", "istiqamah", "steadfastness"}, "riyad:book=1:ch=8:hadith=0"),
+    ({"reflection", "contemplation", "tafakkur"}, "riyad:book=1:ch=9:hadith=0"),
+    ({"striving", "jihad", "struggle"}, "riyad:book=1:ch=11:hadith=0"),
+    ({"fear", "khawf", "afraid", "dread"}, "riyad:book=1:ch=49:hadith=0"),
+    ({"forgiveness", "mercy", "rahma", "compassion"}, "riyad:book=1:ch=50:hadith=0"),
+    ({"weeping", "tears", "cry", "crying"}, "riyad:book=1:ch=53:hadith=0"),
+    ({"renunciation", "zuhd", "asceticism"}, "riyad:book=1:ch=54:hadith=0"),
+    ({"contentment", "rida", "satisfied"}, "riyad:book=1:ch=56:hadith=0"),
+    ({"generosity", "charity", "sadaqah", "generous", "giving"}, "riyad:book=1:ch=58:hadith=0"),
+]
+
+MAX_POINTERS = 7
+
+
+def plan_scholarly_retrieval_deterministic(surah_number, verse_start, verse_end,
+                                            verse_text, ibn_kathir_summary):
+    """
+    Deterministic scholarly retrieval planner — replaces Gemini planning call.
+
+    Scans verse text and Ibn Kathir summary for routing keywords, then emits
+    exact pointers matching the routing tables. Zero API calls, zero latency,
+    zero failure modes.
+
+    Returns dict: {"pointers": [...], "reasoning": "..."}
+    """
+    # Always include asbab + thematic
+    pointers = [
+        f"asbab:surah={surah_number}:verse={verse_start}",
+        f"thematic:surah={surah_number}:section=0",
+    ]
+
+    # Build combined search text (lowercase)
+    search_text = f"{verse_text} {ibn_kathir_summary}".lower()
+
+    # Track which sources we've already added pointers for (dedup)
+    ihya_added = set()
+    madarij_added = False  # max 1
+    riyad_added = set()  # max 2
+    matched_keywords = []
+
+    def _scan_routing(routing_table, source_name, added_tracker, max_entries):
+        """Scan a routing table and emit pointers for keyword matches."""
+        nonlocal pointers
+        count = 0 if isinstance(added_tracker, bool) else len(added_tracker)
+        for keywords, pointer in routing_table:
+            if len(pointers) >= MAX_POINTERS:
+                break
+            if count >= max_entries:
+                break
+            if pointer in (ihya_added if source_name == "ihya" else
+                          riyad_added if source_name == "riyad" else set()):
+                continue
+            for kw in keywords:
+                if kw in search_text:
+                    pointers.append(pointer)
+                    matched_keywords.append(kw)
+                    if source_name == "ihya":
+                        ihya_added.add(pointer)
+                    elif source_name == "riyad":
+                        riyad_added.add(pointer)
+                    count += 1
+                    break  # one keyword match per route is enough
+
+    # Scan Ihya (up to 3 pointers)
+    for keywords, pointer in _IHYA_ROUTING:
+        if len(pointers) >= MAX_POINTERS:
+            break
+        if len(ihya_added) >= 3:
+            break
+        if pointer in ihya_added:
+            continue
+        for kw in keywords:
+            if kw in search_text:
+                pointers.append(pointer)
+                ihya_added.add(pointer)
+                matched_keywords.append(kw)
+                break
+
+    # Scan Madarij (max 1 pointer)
+    for keywords, pointer in _MADARIJ_ROUTING:
+        if len(pointers) >= MAX_POINTERS:
+            break
+        if madarij_added:
+            break
+        for kw in keywords:
+            if kw in search_text:
+                pointers.append(pointer)
+                madarij_added = True
+                matched_keywords.append(kw)
+                break
+
+    # Scan Riyad (max 2 pointers)
+    for keywords, pointer in _RIYAD_ROUTING:
+        if len(pointers) >= MAX_POINTERS:
+            break
+        if len(riyad_added) >= 2:
+            break
+        if pointer in riyad_added:
+            continue
+        for kw in keywords:
+            if kw in search_text:
+                pointers.append(pointer)
+                riyad_added.add(pointer)
+                matched_keywords.append(kw)
+                break
+
+    # Build reasoning
+    if matched_keywords:
+        reasoning = f"Matched keywords: {', '.join(matched_keywords[:8])}"
+    else:
+        reasoning = "No topical keywords matched routing tables; asbab + thematic only."
+
+    return {"pointers": pointers, "reasoning": reasoning}
