@@ -4389,11 +4389,11 @@ def _get_scholarly_context_two_stage(query, verse_data, context_by_source):
                 surah_number = verse_data[0].get('surah_number')
                 verse_start = verse_data[0].get('verse_number')
                 verse_end = verse_data[-1].get('verse_number')
-                verse_text = verse_data[0].get('english_text', '') or verse_data[0].get('translation', '') or ''
+                verse_text = verse_data[0].get('english', '') or verse_data[0].get('text_saheeh_international', '') or ''
             elif isinstance(verse_data, dict):
                 surah_number = verse_data.get('surah_number')
                 verse_start = verse_data.get('verse_number')
-                verse_text = verse_data.get('english_text', '') or verse_data.get('translation', '') or ''
+                verse_text = verse_data.get('english', '') or verse_data.get('text_saheeh_international', '') or ''
 
         if not surah_number or not verse_start:
             # No verse info — fall back to old method
