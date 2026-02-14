@@ -7,22 +7,22 @@ const FEATURE_STEPS = [
     title: 'Welcome to Tafsir Simplified',
     titleWithName: (name) => `Welcome, ${name}!`,
     description: 'Get classical tafsir commentary on any verse of the Quran, powered by AI and grounded in 5 scholarly sources.',
-    icon: '📖'
+    iconLabel: 'Q',
   },
   {
     title: 'Choose a Surah and Verse Range',
-    description: 'Pick from all 114 surahs. Select a single verse or a range — the app automatically adjusts the range limit based on verse length and included scholarly commentary to keep responses focused.',
-    icon: '🔍'
+    description: 'Pick from all 114 surahs. Select a single verse or a range -- the app automatically adjusts the range limit based on verse length and included scholarly commentary to keep responses focused.',
+    iconLabel: 'S',
   },
   {
     title: 'Grounded in Classical Scholarship',
-    description: 'Responses draw from sources including Asbab Al-Nuzul, A Thematic Commentary, Ihya Ulum Al-Din, Madarij Al-Salikin, and Riyad-us-Saliheen — matched automatically based on verse themes.',
-    icon: '📚'
+    description: 'Responses draw from sources including Asbab Al-Nuzul, A Thematic Commentary, Ihya Ulum Al-Din, Madarij Al-Salikin, and Riyad-us-Saliheen -- matched automatically based on verse themes.',
+    iconLabel: 'C',
   },
   {
     title: 'Save, Reflect, and Explore',
     description: 'Save answers for later, add personal reflections to any text, track your journey across all 114 surahs, and find help anytime with the ? button.',
-    icon: '💡'
+    iconLabel: 'R',
   }
 ];
 
@@ -79,12 +79,13 @@ export default function FeatureIntroModal({ isOpen, onComplete, userName }) {
           top: '50%', left: '50%',
           transform: 'translate(-50%, -50%)',
           width: '90%', maxWidth: '480px',
-          background: 'white',
+          background: 'var(--cream, #faf6f0)',
           borderRadius: '16px',
           boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
           zIndex: Z_INDEX.MODAL,
           overflow: 'hidden',
-          animation: 'featureIntroSlideIn 0.3s ease'
+          animation: 'featureIntroSlideIn 0.3s ease',
+          color: 'var(--foreground, #2C3E50)'
         }}
       >
         {/* Close button */}
@@ -94,22 +95,27 @@ export default function FeatureIntroModal({ isOpen, onComplete, userName }) {
           style={{
             position: 'absolute', top: 12, right: 12,
             background: 'none', border: 'none',
-            color: '#999', fontSize: '18px',
+            color: 'var(--text-muted, #6b7280)', fontSize: '18px',
             cursor: 'pointer', padding: '4px 8px',
             borderRadius: 6, zIndex: 1
           }}
         >
-          ✕
+          X
         </button>
 
         {/* Header */}
         <div style={{
           padding: '28px 24px 16px',
-          background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
+          background: 'var(--background, #FDFBF7)',
           borderBottom: '2px solid var(--border-light, #e5e7eb)',
           textAlign: 'center'
         }}>
-          <div style={{ fontSize: '40px', marginBottom: '8px' }}>{step.icon}</div>
+          <div style={{
+            width: 48, height: 48, borderRadius: '50%',
+            background: 'var(--primary-teal, #0d9488)', color: 'white',
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '1.3rem', fontWeight: 700, marginBottom: 8
+          }}>{step.iconLabel}</div>
           <h2 style={{
             margin: 0, fontSize: '1.3rem',
             color: 'var(--deep-blue, #1e3a5f)'
@@ -144,7 +150,7 @@ export default function FeatureIntroModal({ isOpen, onComplete, userName }) {
         {/* Content */}
         <div style={{ padding: '24px', minHeight: '100px' }}>
           <p style={{
-            margin: 0, color: '#555', lineHeight: '1.7',
+            margin: 0, color: 'var(--text-secondary, #64748B)', lineHeight: '1.7',
             fontSize: '0.95rem', textAlign: 'center'
           }}>
             {step.description}
@@ -163,7 +169,7 @@ export default function FeatureIntroModal({ isOpen, onComplete, userName }) {
             onClick={onComplete}
             style={{
               padding: '8px 16px', background: 'none', border: 'none',
-              color: '#999', cursor: 'pointer', fontSize: '0.9rem'
+              color: 'var(--text-muted, #6b7280)', cursor: 'pointer', fontSize: '0.9rem'
             }}
           >
             Skip
@@ -174,7 +180,7 @@ export default function FeatureIntroModal({ isOpen, onComplete, userName }) {
                 onClick={() => setCurrentStep(s => s - 1)}
                 style={{
                   padding: '10px 20px', border: '1px solid var(--border-light, #e5e7eb)',
-                  borderRadius: '10px', background: 'white',
+                  borderRadius: '10px', background: 'var(--background, #FDFBF7)',
                   color: 'var(--deep-blue, #1e3a5f)', cursor: 'pointer',
                   fontWeight: '600', fontSize: '0.9rem'
                 }}

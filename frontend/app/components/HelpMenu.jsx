@@ -142,7 +142,7 @@ const helpContent = {
   }
 };
 
-export default function HelpMenu({ currentPage = 'home', isOpen, onClose, onStartTour, onReplayFeatureIntro }) {
+export default function HelpMenu({ currentPage = 'home', isOpen, onClose, onReplayFeatureIntro }) {
   const [expandedSection, setExpandedSection] = useState(null);
   const [activeTab, setActiveTab] = useState('help');
   const content = helpContent[currentPage] || helpContent.home;
@@ -159,10 +159,10 @@ export default function HelpMenu({ currentPage = 'home', isOpen, onClose, onStar
     };
   }, [isOpen]);
 
-  const handleStartTour = (tourType) => {
+  const handleReplayIntro = () => {
     onClose();
-    if (onStartTour) {
-      onStartTour(tourType);
+    if (onReplayFeatureIntro) {
+      onReplayFeatureIntro();
     }
   };
 
@@ -239,12 +239,12 @@ export default function HelpMenu({ currentPage = 'home', isOpen, onClose, onStar
                         <div className="item-content">
                           <strong>{item.label}</strong>
                           <p>{item.description}</p>
-                          {item.tour && (
+                          {item.tour && onReplayFeatureIntro && (
                             <button
                               className="tour-link"
-                              onClick={() => handleStartTour(item.tour)}
+                              onClick={handleReplayIntro}
                             >
-                              Show me how →
+                              Show me how
                             </button>
                           )}
                         </div>
@@ -268,9 +268,9 @@ export default function HelpMenu({ currentPage = 'home', isOpen, onClose, onStar
                 )}
                 <button
                   className="start-tour-btn"
-                  onClick={() => handleStartTour('welcome')}
+                  onClick={handleReplayIntro}
                 >
-                  Take a Quick Tour
+                  Replay Introduction
                 </button>
               </div>
             </>

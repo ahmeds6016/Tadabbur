@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Clock, Star, FileText, BarChart3, BookOpen, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Home, BookOpen as PlansIcon, Star, FileText, BarChart3, BookOpen, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export default function DesktopNav({ user, stats = {}, collapsed = false, onToggleCollapse }) {
   const pathname = usePathname();
@@ -18,13 +18,12 @@ export default function DesktopNav({ user, stats = {}, collapsed = false, onTogg
       description: 'Search and explore Tafsir'
     },
     {
-      id: 'history',
-      label: 'History',
-      icon: Clock,
-      href: '/history',
+      id: 'plans',
+      label: 'Plans',
+      icon: PlansIcon,
+      href: '/plans',
       shortcut: 'Alt+R',
-      description: `${stats.historyCount || 0} recent queries`,
-      badge: stats.historyCount
+      description: 'Reading plans and progress'
     },
     {
       id: 'saved',
@@ -65,7 +64,7 @@ export default function DesktopNav({ user, stats = {}, collapsed = false, onTogg
             break;
           case 'r':
             e.preventDefault();
-            window.location.href = '/history';
+            window.location.href = '/plans';
             break;
           case 's':
             e.preventDefault();
@@ -175,7 +174,7 @@ export default function DesktopNav({ user, stats = {}, collapsed = false, onTogg
           top: 0;
           bottom: 0;
           width: 260px;
-          background: linear-gradient(180deg, var(--cream) 0%, #faf6f0 100%);
+          background: var(--cream, #FAF6F0);
           border-right: 1px solid var(--border-light);
           display: flex;
           flex-direction: column;
@@ -201,7 +200,7 @@ export default function DesktopNav({ user, stats = {}, collapsed = false, onTogg
           height: 30px;
           border-radius: 8px;
           border: 1px solid var(--border-light);
-          background: white;
+          background: var(--background, #FDFBF7);
           cursor: pointer;
           display: flex;
           align-items: center;
@@ -339,7 +338,7 @@ export default function DesktopNav({ user, stats = {}, collapsed = false, onTogg
         .nav-footer {
           border-top: 1px solid var(--border-light);
           padding: 16px;
-          background: white;
+          background: var(--background, #FDFBF7);
         }
 
         .user-section {
@@ -388,7 +387,7 @@ export default function DesktopNav({ user, stats = {}, collapsed = false, onTogg
 
         .user-email {
           font-size: 0.75rem;
-          color: #666;
+          color: var(--text-muted, #6b7280);
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;

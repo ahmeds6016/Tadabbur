@@ -1,6 +1,6 @@
 'use client';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, Clock, Star, FileText } from 'lucide-react';
+import { Home, BookOpen, Star, FileText } from 'lucide-react';
 
 export default function BottomNav({ user }) {
   const pathname = usePathname();
@@ -14,10 +14,10 @@ export default function BottomNav({ user }) {
       active: pathname === '/'
     },
     {
-      label: 'History',
-      icon: Clock,
-      path: '/history',
-      active: pathname === '/history'
+      label: 'Plans',
+      icon: BookOpen,
+      path: '/plans',
+      active: pathname === '/plans'
     },
     {
       label: 'Saved',

@@ -74,6 +74,37 @@
     --cream-dark: #252B3A;
     --border-light: rgba(212, 175, 55, 0.15);
     --border-medium: rgba(94, 234, 212, 0.2);
+    --surface: #1A1F2E;
+    --text-primary: #E8E6E3;
+    --text-secondary: #9CA3AF;
+    --text-muted: #6B7280;
+    --deep-blue: #93B5E1;
+    --gold-text: #F4D03F;
+    --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.3);
+    --shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.4);
+    --shadow-strong: 0 8px 32px rgba(0, 0, 0, 0.5);
+    --gradient-manuscript: linear-gradient(180deg, #0F1419 0%, #1A1F2E 100%);
+  }
+}
+
+/* Dark mode surface overrides for elements using hardcoded white */
+@media (prefers-color-scheme: dark) {
+  .tafsir-form select,
+  .tafsir-form input {
+    background: var(--surface) !important;
+    color: var(--foreground) !important;
+    border-color: var(--border-medium) !important;
+  }
+
+  .verse-card,
+  .verse-card.enhanced {
+    background: var(--surface) !important;
+    border-color: var(--border-light) !important;
+  }
+
+  .card {
+    background: var(--surface);
+    color: var(--foreground);
   }
 }
 

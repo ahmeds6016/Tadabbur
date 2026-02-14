@@ -18,10 +18,8 @@ import CollapsibleSection from './components/CollapsibleSection';
 import TabNavigation from './components/TabNavigation';
 import BottomNav from './components/BottomNav';
 import DesktopNav from './components/DesktopNav';
-import TourOverlay from './components/TourOverlay';
 import Tooltip from './components/Tooltip';
 import HelpMenu, { FloatingHelpButton } from './components/HelpMenu';
-import OnboardingProgress from './components/OnboardingProgress';
 import FeatureIntroModal from './components/FeatureIntroModal';
 import FloatingAnnotateButton from './components/FloatingAnnotateButton';
 import ConfirmDialog from './components/ConfirmDialog';
@@ -710,16 +708,8 @@ function MainApp({ user, userProfile, onResetProfile }) {
   // Onboarding system
   const {
     onboardingState,
-    showTour,
-    setShowTour,
-    currentTourStep,
-    setCurrentTourStep,
-    tourType,
     markStepComplete,
     markFeatureIntroSeen,
-    startFeatureTour,
-    endFeatureTour,
-    resetOnboarding,
     isLoaded: onboardingLoaded
   } = useOnboarding(user?.uid);
 
@@ -979,20 +969,6 @@ function MainApp({ user, userProfile, onResetProfile }) {
   }, [userProfile]);
 
   // Start welcome tour for first-time users (only after localStorage is loaded)
-  useEffect(() => {
-    // Wait for onboarding state to load from localStorage before deciding to show tour
-    if (!onboardingLoaded) return;
-
-    if (user && !onboardingState.hasSeenWelcome && !showTour) {
-      const timer = setTimeout(() => {
-        if (startFeatureTour) {
-          startFeatureTour('welcome');
-        }
-      }, 1000); // Small delay for smoother experience
-      return () => clearTimeout(timer);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, onboardingState.hasSeenWelcome, showTour, onboardingLoaded]); // startFeatureTour intentionally excluded to prevent infinite loops
 
 
   const handleCancelSearch = () => {
@@ -1554,7 +1530,7 @@ function MainApp({ user, userProfile, onResetProfile }) {
             {/* Streak Display */}
             {streak.current_streak > 0 && (
               <div className="streak-card">
-                <div className="streak-flame">{streak.current_streak >= 7 ? '\u{1F525}' : '\u{2B50}'}</div>
+                <div className="streak-flame" style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--primary-teal)' }}>{streak.current_streak >= 7 ? 'S' : 'S'}</div>
                 <div className="streak-info">
                   <span className="streak-count">{streak.current_streak} day streak</span>
                   <span className="streak-sub">Longest: {streak.longest_streak} days</span>
@@ -2070,15 +2046,6 @@ function MainApp({ user, userProfile, onResetProfile }) {
         {/* Bottom Navigation for PWA */}
         <BottomNav user={user} />
 
-        {/* Onboarding Progress */}
-        {!onboardingState.completedAt && (
-          <OnboardingProgress
-            onboardingState={onboardingState}
-            onResumeTour={startFeatureTour}
-            onHide={() => markStepComplete('completedAt')}
-          />
-        )}
-
         {/* Feature Intro Modal (first-time users) */}
         <FeatureIntroModal
           isOpen={showFeatureIntro}
@@ -2089,40 +2056,11 @@ function MainApp({ user, userProfile, onResetProfile }) {
           userName={user.displayName || null}
         />
 
-        {/* Tour Overlay */}
-        {showTour && (
-          <TourOverlay
-            isOpen={showTour}
-            tourType={tourType}
-            currentStep={currentTourStep}
-            totalSteps={tourType === 'welcome' ? 5 : 3}
-            onNext={() => setCurrentTourStep(currentTourStep + 1)}
-            onPrev={() => setCurrentTourStep(currentTourStep - 1)}
-            onSkip={() => {
-              // Mark welcome tour as seen even when skipped
-              if (tourType === 'welcome') {
-                markStepComplete('hasSeenWelcome');
-              }
-              endFeatureTour(tourType);
-            }}
-            onComplete={() => {
-              // Mark welcome tour as complete with correct state key
-              if (tourType === 'welcome') {
-                markStepComplete('hasSeenWelcome');
-              } else {
-                markStepComplete(`has${tourType.charAt(0).toUpperCase() + tourType.slice(1)}`);
-              }
-              endFeatureTour(tourType);
-            }}
-          />
-        )}
-
         {/* Help Menu */}
         <HelpMenu
           currentPage={response ? 'results' : 'home'}
           isOpen={helpMenuOpen}
           onClose={() => setHelpMenuOpen(false)}
-          onStartTour={startFeatureTour}
           onReplayFeatureIntro={() => setShowFeatureIntro(true)}
         />
 

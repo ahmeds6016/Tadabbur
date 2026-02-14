@@ -3,18 +3,18 @@ import { useState, useEffect, useCallback } from 'react';
 import { BACKEND_URL } from '../lib/config';
 
 const COLLECTION_ICONS = {
-  patience: '\u{1F4AA}',
-  trust: '\u{1F6E1}',
-  mercy: '\u{1F49B}',
-  gratitude: '\u{2728}',
-  knowledge: '\u{1F4D6}',
-  remembrance: '\u{1F56F}',
-  family: '\u{1F46A}',
-  justice: '\u{2696}',
-  hereafter: '\u{1F319}',
-  repentance: '\u{1F6AA}',
-  worship: '\u{1F64F}',
-  charity: '\u{1F381}',
+  patience: 'Pa',
+  trust: 'Tr',
+  mercy: 'Me',
+  gratitude: 'Gr',
+  knowledge: 'Kn',
+  remembrance: 'Dh',
+  family: 'Fa',
+  justice: 'Ju',
+  hereafter: 'Ak',
+  repentance: 'Re',
+  worship: 'Ib',
+  charity: 'Sa',
 };
 
 export default function CollectionsGrid({ user, onStudyVerse }) {

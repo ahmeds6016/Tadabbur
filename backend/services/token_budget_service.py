@@ -7,12 +7,17 @@ length of every tafsir chunk for every verse across all 114 surahs, converts
 to token estimates, builds prefix-sum arrays for O(1) range-cost queries,
 and precomputes a max-end lookup table for every (surah, start_verse) pair.
 
-The ``/range-limit`` endpoint then does a single dict lookup — no estimation,
-no heuristics, no per-request computation.
+The result is exported to ``backend/data/verse_range_map.json`` — a static,
+validated artifact where every verse's maximum range is backed by actual
+measured token costs.  The ``/range-limit`` endpoint does a single dict
+lookup from this map.
 """
 
+import json
 import logging
 import math
+import os
+from datetime import datetime, timezone
 from typing import Dict, Optional, Tuple
 
 from config.token_budget import (
@@ -217,3 +222,189 @@ def get_range_token_cost(surah: int, start: int, end: int) -> int:
     if not prefix or start < 1 or end >= len(prefix):
         return 0
     return prefix[end] - prefix[start - 1]
+
+
+# ---------------------------------------------------------------------------
+# Static range map — export / import
+# ---------------------------------------------------------------------------
+
+_RANGE_MAP_FILENAME = "verse_range_map.json"
+
+
+def _default_range_map_path() -> str:
+    """Return the default path for the static range map JSON file."""
+    # backend/data/verse_range_map.json
+    services_dir = os.path.dirname(os.path.abspath(__file__))
+    backend_dir = os.path.dirname(services_dir)
+    return os.path.join(backend_dir, "data", _RANGE_MAP_FILENAME)
+
+
+def export_range_map(filepath: str = None) -> str:
+    """
+    Export the precomputed range map and per-verse costs to a static JSON file.
+
+    Every entry is backed by actual measured tafsir chunk sizes from GCS data.
+    The exported file becomes the authoritative, hardcoded source for verse
+    range limits.
+
+    Returns the filepath written.
+    """
+    if not _PRECOMPUTED:
+        raise RuntimeError("Cannot export: precomputation has not run yet")
+
+    filepath = filepath or _default_range_map_path()
+    budget = int(VERSE_AND_TAFSIR_BUDGET * SAFETY_FACTOR)
+
+    # Count stats
+    total_verses = sum(len(costs) for costs in _VERSE_TOKEN_COSTS.values())
+    total_with_tafsir = sum(
+        1 for costs in _VERSE_TOKEN_COSTS.values()
+        for c in costs if c > VERSE_TEXT_TOKENS_PER_VERSE
+    )
+    constrained_count = sum(
+        1 for surah_map in _MAX_END_LOOKUP.values()
+        for start, end in surah_map.items()
+        if end - start + 1 < ABSOLUTE_MAX_VERSES
+    )
+
+    # Build the export structure
+    # Keys are strings for JSON compatibility
+    export_data = {
+        "_meta": {
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "description": (
+                "Static verse range map. Every entry is the maximum end verse "
+                "allowed for a given (surah, start_verse) pair, computed from "
+                "actual measured tafsir chunk sizes."
+            ),
+            "verse_and_tafsir_budget": VERSE_AND_TAFSIR_BUDGET,
+            "safety_factor": SAFETY_FACTOR,
+            "effective_budget_tokens": budget,
+            "absolute_max_verses": ABSOLUTE_MAX_VERSES,
+            "verse_text_tokens_per_verse": VERSE_TEXT_TOKENS_PER_VERSE,
+            "total_surahs": len(_MAX_END_LOOKUP),
+            "total_verses": total_verses,
+            "total_with_tafsir_data": total_with_tafsir,
+            "budget_constrained_verses": constrained_count,
+        },
+        "ranges": {},
+        "verse_costs": {},
+    }
+
+    for surah in sorted(_MAX_END_LOOKUP.keys()):
+        surah_key = str(surah)
+
+        # Range map: {start_verse: max_end_verse}
+        range_map = _MAX_END_LOOKUP[surah]
+        export_data["ranges"][surah_key] = {
+            str(start): end for start, end in sorted(range_map.items())
+        }
+
+        # Per-verse token costs (0-indexed list)
+        costs = _VERSE_TOKEN_COSTS.get(surah, [])
+        export_data["verse_costs"][surah_key] = costs
+
+    os.makedirs(os.path.dirname(filepath), exist_ok=True)
+    with open(filepath, "w") as f:
+        json.dump(export_data, f, indent=None, separators=(",", ":"))
+
+    file_size_kb = os.path.getsize(filepath) / 1024
+    logger.info(
+        "[TOKEN_BUDGET] Exported static range map to %s (%.1f KB, %d surahs, "
+        "%d verses, %d budget-constrained)",
+        filepath, file_size_kb, len(_MAX_END_LOOKUP),
+        total_verses, constrained_count,
+    )
+    return filepath
+
+
+def load_range_map(filepath: str = None) -> bool:
+    """
+    Load the static range map from a JSON file.
+
+    Populates _MAX_END_LOOKUP, _VERSE_TOKEN_COSTS, and _PREFIX_SUMS from
+    the file.  Returns True if loaded successfully.
+    """
+    global _VERSE_TOKEN_COSTS, _PREFIX_SUMS, _MAX_END_LOOKUP, _PRECOMPUTED
+
+    filepath = filepath or _default_range_map_path()
+
+    if not os.path.exists(filepath):
+        logger.info("[TOKEN_BUDGET] No static range map at %s", filepath)
+        return False
+
+    try:
+        with open(filepath, "r") as f:
+            data = json.load(f)
+
+        meta = data.get("_meta", {})
+        ranges = data.get("ranges", {})
+        verse_costs = data.get("verse_costs", {})
+
+        if not ranges:
+            logger.warning("[TOKEN_BUDGET] Static range map is empty")
+            return False
+
+        # Populate module-level data structures
+        loaded_max_end = {}
+        loaded_costs = {}
+        loaded_prefix = {}
+
+        for surah_key, range_map in ranges.items():
+            surah = int(surah_key)
+            loaded_max_end[surah] = {
+                int(start): end for start, end in range_map.items()
+            }
+
+        for surah_key, costs in verse_costs.items():
+            surah = int(surah_key)
+            loaded_costs[surah] = costs
+
+            # Rebuild prefix sums
+            prefix = [0]
+            for c in costs:
+                prefix.append(prefix[-1] + c)
+            loaded_prefix[surah] = prefix
+
+        _MAX_END_LOOKUP = loaded_max_end
+        _VERSE_TOKEN_COSTS = loaded_costs
+        _PREFIX_SUMS = loaded_prefix
+        _PRECOMPUTED = True
+
+        total_verses = sum(len(c) for c in loaded_costs.values())
+        logger.info(
+            "[TOKEN_BUDGET] Loaded static range map from %s "
+            "(generated: %s, %d surahs, %d verses)",
+            filepath,
+            meta.get("generated_at", "unknown"),
+            len(loaded_max_end),
+            total_verses,
+        )
+        return True
+
+    except Exception as e:
+        logger.error("[TOKEN_BUDGET] Failed to load static range map: %s", e)
+        return False
+
+
+def get_range_map_info() -> dict:
+    """Return summary info about the loaded range map (for debug endpoints)."""
+    if not _PRECOMPUTED:
+        return {"loaded": False}
+
+    budget = int(VERSE_AND_TAFSIR_BUDGET * SAFETY_FACTOR)
+    total_verses = sum(len(c) for c in _VERSE_TOKEN_COSTS.values())
+    constrained = sum(
+        1 for surah_map in _MAX_END_LOOKUP.values()
+        for start, end in surah_map.items()
+        if end - start + 1 < ABSOLUTE_MAX_VERSES
+    )
+
+    return {
+        "loaded": True,
+        "total_surahs": len(_MAX_END_LOOKUP),
+        "total_verses": total_verses,
+        "effective_budget_tokens": budget,
+        "budget_constrained_verses": constrained,
+        "static_file_exists": os.path.exists(_default_range_map_path()),
+    }

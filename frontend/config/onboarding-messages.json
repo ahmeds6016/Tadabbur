@@ -133,31 +133,31 @@
   ],
   "personaDescriptions": {
     "new_revert": {
-      "icon": "🌱",
+      "icon": "",
       "name": "New Revert",
       "description": "Starting fresh with an open heart",
       "longDescription": "Gentle guidance with warmth, patience, and encouragement for those beginning their Islamic journey"
     },
     "curious_explorer": {
-      "icon": "🔍",
+      "icon": "",
       "name": "Curious Explorer",
       "description": "Exploring the Quran with an open mind",
       "longDescription": "Thoughtful and reflective interpretations for those drawn to explore spiritual meaning and wisdom"
     },
     "practicing_muslim": {
-      "icon": "🕌",
+      "icon": "",
       "name": "Practicing Muslim",
       "description": "Seeking balanced, daily guidance",
       "longDescription": "Balanced reflections for steady spiritual growth and daily connection"
     },
     "student": {
-      "icon": "🎓",
+      "icon": "",
       "name": "Islamic Studies Student",
       "description": "Learning through structured study",
       "longDescription": "Comprehensive tafsir grounded in authentic sources for academic learning"
     },
     "advanced_learner": {
-      "icon": "📚",
+      "icon": "",
       "name": "Advanced Learner",
       "description": "Engaging with depth and precision",
       "longDescription": "Detailed analysis with advanced insights and classical commentary for deep understanding"

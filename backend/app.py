@@ -3305,8 +3305,14 @@ initialize_firebase()
 load_chunks_from_verse_files_enhanced() # UPDATED CALL
 
 # Precompute per-verse token budgets from actual TAFSIR_CHUNKS data
-from services.token_budget_service import precompute_verse_budgets
+# and export the static range map (hardcoded, validated per-verse limits)
+from services.token_budget_service import precompute_verse_budgets, export_range_map
 precompute_verse_budgets(TAFSIR_CHUNKS, QURAN_METADATA)
+try:
+    export_range_map()
+    print("INFO: Static verse range map exported to data/verse_range_map.json")
+except Exception as e:
+    print(f"WARNING: Could not export static range map: {e}")
 
 vertexai.init(project=GCP_INFRASTRUCTURE_PROJECT, location=LOCATION)
 
@@ -7634,11 +7640,11 @@ def tafsir_handler_enhanced():
             surah, start_verse, end_verse = verse_range
             verse_count = end_verse - start_verse + 1
 
-            # Maximum 10 verses per query
+            # Hard cap: maximum 10 verses per query
             if verse_count > 10:
                 return jsonify({
                     'error': 'verse_range_too_large',
-                    'message': f'📚 Please narrow your range to 10 verses or less.\n\nYou requested {verse_count} verses ({surah}:{start_verse}-{end_verse}).\n\nTry breaking it into smaller ranges like:\n• {surah}:{start_verse}-{start_verse+9}\n• {surah}:{start_verse+10}-{start_verse+19}',
+                    'message': f'Please narrow your range to 10 verses or less.\n\nYou requested {verse_count} verses ({surah}:{start_verse}-{end_verse}).\n\nTry smaller ranges like:\n- {surah}:{start_verse}-{start_verse+9}\n- {surah}:{start_verse+10}-{start_verse+19}',
                     'requested_verses': verse_count,
                     'max_verses': 10,
                     'suggestions': [
@@ -7646,6 +7652,23 @@ def tafsir_handler_enhanced():
                         f'{surah}:{min(start_verse+10, end_verse)}-{min(start_verse+19, end_verse)}' if verse_count > 10 else None
                     ]
                 }), 400
+
+            # Dynamic budget enforcement — prevent oversized prompts
+            from services.token_budget_service import compute_max_end_verse
+            surah_max = QURAN_METADATA.get(surah, {}).get("verses", 0)
+            if surah_max:
+                budget_max_end, _meta = compute_max_end_verse(surah, start_verse, surah_max)
+                if end_verse > budget_max_end:
+                    safe_count = budget_max_end - start_verse + 1
+                    return jsonify({
+                        'error': 'verse_range_too_large',
+                        'message': f'The verses {surah}:{start_verse}-{end_verse} contain extensive commentary that exceeds response limits.\n\nPlease narrow your range to {safe_count} verse{"s" if safe_count != 1 else ""} or fewer from this starting point.\n\nSuggested range:\n- {surah}:{start_verse}-{budget_max_end}',
+                        'requested_verses': verse_count,
+                        'max_verses': safe_count,
+                        'suggestions': [
+                            f'{surah}:{start_verse}-{budget_max_end}'
+                        ]
+                    }), 400
 
         # Rate limiting
         if is_rate_limited(user_id):
@@ -8761,6 +8784,21 @@ def debug_index():
             "error": str(e),
             "traceback": traceback.format_exc()
         }), 500
+
+@app.route("/debug/range-map", methods=["GET"])
+def debug_range_map():
+    """View the static verse range map info and optionally re-export it."""
+    from services.token_budget_service import get_range_map_info, export_range_map
+    try:
+        info = get_range_map_info()
+        action = request.args.get("action")
+        if action == "export":
+            path = export_range_map()
+            info["exported_to"] = path
+        return jsonify(info), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 @app.route("/debug/test/<path:query>", methods=["GET"])
 def debug_query(query):

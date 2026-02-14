@@ -3,20 +3,20 @@ import { useState, useEffect, useCallback } from 'react';
 import { BACKEND_URL } from '../lib/config';
 
 const BADGE_ICONS = {
-  fire: '\u{1F525}',
-  calendar: '\u{1F4C5}',
-  star: '\u{2B50}',
-  search: '\u{1F50D}',
-  brain: '\u{1F9E0}',
-  graduation: '\u{1F393}',
-  compass: '\u{1F9ED}',
-  globe: '\u{1F30D}',
-  pen: '\u{270F}',
-  heart: '\u{1F49C}',
-  crown: '\u{1F451}',
-  book: '\u{1F4DA}',
-  trophy: '\u{1F3C6}',
-  rocket: '\u{1F680}',
+  fire: 'St',
+  calendar: 'Ca',
+  star: 'Sr',
+  search: 'Se',
+  brain: 'Br',
+  graduation: 'Gr',
+  compass: 'Co',
+  globe: 'Gl',
+  pen: 'Pe',
+  heart: 'He',
+  crown: 'Cr',
+  book: 'Bk',
+  trophy: 'Tr',
+  rocket: 'Rk',
 };
 
 /** Toast-style popup shown when a badge is newly earned. */
