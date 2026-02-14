@@ -37,7 +37,8 @@ export default function ReadingPlanCard({ user, onStudyVerse }) {
     try {
       const res = await fetch(`${BACKEND_URL}/reading-plans`);
       if (!res.ok) throw new Error('Failed to fetch plans');
-      return await res.json();
+      const data = await res.json();
+      return data.plans || [];
     } catch {
       throw new Error('Could not load reading plans');
     }
@@ -121,7 +122,7 @@ export default function ReadingPlanCard({ user, onStudyVerse }) {
   const activePlan = progress
     ? plans.find((p) => p.id === progress.plan_id)
     : null;
-  const totalDays = activePlan?.total_days || 0;
+  const totalDays = activePlan?.duration_days || 0;
   const completedCount = progress?.completed_days?.length || 0;
   const progressPct = totalDays > 0 ? (completedCount / totalDays) * 100 : 0;
 
@@ -209,7 +210,7 @@ export default function ReadingPlanCard({ user, onStudyVerse }) {
                 <div className="rp-plan-info">
                   <span className="rp-plan-title">{plan.title}</span>
                   <span className="rp-plan-meta">
-                    {plan.total_days} days &middot; {plan.category}
+                    {plan.duration_days} days &middot; {plan.category}
                   </span>
                   <span className="rp-plan-desc">{plan.description}</span>
                 </div>

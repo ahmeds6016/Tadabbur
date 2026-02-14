@@ -37,7 +37,7 @@ export default function CollectionsGrid({ user, onStudyVerse }) {
         if (!res.ok) throw new Error('Failed to load collections');
         const data = await res.json();
         if (!cancelled) {
-          setCollections(data);
+          setCollections(data.collections || []);
           setError(null);
         }
       } catch (err) {
@@ -168,7 +168,7 @@ export default function CollectionsGrid({ user, onStudyVerse }) {
       {collections.map((col) => {
         const isExpanded = expandedId === col.id;
         const colProgress = progress[col.id];
-        const studied = colProgress?.studied_count || 0;
+        const studied = colProgress?.completed_count || colProgress?.studied_count || 0;
         const total = col.verse_count || 1;
         const pct = Math.round((studied / total) * 100);
         const icon = COLLECTION_ICONS[col.icon] || COLLECTION_ICONS[col.id] || '\u{1F4D6}';

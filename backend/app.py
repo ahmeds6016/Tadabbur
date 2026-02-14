@@ -6573,13 +6573,30 @@ def get_plan_progress(plan_id):
         if active_plan.get("plan_id") != plan_id:
             return jsonify({"active": False, "plan_id": plan_id}), 200
 
+        # Look up today's verse from the plan data
+        plan = next((p for p in READING_PLANS if p["id"] == plan_id), None)
+        current_day = active_plan.get("current_day", 1)
+        today_verse = None
+        if plan and 1 <= current_day <= len(plan["days"]):
+            day_data = plan["days"][current_day - 1]
+            surah, verse_num = day_data["verse"]
+            surah_name = QURAN_METADATA.get(surah, {}).get("name", f"Surah {surah}")
+            today_verse = {
+                "surah": surah,
+                "verse": verse_num,
+                "surah_name": surah_name,
+                "title": day_data.get("title", ""),
+                "reflection": day_data.get("reflection", ""),
+            }
+
         return jsonify({
             "active": True,
             "plan_id": plan_id,
-            "current_day": active_plan.get("current_day", 1),
+            "current_day": current_day,
             "completed_days": active_plan.get("completed_days", []),
             "started_at": active_plan.get("started_at"),
             "completed_at": active_plan.get("completed_at"),
+            "today_verse": today_verse,
         }), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
