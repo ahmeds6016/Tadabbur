@@ -1,0 +1,216 @@
+'use client';
+import { useState, useEffect, useCallback } from 'react';
+import { Z_INDEX } from '../utils/zIndex';
+
+const FEATURE_STEPS = [
+  {
+    title: 'Welcome to Tafsir Simplified',
+    titleWithName: (name) => `Welcome, ${name}!`,
+    description: 'Get classical tafsir commentary on any verse of the Quran, powered by AI and grounded in 5 scholarly sources.',
+    icon: '📖'
+  },
+  {
+    title: 'Choose a Surah and Verse Range',
+    description: 'Pick from all 114 surahs. Select a single verse or a range — the app automatically adjusts the range limit based on verse length and included scholarly commentary to keep responses focused.',
+    icon: '🔍'
+  },
+  {
+    title: 'Grounded in Classical Scholarship',
+    description: 'Responses draw from sources including Asbab Al-Nuzul, A Thematic Commentary, Ihya Ulum Al-Din, Madarij Al-Salikin, and Riyad-us-Saliheen — matched automatically based on verse themes.',
+    icon: '📚'
+  },
+  {
+    title: 'Save, Reflect, and Explore',
+    description: 'Save answers for later, add personal reflections to any text, track your journey across all 114 surahs, and find help anytime with the ? button.',
+    icon: '💡'
+  }
+];
+
+export default function FeatureIntroModal({ isOpen, onComplete, userName }) {
+  const [currentStep, setCurrentStep] = useState(0);
+
+  // Reset step when opened
+  useEffect(() => {
+    if (isOpen) setCurrentStep(0);
+  }, [isOpen]);
+
+  // Keyboard navigation
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKey = (e) => {
+      if (e.key === 'Escape') { onComplete(); return; }
+      if (e.key === 'ArrowRight' || e.key === 'Enter') {
+        if (currentStep < FEATURE_STEPS.length - 1) setCurrentStep(s => s + 1);
+        else onComplete();
+      }
+      if (e.key === 'ArrowLeft' && currentStep > 0) setCurrentStep(s => s - 1);
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [isOpen, currentStep, onComplete]);
+
+  if (!isOpen) return null;
+
+  const step = FEATURE_STEPS[currentStep];
+  const isLast = currentStep === FEATURE_STEPS.length - 1;
+  const isFirst = currentStep === 0;
+  const title = isFirst && userName ? step.titleWithName(userName) : step.title;
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        onClick={onComplete}
+        style={{
+          position: 'fixed', inset: 0,
+          background: 'rgba(0,0,0,0.5)',
+          zIndex: Z_INDEX.MODAL_BACKDROP,
+          animation: 'featureIntroFadeIn 0.3s ease'
+        }}
+      />
+
+      {/* Modal */}
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Feature introduction"
+        style={{
+          position: 'fixed',
+          top: '50%', left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: '90%', maxWidth: '480px',
+          background: 'white',
+          borderRadius: '16px',
+          boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
+          zIndex: Z_INDEX.MODAL,
+          overflow: 'hidden',
+          animation: 'featureIntroSlideIn 0.3s ease'
+        }}
+      >
+        {/* Close button */}
+        <button
+          onClick={onComplete}
+          aria-label="Skip introduction"
+          style={{
+            position: 'absolute', top: 12, right: 12,
+            background: 'none', border: 'none',
+            color: '#999', fontSize: '18px',
+            cursor: 'pointer', padding: '4px 8px',
+            borderRadius: 6, zIndex: 1
+          }}
+        >
+          ✕
+        </button>
+
+        {/* Header */}
+        <div style={{
+          padding: '28px 24px 16px',
+          background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
+          borderBottom: '2px solid var(--border-light, #e5e7eb)',
+          textAlign: 'center'
+        }}>
+          <div style={{ fontSize: '40px', marginBottom: '8px' }}>{step.icon}</div>
+          <h2 style={{
+            margin: 0, fontSize: '1.3rem',
+            color: 'var(--deep-blue, #1e3a5f)'
+          }}>
+            {title}
+          </h2>
+          {/* Progress dots */}
+          <div style={{
+            display: 'flex', gap: '8px', marginTop: '16px',
+            justifyContent: 'center'
+          }}>
+            {FEATURE_STEPS.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setCurrentStep(i)}
+                aria-label={`Go to step ${i + 1}`}
+                style={{
+                  width: i === currentStep ? 24 : 8,
+                  height: 8, borderRadius: 4,
+                  border: 'none', padding: 0,
+                  backgroundColor: i === currentStep
+                    ? 'var(--primary-teal, #10b981)'
+                    : 'rgba(0,0,0,0.15)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Content */}
+        <div style={{ padding: '24px', minHeight: '100px' }}>
+          <p style={{
+            margin: 0, color: '#555', lineHeight: '1.7',
+            fontSize: '0.95rem', textAlign: 'center'
+          }}>
+            {step.description}
+          </p>
+        </div>
+
+        {/* Footer */}
+        <div style={{
+          padding: '16px 24px',
+          display: 'flex', justifyContent: 'space-between',
+          alignItems: 'center',
+          borderTop: '1px solid var(--border-light, #e5e7eb)',
+          background: 'var(--cream, #faf6f0)'
+        }}>
+          <button
+            onClick={onComplete}
+            style={{
+              padding: '8px 16px', background: 'none', border: 'none',
+              color: '#999', cursor: 'pointer', fontSize: '0.9rem'
+            }}
+          >
+            Skip
+          </button>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {!isFirst && (
+              <button
+                onClick={() => setCurrentStep(s => s - 1)}
+                style={{
+                  padding: '10px 20px', border: '1px solid var(--border-light, #e5e7eb)',
+                  borderRadius: '10px', background: 'white',
+                  color: 'var(--deep-blue, #1e3a5f)', cursor: 'pointer',
+                  fontWeight: '600', fontSize: '0.9rem'
+                }}
+              >
+                Back
+              </button>
+            )}
+            <button
+              onClick={() => {
+                if (isLast) onComplete();
+                else setCurrentStep(s => s + 1);
+              }}
+              style={{
+                padding: '10px 24px', border: 'none', borderRadius: '10px',
+                background: 'linear-gradient(135deg, var(--primary-teal, #10b981) 0%, var(--gold, #d4af37) 100%)',
+                color: 'white', cursor: 'pointer',
+                fontWeight: '600', fontSize: '0.9rem'
+              }}
+            >
+              {isLast ? 'Get Started' : 'Next'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Animations */}
+      <style>{`
+        @keyframes featureIntroFadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes featureIntroSlideIn {
+          from { opacity: 0; transform: translate(-50%, -48%); }
+          to { opacity: 1; transform: translate(-50%, -50%); }
+        }
+      `}</style>
+    </>
+  );
+}

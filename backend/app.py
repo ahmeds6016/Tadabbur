@@ -98,13 +98,11 @@ RAG_OPTIMIZED_CONFIG = {
 
 # Persona-based verse limits (to prevent overwhelming responses)
 PERSONA_VERSE_LIMITS = {
-    'new_revert': 5,        # Simple, focused responses
-    'practicing_muslim': 8, # Balanced depth
-    'revert_muslim': 6,     # Gentle progression
-    'scholar': 12,          # More comprehensive
-    'spiritual_seeker': 7,  # Relevant exploration
-    'student': 10,          # Academic depth
-    'teacher_imam': 12      # Teaching resources
+    'new_revert': 5,          # Simple, focused responses
+    'curious_explorer': 7,    # Accessible exploration
+    'practicing_muslim': 8,   # Balanced depth
+    'student': 10,            # Academic depth
+    'advanced_learner': 12    # Comprehensive analysis
 }
 
 # Source coverage information
@@ -159,8 +157,8 @@ analytics_lock = threading.Lock()
 # NEW: PERSONA SYSTEM FOR ADAPTIVE RESPONSES
 # ============================================================================
 
-# Comprehensive persona system (7 personas) - UPDATED: standardized format_style
-# All personas now use academic_prose format for consistent parsing
+# Consolidated persona system (5 personas)
+# All personas use academic_prose format for consistent parsing
 PERSONAS = {
     "new_revert": {
         "name": "New Revert",
@@ -170,17 +168,9 @@ PERSONAS = {
         "scholarly_debates": False,
         "format_style": "academic_prose"
     },
-    "revert": {
-        "name": "Revert Muslim (1-5 years)",
-        "tone": "supportive, informative",
-        "vocabulary": "moderate",
-        "include_hadith": True,
-        "scholarly_debates": False,
-        "format_style": "academic_prose"
-    },
-    "seeker": {
-        "name": "Spiritual Seeker",
-        "tone": "warm, reflective",
+    "curious_explorer": {
+        "name": "Curious Explorer",
+        "tone": "warm, reflective, inviting",
         "vocabulary": "accessible",
         "include_hadith": True,
         "scholarly_debates": False,
@@ -194,26 +184,18 @@ PERSONAS = {
         "scholarly_debates": True,
         "format_style": "academic_prose"
     },
-    "teacher": {
-        "name": "Teacher/Imam/Educator",
-        "tone": "pedagogical, clear",
-        "vocabulary": "accessible",
-        "include_hadith": True,
-        "scholarly_debates": True,
-        "format_style": "academic_prose"
-    },
-    "scholar": {
-        "name": "Scholar/Advanced Student",
-        "tone": "academic, precise",
-        "vocabulary": "advanced, technical",
-        "include_hadith": True,
-        "scholarly_debates": True,
-        "format_style": "academic_prose"
-    },
     "student": {
         "name": "Islamic Studies Student",
         "tone": "educational, comprehensive",
         "vocabulary": "academic",
+        "include_hadith": True,
+        "scholarly_debates": True,
+        "format_style": "academic_prose"
+    },
+    "advanced_learner": {
+        "name": "Advanced Learner",
+        "tone": "academic, precise",
+        "vocabulary": "advanced, technical",
         "include_hadith": True,
         "scholarly_debates": True,
         "format_style": "academic_prose"
@@ -1819,7 +1801,7 @@ def determine_knowledge_level(persona: str, provided_level: Optional[str]) -> Tu
     """
     # Deterministic personas - auto-set knowledge_level
     deterministic = {
-        "scholar": "advanced",
+        "advanced_learner": "advanced",
         "student": "advanced",
         "new_revert": "beginner"
     }
@@ -3321,6 +3303,11 @@ def initialize_firebase():
 # Initialize services on startup (fail fast if any critical component fails)
 initialize_firebase()
 load_chunks_from_verse_files_enhanced() # UPDATED CALL
+
+# Precompute per-verse token budgets from actual TAFSIR_CHUNKS data
+from services.token_budget_service import precompute_verse_budgets
+precompute_verse_budgets(TAFSIR_CHUNKS, QURAN_METADATA)
+
 vertexai.init(project=GCP_INFRASTRUCTURE_PROJECT, location=LOCATION)
 
 # --- Firebase Auth Decorator ---
@@ -5020,7 +5007,7 @@ def prewarm_cache():
     try:
         data = request.json
         queries = data.get('queries', [])
-        personas = data.get('personas', ['practicing_muslim', 'scholar', 'new_revert'])
+        personas = data.get('personas', ['practicing_muslim', 'advanced_learner', 'new_revert'])
 
         if not queries:
             # Get top popular queries if none specified
@@ -5487,6 +5474,7 @@ def set_profile():
     persona = data.get("persona")
     provided_knowledge_level = data.get("knowledge_level")
     learning_goal = data.get("learning_goal")
+    first_name = data.get("first_name")
 
     try:
         profile_data = {}
@@ -5511,7 +5499,7 @@ def set_profile():
                 return jsonify({
                     "error": "Invalid persona",
                     "available_personas": list(PERSONAS.keys()),
-                    "description": "Choose from: new_revert, revert, seeker, practicing_muslim, teacher, scholar, student"
+                    "description": "Choose from: new_revert, curious_explorer, practicing_muslim, student, advanced_learner"
                 }), 400
             
             # Validate learning_goal
@@ -5565,6 +5553,12 @@ def set_profile():
             else:
                 print(f"INFO: User-provided knowledge_level='{knowledge_level}' for persona='{persona}'")
 
+        # Store first_name if provided
+        if first_name and isinstance(first_name, str):
+            cleaned = first_name.strip()[:30]
+            if cleaned:
+                profile_data["first_name"] = cleaned
+
         # Save to Firestore
         users_db.collection("users").document(uid).set(profile_data, merge=True)
         
@@ -5593,7 +5587,7 @@ def list_personas():
     for name, config in PERSONAS.items():
         # Determine if this persona has deterministic knowledge_level
         deterministic_level = None
-        if name in ["scholar", "student"]:
+        if name in ["advanced_learner", "student"]:
             deterministic_level = "advanced"
         elif name == "new_revert":
             deterministic_level = "beginner"
@@ -5700,6 +5694,59 @@ DAILY_VERSE_POOL = [
     (103, 1, "Time and loss"),
     (112, 1, "Say: He is Allah, the One"),
 ]
+
+
+@app.route("/range-limit", methods=["GET"])
+def get_range_limit():
+    """
+    Dropdown guardrail: return the precomputed maximum end verse for a given
+    surah + start verse.  Uses actual tafsir chunk sizes measured at startup —
+    no heuristics, no per-request computation.
+
+    Query params:
+        surah (int): Surah number (1-114)
+        start (int): Starting verse number
+
+    Returns:
+        {"maxEnd": int, "surahMax": int}
+    """
+    from services.token_budget_service import compute_max_end_verse
+    from config.token_budget import ABSOLUTE_MAX_VERSES
+
+    try:
+        surah = request.args.get("surah", type=int)
+        start = request.args.get("start", type=int)
+
+        if not surah or not start:
+            return jsonify({"error": "Missing required params: surah, start"}), 400
+
+        if surah not in QURAN_METADATA:
+            return jsonify({"error": f"Invalid surah: {surah}"}), 400
+
+        surah_max = QURAN_METADATA[surah]["verses"]
+
+        if start < 1 or start > surah_max:
+            return jsonify({"error": f"Invalid start verse: {start}"}), 400
+
+        # Precomputed lookup — O(1) dict access
+        max_end, _ = compute_max_end_verse(surah, start, surah_max)
+
+        # Hard cap as safety net (should already be enforced by precomputation)
+        hard_max = min(start + ABSOLUTE_MAX_VERSES - 1, surah_max)
+        effective_max = min(max_end, hard_max)
+
+        return jsonify({"maxEnd": effective_max, "surahMax": surah_max}), 200
+
+    except Exception as e:
+        print(f"[RANGE-LIMIT] Error: {e}")
+        # Graceful fallback: return the existing hard limit
+        try:
+            s_max = QURAN_METADATA.get(surah, {}).get("verses", 0) if surah else 0
+            fallback = min(start + 9, s_max) if surah and start and s_max else 10
+        except Exception:
+            s_max = 0
+            fallback = 10
+        return jsonify({"maxEnd": fallback, "surahMax": s_max}), 200
 
 
 @app.route("/daily-verse", methods=["GET"])

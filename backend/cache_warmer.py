@@ -96,7 +96,7 @@ QURAN_METADATA = {
     112: {"name": "Al-Ikhlas", "verses": 4}, 113: {"name": "Al-Falaq", "verses": 5}, 114: {"name": "An-Nas", "verses": 6}
 }
 
-PERSONAS = ["new_revert", "revert", "seeker", "practicing_muslim", "teacher", "scholar", "student"]
+PERSONAS = ["new_revert", "curious_explorer", "practicing_muslim", "student", "advanced_learner"]
 
 # Priority verses (high-traffic, respecting ≤10 verse limit)
 PRIORITY_VERSES = [

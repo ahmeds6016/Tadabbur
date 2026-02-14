@@ -6,21 +6,21 @@ const helpContent = {
     title: 'Getting Started',
     sections: [
       {
-        title: 'How to Search',
+        title: 'Browse Surahs',
         items: [
           {
-            label: 'Search by Verse',
-            description: 'Enter verse references like "2:255" or "Al-Baqarah 255"',
+            label: 'Surah Picker',
+            description: 'Select any of the 114 surahs from the dropdown to explore its verses',
             tour: 'search'
           },
           {
-            label: 'Search by Topic',
-            description: 'Ask questions like "What does the Quran say about patience?"',
+            label: 'Verse Range',
+            description: 'Pick a start and end verse — the app adjusts the max range based on commentary length',
             tour: 'search'
           },
           {
-            label: 'Deep Tafsir Commentary',
-            description: 'Classical scholarly insights with historical and linguistic analysis',
+            label: 'Scholarly Commentary',
+            description: 'Each response includes classical tafsir plus insights from 5 scholarly sources when relevant',
             tour: 'search'
           }
         ]
@@ -30,17 +30,17 @@ const helpContent = {
         items: [
           {
             label: 'Add Reflections',
-            description: 'Select any text to add personal notes',
+            description: 'Select any text in the results to add personal notes',
             tour: 'annotations'
           },
           {
             label: 'Save Answers',
-            description: 'Bookmark important responses for later',
+            description: 'Bookmark important responses for later review',
             tour: 'save'
           },
           {
-            label: 'Share Insights',
-            description: 'Generate links to share with others',
+            label: 'Share',
+            description: 'Generate shareable links for any answer',
             tour: 'share'
           }
         ]
@@ -97,9 +97,9 @@ const helpContent = {
             tour: 'save'
           },
           {
-            label: 'Export',
-            description: 'Download as PDF or copy as text',
-            tour: 'export'
+            label: 'Share',
+            description: 'Generate a shareable link for this answer',
+            tour: 'share'
           }
         ]
       }
@@ -114,7 +114,7 @@ const helpContent = {
     title: 'Notes & Reflections',
     sections: [
       {
-        title: 'Annotation Types',
+        title: 'Reflection Types',
         items: [
           { label: 'Insight', description: 'Personal understanding or revelation' },
           { label: 'Question', description: 'Something to explore further' },
@@ -125,22 +125,15 @@ const helpContent = {
         ]
       },
       {
-        title: 'Organization',
+        title: 'Managing Reflections',
         items: [
           {
-            label: 'Use Tags',
-            description: 'Add tags to categorize your notes',
-            tour: 'tags'
+            label: 'Add Tags',
+            description: 'Categorize your notes with custom tags for easy retrieval'
           },
           {
-            label: 'Calendar View',
-            description: 'See your reflection journey over time',
-            tour: 'calendar'
-          },
-          {
-            label: 'Search Notes',
-            description: 'Find specific reflections quickly',
-            tour: 'search-notes'
+            label: 'View All Reflections',
+            description: 'Access all your saved reflections from the Reflections tab in the sidebar'
           }
         ]
       }
@@ -149,7 +142,7 @@ const helpContent = {
   }
 };
 
-export default function HelpMenu({ currentPage = 'home', isOpen, onClose, onStartTour }) {
+export default function HelpMenu({ currentPage = 'home', isOpen, onClose, onStartTour, onReplayFeatureIntro }) {
   const [expandedSection, setExpandedSection] = useState(null);
   const [activeTab, setActiveTab] = useState('help');
   const content = helpContent[currentPage] || helpContent.home;
@@ -262,6 +255,17 @@ export default function HelpMenu({ currentPage = 'home', isOpen, onClose, onStar
               ))}
 
               <div className="help-cta">
+                {onReplayFeatureIntro && (
+                  <button
+                    className="replay-intro-btn"
+                    onClick={() => {
+                      onClose();
+                      onReplayFeatureIntro();
+                    }}
+                  >
+                    Replay Feature Introduction
+                  </button>
+                )}
                 <button
                   className="start-tour-btn"
                   onClick={() => handleStartTour('welcome')}
@@ -299,28 +303,38 @@ export default function HelpMenu({ currentPage = 'home', isOpen, onClose, onStar
               <h3>Frequently Asked Questions</h3>
 
               <div className="faq-item">
-                <h4>What is Deep Tafsir?</h4>
-                <p>Deep Tafsir provides verse-by-verse classical commentary from renowned scholars like Ibn Kathir and Al-Qurtubi, with historical context and linguistic analysis for deeper understanding.</p>
+                <h4>What is Tafsir Simplified?</h4>
+                <p>Tafsir Simplified provides AI-powered classical tafsir commentary on any verse of the Quran. Each response draws from Ibn Kathir and Al-Qurtubi, plus insights from 5 scholarly sources including Asbab Al-Nuzul, A Thematic Commentary, Ihya Ulum Al-Din, Madarij Al-Salikin, and Riyad-us-Saliheen.</p>
               </div>
 
               <div className="faq-item">
-                <h4>How do I save my favorite answers?</h4>
-                <p>Click the "Save this Answer" button at the top of any search result. You can organize saved answers into folders and access them from the Saved page.</p>
+                <h4>How do I select verses?</h4>
+                <p>Use the surah dropdown to pick from all 114 surahs. Then choose a starting verse and an ending verse. The app automatically adjusts the maximum range based on how much commentary exists for those verses, so you always get complete, untruncated results.</p>
               </div>
 
               <div className="faq-item">
-                <h4>Can I add my own notes to verses?</h4>
-                <p>Yes! Select any text in the results to open the annotation dialog. Choose from 17 reflection types and add tags for easy organization.</p>
+                <h4>Where do scholarly insights come from?</h4>
+                <p>Five classical sources are matched automatically based on verse themes: Asbab Al-Nuzul (reasons of revelation), A Thematic Commentary on the Quran, Ihya Ulum Al-Din (Revival of Religious Sciences), Madarij Al-Salikin (Ranks of the Wayfarers), and Riyad-us-Saliheen (Gardens of the Righteous).</p>
               </div>
 
               <div className="faq-item">
-                <h4>How do I share an answer with someone?</h4>
-                <p>Click the "Share" button to generate a permanent link. Anyone with the link can view the answer, even without an account.</p>
+                <h4>Why are some responses slow?</h4>
+                <p>Each response involves multi-step generation: fetching verse data, matching scholarly sources, and generating commentary. This typically takes 10-20 seconds. Longer verse ranges or verses with more scholarly matches may take a bit longer.</p>
               </div>
 
               <div className="faq-item">
-                <h4>What do the different persona levels mean?</h4>
-                <p>Your persona level affects how explanations are presented. Beginners get simpler explanations, while advanced users see more detailed scholarly content.</p>
+                <h4>How do I save my work?</h4>
+                <p>Click the save button at the top of any response to bookmark it. You can also select any text to add a personal reflection. Access saved answers and reflections from the navigation sidebar.</p>
+              </div>
+
+              <div className="faq-item">
+                <h4>Can I change my persona?</h4>
+                <p>Yes! Click your persona badge in the header area to change your learning persona at any time. Your new persona takes effect on the next query.</p>
+              </div>
+
+              <div className="faq-item">
+                <h4>What do personas do?</h4>
+                <p>Your persona affects the tone, depth, and formatting of responses. For example, a student persona gets more detailed explanations, while a general audience persona gets accessible summaries focused on practical takeaways.</p>
               </div>
             </div>
           )}
@@ -526,6 +540,26 @@ export default function HelpMenu({ currentPage = 'home', isOpen, onClose, onStar
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
+          }
+
+          .replay-intro-btn {
+            padding: 12px 24px;
+            background: white;
+            color: var(--primary-teal, #10b981);
+            border: 2px solid var(--primary-teal, #10b981);
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 10px;
+            width: 100%;
+          }
+
+          .replay-intro-btn:hover {
+            background: var(--cream, #faf6f0);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
           }
 
           .start-tour-btn:hover {

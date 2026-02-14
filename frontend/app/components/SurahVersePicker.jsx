@@ -1,5 +1,6 @@
 'use client';
 import { useState, useMemo, useEffect } from 'react';
+import { BACKEND_URL } from '../lib/config';
 
 // Complete list of all 114 surahs with their verse counts
 const SURAHS = [
@@ -161,19 +162,57 @@ export default function SurahVersePicker({ onSelect, initialSurah = null, initia
   // Get verse count for selected surah
   const maxVerses = selectedSurah ? SURAHS.find(s => s.number === parseInt(selectedSurah))?.verseCount || 0 : 0;
 
+  // Dynamic range limit from backend token budget
+  const [dynamicMaxEnd, setDynamicMaxEnd] = useState(null);
+
+  useEffect(() => {
+    if (!selectedSurah || !startVerse) {
+      setDynamicMaxEnd(null);
+      return;
+    }
+    let cancelled = false;
+    fetch(`${BACKEND_URL}/range-limit?surah=${selectedSurah}&start=${startVerse}`)
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (!cancelled && data) setDynamicMaxEnd(data.maxEnd);
+      })
+      .catch(() => {
+        if (!cancelled) setDynamicMaxEnd(null);
+      });
+    return () => { cancelled = true; };
+  }, [selectedSurah, startVerse]);
+
+  // Clamp endVerse if it now exceeds the dynamic limit
+  useEffect(() => {
+    if (dynamicMaxEnd !== null && endVerse && parseInt(endVerse) > dynamicMaxEnd) {
+      setEndVerse(String(dynamicMaxEnd));
+    }
+  }, [dynamicMaxEnd, endVerse]);
+
   // Generate verse options array
   const verseOptions = useMemo(() => {
     if (!maxVerses) return [];
     return Array.from({ length: maxVerses }, (_, i) => i + 1);
   }, [maxVerses]);
 
-  // Generate end verse options (from startVerse to min(startVerse + MAX_VERSE_RANGE - 1, maxVerses))
+  // Generate end verse options — use dynamic limit when available, static fallback otherwise
   const endVerseOptions = useMemo(() => {
     if (!startVerse || !maxVerses) return [];
     const start = parseInt(startVerse);
-    const maxEnd = Math.min(start + MAX_VERSE_RANGE - 1, maxVerses);
-    return Array.from({ length: maxEnd - start + 1 }, (_, i) => start + i);
-  }, [startVerse, maxVerses]);
+    const staticMax = Math.min(start + MAX_VERSE_RANGE - 1, maxVerses);
+    const effectiveMax = dynamicMaxEnd !== null
+      ? Math.min(dynamicMaxEnd, maxVerses)
+      : staticMax;
+    return Array.from({ length: effectiveMax - start + 1 }, (_, i) => start + i);
+  }, [startVerse, maxVerses, dynamicMaxEnd]);
+
+  // Whether the dynamic limit is tighter than the static 10-verse cap
+  const isDynamicallyLimited = useMemo(() => {
+    if (!startVerse || !maxVerses || dynamicMaxEnd === null) return false;
+    const start = parseInt(startVerse);
+    const staticMax = Math.min(start + MAX_VERSE_RANGE - 1, maxVerses);
+    return dynamicMaxEnd < staticMax;
+  }, [startVerse, maxVerses, dynamicMaxEnd]);
 
   const handleSurahChange = (e) => {
     const value = e.target.value;
@@ -333,6 +372,22 @@ export default function SurahVersePicker({ onSelect, initialSurah = null, initia
               ))}
             </select>
           </div>
+
+          {/* Range limit info */}
+          {isDynamicallyLimited && (
+            <div style={{
+              fontSize: '0.78rem',
+              color: 'var(--text-muted, #6b7280)',
+              marginBottom: '10px',
+              padding: '6px 10px',
+              background: 'rgba(13, 148, 136, 0.06)',
+              borderRadius: '6px',
+              borderLeft: '3px solid var(--primary-teal, #0d9488)',
+              lineHeight: '1.4',
+            }}>
+              Range limited to {dynamicMaxEnd - parseInt(startVerse) + 1} verse{dynamicMaxEnd - parseInt(startVerse) + 1 !== 1 ? 's' : ''} based on verse length and included scholarly commentary.
+            </div>
+          )}
 
           {/* Apply Button */}
           <button

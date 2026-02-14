@@ -312,6 +312,11 @@ class TafsirAPI {
         { text: "Surah 2:255 - Ayatul Kursi", approach: "tafsir" },
         { text: "Surah 112 - Al-Ikhlas", approach: "tafsir" }
       ],
+      curious_explorer: [
+        { text: "Surah 2:255 - Ayatul Kursi", approach: "tafsir" },
+        { text: "Surah 13:28 - Hearts find rest", approach: "tafsir" },
+        { text: "Surah 31:12-19 - Luqman's wisdom", approach: "tafsir" }
+      ],
       practicing_muslim: [
         { text: "Surah 2:255 - Ayatul Kursi", approach: "tafsir" },
         { text: "Surah 67:1-5 - Al-Mulk opening", approach: "tafsir" },
@@ -322,7 +327,7 @@ class TafsirAPI {
         { text: "Surah 3:7 - Muhkam and Mutashabih", approach: "tafsir" },
         { text: "Surah 2:282 - Longest verse", approach: "tafsir" }
       ],
-      scholar: [
+      advanced_learner: [
         { text: "Surah 4:34 - Classical interpretations", approach: "tafsir" },
         { text: "Surah 2:106 - Naskh concept", approach: "tafsir" },
         { text: "Surah 3:7 - Hermeneutical principles", approach: "tafsir" }

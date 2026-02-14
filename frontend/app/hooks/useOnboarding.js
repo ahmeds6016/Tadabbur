@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 export function useOnboarding(userId) {
   const [onboardingState, setOnboardingState] = useState({
     hasSeenWelcome: false,
+    hasSeenFeatureIntro: false,
     hasSearched: false,
     hasUsedAnnotations: false,
     hasViewedSaved: false,
@@ -35,16 +36,8 @@ export function useOnboarding(userId) {
     if (savedState) {
       const parsed = JSON.parse(savedState);
       setOnboardingState(parsed);
-      // Only show tour if user hasn't seen welcome AND state says they should see it
-      if (!parsed.hasSeenWelcome && parsed.tutorialActive) {
-        setShowTour(true);
-        setTourType('welcome');
-      }
-    } else {
-      // First time user - show welcome tour
-      setShowTour(true);
-      setTourType('welcome');
     }
+    // No auto-start of TourOverlay — FeatureIntroModal handles first-time intro
     setIsLoaded(true); // Mark as loaded after processing
   }, [userId]);
 
@@ -101,9 +94,18 @@ export function useOnboarding(userId) {
            onboardingState.hasUsedAnnotations;
   };
 
+  const markFeatureIntroSeen = () => {
+    setOnboardingState(prev => ({
+      ...prev,
+      hasSeenFeatureIntro: true,
+      hasSeenWelcome: true
+    }));
+  };
+
   const resetOnboarding = () => {
     const initialState = {
       hasSeenWelcome: false,
+      hasSeenFeatureIntro: false,
       hasSearched: false,
       hasUsedAnnotations: false,
       hasViewedSaved: false,
@@ -125,13 +127,12 @@ export function useOnboarding(userId) {
     if (userId) {
       localStorage.setItem(`onboarding-${userId}`, JSON.stringify(initialState));
     }
-    setShowTour(true);
-    setTourType('welcome');
   };
 
   return {
     onboardingState,
     markStepComplete,
+    markFeatureIntroSeen,
     startFeatureTour,
     endFeatureTour,
     isOnboardingComplete,

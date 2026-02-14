@@ -1,4 +1,4 @@
-# Comprehensive persona-specific query suggestions
+# Consolidated persona-specific query suggestions (5 personas)
 # Each persona gets relevant suggestions based on their knowledge level and needs
 
 PERSONA_SUGGESTIONS = {
@@ -51,45 +51,27 @@ PERSONA_SUGGESTIONS = {
         ]
     },
 
-    "revert": {
+    "curious_explorer": {
         "tafsir": [
-            "1:1-7", "2:1-5", "2:30-39", "2:255", "2:256",
-            "2:261-266", "2:285-286", "3:26-27", "3:190-195",
-            "4:1", "4:36", "5:32", "6:151-153", "7:156",
-            "17:23-24", "30:21", "49:10-13", "60:8",
-            "23:1-10", "25:63-70", "29:45", "33:21",
-            "39:53-54", "42:36-43",
-            "Surah Ya-Sin verse 1-10",
-            "Surah Ar-Rahman verse 1-10",
-            "Surah Al-Kahf verse 1-10"
-        ],
-        "explore": [
-            "What is the concept of Tawakkul and how do I practice it?",
-            "How does predestination work with free will in Islam?",
-            "What lessons can we learn from Prophet Yusuf's story?",
-            "How did Prophet Ibrahim discover monotheism?",
-            "What can we learn from the People of the Cave?",
-            "How do I perform Istikhara prayer for decisions?",
-            "What are the etiquettes of making dua?",
-            "When and how should I pay Zakat?",
-            "What are the rights and responsibilities in marriage?",
-            "How should Muslims raise their children?",
-            "What does Islam say about social justice?"
-        ]
-    },
-
-    "seeker": {
-        "tafsir": [
+            # Nature and creation signs
             "2:164", "2:255", "3:190-195", "6:59", "7:54",
             "10:5-6", "13:2-4", "13:28", "24:35", "50:16",
             "57:3-6", "59:22-24", "2:115", "11:61",
+            # Soul and existence
             "17:85", "23:12-14", "32:7-9", "39:42",
             "56:83-87", "89:27-30", "31:12-19", "38:29",
             "39:9", "47:24", "51:20-21",
+            # Contemplation and wonder
             "6:95-96", "55:19-22", "88:17-20",
             "Surah Ar-Rahman verse 1-10",
             "Surah Al-Mulk verse 1-10",
-            "93:1-8", "94:1-8"
+            "93:1-8", "94:1-8",
+            # Growing in practice
+            "1:1-7", "2:1-5", "2:30-39", "2:256",
+            "4:1", "4:36", "5:32", "17:23-24",
+            "30:21", "49:10-13", "60:8",
+            "Surah Ya-Sin verse 1-10",
+            "Surah Al-Kahf verse 1-10"
         ],
         "explore": [
             "What is the nature of the soul according to the Quran?",
@@ -100,9 +82,11 @@ PERSONA_SUGGESTIONS = {
             "What does it mean to be Allah's khalifa on earth?",
             "How can one develop a personal relationship with Allah?",
             "What is the role of meditation and contemplation in Islam?",
-            "How does the Quran use nature as signs for seekers?",
+            "How does the Quran use nature as signs of the divine?",
             "What spiritual wisdom did Luqman teach his son?",
-            "What are the veils between humanity and divine truth?"
+            "What is the concept of Tawakkul and how do I practice it?",
+            "How does predestination work with free will in Islam?",
+            "What lessons can we learn from Prophet Yusuf's story?"
         ]
     },
 
@@ -172,86 +156,6 @@ PERSONA_SUGGESTIONS = {
         ]
     },
 
-    "teacher": {
-        "tafsir": [
-            "1:1-7", "2:1-5", "2:31-33", "3:7", "3:79",
-            "4:82", "6:105", "12:1-3", "12:111", "14:1-4",
-            "16:43-44", "16:89", "16:125", "18:60-69",
-            "20:25-34", "29:43", "39:9", "41:3", "47:24",
-            "12:1-10", "18:1-10", "19:1-10", "20:1-10",
-            "21:51-60", "28:1-10",
-            "What are pedagogical methods in the Quran?",
-            "How do parables function as teaching tools?",
-            "Historical context of verse 5:3",
-            "Context of revelation for verse 96:1-5",
-            "Linguistic beauty in verse 55:1-4"
-        ],
-        "explore": [
-            "What teaching methods does the Quran employ?",
-            "How are stories used for moral education in the Quran?",
-            "What is the progression of revelation on key topics?",
-            "How should Islamic education be structured by age?",
-            "What are effective methods for Quran memorization?",
-            "How does the Quran address controversial topics?",
-            "How does the Quran build moral character?",
-            "How can teachers model prophetic character?",
-            "How to teach Islam to children of mixed-faith families?"
-        ]
-    },
-
-    "scholar": {
-        "tafsir": [
-            # Methodological verses
-            "2:1", "3:7", "4:82", "6:114-115", "10:37",
-            "11:1", "15:9", "16:89", "17:88", "25:32-33",
-            "41:41-42", "56:77-79", "75:16-19", "85:21-22",
-
-            # Legal methodology
-            "2:106", "2:178-179", "2:185", "2:219",
-            "2:282-283", "4:11-12", "4:59", "5:1", "5:3",
-            "5:48", "16:116", "22:78",
-
-            # Divine mercy and proximity
-            "39:53-54", "25:70", "42:25", "4:110",
-            "2:186", "50:16", "57:4", "58:7", "11:61",
-
-            # Purpose and judgment
-            "51:56", "67:1-2", "90:4", "95:4-6", "103:1-3",
-            "21:47", "99:7-8", "3:185", "6:160",
-
-            # Day of Judgment passages
-            "75:1-6", "99:1-8", "101:1-11", "78:31-36",
-
-            # Profound metadata queries
-            "Hadith references in verse 39:73-74",
-            "Hadith narrations about verse 17:79",
-            "Hadith explaining verse 53:39-42",
-            "Legal ruling on verse 2:228",
-            "Legal ruling on verse 4:3",
-            "Circumstances of verse 4:43",
-            "Circumstances of verse 2:187",
-            "Linguistic analysis of verse 2:255",
-            "Rhetorical features of verse 24:35",
-            "Variant readings of verse 2:184"
-        ],
-        "explore": [
-            "How does the Quran reconcile divine mercy with divine justice?",
-            "What does 'Allah is closer than the jugular vein' mean for spiritual practice?",
-            "How do the 99 names reveal different aspects of divine reality?",
-            "What is the Quranic answer to human suffering and evil?",
-            "What is the meaning of being Allah's khalifa on earth?",
-            "What does the Quran mean by the 'diseased heart' and its cure?",
-            "How does remembrance (dhikr) transform the human soul?",
-            "What is the process of tazkiyah (purification) in Quranic spirituality?",
-            "How does the Quran describe the experience of death?",
-            "What is the nature of the barzakh (intermediate realm)?",
-            "What is the significance of intercession (shafa'ah) on Judgment Day?",
-            "What is the relationship between 'ilm and hikmah in the Quran?",
-            "How does the Quran view the limits of human knowledge?",
-            "What is the role of the fitrah (primordial nature) in recognizing truth?"
-        ]
-    },
-
     "student": {
         "tafsir": [
             # Structured study passages
@@ -293,6 +197,64 @@ PERSONA_SUGGESTIONS = {
             "Who are the leading contemporary Quran scholars?",
             "What is the Birmingham manuscript's significance?",
             "How to balance faith and academic objectivity?"
+        ]
+    },
+
+    "advanced_learner": {
+        "tafsir": [
+            # Methodological verses
+            "2:1", "3:7", "4:82", "6:114-115", "10:37",
+            "11:1", "15:9", "16:89", "17:88", "25:32-33",
+            "41:41-42", "56:77-79", "75:16-19", "85:21-22",
+
+            # Legal methodology
+            "2:106", "2:178-179", "2:185", "2:219",
+            "2:282-283", "4:11-12", "4:59", "5:1", "5:3",
+            "5:48", "16:116", "22:78",
+
+            # Divine mercy and proximity
+            "39:53-54", "25:70", "42:25", "4:110",
+            "2:186", "50:16", "57:4", "58:7", "11:61",
+
+            # Purpose and judgment
+            "51:56", "67:1-2", "90:4", "95:4-6", "103:1-3",
+            "21:47", "99:7-8", "3:185", "6:160",
+
+            # Day of Judgment passages
+            "75:1-6", "99:1-8", "101:1-11", "78:31-36",
+
+            # Pedagogical and teaching methodology
+            "1:1-7", "2:1-5", "2:31-33", "3:79",
+            "12:1-3", "12:111", "14:1-4", "16:43-44",
+            "16:125", "18:60-69", "29:43", "41:3",
+
+            # Profound metadata queries
+            "Hadith references in verse 39:73-74",
+            "Hadith narrations about verse 17:79",
+            "Hadith explaining verse 53:39-42",
+            "Legal ruling on verse 2:228",
+            "Legal ruling on verse 4:3",
+            "Circumstances of verse 4:43",
+            "Circumstances of verse 2:187",
+            "Linguistic analysis of verse 2:255",
+            "Rhetorical features of verse 24:35",
+            "Variant readings of verse 2:184"
+        ],
+        "explore": [
+            "How does the Quran reconcile divine mercy with divine justice?",
+            "What does 'Allah is closer than the jugular vein' mean for spiritual practice?",
+            "How do the 99 names reveal different aspects of divine reality?",
+            "What is the Quranic answer to human suffering and evil?",
+            "What is the meaning of being Allah's khalifa on earth?",
+            "What does the Quran mean by the 'diseased heart' and its cure?",
+            "How does remembrance (dhikr) transform the human soul?",
+            "What is the process of tazkiyah (purification) in Quranic spirituality?",
+            "How does the Quran describe the experience of death?",
+            "What is the nature of the barzakh (intermediate realm)?",
+            "What is the significance of intercession (shafa'ah) on Judgment Day?",
+            "What teaching methods does the Quran employ?",
+            "How are stories used for moral education in the Quran?",
+            "What is the role of the fitrah (primordial nature) in recognizing truth?"
         ]
     }
 }

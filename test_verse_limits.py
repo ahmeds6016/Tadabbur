@@ -30,7 +30,7 @@ TEST_CONFIGS = [
         ]
     },
     {
-        'persona': 'scholar',
+        'persona': 'advanced_learner',
         'expected_limit': 12,
         'queries': [
             {'query': 'Discuss the concept of tawhid', 'approach': 'semantic'},

@@ -7,7 +7,8 @@ import {
   onAuthStateChanged,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  signOut
+  signOut,
+  updateProfile
 } from 'firebase/auth';
 import { auth } from './lib/firebase';
 import { BACKEND_URL, getPersonaTheme, getPersonaIcon } from './lib/config';
@@ -21,6 +22,7 @@ import TourOverlay from './components/TourOverlay';
 import Tooltip from './components/Tooltip';
 import HelpMenu, { FloatingHelpButton } from './components/HelpMenu';
 import OnboardingProgress from './components/OnboardingProgress';
+import FeatureIntroModal from './components/FeatureIntroModal';
 import FloatingAnnotateButton from './components/FloatingAnnotateButton';
 import ConfirmDialog from './components/ConfirmDialog';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -37,6 +39,7 @@ import { useToast } from './hooks/useToast';
 import useTextSelection from './hooks/useTextSelection';
 import { useOnboarding } from './hooks/useOnboarding';
 import onboardingConfig from '../config/onboarding-messages.json';
+import { getNameInfo, validateFirstName } from './utils/nameInfo';
 
 // ============================================================================
 // MAIN COMPONENT
@@ -146,15 +149,56 @@ export default function HomePage() {
 function AuthComponent() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [firstNameError, setFirstNameError] = useState(null);
+  const [nameInfo, setNameInfo] = useState(null);
+  const [nameInfoDismissed, setNameInfoDismissed] = useState(false);
   const [error, setError] = useState('');
   const [isSignUp, setIsSignUp] = useState(true);
+  const nameDebounceRef = useRef(null);
+
+  // Debounced name info lookup
+  useEffect(() => {
+    if (!isSignUp) return;
+    clearTimeout(nameDebounceRef.current);
+    setNameInfoDismissed(false);
+    if (!firstName || firstName.trim().length < 2) {
+      setNameInfo(null);
+      return;
+    }
+    nameDebounceRef.current = setTimeout(() => {
+      const info = getNameInfo(firstName);
+      setNameInfo(info);
+    }, 400);
+    return () => clearTimeout(nameDebounceRef.current);
+  }, [firstName, isSignUp]);
+
+  const handleFirstNameChange = (value) => {
+    setFirstName(value);
+    const { valid, error: err } = validateFirstName(value);
+    setFirstNameError(valid ? null : err);
+  };
 
   const handleAuthAction = async (e) => {
     e.preventDefault();
     setError('');
+
+    // Validate firstName if provided (sign-up only)
+    if (isSignUp && firstName.trim()) {
+      const { valid, error: err } = validateFirstName(firstName);
+      if (!valid) {
+        setFirstNameError(err);
+        return;
+      }
+    }
+
     try {
       if (isSignUp) {
-        await createUserWithEmailAndPassword(auth, email, password);
+        const cred = await createUserWithEmailAndPassword(auth, email, password);
+        // Set displayName if firstName provided
+        if (firstName.trim()) {
+          await updateProfile(cred.user, { displayName: firstName.trim() });
+        }
       } else {
         await signInWithEmailAndPassword(auth, email, password);
       }
@@ -168,11 +212,62 @@ function AuthComponent() {
       <div className="card">
         <h1 style={{ textAlign: 'center', marginBottom: '16px' }}>Welcome to Tafsir Simplified</h1>
         <p style={{ fontSize: '1.1rem', color: '#666', marginBottom: '32px', textAlign: 'center' }}>
-          {isSignUp 
-            ? 'Create an account to explore classical Islamic tafsir with AI-powered insights.' 
+          {isSignUp
+            ? 'Create an account to explore classical Islamic tafsir with AI-powered insights.'
             : 'Sign in to continue your Quranic journey.'}
         </p>
         <form onSubmit={handleAuthAction} className="form">
+          {isSignUp && (
+            <div style={{ marginBottom: '12px' }}>
+              <input
+                type="text"
+                value={firstName}
+                onChange={(e) => handleFirstNameChange(e.target.value)}
+                placeholder="First name (optional)"
+                autoComplete="given-name"
+                style={{ width: '100%' }}
+              />
+              {firstNameError && (
+                <p style={{ color: '#dc2626', fontSize: '0.85rem', margin: '4px 0 0 0' }}>
+                  {firstNameError}
+                </p>
+              )}
+              {/* Name info card */}
+              {nameInfo && !nameInfoDismissed && (
+                <div style={{
+                  marginTop: '8px',
+                  padding: '12px 16px',
+                  background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
+                  borderRadius: '10px',
+                  border: '1px solid var(--primary-teal)',
+                  position: 'relative',
+                  animation: 'fadeIn 0.3s ease'
+                }}>
+                  <button
+                    type="button"
+                    onClick={() => setNameInfoDismissed(true)}
+                    style={{
+                      position: 'absolute', top: '6px', right: '8px',
+                      background: 'none', border: 'none', cursor: 'pointer',
+                      fontSize: '1.1rem', color: '#999', lineHeight: 1
+                    }}
+                    aria-label="Dismiss"
+                  >
+                    x
+                  </button>
+                  <p style={{
+                    fontWeight: '600', color: 'var(--primary-teal)',
+                    margin: '0 0 4px 0', fontSize: '0.95rem'
+                  }}>
+                    About this name
+                  </p>
+                  <p style={{ margin: 0, color: '#555', fontSize: '0.9rem', lineHeight: '1.5' }}>
+                    {nameInfo.short}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
           <input
             type="email"
             value={email}
@@ -253,40 +348,30 @@ function OnboardingComponent({ user, onProfileComplete }) {
       } catch {
         // Could not fetch personas, using defaults
         setPersonas([
-          ['new_revert', { 
-            name: 'New Revert', 
-            description: 'warm, encouraging | Format: bullets_emojis',
-            requires_knowledge_level_input: false 
+          ['new_revert', {
+            name: 'New Revert',
+            description: 'warm, encouraging | Format: academic_prose',
+            requires_knowledge_level_input: false
           }],
-          ['revert', { 
-            name: 'Revert Muslim', 
-            description: 'supportive | Format: bullets_emojis',
-            requires_knowledge_level_input: true 
+          ['curious_explorer', {
+            name: 'Curious Explorer',
+            description: 'warm, reflective | Format: academic_prose',
+            requires_knowledge_level_input: true
           }],
-          ['practicing_muslim', { 
-            name: 'Practicing Muslim', 
-            description: 'balanced | Format: balanced',
-            requires_knowledge_level_input: true 
+          ['practicing_muslim', {
+            name: 'Practicing Muslim',
+            description: 'balanced | Format: academic_prose',
+            requires_knowledge_level_input: true
           }],
-          ['scholar', { 
-            name: 'Scholar', 
-            description: 'academic | Format: academic_prose',
-            requires_knowledge_level_input: false 
-          }],
-          ['student', { 
-            name: 'Islamic Studies Student', 
+          ['student', {
+            name: 'Islamic Studies Student',
             description: 'educational | Format: academic_prose',
-            requires_knowledge_level_input: false 
+            requires_knowledge_level_input: false
           }],
-          ['teacher', { 
-            name: 'Teacher/Imam', 
-            description: 'pedagogical | Format: balanced',
-            requires_knowledge_level_input: true 
-          }],
-          ['seeker', { 
-            name: 'Spiritual Seeker', 
-            description: 'warm, reflective | Format: bullets_emojis',
-            requires_knowledge_level_input: true 
+          ['advanced_learner', {
+            name: 'Advanced Learner',
+            description: 'academic, precise | Format: academic_prose',
+            requires_knowledge_level_input: false
           }]
         ]);
       }
@@ -304,10 +389,15 @@ function OnboardingComponent({ user, onProfileComplete }) {
         persona: profile.persona,
         learning_goal: profile.learning_goal
       };
-      
+
       // Only send knowledge_level for variable personas
       if (!isDeterministicPersona) {
         payload.knowledge_level = profile.knowledge_level;
+      }
+
+      // Forward first_name from Firebase Auth displayName
+      if (user.displayName) {
+        payload.first_name = user.displayName;
       }
 
       const response = await fetch(`${BACKEND_URL}/set_profile`, {
@@ -336,7 +426,7 @@ function OnboardingComponent({ user, onProfileComplete }) {
     setProfile((prev) => ({ ...prev, persona: personaKey }));
     
     // Check if this is a deterministic persona (auto-sets knowledge_level)
-    const deterministic = ['scholar', 'student', 'new_revert'];
+    const deterministic = ['advanced_learner', 'student', 'new_revert'];
     setIsDeterministicPersona(deterministic.includes(personaKey));
     
     // Auto-advance to next step
@@ -626,11 +716,21 @@ function MainApp({ user, userProfile, onResetProfile }) {
     setCurrentTourStep,
     tourType,
     markStepComplete,
+    markFeatureIntroSeen,
     startFeatureTour,
     endFeatureTour,
     resetOnboarding,
     isLoaded: onboardingLoaded
   } = useOnboarding(user?.uid);
+
+  // Feature intro modal — show for first-time users
+  const [showFeatureIntro, setShowFeatureIntro] = useState(false);
+
+  useEffect(() => {
+    if (onboardingLoaded && !onboardingState.hasSeenFeatureIntro) {
+      setShowFeatureIntro(true);
+    }
+  }, [onboardingLoaded, onboardingState.hasSeenFeatureIntro]);
 
   // Help menu state
   const [helpMenuOpen, setHelpMenuOpen] = useState(false);
@@ -1373,7 +1473,7 @@ function MainApp({ user, userProfile, onResetProfile }) {
             <h1>Tafsir Simplified</h1>
           </div>
           <div className="user-info" data-persona-icon={personaIcon}>
-            <span>{user.email}</span>
+            <span>{user.displayName || user.email?.split('@')[0] || 'User'}</span>
             <button
               className="persona-badge clickable"
               onClick={() => setShowPersonaConfirm(true)}
@@ -1979,6 +2079,16 @@ function MainApp({ user, userProfile, onResetProfile }) {
           />
         )}
 
+        {/* Feature Intro Modal (first-time users) */}
+        <FeatureIntroModal
+          isOpen={showFeatureIntro}
+          onComplete={() => {
+            setShowFeatureIntro(false);
+            markFeatureIntroSeen();
+          }}
+          userName={user.displayName || null}
+        />
+
         {/* Tour Overlay */}
         {showTour && (
           <TourOverlay
@@ -2013,6 +2123,7 @@ function MainApp({ user, userProfile, onResetProfile }) {
           isOpen={helpMenuOpen}
           onClose={() => setHelpMenuOpen(false)}
           onStartTour={startFeatureTour}
+          onReplayFeatureIntro={() => setShowFeatureIntro(true)}
         />
 
         {/* Floating Help Button */}

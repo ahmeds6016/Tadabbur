@@ -1,0 +1,965 @@
+[
+  {
+    "canonical": "Muhammad",
+    "aliases": ["muhammad", "mohammad", "mohammed", "muhammed", "mohamed"],
+    "short": "Muhammad (also Mohammad/Mohammed) is commonly interpreted as \"praiseworthy.\"",
+    "long": "Muhammad (also spelled Mohammad or Mohammed) is a widely used given name of Arabic origin. It is commonly understood to mean \"praiseworthy\" or \"worthy of praise.\" Usage and transliterations vary across regions and languages.",
+    "language_origin": "Arabic",
+    "meaning": "praiseworthy",
+    "notes": "Multiple common transliterations."
+  },
+  {
+    "canonical": "Ahmad",
+    "aliases": ["ahmad", "ahmed", "ahmet"],
+    "short": "Ahmed (also spelled Ahmad or Ahmet) is a given name of Arabic origin meaning \"highly praised\" or \"most commendable.\"",
+    "long": "Ahmed (also spelled Ahmad or Ahmet) is a given name of Arabic origin, derived from the root \u1e25-m-d (praise). It is commonly interpreted as \"highly praised,\" \"most commendable,\" or \"one who thanks God.\" In Islamic tradition, it is recognized as one of the names associated with the Prophet Muhammad and is often connected with gratitude and virtue.",
+    "language_origin": "Arabic",
+    "meaning": "highly praised",
+    "notes": "Mentioned in Quran 61:6."
+  },
+  {
+    "canonical": "Ali",
+    "aliases": ["ali"],
+    "short": "Ali is a given name of Arabic origin commonly meaning \"elevated\" or \"exalted.\"",
+    "long": "Ali is a widely used given name of Arabic origin. It is commonly understood to mean \"elevated,\" \"exalted,\" or \"sublime.\" The name has deep roots in Arabic linguistic tradition and is used across many cultures and regions.",
+    "language_origin": "Arabic",
+    "meaning": "elevated, exalted",
+    "notes": ""
+  },
+  {
+    "canonical": "Yusuf",
+    "aliases": ["yusuf", "yousef", "yousuf", "youssef", "yosef", "yusef"],
+    "short": "Yusuf (also Yousef) is a given name of Semitic origin, often associated with the meaning \"God increases.\"",
+    "long": "Yusuf (also spelled Yousef or Yousuf) is a given name of Semitic origin found across multiple linguistic traditions. It is commonly interpreted as \"God increases\" or \"He will add.\" The name appears prominently in Quranic and Biblical narratives.",
+    "language_origin": "Arabic / Semitic",
+    "meaning": "God increases",
+    "notes": "Name of a Quranic and Biblical prophet."
+  },
+  {
+    "canonical": "Umar",
+    "aliases": ["umar", "omar", "omer"],
+    "short": "Umar (also Omar) is a given name of Arabic origin, often associated with \"flourishing\" or \"long-lived.\"",
+    "long": "Umar (also spelled Omar) is a widely used given name of Arabic origin. It is commonly associated with meanings such as \"flourishing,\" \"long-lived,\" or \"thriving.\" The name has been in use for centuries across many cultures.",
+    "language_origin": "Arabic",
+    "meaning": "flourishing, long-lived",
+    "notes": ""
+  },
+  {
+    "canonical": "Hamza",
+    "aliases": ["hamza", "hamzah"],
+    "short": "Hamza is a given name of Arabic origin commonly meaning \"strong\" or \"steadfast.\"",
+    "long": "Hamza is a given name of Arabic origin. It is commonly interpreted as \"strong,\" \"steadfast,\" or \"brave.\" The meaning \"lion\" is also popularly attributed to the name, though this is a cultural association rather than a strict etymological derivation.",
+    "language_origin": "Arabic",
+    "meaning": "strong, steadfast",
+    "notes": ""
+  },
+  {
+    "canonical": "Abdullah",
+    "aliases": ["abdullah", "abdallah", "abdillah"],
+    "short": "Abdullah is a given name of Arabic origin meaning \"servant of God (Allah).\"",
+    "long": "Abdullah (also spelled Abdallah) is a given name of Arabic origin composed of two elements: \"abd\" (servant) and \"Allah\" (God). It is commonly understood to mean \"servant of God\" and is widely used across many cultures and regions.",
+    "language_origin": "Arabic",
+    "meaning": "servant of God",
+    "notes": ""
+  },
+  {
+    "canonical": "Ibrahim",
+    "aliases": ["ibrahim", "ibraheem", "ebrahim"],
+    "short": "Ibrahim (also Ibraheem) is a given name of Semitic origin, commonly associated with \"father of many.\"",
+    "long": "Ibrahim (also spelled Ibraheem) is a given name of Semitic origin found in both Arabic and Hebrew linguistic traditions. It is commonly interpreted as \"father of many\" or \"father of nations.\" The name appears prominently in Quranic and Biblical narratives as the name of a major prophet.",
+    "language_origin": "Arabic / Semitic",
+    "meaning": "father of many",
+    "notes": "Name of a major Quranic and Biblical prophet."
+  },
+  {
+    "canonical": "Adam",
+    "aliases": ["adam", "aadam"],
+    "short": "Adam is a given name of Semitic origin, often associated with \"earth\" or \"mankind.\"",
+    "long": "Adam is a given name with deep roots in Semitic languages. It is commonly associated with meanings related to \"earth,\" \"ground,\" or \"mankind.\" The name appears in many religious and cultural traditions as the name of the first human being.",
+    "language_origin": "Arabic / Semitic",
+    "meaning": "earth, mankind",
+    "notes": ""
+  },
+  {
+    "canonical": "Zayn",
+    "aliases": ["zayn", "zain", "zayne", "zaine"],
+    "short": "Zayn (also Zain) is a given name of Arabic origin meaning \"beauty\" or \"grace.\"",
+    "long": "Zayn (also spelled Zain) is a given name of Arabic origin. It is commonly interpreted as \"beauty,\" \"grace,\" or \"adornment.\" The name is used across various cultures and has gained broader popularity in recent years.",
+    "language_origin": "Arabic",
+    "meaning": "beauty, grace",
+    "notes": ""
+  },
+  {
+    "canonical": "Khalid",
+    "aliases": ["khalid", "khaled"],
+    "short": "Khalid (also Khaled) is a given name of Arabic origin commonly meaning \"eternal\" or \"immortal.\"",
+    "long": "Khalid (also spelled Khaled) is a given name of Arabic origin. It is commonly interpreted as \"eternal,\" \"immortal,\" or \"everlasting.\" The name has been widely used across Arabic-speaking cultures for centuries.",
+    "language_origin": "Arabic",
+    "meaning": "eternal, immortal",
+    "notes": ""
+  },
+  {
+    "canonical": "Hassan",
+    "aliases": ["hassan", "hasan"],
+    "short": "Hassan (also Hasan) is a given name of Arabic origin commonly meaning \"handsome\" or \"good.\"",
+    "long": "Hassan (also spelled Hasan) is a given name of Arabic origin. It is commonly interpreted as \"handsome,\" \"good,\" or \"beautiful.\" The name has deep cultural significance and is widely used across many regions.",
+    "language_origin": "Arabic",
+    "meaning": "handsome, good",
+    "notes": ""
+  },
+  {
+    "canonical": "Hussain",
+    "aliases": ["hussain", "husain", "hussein", "husein", "husayn"],
+    "short": "Hussain (also Hussein) is a given name of Arabic origin, a diminutive form commonly meaning \"handsome\" or \"beautiful.\"",
+    "long": "Hussain (also spelled Hussein or Husayn) is a given name of Arabic origin. It is a diminutive form related to \"Hasan\" and is commonly interpreted as \"handsome,\" \"beautiful,\" or \"good.\" The name holds deep cultural and historical significance.",
+    "language_origin": "Arabic",
+    "meaning": "handsome, beautiful",
+    "notes": "Diminutive form of Hasan."
+  },
+  {
+    "canonical": "Bilal",
+    "aliases": ["bilal"],
+    "short": "Bilal is a given name of Arabic origin commonly meaning \"moisture\" or \"freshness.\"",
+    "long": "Bilal is a given name of Arabic origin. It is commonly interpreted as \"moisture,\" \"freshness,\" or \"water.\" The name is historically significant in Islamic tradition and is widely used across many cultures.",
+    "language_origin": "Arabic",
+    "meaning": "moisture, freshness",
+    "notes": ""
+  },
+  {
+    "canonical": "Tariq",
+    "aliases": ["tariq", "tarek", "tarik"],
+    "short": "Tariq (also Tarek) is a given name of Arabic origin commonly meaning \"one who knocks at the door\" or \"morning star.\"",
+    "long": "Tariq (also spelled Tarek or Tarik) is a given name of Arabic origin. It is commonly interpreted as \"one who knocks at the door,\" \"night visitor,\" or \"morning star.\" The word appears in the Quran (Surah At-Tariq) referring to a celestial body.",
+    "language_origin": "Arabic",
+    "meaning": "morning star, night visitor",
+    "notes": "Referenced in Surah At-Tariq (86)."
+  },
+  {
+    "canonical": "Salman",
+    "aliases": ["salman", "salmaan"],
+    "short": "Salman is a given name of Arabic origin commonly meaning \"safe\" or \"secure.\"",
+    "long": "Salman is a given name of Arabic origin. It is commonly interpreted as \"safe,\" \"secure,\" or \"peaceful.\" The name is widely used across many cultures and has historical significance in Islamic tradition.",
+    "language_origin": "Arabic",
+    "meaning": "safe, secure",
+    "notes": ""
+  },
+  {
+    "canonical": "Zaid",
+    "aliases": ["zaid", "zayd", "zayed"],
+    "short": "Zaid (also Zayd) is a given name of Arabic origin commonly meaning \"growth\" or \"abundance.\"",
+    "long": "Zaid (also spelled Zayd) is a given name of Arabic origin. It is commonly interpreted as \"growth,\" \"abundance,\" or \"increase.\" The name has been in use for centuries and appears in early Islamic historical records.",
+    "language_origin": "Arabic",
+    "meaning": "growth, abundance",
+    "notes": ""
+  },
+  {
+    "canonical": "Ismail",
+    "aliases": ["ismail", "ismaeel", "ismael"],
+    "short": "Ismail (also Ismael) is a given name of Semitic origin commonly meaning \"God hears\" or \"God will hear.\"",
+    "long": "Ismail (also spelled Ismaeel or Ismael) is a given name of Semitic origin. It is commonly interpreted as \"God hears\" or \"God will hear.\" The name appears prominently in Quranic and Biblical narratives as the name of a prophet.",
+    "language_origin": "Arabic / Semitic",
+    "meaning": "God hears",
+    "notes": "Name of a Quranic and Biblical prophet."
+  },
+  {
+    "canonical": "Sulayman",
+    "aliases": ["sulayman", "sulaiman", "suleiman", "solomon"],
+    "short": "Sulayman (also Sulaiman) is a given name of Semitic origin commonly meaning \"man of peace.\"",
+    "long": "Sulayman (also spelled Sulaiman or Suleiman) is a given name of Semitic origin. It is commonly interpreted as \"man of peace\" or \"peaceful.\" The name appears prominently in Quranic and Biblical narratives as a prophet-king known for wisdom.",
+    "language_origin": "Arabic / Semitic",
+    "meaning": "man of peace",
+    "notes": "Name of a prophet-king in the Quran and Bible."
+  },
+  {
+    "canonical": "Dawud",
+    "aliases": ["dawud", "dawood", "davud", "david"],
+    "short": "Dawud (also Dawood) is a given name of Semitic origin commonly meaning \"beloved.\"",
+    "long": "Dawud (also spelled Dawood) is a given name of Semitic origin. It is commonly interpreted as \"beloved\" or \"dear one.\" The name appears in Quranic and Biblical narratives as the name of a prophet-king.",
+    "language_origin": "Arabic / Semitic",
+    "meaning": "beloved",
+    "notes": "Name of a Quranic and Biblical prophet."
+  },
+  {
+    "canonical": "Yahya",
+    "aliases": ["yahya", "yahia", "yehia"],
+    "short": "Yahya is a given name of Semitic origin commonly meaning \"God gives life\" or \"living.\"",
+    "long": "Yahya is a given name of Semitic origin. It is commonly interpreted as \"God gives life,\" \"living,\" or \"He lives.\" The name appears in the Quran as the name of a prophet, corresponding to John in Biblical tradition.",
+    "language_origin": "Arabic / Semitic",
+    "meaning": "God gives life",
+    "notes": "Name of a Quranic prophet (John in Biblical tradition)."
+  },
+  {
+    "canonical": "Idris",
+    "aliases": ["idris", "idriss", "edris"],
+    "short": "Idris is a given name of Arabic origin commonly associated with \"studious\" or \"interpreter.\"",
+    "long": "Idris is a given name of Arabic origin. It is commonly associated with meanings such as \"studious,\" \"interpreter,\" or \"one who instructs.\" The name appears in the Quran as the name of an early prophet praised for patience and righteousness.",
+    "language_origin": "Arabic",
+    "meaning": "studious, interpreter",
+    "notes": "Mentioned in the Quran as a prophet (19:56-57, 21:85-86)."
+  },
+  {
+    "canonical": "Musa",
+    "aliases": ["musa", "mousa", "moussa", "moses"],
+    "short": "Musa is a given name of Semitic origin commonly meaning \"drawn out\" or \"saved from water.\"",
+    "long": "Musa is a given name of Semitic origin. Its meaning is often given as \"drawn out\" or \"saved from water,\" though the exact etymology is debated across linguistic traditions. The name appears prominently in the Quran as one of the most frequently mentioned prophets.",
+    "language_origin": "Arabic / Semitic",
+    "meaning": "drawn out, saved from water",
+    "notes": "Most frequently mentioned prophet in the Quran."
+  },
+  {
+    "canonical": "Isa",
+    "aliases": ["isa", "eisa", "eesa"],
+    "short": "Isa is a given name of Semitic origin, the Arabic form commonly associated with Jesus in Islamic tradition.",
+    "long": "Isa is a given name of Semitic origin. It is the Arabic form of the name known as Jesus in English. The name appears prominently in the Quran as the name of a major prophet. Various etymologies have been proposed, though the exact original meaning is debated.",
+    "language_origin": "Arabic / Semitic",
+    "meaning": "debated; Quranic prophet name",
+    "notes": "Name of a major Quranic prophet."
+  },
+  {
+    "canonical": "Luqman",
+    "aliases": ["luqman", "luqmaan", "lokman"],
+    "short": "Luqman is a given name of Arabic origin commonly associated with wisdom.",
+    "long": "Luqman is a given name of Arabic origin. It is most commonly associated with wisdom and sound counsel. The name appears in the Quran as Surah Luqman (31), where a wise figure advises his son on faith, gratitude, and good character.",
+    "language_origin": "Arabic",
+    "meaning": "wise",
+    "notes": "Name of Surah 31 in the Quran."
+  },
+  {
+    "canonical": "Nuh",
+    "aliases": ["nuh", "nouh", "noah"],
+    "short": "Nuh is a given name of Semitic origin commonly meaning \"rest\" or \"comfort.\"",
+    "long": "Nuh is a given name of Semitic origin. It is commonly interpreted as \"rest\" or \"comfort.\" The name appears in the Quran as the name of a major prophet known for building the ark, corresponding to Noah in Biblical tradition.",
+    "language_origin": "Arabic / Semitic",
+    "meaning": "rest, comfort",
+    "notes": "Name of a major Quranic prophet (Noah)."
+  },
+  {
+    "canonical": "Daniyal",
+    "aliases": ["daniyal", "danyal", "daniel"],
+    "short": "Daniyal is a given name of Semitic origin commonly meaning \"God is my judge.\"",
+    "long": "Daniyal (also spelled Danyal) is a given name of Semitic origin. It is commonly interpreted as \"God is my judge.\" The name is used across many cultures and linguistic traditions, appearing in both Islamic and Biblical heritage.",
+    "language_origin": "Arabic / Semitic",
+    "meaning": "God is my judge",
+    "notes": ""
+  },
+  {
+    "canonical": "Salih",
+    "aliases": ["salih", "saleh", "saalih"],
+    "short": "Salih (also Saleh) is a given name of Arabic origin commonly meaning \"virtuous\" or \"righteous.\"",
+    "long": "Salih (also spelled Saleh) is a given name of Arabic origin. It is commonly interpreted as \"virtuous,\" \"righteous,\" or \"pious.\" The name appears in the Quran as the name of a prophet sent to the people of Thamud.",
+    "language_origin": "Arabic",
+    "meaning": "virtuous, righteous",
+    "notes": "Name of a Quranic prophet."
+  },
+  {
+    "canonical": "Hud",
+    "aliases": ["hud", "hood"],
+    "short": "Hud is a given name of Arabic origin, borne by a Quranic prophet.",
+    "long": "Hud is a given name of Arabic origin. It appears in the Quran as the name of a prophet sent to the people of 'Ad. The exact etymological meaning is debated, though some scholars associate it with guidance or gentleness.",
+    "language_origin": "Arabic",
+    "meaning": "debated; Quranic prophet name",
+    "notes": "Name of Surah 11 in the Quran."
+  },
+  {
+    "canonical": "Usman",
+    "aliases": ["usman", "uthman", "osman", "othman"],
+    "short": "Usman (also Uthman/Osman) is a given name of Arabic origin commonly meaning \"baby bustard\" or \"devoted.\"",
+    "long": "Usman (also spelled Uthman or Osman) is a given name of Arabic origin. Its etymological meaning is commonly given as \"baby bustard\" (a type of bird), though the name is culturally associated with devotion and sincerity. It has deep historical significance in Islamic tradition.",
+    "language_origin": "Arabic",
+    "meaning": "baby bustard; devoted (cultural)",
+    "notes": ""
+  },
+  {
+    "canonical": "Abdurrahman",
+    "aliases": ["abdurrahman", "abdulrahman", "abderrahman", "abdul-rahman"],
+    "short": "Abdurrahman is a given name of Arabic origin meaning \"servant of the Most Merciful.\"",
+    "long": "Abdurrahman (also spelled Abdul Rahman or Abdulrahman) is a given name of Arabic origin composed of \"abd\" (servant) and \"ar-Rahman\" (the Most Merciful, one of the names of God in Islamic tradition). It is commonly understood to mean \"servant of the Most Merciful.\"",
+    "language_origin": "Arabic",
+    "meaning": "servant of the Most Merciful",
+    "notes": ""
+  },
+  {
+    "canonical": "Rayyan",
+    "aliases": ["rayyan", "rayan", "rayaan"],
+    "short": "Rayyan is a given name of Arabic origin commonly meaning \"luxuriant\" or \"well-watered.\"",
+    "long": "Rayyan (also spelled Rayan) is a given name of Arabic origin. It is commonly interpreted as \"luxuriant,\" \"well-watered,\" or \"one who quenches thirst.\" In Islamic tradition, Ar-Rayyan is the name of one of the gates of Paradise.",
+    "language_origin": "Arabic",
+    "meaning": "luxuriant, well-watered",
+    "notes": "Associated with a gate of Paradise in Islamic tradition."
+  },
+  {
+    "canonical": "Mustafa",
+    "aliases": ["mustafa", "mostafa", "mustapha"],
+    "short": "Mustafa is a given name of Arabic origin commonly meaning \"chosen\" or \"selected.\"",
+    "long": "Mustafa (also spelled Mostafa or Mustapha) is a given name of Arabic origin. It is commonly interpreted as \"chosen,\" \"selected,\" or \"the elect one.\" The name is widely used across many cultures and is traditionally associated with one of the epithets of the Prophet Muhammad.",
+    "language_origin": "Arabic",
+    "meaning": "chosen, selected",
+    "notes": ""
+  },
+  {
+    "canonical": "Anas",
+    "aliases": ["anas"],
+    "short": "Anas is a given name of Arabic origin commonly meaning \"friendliness\" or \"affection.\"",
+    "long": "Anas is a given name of Arabic origin. It is commonly interpreted as \"friendliness,\" \"affection,\" or \"good companionship.\" The name has been in use since early Islamic history and is widely used across many cultures.",
+    "language_origin": "Arabic",
+    "meaning": "friendliness, affection",
+    "notes": ""
+  },
+  {
+    "canonical": "Saad",
+    "aliases": ["saad", "sa'ad", "sad"],
+    "short": "Saad is a given name of Arabic origin commonly meaning \"happiness\" or \"good fortune.\"",
+    "long": "Saad is a given name of Arabic origin. It is commonly interpreted as \"happiness,\" \"good fortune,\" or \"felicity.\" The name has deep historical roots and is widely used across many cultures and regions.",
+    "language_origin": "Arabic",
+    "meaning": "happiness, good fortune",
+    "notes": ""
+  },
+  {
+    "canonical": "Faisal",
+    "aliases": ["faisal", "faysal", "feisal"],
+    "short": "Faisal (also Faysal) is a given name of Arabic origin commonly meaning \"decisive\" or \"judge.\"",
+    "long": "Faisal (also spelled Faysal) is a given name of Arabic origin. It is commonly interpreted as \"decisive,\" \"judge,\" or \"one who distinguishes between right and wrong.\" The name has been widely used across Arabic-speaking cultures.",
+    "language_origin": "Arabic",
+    "meaning": "decisive, judge",
+    "notes": ""
+  },
+  {
+    "canonical": "Jamal",
+    "aliases": ["jamal", "jamaal", "gamal"],
+    "short": "Jamal is a given name of Arabic origin commonly meaning \"beauty\" or \"handsomeness.\"",
+    "long": "Jamal (also spelled Jamaal or Gamal) is a given name of Arabic origin. It is commonly interpreted as \"beauty,\" \"handsomeness,\" or \"grace.\" The name is widely used across many cultures and is commonly used as a masculine given name.",
+    "language_origin": "Arabic",
+    "meaning": "beauty, handsomeness",
+    "notes": ""
+  },
+  {
+    "canonical": "Kareem",
+    "aliases": ["kareem", "karim", "kareen"],
+    "short": "Kareem (also Karim) is a given name of Arabic origin commonly meaning \"generous\" or \"noble.\"",
+    "long": "Kareem (also spelled Karim) is a given name of Arabic origin. It is commonly interpreted as \"generous,\" \"noble,\" or \"distinguished.\" Al-Karim is one of the names of God in Islamic tradition, and the name is widely used across many cultures.",
+    "language_origin": "Arabic",
+    "meaning": "generous, noble",
+    "notes": ""
+  },
+  {
+    "canonical": "Malik",
+    "aliases": ["malik", "malek", "maalik"],
+    "short": "Malik is a given name of Arabic origin commonly meaning \"king\" or \"sovereign.\"",
+    "long": "Malik (also spelled Malek) is a given name of Arabic origin. It is commonly interpreted as \"king,\" \"sovereign,\" or \"master.\" The name has deep roots in Arabic linguistic tradition and is used across many cultures and regions.",
+    "language_origin": "Arabic",
+    "meaning": "king, sovereign",
+    "notes": ""
+  },
+  {
+    "canonical": "Rashid",
+    "aliases": ["rashid", "rasheed", "rachid"],
+    "short": "Rashid (also Rasheed) is a given name of Arabic origin commonly meaning \"rightly guided\" or \"wise.\"",
+    "long": "Rashid (also spelled Rasheed) is a given name of Arabic origin. It is commonly interpreted as \"rightly guided,\" \"wise,\" or \"having sound judgment.\" Ar-Rashid is one of the names of God in Islamic tradition.",
+    "language_origin": "Arabic",
+    "meaning": "rightly guided, wise",
+    "notes": ""
+  },
+  {
+    "canonical": "Sami",
+    "aliases": ["sami", "saami", "samee"],
+    "short": "Sami is a given name of Arabic origin commonly meaning \"elevated\" or \"sublime.\"",
+    "long": "Sami is a given name of Arabic origin. It is commonly interpreted as \"elevated,\" \"sublime,\" or \"exalted.\" The name is widely used across many cultures and regions with various transliterations.",
+    "language_origin": "Arabic",
+    "meaning": "elevated, sublime",
+    "notes": ""
+  },
+  {
+    "canonical": "Talha",
+    "aliases": ["talha", "talhah"],
+    "short": "Talha is a given name of Arabic origin commonly meaning \"fruitful tree\" or \"banana tree.\"",
+    "long": "Talha is a given name of Arabic origin. It is commonly interpreted as referring to a type of fruitful tree, often identified as a banana tree or a tree in Paradise. The name has historical significance in Islamic tradition and is widely used.",
+    "language_origin": "Arabic",
+    "meaning": "fruitful tree",
+    "notes": ""
+  },
+  {
+    "canonical": "Waleed",
+    "aliases": ["waleed", "walid", "walied"],
+    "short": "Waleed (also Walid) is a given name of Arabic origin commonly meaning \"newborn\" or \"new child.\"",
+    "long": "Waleed (also spelled Walid) is a given name of Arabic origin. It is commonly interpreted as \"newborn,\" \"new child,\" or \"newly born.\" The name has been used across Arabic-speaking cultures for centuries.",
+    "language_origin": "Arabic",
+    "meaning": "newborn, new child",
+    "notes": ""
+  },
+  {
+    "canonical": "Zakaria",
+    "aliases": ["zakaria", "zakariya", "zakariyya", "zechariah"],
+    "short": "Zakaria (also Zakariya) is a given name of Semitic origin commonly meaning \"God has remembered.\"",
+    "long": "Zakaria (also spelled Zakariya or Zakariyya) is a given name of Semitic origin. It is commonly interpreted as \"God has remembered\" or \"God remembers.\" The name appears in the Quran as the name of a prophet, the father of Yahya (John).",
+    "language_origin": "Arabic / Semitic",
+    "meaning": "God has remembered",
+    "notes": "Name of a Quranic prophet."
+  },
+  {
+    "canonical": "Imran",
+    "aliases": ["imran", "imraan", "emran"],
+    "short": "Imran is a given name of Arabic origin associated with \"prosperity\" or \"long life.\"",
+    "long": "Imran (also spelled Imraan) is a given name of Arabic origin. It is commonly associated with \"prosperity\" or \"long life.\" The name appears in the Quran — Surah Al-Imran (3) is named after the family of Imran.",
+    "language_origin": "Arabic",
+    "meaning": "prosperity, long life",
+    "notes": "Name of Surah 3 in the Quran."
+  },
+  {
+    "canonical": "Muadh",
+    "aliases": ["muadh", "muaz", "moaz", "muaaz"],
+    "short": "Muadh is a given name of Arabic origin commonly meaning \"sheltered\" or \"protected.\"",
+    "long": "Muadh (also spelled Muaz) is a given name of Arabic origin. It is commonly interpreted as \"sheltered,\" \"protected,\" or \"granted refuge.\" The name has historical significance in Islamic tradition and is used across various cultures.",
+    "language_origin": "Arabic",
+    "meaning": "sheltered, protected",
+    "notes": ""
+  },
+  {
+    "canonical": "Owais",
+    "aliases": ["owais", "uwais", "oways", "aws"],
+    "short": "Owais (also Uwais) is a given name of Arabic origin commonly meaning \"small wolf\" or \"gifted.\"",
+    "long": "Owais (also spelled Uwais) is a given name of Arabic origin. It is commonly interpreted as a diminutive form meaning \"small wolf\" or \"gifted.\" The name has historical significance in Islamic tradition and is widely used across many cultures.",
+    "language_origin": "Arabic",
+    "meaning": "small wolf, gifted",
+    "notes": ""
+  },
+  {
+    "canonical": "Ayman",
+    "aliases": ["ayman", "aiman", "aymen"],
+    "short": "Ayman is a given name of Arabic origin commonly meaning \"blessed\" or \"fortunate.\"",
+    "long": "Ayman is a given name of Arabic origin. It is commonly interpreted as \"blessed,\" \"fortunate,\" or \"righteous.\" The name can also be associated with the right-hand side, which carries positive connotations in Arabic culture.",
+    "language_origin": "Arabic",
+    "meaning": "blessed, fortunate",
+    "notes": ""
+  },
+  {
+    "canonical": "Badr",
+    "aliases": ["badr", "bader", "badre"],
+    "short": "Badr is a given name of Arabic origin commonly meaning \"full moon.\"",
+    "long": "Badr is a given name of Arabic origin. It is commonly interpreted as \"full moon,\" symbolizing beauty and radiance. The name also has historical significance, associated with the Battle of Badr in early Islamic history.",
+    "language_origin": "Arabic",
+    "meaning": "full moon",
+    "notes": ""
+  },
+  {
+    "canonical": "Harith",
+    "aliases": ["harith", "haris", "hareth"],
+    "short": "Harith (also Haris) is a given name of Arabic origin commonly meaning \"cultivator\" or \"ploughman.\"",
+    "long": "Harith (also spelled Haris) is a given name of Arabic origin. It is commonly interpreted as \"cultivator,\" \"ploughman,\" or \"provider.\" The name has been in use since pre-Islamic times and is widely used across many cultures.",
+    "language_origin": "Arabic",
+    "meaning": "cultivator, ploughman",
+    "notes": ""
+  },
+  {
+    "canonical": "Aisha",
+    "aliases": ["aisha", "ayesha", "aysha", "aaisha"],
+    "short": "Aisha (also Ayesha) is a given name of Arabic origin commonly meaning \"alive\" or \"living.\"",
+    "long": "Aisha (also spelled Ayesha or Aysha) is a given name of Arabic origin. It is commonly interpreted as \"alive,\" \"living,\" or \"she who lives.\" The name has deep historical significance in Islamic tradition and is widely used across many cultures.",
+    "language_origin": "Arabic",
+    "meaning": "alive, living",
+    "notes": ""
+  },
+  {
+    "canonical": "Fatimah",
+    "aliases": ["fatimah", "fatima", "faatimah", "fatma"],
+    "short": "Fatimah (also Fatima) is a given name of Arabic origin commonly meaning \"one who abstains\" or \"captivating.\"",
+    "long": "Fatimah (also spelled Fatima) is a given name of Arabic origin. It is commonly interpreted as \"one who abstains,\" \"captivating,\" or \"one who weans.\" The name has deep significance in Islamic tradition and is widely used across many cultures and regions.",
+    "language_origin": "Arabic",
+    "meaning": "one who abstains, captivating",
+    "notes": ""
+  },
+  {
+    "canonical": "Khadijah",
+    "aliases": ["khadijah", "khadija", "khadiga"],
+    "short": "Khadijah (also Khadija) is a given name of Arabic origin commonly meaning \"premature child\" or \"trustworthy.\"",
+    "long": "Khadijah (also spelled Khadija) is a given name of Arabic origin. Its etymological meaning is often given as \"premature child\" or \"early baby,\" though the name is culturally associated with trustworthiness, dignity, and honor. It is widely used across many regions.",
+    "language_origin": "Arabic",
+    "meaning": "premature child; trustworthy (cultural)",
+    "notes": ""
+  },
+  {
+    "canonical": "Maryam",
+    "aliases": ["maryam", "mariam", "miriam", "meryem"],
+    "short": "Maryam (also Mariam) is a given name of Semitic origin, commonly associated with \"beloved\" or \"wished-for child.\"",
+    "long": "Maryam (also spelled Mariam or Miriam) is a given name with deep roots in Semitic languages. It is commonly associated with meanings such as \"beloved,\" \"wished-for child,\" or \"lady of the sea,\" though the exact etymology is debated. The name appears prominently in both Quranic and Biblical narratives.",
+    "language_origin": "Arabic / Semitic",
+    "meaning": "beloved, wished-for child",
+    "notes": "Name of a major figure in the Quran and Bible."
+  },
+  {
+    "canonical": "Hafsa",
+    "aliases": ["hafsa", "hafsah"],
+    "short": "Hafsa is a given name of Arabic origin commonly meaning \"gatherer\" or \"young lioness.\"",
+    "long": "Hafsa (also spelled Hafsah) is a given name of Arabic origin. It is commonly interpreted as \"gatherer\" or \"young lioness.\" The name has historical significance in Islamic tradition and is used across many cultures.",
+    "language_origin": "Arabic",
+    "meaning": "gatherer, young lioness",
+    "notes": ""
+  },
+  {
+    "canonical": "Zainab",
+    "aliases": ["zainab", "zaynab", "zeinab", "zeynab"],
+    "short": "Zainab (also Zaynab) is a given name of Arabic origin commonly meaning \"fragrant flower\" or \"beauty.\"",
+    "long": "Zainab (also spelled Zaynab or Zeinab) is a given name of Arabic origin. It is commonly interpreted as \"fragrant flower,\" \"beauty,\" or \"father's precious jewel.\" The name has deep cultural and historical significance and is widely used across many regions.",
+    "language_origin": "Arabic",
+    "meaning": "fragrant flower, beauty",
+    "notes": ""
+  },
+  {
+    "canonical": "Sumayya",
+    "aliases": ["sumayya", "sumayyah", "sumaia"],
+    "short": "Sumayya is a given name of Arabic origin commonly meaning \"high\" or \"elevated.\"",
+    "long": "Sumayya (also spelled Sumayyah) is a given name of Arabic origin. It is commonly interpreted as \"high,\" \"elevated,\" or \"lofty.\" The name holds historical significance in Islamic tradition and is used across various cultures.",
+    "language_origin": "Arabic",
+    "meaning": "high, elevated",
+    "notes": ""
+  },
+  {
+    "canonical": "Amina",
+    "aliases": ["amina", "aminah", "ameena", "ameenah"],
+    "short": "Amina (also Aminah) is a given name of Arabic origin commonly meaning \"trustworthy\" or \"faithful.\"",
+    "long": "Amina (also spelled Aminah) is a given name of Arabic origin. It is commonly interpreted as \"trustworthy,\" \"faithful,\" or \"secure.\" The name has deep historical significance in Islamic tradition and is widely used across many cultures.",
+    "language_origin": "Arabic",
+    "meaning": "trustworthy, faithful",
+    "notes": ""
+  },
+  {
+    "canonical": "Hana",
+    "aliases": ["hana", "hanaa", "hanna"],
+    "short": "Hana is a given name of Arabic origin commonly meaning \"happiness\" or \"bliss.\"",
+    "long": "Hana (also spelled Hanaa) is a given name of Arabic origin. It is commonly interpreted as \"happiness,\" \"bliss,\" or \"contentment.\" The name is used across many cultures and languages with various transliterations.",
+    "language_origin": "Arabic",
+    "meaning": "happiness, bliss",
+    "notes": ""
+  },
+  {
+    "canonical": "Layla",
+    "aliases": ["layla", "laila", "leyla", "leila"],
+    "short": "Layla (also Leila) is a given name of Arabic origin commonly meaning \"night\" or \"dark beauty.\"",
+    "long": "Layla (also spelled Laila, Leyla, or Leila) is a given name of Arabic origin. It is commonly interpreted as \"night,\" \"dark beauty,\" or \"born at night.\" The name has deep literary and cultural associations, appearing in classical Arabic poetry.",
+    "language_origin": "Arabic",
+    "meaning": "night, dark beauty",
+    "notes": "Famous in Arabic literary tradition."
+  },
+  {
+    "canonical": "Safiya",
+    "aliases": ["safiya", "safiyya", "safiyyah", "sofia"],
+    "short": "Safiya is a given name of Arabic origin commonly meaning \"pure\" or \"sincere friend.\"",
+    "long": "Safiya (also spelled Safiyya or Safiyyah) is a given name of Arabic origin. It is commonly interpreted as \"pure,\" \"sincere friend,\" or \"chosen one.\" The name has historical significance and is widely used across many cultures.",
+    "language_origin": "Arabic",
+    "meaning": "pure, sincere friend",
+    "notes": ""
+  },
+  {
+    "canonical": "Zahra",
+    "aliases": ["zahra", "zahrah", "zara"],
+    "short": "Zahra is a given name of Arabic origin commonly meaning \"flower\" or \"radiant.\"",
+    "long": "Zahra (also spelled Zahrah) is a given name of Arabic origin. It is commonly interpreted as \"flower,\" \"radiant,\" or \"bright.\" The name is widely used across many cultures and has deep cultural significance.",
+    "language_origin": "Arabic",
+    "meaning": "flower, radiant",
+    "notes": ""
+  },
+  {
+    "canonical": "Noor",
+    "aliases": ["noor", "nur", "nour", "noora", "nura"],
+    "short": "Noor (also Nur/Nour) is a given name of Arabic origin commonly meaning \"light.\"",
+    "long": "Noor (also spelled Nur or Nour) is a given name of Arabic origin. It is commonly interpreted as \"light\" or \"radiance.\" The name is used for people of various genders and appears in the Quran (Surah An-Nur). It is widely used across many cultures.",
+    "language_origin": "Arabic",
+    "meaning": "light",
+    "notes": "Referenced in Surah An-Nur (24)."
+  },
+  {
+    "canonical": "Iman",
+    "aliases": ["iman", "imaan", "eeman"],
+    "short": "Iman is a given name of Arabic origin commonly meaning \"faith\" or \"belief.\"",
+    "long": "Iman (also spelled Imaan) is a given name of Arabic origin. It is commonly interpreted as \"faith,\" \"belief,\" or \"trust in God.\" The word is a central concept in Islamic theology. The name is used across many cultures for people of various genders.",
+    "language_origin": "Arabic",
+    "meaning": "faith, belief",
+    "notes": ""
+  },
+  {
+    "canonical": "Samira",
+    "aliases": ["samira", "sameera", "samirah"],
+    "short": "Samira is a given name of Arabic origin commonly meaning \"entertaining companion\" or \"pleasant.\"",
+    "long": "Samira (also spelled Sameera) is a given name of Arabic origin. It is commonly interpreted as \"entertaining companion,\" \"pleasant,\" or \"one who converses pleasantly in the evening.\" The name is widely used across many cultures.",
+    "language_origin": "Arabic",
+    "meaning": "entertaining companion",
+    "notes": ""
+  },
+  {
+    "canonical": "Ruqayyah",
+    "aliases": ["ruqayyah", "ruqayya", "ruqaia"],
+    "short": "Ruqayyah is a given name of Arabic origin commonly meaning \"ascent\" or \"rising.\"",
+    "long": "Ruqayyah (also spelled Ruqayya) is a given name of Arabic origin. It is commonly interpreted as \"ascent,\" \"rising,\" or \"charm.\" The name has historical significance in Islamic tradition and is used across many cultures.",
+    "language_origin": "Arabic",
+    "meaning": "ascent, rising",
+    "notes": ""
+  },
+  {
+    "canonical": "Asma",
+    "aliases": ["asma", "asmaa", "asmah"],
+    "short": "Asma (also Asmaa) is a given name of Arabic origin commonly meaning \"supreme\" or \"lofty.\"",
+    "long": "Asma (also spelled Asmaa) is a given name of Arabic origin. It is commonly interpreted as \"supreme,\" \"lofty,\" or \"prestigious.\" The name has historical significance in Islamic tradition and is widely used across many cultures.",
+    "language_origin": "Arabic",
+    "meaning": "supreme, lofty",
+    "notes": ""
+  },
+  {
+    "canonical": "Sana",
+    "aliases": ["sana", "sanaa", "thana"],
+    "short": "Sana is a given name of Arabic origin commonly meaning \"brilliance\" or \"praise.\"",
+    "long": "Sana (also spelled Sanaa) is a given name of Arabic origin. It is commonly interpreted as \"brilliance,\" \"radiance,\" or \"praise.\" The name is used across many cultures and regions with various transliterations.",
+    "language_origin": "Arabic",
+    "meaning": "brilliance, praise",
+    "notes": ""
+  },
+  {
+    "canonical": "Yusra",
+    "aliases": ["yusra", "yosra"],
+    "short": "Yusra is a given name of Arabic origin commonly meaning \"ease\" or \"prosperity.\"",
+    "long": "Yusra is a given name of Arabic origin. It is commonly interpreted as \"ease,\" \"prosperity,\" or \"wealth.\" The concept of ease (yusr) appears in the Quran in the context of God providing relief alongside hardship.",
+    "language_origin": "Arabic",
+    "meaning": "ease, prosperity",
+    "notes": "Related to the Quranic concept of yusr (ease)."
+  },
+  {
+    "canonical": "Sara",
+    "aliases": ["sara", "sarah", "saara"],
+    "short": "Sara (also Sarah) is a given name of Semitic origin commonly meaning \"princess\" or \"noble woman.\"",
+    "long": "Sara (also spelled Sarah) is a given name with deep roots in Semitic languages. It is commonly interpreted as \"princess,\" \"noble woman,\" or \"lady.\" The name appears in both Quranic and Biblical narratives and is widely used across many cultures.",
+    "language_origin": "Arabic / Semitic",
+    "meaning": "princess, noble woman",
+    "notes": ""
+  },
+  {
+    "canonical": "Yasmin",
+    "aliases": ["yasmin", "yasmeen", "jasmin", "jasmine", "yasmina"],
+    "short": "Yasmin (also Yasmeen) is a given name of Persian/Arabic origin commonly meaning \"jasmine flower.\"",
+    "long": "Yasmin (also spelled Yasmeen or Jasmine) is a given name of Persian and Arabic origin. It is commonly interpreted as referring to the jasmine flower, symbolizing grace, elegance, and sweetness. The name is widely used across many cultures and regions.",
+    "language_origin": "Persian / Arabic",
+    "meaning": "jasmine flower",
+    "notes": ""
+  },
+  {
+    "canonical": "Huda",
+    "aliases": ["huda", "houda", "hudaa"],
+    "short": "Huda is a given name of Arabic origin commonly meaning \"guidance\" or \"right path.\"",
+    "long": "Huda is a given name of Arabic origin. It is commonly interpreted as \"guidance,\" \"right path,\" or \"direction.\" The concept of guidance (huda) is central in the Quran and the name is widely used across many cultures.",
+    "language_origin": "Arabic",
+    "meaning": "guidance, right path",
+    "notes": ""
+  },
+  {
+    "canonical": "Nadia",
+    "aliases": ["nadia", "nadiya", "nadya"],
+    "short": "Nadia is a given name of Arabic origin commonly meaning \"caller\" or \"announcer.\"",
+    "long": "Nadia (also spelled Nadiya) is a given name of Arabic origin. It is commonly interpreted as \"caller,\" \"announcer,\" or \"one who calls.\" The name is also associated with generosity and dew. It is widely used across many cultures and regions.",
+    "language_origin": "Arabic",
+    "meaning": "caller, announcer",
+    "notes": ""
+  },
+  {
+    "canonical": "Reem",
+    "aliases": ["reem", "rima", "rim", "reema"],
+    "short": "Reem (also Rima) is a given name of Arabic origin commonly meaning \"white gazelle.\"",
+    "long": "Reem (also spelled Rima or Reema) is a given name of Arabic origin. It is commonly interpreted as \"white gazelle\" or \"white antelope,\" symbolizing grace and beauty. The name is widely used across many Arabic-speaking cultures.",
+    "language_origin": "Arabic",
+    "meaning": "white gazelle",
+    "notes": ""
+  },
+  {
+    "canonical": "Salma",
+    "aliases": ["salma", "salmah"],
+    "short": "Salma is a given name of Arabic origin commonly meaning \"peaceful\" or \"safe.\"",
+    "long": "Salma is a given name of Arabic origin. It is commonly interpreted as \"peaceful,\" \"safe,\" or \"secure.\" The name has been in use since pre-Islamic times and is widely used across many cultures and regions.",
+    "language_origin": "Arabic",
+    "meaning": "peaceful, safe",
+    "notes": ""
+  },
+  {
+    "canonical": "Malak",
+    "aliases": ["malak", "malaak"],
+    "short": "Malak is a given name of Arabic origin commonly meaning \"angel.\"",
+    "long": "Malak is a given name of Arabic origin. It is commonly interpreted as \"angel\" or \"messenger.\" The name is widely used across many cultures and is commonly used as a feminine given name, though usage varies by region.",
+    "language_origin": "Arabic",
+    "meaning": "angel",
+    "notes": ""
+  },
+  {
+    "canonical": "Maha",
+    "aliases": ["maha"],
+    "short": "Maha is a given name of Arabic origin commonly meaning \"wild cow\" (symbolizing beautiful eyes) or \"crystal.\"",
+    "long": "Maha is a given name of Arabic origin. It is commonly interpreted as referring to a type of wild cow known for its large, beautiful eyes — making it a poetic symbol of beauty. The name is widely used across many cultures.",
+    "language_origin": "Arabic",
+    "meaning": "beautiful eyes, wild cow",
+    "notes": "Poetic symbol of beauty in Arabic literature."
+  },
+  {
+    "canonical": "Dina",
+    "aliases": ["dina", "deena", "dinah"],
+    "short": "Dina is a given name of Semitic origin commonly meaning \"judged\" or \"vindicated.\"",
+    "long": "Dina (also spelled Deena or Dinah) is a given name with roots in Semitic languages. It is commonly interpreted as \"judged,\" \"vindicated,\" or \"one who is judged fairly.\" The name appears in biblical narratives and is widely used across many cultures.",
+    "language_origin": "Arabic / Semitic",
+    "meaning": "judged, vindicated",
+    "notes": ""
+  },
+  {
+    "canonical": "Hiba",
+    "aliases": ["hiba", "hibah", "hebah"],
+    "short": "Hiba is a given name of Arabic origin commonly meaning \"gift\" or \"blessing.\"",
+    "long": "Hiba (also spelled Hibah) is a given name of Arabic origin. It is commonly interpreted as \"gift,\" \"blessing,\" or \"donation.\" The name is widely used across many cultures and carries positive connotations of generosity.",
+    "language_origin": "Arabic",
+    "meaning": "gift, blessing",
+    "notes": ""
+  },
+  {
+    "canonical": "Lubna",
+    "aliases": ["lubna", "lubnah"],
+    "short": "Lubna is a given name of Arabic origin commonly meaning \"storax tree\" or associated with sweetness.",
+    "long": "Lubna is a given name of Arabic origin. It is commonly interpreted as referring to the storax tree (a tree that produces a sweet-smelling resin). The name has literary significance in classical Arabic poetry and is widely used across many cultures.",
+    "language_origin": "Arabic",
+    "meaning": "storax tree",
+    "notes": "Appears in classical Arabic love poetry."
+  },
+  {
+    "canonical": "Marwa",
+    "aliases": ["marwa", "marwah", "merwa"],
+    "short": "Marwa is a given name of Arabic origin commonly meaning \"flint stone\" or \"white stone.\"",
+    "long": "Marwa (also spelled Marwah) is a given name of Arabic origin. It is commonly interpreted as \"flint stone\" or \"white stone.\" The name is also associated with one of the two hills (Safa and Marwa) mentioned in the Quran in relation to the Hajj pilgrimage.",
+    "language_origin": "Arabic",
+    "meaning": "flint stone, white stone",
+    "notes": "Associated with a Hajj site mentioned in the Quran."
+  },
+  {
+    "canonical": "Nawal",
+    "aliases": ["nawal", "nawaal"],
+    "short": "Nawal is a given name of Arabic origin commonly meaning \"gift\" or \"attainment.\"",
+    "long": "Nawal is a given name of Arabic origin. It is commonly interpreted as \"gift,\" \"attainment,\" or \"achievement.\" The name is widely used across many cultures and regions.",
+    "language_origin": "Arabic",
+    "meaning": "gift, attainment",
+    "notes": ""
+  },
+  {
+    "canonical": "Rabia",
+    "aliases": ["rabia", "rabiah", "rabi'a", "rabiaa"],
+    "short": "Rabia is a given name of Arabic origin commonly meaning \"spring\" or \"fourth.\"",
+    "long": "Rabia (also spelled Rabi'a) is a given name of Arabic origin. It is commonly interpreted as \"spring\" (the season) or \"fourth.\" The name has deep significance in Islamic spiritual tradition, associated with the renowned mystic Rabia al-Adawiyya.",
+    "language_origin": "Arabic",
+    "meaning": "spring, fourth",
+    "notes": ""
+  },
+  {
+    "canonical": "Jamila",
+    "aliases": ["jamila", "jameela", "djamila", "gamila"],
+    "short": "Jamila (also Jameela) is a given name of Arabic origin commonly meaning \"beautiful\" or \"elegant.\"",
+    "long": "Jamila (also spelled Jameela) is a given name of Arabic origin. It is commonly interpreted as \"beautiful,\" \"elegant,\" or \"graceful.\" The name is the feminine form of Jamal and is widely used across many cultures.",
+    "language_origin": "Arabic",
+    "meaning": "beautiful, elegant",
+    "notes": "Feminine form of Jamal."
+  },
+  {
+    "canonical": "Aaliyah",
+    "aliases": ["aaliyah", "aliyah", "aliya", "aaliya"],
+    "short": "Aaliyah (also Aliyah) is a given name of Arabic origin commonly meaning \"exalted\" or \"sublime.\"",
+    "long": "Aaliyah (also spelled Aliyah or Aliya) is a given name of Arabic origin. It is commonly interpreted as \"exalted,\" \"sublime,\" or \"high-ranking.\" The name is the feminine form of Ali and is widely used across many cultures.",
+    "language_origin": "Arabic",
+    "meaning": "exalted, sublime",
+    "notes": "Feminine form of Ali."
+  },
+  {
+    "canonical": "Basma",
+    "aliases": ["basma", "basmah", "basima"],
+    "short": "Basma is a given name of Arabic origin commonly meaning \"smile.\"",
+    "long": "Basma (also spelled Basmah) is a given name of Arabic origin. It is commonly interpreted as \"smile\" or \"joyful expression.\" The name is widely used across many cultures and carries positive connotations of warmth and cheerfulness.",
+    "language_origin": "Arabic",
+    "meaning": "smile",
+    "notes": ""
+  },
+  {
+    "canonical": "Farida",
+    "aliases": ["farida", "faridah", "fareeda"],
+    "short": "Farida is a given name of Arabic origin commonly meaning \"unique\" or \"precious gem.\"",
+    "long": "Farida (also spelled Faridah) is a given name of Arabic origin. It is commonly interpreted as \"unique,\" \"precious gem,\" or \"one of a kind.\" The name is the feminine form of Farid and is widely used across many cultures.",
+    "language_origin": "Arabic",
+    "meaning": "unique, precious gem",
+    "notes": ""
+  },
+  {
+    "canonical": "Inaya",
+    "aliases": ["inaya", "inayah", "enaya"],
+    "short": "Inaya is a given name of Arabic origin commonly meaning \"care\" or \"concern.\"",
+    "long": "Inaya (also spelled Inayah) is a given name of Arabic origin. It is commonly interpreted as \"care,\" \"concern,\" or \"solicitude.\" The name is widely used across many cultures and has gained popularity in recent years.",
+    "language_origin": "Arabic",
+    "meaning": "care, concern",
+    "notes": ""
+  },
+  {
+    "canonical": "Karima",
+    "aliases": ["karima", "karimah", "kareema"],
+    "short": "Karima is a given name of Arabic origin commonly meaning \"generous\" or \"noble.\"",
+    "long": "Karima (also spelled Karimah) is a given name of Arabic origin. It is commonly interpreted as \"generous,\" \"noble,\" or \"distinguished.\" The name is the feminine form of Karim/Kareem and is widely used across many cultures.",
+    "language_origin": "Arabic",
+    "meaning": "generous, noble",
+    "notes": "Feminine form of Karim."
+  },
+  {
+    "canonical": "Lamya",
+    "aliases": ["lamya", "lamia", "lamyaa"],
+    "short": "Lamya is a given name of Arabic origin commonly meaning \"dark-lipped\" (a mark of beauty).",
+    "long": "Lamya (also spelled Lamia) is a given name of Arabic origin. It is commonly interpreted as \"dark-lipped\" or \"having beautiful dark lips,\" which is a traditional mark of beauty in Arabic culture. The name is widely used across many cultures.",
+    "language_origin": "Arabic",
+    "meaning": "dark-lipped (beauty)",
+    "notes": ""
+  },
+  {
+    "canonical": "Munira",
+    "aliases": ["munira", "munirah", "mounira"],
+    "short": "Munira is a given name of Arabic origin commonly meaning \"luminous\" or \"radiant.\"",
+    "long": "Munira (also spelled Munirah) is a given name of Arabic origin. It is commonly interpreted as \"luminous,\" \"radiant,\" or \"bright.\" The name is the feminine form of Munir and is widely used across many cultures.",
+    "language_origin": "Arabic",
+    "meaning": "luminous, radiant",
+    "notes": "Feminine form of Munir."
+  },
+  {
+    "canonical": "Nusaybah",
+    "aliases": ["nusaybah", "nusaiba", "nosaiba"],
+    "short": "Nusaybah is a given name of Arabic origin, commonly associated with noble lineage.",
+    "long": "Nusaybah is a given name of Arabic origin. Its exact etymological meaning is debated, though it is often associated with noble lineage or high origin. The name has deep historical significance in Islamic tradition and is widely used across many cultures.",
+    "language_origin": "Arabic",
+    "meaning": "noble lineage",
+    "notes": ""
+  },
+  {
+    "canonical": "Rahmah",
+    "aliases": ["rahmah", "rahma", "rehmah"],
+    "short": "Rahmah is a given name of Arabic origin commonly meaning \"mercy\" or \"compassion.\"",
+    "long": "Rahmah (also spelled Rahma) is a given name of Arabic origin. It is commonly interpreted as \"mercy,\" \"compassion,\" or \"grace.\" The concept of rahmah (divine mercy) is central in the Quran, and the name is widely used across many cultures.",
+    "language_origin": "Arabic",
+    "meaning": "mercy, compassion",
+    "notes": ""
+  },
+  {
+    "canonical": "Sawda",
+    "aliases": ["sawda", "sawdah", "sauda"],
+    "short": "Sawda is a given name of Arabic origin, often associated with a type of palm tree or dark complexion.",
+    "long": "Sawda (also spelled Sawdah) is a given name of Arabic origin. Its meaning is sometimes given as referring to a type of palm tree, or associated with a dark or swarthy complexion. The name has historical significance in Islamic tradition and is used across various cultures.",
+    "language_origin": "Arabic",
+    "meaning": "palm tree; dark complexion",
+    "notes": ""
+  },
+  {
+    "canonical": "Tasneem",
+    "aliases": ["tasneem", "tasnim", "tasniem"],
+    "short": "Tasneem is a given name of Arabic origin commonly meaning \"a spring in Paradise.\"",
+    "long": "Tasneem (also spelled Tasnim) is a given name of Arabic origin. It is commonly interpreted as referring to a spring or fountain in Paradise. The name appears in the Quran (Surah Al-Mutaffifin 83:27) and is widely used across many cultures.",
+    "language_origin": "Arabic",
+    "meaning": "a spring in Paradise",
+    "notes": "Mentioned in the Quran (83:27)."
+  },
+  {
+    "canonical": "Wardah",
+    "aliases": ["wardah", "warda"],
+    "short": "Wardah (also Warda) is a given name of Arabic origin commonly meaning \"rose\" or \"flower.\"",
+    "long": "Wardah (also spelled Warda) is a given name of Arabic origin. It is commonly interpreted as \"rose\" or \"flower.\" The name is widely used across many cultures and carries connotations of beauty and fragrance.",
+    "language_origin": "Arabic",
+    "meaning": "rose, flower",
+    "notes": ""
+  },
+  {
+    "canonical": "Ghada",
+    "aliases": ["ghada", "ghadah"],
+    "short": "Ghada is a given name of Arabic origin commonly meaning \"graceful\" or \"delicate.\"",
+    "long": "Ghada (also spelled Ghadah) is a given name of Arabic origin. It is commonly interpreted as \"graceful,\" \"delicate,\" or \"beautiful young woman.\" The name is widely used across many cultures and regions.",
+    "language_origin": "Arabic",
+    "meaning": "graceful, delicate",
+    "notes": ""
+  },
+  {
+    "canonical": "Suha",
+    "aliases": ["suha", "soha"],
+    "short": "Suha is a given name of Arabic origin commonly meaning \"a star\" (referring to a faint star in Ursa Major).",
+    "long": "Suha (also spelled Soha) is a given name of Arabic origin. It is commonly interpreted as referring to a small, faint star in the constellation Ursa Major (the Great Bear). In classical Arabic culture, being able to see this dim star was a sign of sharp eyesight.",
+    "language_origin": "Arabic",
+    "meaning": "a star (in Ursa Major)",
+    "notes": ""
+  },
+  {
+    "canonical": "Tala",
+    "aliases": ["tala", "talah"],
+    "short": "Tala is a given name of Arabic origin commonly meaning \"gold\" or \"rising star.\"",
+    "long": "Tala is a given name of Arabic origin. It is commonly interpreted as \"gold,\" \"rising star,\" or referring to a young palm tree. The name is concise and has gained popularity across many cultures in recent years.",
+    "language_origin": "Arabic",
+    "meaning": "gold, rising star",
+    "notes": ""
+  },
+  {
+    "canonical": "Lina",
+    "aliases": ["lina", "leena", "linah"],
+    "short": "Lina is a given name of Arabic origin commonly meaning \"tender\" or \"young palm tree.\"",
+    "long": "Lina (also spelled Leena) is a given name of Arabic origin. It is commonly interpreted as \"tender,\" \"delicate,\" or \"young palm tree.\" The name is used across many cultures and languages with slightly different connotations in each.",
+    "language_origin": "Arabic",
+    "meaning": "tender, young palm tree",
+    "notes": ""
+  },
+  {
+    "canonical": "Maysa",
+    "aliases": ["maysa", "maisa", "maysaa"],
+    "short": "Maysa is a given name of Arabic origin commonly meaning \"one who walks with a proud gait.\"",
+    "long": "Maysa (also spelled Maisa) is a given name of Arabic origin. It is commonly interpreted as \"one who walks with a proud gait\" or \"graceful walker.\" The name is widely used across many cultures and carries connotations of elegance.",
+    "language_origin": "Arabic",
+    "meaning": "proud gait, graceful",
+    "notes": ""
+  },
+  {
+    "canonical": "Abeer",
+    "aliases": ["abeer", "abir"],
+    "short": "Abeer is a given name of Arabic origin commonly meaning \"fragrance\" or \"perfume.\"",
+    "long": "Abeer (also spelled Abir) is a given name of Arabic origin. It is commonly interpreted as \"fragrance,\" \"perfume,\" or \"scent of flowers.\" The name is widely used across many cultures and carries connotations of beauty and pleasantness.",
+    "language_origin": "Arabic",
+    "meaning": "fragrance, perfume",
+    "notes": ""
+  },
+  {
+    "canonical": "Duha",
+    "aliases": ["duha", "dhuha", "doha"],
+    "short": "Duha is a given name of Arabic origin commonly meaning \"forenoon\" or \"morning light.\"",
+    "long": "Duha (also spelled Dhuha) is a given name of Arabic origin. It is commonly interpreted as \"forenoon,\" \"morning light,\" or \"mid-morning brightness.\" The name is associated with Surah Ad-Duha (93) in the Quran and is widely used across many cultures.",
+    "language_origin": "Arabic",
+    "meaning": "forenoon, morning light",
+    "notes": "Associated with Surah Ad-Duha (93)."
+  },
+  {
+    "canonical": "Jannah",
+    "aliases": ["jannah", "jana", "janna"],
+    "short": "Jannah is a given name of Arabic origin commonly meaning \"garden\" or \"paradise.\"",
+    "long": "Jannah (also spelled Jana or Janna) is a given name of Arabic origin. It is commonly interpreted as \"garden\" or \"paradise.\" In Islamic theology, Jannah refers to the heavenly garden of Paradise. The name is widely used across many cultures.",
+    "language_origin": "Arabic",
+    "meaning": "garden, paradise",
+    "notes": ""
+  },
+  {
+    "canonical": "Malaika",
+    "aliases": ["malaika", "malaikah"],
+    "short": "Malaika is a given name of Arabic origin commonly meaning \"angels.\"",
+    "long": "Malaika is a given name of Arabic origin. It is commonly interpreted as \"angels\" (the plural form of malak). The name is widely used across many cultures and carries connotations of purity and grace.",
+    "language_origin": "Arabic",
+    "meaning": "angels",
+    "notes": ""
+  },
+  {
+    "canonical": "Rania",
+    "aliases": ["rania", "raniya", "raniyah", "ranya"],
+    "short": "Rania is a given name of Arabic origin commonly meaning \"gazing\" or \"queenly.\"",
+    "long": "Rania (also spelled Raniya or Ranya) is a given name of Arabic origin. It is commonly interpreted as \"gazing,\" \"content,\" or associated with queenly dignity. The name is widely used across many cultures and regions.",
+    "language_origin": "Arabic",
+    "meaning": "gazing, queenly",
+    "notes": ""
+  },
+  {
+    "canonical": "Shayma",
+    "aliases": ["shayma", "shaima", "shaymaa", "chaima"],
+    "short": "Shayma is a given name of Arabic origin commonly meaning \"one with a beauty mark.\"",
+    "long": "Shayma (also spelled Shaima or Shaymaa) is a given name of Arabic origin. It is commonly interpreted as \"one with a beauty mark\" or \"one with a good nature.\" The name has historical significance in Islamic tradition and is widely used across many cultures.",
+    "language_origin": "Arabic",
+    "meaning": "one with a beauty mark",
+    "notes": ""
+  }
+]

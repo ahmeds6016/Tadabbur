@@ -26,17 +26,13 @@ export const APP_CONSTANTS = {
   TEXT_SELECTION_MIN_LENGTH: 3
 };
 
-// Persona themes for UI
+// Persona themes for UI (5 consolidated personas)
 export const PERSONA_THEMES = {
   new_revert: {
     gradient: 'linear-gradient(135deg, #10B981 0%, #34D399 100%)',
     color: '#10B981'
   },
-  revert: {
-    gradient: 'linear-gradient(135deg, #059669 0%, #10B981 100%)',
-    color: '#059669'
-  },
-  seeker: {
+  curious_explorer: {
     gradient: 'linear-gradient(135deg, #8B5CF6 0%, #A78BFA 100%)',
     color: '#8B5CF6'
   },
@@ -44,17 +40,13 @@ export const PERSONA_THEMES = {
     gradient: 'linear-gradient(135deg, #0D9488 0%, #14B8A6 100%)',
     color: '#0D9488'
   },
-  teacher: {
-    gradient: 'linear-gradient(135deg, #D97706 0%, #F59E0B 100%)',
-    color: '#D97706'
-  },
-  scholar: {
-    gradient: 'linear-gradient(135deg, #1E3A5F 0%, #3B5A7F 100%)',
-    color: '#1E3A5F'
-  },
   student: {
     gradient: 'linear-gradient(135deg, #3B82F6 0%, #60A5FA 100%)',
     color: '#3B82F6'
+  },
+  advanced_learner: {
+    gradient: 'linear-gradient(135deg, #1E3A5F 0%, #3B5A7F 100%)',
+    color: '#1E3A5F'
   }
 };
 

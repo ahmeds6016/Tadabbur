@@ -138,11 +138,11 @@
       "description": "Starting fresh with an open heart",
       "longDescription": "Gentle guidance with warmth, patience, and encouragement for those beginning their Islamic journey"
     },
-    "revert": {
-      "icon": "📗",
-      "name": "Revert Muslim",
-      "description": "Growing with gentle, steady support",
-      "longDescription": "Supportive insights to deepen understanding for those building their foundation in Islam"
+    "curious_explorer": {
+      "icon": "🔍",
+      "name": "Curious Explorer",
+      "description": "Exploring the Quran with an open mind",
+      "longDescription": "Thoughtful and reflective interpretations for those drawn to explore spiritual meaning and wisdom"
     },
     "practicing_muslim": {
       "icon": "🕌",
@@ -150,29 +150,17 @@
       "description": "Seeking balanced, daily guidance",
       "longDescription": "Balanced reflections for steady spiritual growth and daily connection"
     },
-    "seeker": {
-      "icon": "🔍",
-      "name": "Spiritual Seeker",
-      "description": "Exploring meanings that resonate",
-      "longDescription": "Thoughtful and reflective interpretations to explore spiritual meaning"
-    },
     "student": {
       "icon": "🎓",
       "name": "Islamic Studies Student",
       "description": "Learning through structured study",
       "longDescription": "Comprehensive tafsir grounded in authentic sources for academic learning"
     },
-    "scholar": {
+    "advanced_learner": {
       "icon": "📚",
-      "name": "Scholar",
+      "name": "Advanced Learner",
       "description": "Engaging with depth and precision",
-      "longDescription": "Detailed analysis with scholarly precision and classical commentary"
-    },
-    "teacher": {
-      "icon": "👨‍🏫",
-      "name": "Teacher / Imam",
-      "description": "Preparing to guide and inspire",
-      "longDescription": "Clear explanations and teaching-oriented insights for educators and spiritual guides"
+      "longDescription": "Detailed analysis with advanced insights and classical commentary for deep understanding"
     }
   }
 }

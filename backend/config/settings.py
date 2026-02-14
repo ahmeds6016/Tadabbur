@@ -121,7 +121,7 @@ class Settings(BaseSettings):
 settings = Settings()
 
 
-# Persona configuration
+# Persona configuration (5 consolidated personas)
 PERSONA_CONFIGS = {
     "new_revert": {
         "verse_limit": 5,
@@ -129,7 +129,7 @@ PERSONA_CONFIGS = {
         "include_transliteration": True,
         "simplify_language": True
     },
-    "revert": {
+    "curious_explorer": {
         "verse_limit": 7,
         "format_style": "balanced",
         "include_transliteration": True,
@@ -147,7 +147,7 @@ PERSONA_CONFIGS = {
         "include_transliteration": False,
         "simplify_language": False
     },
-    "scholar": {
+    "advanced_learner": {
         "verse_limit": 15,
         "format_style": "scholarly",
         "include_transliteration": False,
