@@ -26,8 +26,7 @@ CHARS_PER_TOKEN_MIXED = 3 # Mixed content default
 # ---------------------------------------------------------------------------
 PROMPT_OVERHEAD_TOKENS = 4_000       # Static prompt template (persona, instructions, JSON schema)
 OUTPUT_RESERVE_TOKENS = 16_384       # Reserved for model output
-SCHOLARLY_RESERVE_TOKENS = 3_500     # MAX_TOTAL_SCHOLARLY_CHARS (12 000) / ~3.4 chars/tok
-RAG_OVERHEAD_TOKENS = 500            # Cross-refs, Arabic text block, section headers
+SCHOLARLY_RESERVE_TOKENS = 4_000     # MAX_TOTAL_SCHOLARLY_CHARS (14 000) / ~3.5 chars/tok
 
 # ---------------------------------------------------------------------------
 # Derived budget for verses + tafsir context
@@ -37,7 +36,6 @@ VERSE_AND_TAFSIR_BUDGET = (
     - PROMPT_OVERHEAD_TOKENS
     - OUTPUT_RESERVE_TOKENS
     - SCHOLARLY_RESERVE_TOKENS
-    - RAG_OVERHEAD_TOKENS
 )  # = 25 616 tokens
 
 # ---------------------------------------------------------------------------

@@ -86,7 +86,7 @@ def precompute_verse_budgets(
 
     Scholarly source cost is accounted for separately as a fixed budget
     reservation (SCHOLARLY_RESERVE_TOKENS = 3500) because scholarly content
-    is capped at MAX_TOTAL_SCHOLARLY_CHARS = 12000 per query regardless of
+    is capped at MAX_TOTAL_SCHOLARLY_CHARS = 14000 per query regardless of
     verse count.
     """
     global _VERSE_TOKEN_COSTS, _PREFIX_SUMS, _MAX_END_LOOKUP, _PRECOMPUTED
