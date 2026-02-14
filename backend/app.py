@@ -4554,12 +4554,10 @@ VERSE LIMITS - CRITICAL FOR PERFORMANCE
 
 🚨 STRICT VERSE LIMITS BASED ON PERSONA:
 • new_revert: Maximum 5 verses
-• revert: Maximum 5 verses
-• seeker: Maximum 5 verses
+• curious_explorer: Maximum 7 verses
 • practicing_muslim: Maximum 8 verses
-• teacher: Maximum 8 verses
-• scholar: Maximum 12 verses
-• student: Maximum 12 verses
+• student: Maximum 10 verses
+• advanced_learner: Maximum 12 verses
 
 IMPORTANT: Even if more verses are provided in the source material, you MUST:
 1. Select only the MOST RELEVANT verses that directly answer the query
@@ -4595,9 +4593,9 @@ The Prophet (peace be upon him) taught that reciting this verse provides spiritu
 This verse reminds us that Allah's care never ceases. When we feel alone, we can find comfort in knowing He is always aware and present."
 
 VOCABULARY ADAPTATION BY PERSONA:
-- Beginner personas (new_revert, revert, seeker): Use simple, everyday language while maintaining paragraph structure
-- Intermediate personas (practicing_muslim, teacher): Use moderate vocabulary with some Arabic terms explained
-- Advanced personas (scholar, student): Use technical terminology and scholarly citations
+- Beginner personas (new_revert, curious_explorer): Use simple, everyday language while maintaining paragraph structure
+- Intermediate personas (practicing_muslim): Use moderate vocabulary with some Arabic terms explained
+- Advanced personas (student, advanced_learner): Use technical terminology and scholarly citations
 
 JSON Structure (verse text ALREADY provided by backend - you focus on tafsir):
 
@@ -5458,7 +5456,7 @@ def set_profile():
     Set or update user's learning profile with smart knowledge_level handling.
     
     NEW LOGIC:
-    - Deterministic personas (scholar, student, new_revert) auto-set knowledge_level
+    - Deterministic personas (advanced_learner, student, new_revert) auto-set knowledge_level
     - Variable personas require knowledge_level from client
     - learning_goal is required for all personas
     """

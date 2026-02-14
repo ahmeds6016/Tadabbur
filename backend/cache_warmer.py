@@ -41,7 +41,7 @@ python cache_warmer.py --token abc123 --mode priority --batch-size 10
 python cache_warmer.py --token abc123 --mode single_verses --batch-size 50
 
 # Cache specific personas only
-python cache_warmer.py --token abc123 --mode single_verses --personas scholar teacher
+python cache_warmer.py --token abc123 --mode single_verses --personas student advanced_learner
 
 # Use production API
 python cache_warmer.py --token abc123 --api-url https://tafsir-backend.com/api --mode priority
