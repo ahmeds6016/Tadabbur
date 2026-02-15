@@ -1896,101 +1896,6 @@ function MainApp({ user, userProfile, onResetProfile }) {
             />
             </ErrorBoundary>
 
-            {/* Contextual Reflection Prompt */}
-            {response.reflection_prompt && user && (
-              <div className="reflection-prompt-card">
-                <div className="reflection-prompt-icon">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="10"/>
-                    <path d="M12 16v-4"/>
-                    <path d="M12 8h.01"/>
-                  </svg>
-                </div>
-                <div className="reflection-prompt-body">
-                  <p className="reflection-prompt-label">Reflection</p>
-                  <p className="reflection-prompt-text">{response.reflection_prompt}</p>
-                  <button
-                    className="reflection-prompt-btn"
-                    onClick={() => {
-                      setCurrentVerse({
-                        reflectionType: 'general',
-                        queryContext: query,
-                        prefillPrompt: response.reflection_prompt
-                      });
-                      setAnnotationDialogOpen(true);
-                      ensureShareId().catch(() => {});
-                      updateStreak();
-                    }}
-                  >
-                    Reflect
-                  </button>
-                </div>
-
-                <style jsx>{`
-                  .reflection-prompt-card {
-                    display: flex;
-                    gap: 16px;
-                    padding: 16px 20px;
-                    margin-top: 16px;
-                    background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 50%, #ede9fe 100%);
-                    border: 1px solid #ddd6fe;
-                    border-radius: 16px;
-                    animation: fadeSlideIn 0.5s ease;
-                  }
-                  @keyframes fadeSlideIn {
-                    from { opacity: 0; transform: translateY(8px); }
-                    to { opacity: 1; transform: translateY(0); }
-                  }
-                  .reflection-prompt-icon {
-                    flex-shrink: 0;
-                    color: #8b5cf6;
-                    margin-top: 2px;
-                  }
-                  .reflection-prompt-body {
-                    flex: 1;
-                  }
-                  .reflection-prompt-label {
-                    font-size: 0.75rem;
-                    font-weight: 700;
-                    text-transform: uppercase;
-                    letter-spacing: 0.08em;
-                    color: #7c3aed;
-                    margin: 0 0 8px 0;
-                  }
-                  .reflection-prompt-text {
-                    font-size: 1rem;
-                    color: #374151;
-                    line-height: 1.6;
-                    margin: 0 0 16px 0;
-                  }
-                  .reflection-prompt-btn {
-                    padding: 10px 20px;
-                    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-                    color: white;
-                    border: none;
-                    border-radius: 24px;
-                    font-weight: 600;
-                    font-size: 0.9rem;
-                    cursor: pointer;
-                    transition: all 0.2s ease;
-                  }
-                  .reflection-prompt-btn:hover {
-                    transform: translateY(-1px);
-                    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
-                  }
-                  @media (max-width: 768px) {
-                    .reflection-prompt-card {
-                      flex-direction: column;
-                      gap: 8px;
-                      padding: 16px;
-                    }
-                    .reflection-prompt-icon {
-                      display: none;
-                    }
-                  }
-                `}</style>
-              </div>
-            )}
 
             {/* Verse Recommendations */}
             {response.recommendations && (
@@ -2704,51 +2609,6 @@ function EnhancedResultsDisplay({
   return (
     <>
       <div className="results-container">
-      {/* Scholarly Sources Attribution */}
-      {scholarly_sources.length > 0 && (
-        <div style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: '6px',
-          alignItems: 'center',
-          marginBottom: '8px',
-          padding: '6px 10px',
-          background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
-          borderRadius: '8px',
-          border: '1px solid #e2e8f0',
-        }}>
-          <span style={{
-            fontSize: '0.75rem',
-            fontWeight: '600',
-            color: '#64748b',
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em',
-            marginRight: '4px',
-          }}>
-            Scholarly Sources
-          </span>
-          {scholarly_sources.map((source, idx) => (
-            <span
-              key={idx}
-              title={`${source.name} by ${source.author} — ${source.type}`}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                padding: '2px 8px',
-                background: 'white',
-                border: '1px solid #cbd5e1',
-                borderRadius: '12px',
-                fontSize: '0.7rem',
-                fontWeight: '500',
-                color: '#475569',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {source.name}
-            </span>
-          ))}
-        </div>
-      )}
 
       <TabNavigation
         resetKey={query}  // Reset to first tab (verses) on new query
@@ -2912,6 +2772,59 @@ function EnhancedResultsDisplay({
                           </div>
                         </div>
                       ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Reflection Prompt — once, at end of Tafsir section */}
+                {data.reflection_prompt && user && (
+                  <div style={{
+                    display: 'flex',
+                    gap: '12px',
+                    padding: '14px 16px',
+                    marginTop: '20px',
+                    background: 'linear-gradient(135deg, #faf5ff 0%, #f3e8ff 50%, #ede9fe 100%)',
+                    border: '1px solid #ddd6fe',
+                    borderRadius: '12px',
+                  }}>
+                    <div style={{ flex: 1 }}>
+                      <p style={{
+                        fontSize: '0.7rem',
+                        fontWeight: 700,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.08em',
+                        color: '#7c3aed',
+                        margin: '0 0 6px 0',
+                      }}>Reflection</p>
+                      <p style={{
+                        fontSize: '0.92rem',
+                        color: '#374151',
+                        lineHeight: 1.6,
+                        margin: '0 0 12px 0',
+                      }}>{data.reflection_prompt}</p>
+                      <button
+                        onClick={() => {
+                          setCurrentVerse({
+                            reflectionType: 'general',
+                            queryContext: query,
+                            prefillPrompt: data.reflection_prompt
+                          });
+                          setAnnotationDialogOpen(true);
+                          ensureShareId().catch(() => {});
+                        }}
+                        style={{
+                          padding: '8px 18px',
+                          background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '20px',
+                          fontWeight: 600,
+                          fontSize: '0.82rem',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Reflect
+                      </button>
                     </div>
                   </div>
                 )}

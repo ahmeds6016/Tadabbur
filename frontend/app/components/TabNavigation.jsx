@@ -78,13 +78,34 @@ export default function TabNavigation({
   // Get current section name for reflect
   const currentSectionName = validTabs[activeTab]?.sectionName || validTabs[activeTab]?.label || '';
 
-  // Small reflect icon SVG (pencil/pen)
-  const reflectIcon = (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 20h9"/>
-      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+  // Three-dot icon for overflow menu
+  const dotsIcon = (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+      <circle cx="12" cy="5" r="2"/>
+      <circle cx="12" cy="12" r="2"/>
+      <circle cx="12" cy="19" r="2"/>
     </svg>
   );
+
+  // Track which desktop section has its menu open
+  const [openDesktopMenu, setOpenDesktopMenu] = useState(null);
+  const desktopMenuRef = useRef(null);
+
+  // Close desktop overflow menu on outside click
+  useEffect(() => {
+    if (openDesktopMenu === null) return;
+    const handler = (e) => {
+      if (desktopMenuRef.current && !desktopMenuRef.current.contains(e.target)) {
+        setOpenDesktopMenu(null);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    document.addEventListener('touchstart', handler);
+    return () => {
+      document.removeEventListener('mousedown', handler);
+      document.removeEventListener('touchstart', handler);
+    };
+  }, [openDesktopMenu]);
 
   // Don't use tabs on desktop - show all content with section labels
   if (!isMobile) {
@@ -98,15 +119,40 @@ export default function TabNavigation({
                 <h2 className="tab-label">{tab.label}</h2>
               </div>
               {onReflect && tab.sectionName && (
-                <button
-                  className="section-reflect-btn"
-                  onClick={() => onReflect(tab.sectionName)}
-                  title={`Reflect on ${tab.label}`}
-                  aria-label={`Reflect on ${tab.label}`}
-                >
-                  {reflectIcon}
-                  <span>Reflect</span>
-                </button>
+                <div className="section-dots-area" ref={openDesktopMenu === index ? desktopMenuRef : null}>
+                  <button
+                    className="section-dots-btn"
+                    onClick={() => setOpenDesktopMenu(openDesktopMenu === index ? null : index)}
+                    title="More options"
+                    aria-label="More options"
+                  >
+                    {dotsIcon}
+                  </button>
+                  {openDesktopMenu === index && (
+                    <div className="section-dots-menu">
+                      <button
+                        className="section-dots-menu-item"
+                        onClick={() => {
+                          setOpenDesktopMenu(null);
+                          onReflect(tab.sectionName);
+                        }}
+                      >
+                        Reflect on {tab.label}
+                      </button>
+                      {onReflectAll && (
+                        <button
+                          className="section-dots-menu-item"
+                          onClick={() => {
+                            setOpenDesktopMenu(null);
+                            onReflectAll();
+                          }}
+                        >
+                          Reflect on entire response
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
               )}
             </header>
             <div className="desktop-section-body">
@@ -149,25 +195,64 @@ export default function TabNavigation({
             margin: 0;
           }
 
-          .section-reflect-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            padding: 5px 10px;
-            background: none;
-            border: 1px solid #ddd6fe;
-            border-radius: 6px;
-            color: #7c3aed;
-            font-size: 0.72rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.15s ease;
-            white-space: nowrap;
+          .section-dots-area {
+            position: relative;
           }
 
-          .section-reflect-btn:hover {
+          .section-dots-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            background: none;
+            border: none;
+            border-radius: 6px;
+            color: #9ca3af;
+            cursor: pointer;
+            transition: all 0.15s ease;
+          }
+
+          .section-dots-btn:hover {
+            background: #f3f4f6;
+            color: #6b7280;
+          }
+
+          .section-dots-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 4px;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+            min-width: 200px;
+            z-index: 100;
+            overflow: hidden;
+          }
+
+          .section-dots-menu-item {
+            display: block;
+            width: 100%;
+            padding: 10px 16px;
+            background: none;
+            border: none;
+            text-align: left;
+            cursor: pointer;
+            transition: background 0.15s ease;
+            font-size: 0.82rem;
+            color: #374151;
+            font-weight: 500;
+          }
+
+          .section-dots-menu-item:hover {
             background: #f5f3ff;
-            border-color: #c4b5fd;
+            color: #7c3aed;
+          }
+
+          .section-dots-menu-item + .section-dots-menu-item {
+            border-top: 1px solid #f3f4f6;
           }
 
           .desktop-section-body {
@@ -212,29 +297,26 @@ export default function TabNavigation({
             </button>
           ))}
 
-          {/* Reflect action in tab bar — shows when current tab has a section or entire-response reflect is available */}
+          {/* Three-dot overflow menu for reflect */}
           {onReflect && (currentSectionName || onReflectAll) && (
-            <div className="tab-reflect-area" ref={menuRef}>
+            <div className="tab-dots-area" ref={menuRef}>
               <button
-                className="tab-reflect-btn"
+                className="tab-dots-btn"
                 onClick={() => {
-                  // If current tab has a section AND there's also a reflectAll, show menu for choice
                   if (currentSectionName && onReflectAll) {
                     setShowReflectMenu(!showReflectMenu);
                   } else if (currentSectionName) {
                     onReflect(currentSectionName);
                   } else if (onReflectAll) {
-                    // On a tab with no section (e.g., Verses) — go straight to entire response
                     onReflectAll();
                   }
                 }}
-                title="Reflect"
-                aria-label="Reflect on this section"
+                title="More options"
+                aria-label="More options"
               >
-                {reflectIcon}
+                {dotsIcon}
               </button>
 
-              {/* Overflow menu for reflect scope */}
               {showReflectMenu && (
                 <div className="reflect-menu">
                   {currentSectionName && (
@@ -347,31 +429,32 @@ export default function TabNavigation({
           background: var(--primary-teal, #0d9488);
         }
 
-        /* Reflect button in tab bar */
-        .tab-reflect-area {
+        /* Three-dot button in tab bar */
+        .tab-dots-area {
           position: relative;
           display: flex;
           align-items: center;
-          padding: 0 8px;
+          padding: 0 6px;
           flex-shrink: 0;
         }
 
-        .tab-reflect-btn {
+        .tab-dots-btn {
           display: flex;
           align-items: center;
           justify-content: center;
-          width: 32px;
-          height: 32px;
+          width: 28px;
+          height: 28px;
           background: none;
-          border: 1px solid #ddd6fe;
-          border-radius: 8px;
-          color: #7c3aed;
+          border: none;
+          border-radius: 6px;
+          color: #9ca3af;
           cursor: pointer;
           transition: all 0.15s ease;
         }
 
-        .tab-reflect-btn:active {
-          background: #f5f3ff;
+        .tab-dots-btn:active {
+          background: #f3f4f6;
+          color: #6b7280;
         }
 
         /* Overflow menu */
