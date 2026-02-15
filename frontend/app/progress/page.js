@@ -286,14 +286,17 @@ export default function ProgressPage() {
           line-height: 1;
         }
         .surah-tile__name {
-          font-size: 0.75rem;
+          font-size: 0.72rem;
           font-weight: 700;
           color: var(--deep-blue, #1e293b);
-          line-height: 1.2;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
+          line-height: 1.15;
+          text-align: center;
+          word-break: break-word;
           max-width: 100%;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
         }
         .surah-tile__bar-track {
           width: 80%;

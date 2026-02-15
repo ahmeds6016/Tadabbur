@@ -1,8 +1,12 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
+import {
+  Flame, Calendar, Star, Search, Brain, GraduationCap,
+  Compass, Globe, PenLine, Heart, Crown, BookOpen, Trophy, Rocket,
+} from 'lucide-react';
 import { BACKEND_URL } from '../lib/config';
 
-// Color palette for badge icons (colored circles, no abbreviations)
+// Color palette for badge icons
 const BADGE_COLORS = {
   fire: '#EF4444',
   calendar: '#2563EB',
@@ -20,6 +24,45 @@ const BADGE_COLORS = {
   rocket: '#7C3AED',
 };
 
+// Lucide icon mapping for each badge type
+const BADGE_ICONS = {
+  fire: Flame,
+  calendar: Calendar,
+  star: Star,
+  search: Search,
+  brain: Brain,
+  graduation: GraduationCap,
+  compass: Compass,
+  globe: Globe,
+  pen: PenLine,
+  heart: Heart,
+  crown: Crown,
+  book: BookOpen,
+  trophy: Trophy,
+  rocket: Rocket,
+};
+
+/** Render a badge icon with translucent colored background */
+function BadgeIcon({ iconKey, size = 40 }) {
+  const color = BADGE_COLORS[iconKey] || BADGE_COLORS.trophy;
+  const IconComponent = BADGE_ICONS[iconKey] || Trophy;
+  const iconSize = Math.round(size * 0.5);
+  return (
+    <span style={{
+      background: `${color}15`,
+      width: size,
+      height: size,
+      borderRadius: size > 30 ? 12 : 6,
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexShrink: 0,
+    }}>
+      <IconComponent size={iconSize} color={color} strokeWidth={2.2} />
+    </span>
+  );
+}
+
 /** Toast-style popup shown when a badge is newly earned. */
 export function BadgePopup({ badge, onClose }) {
   const [visible, setVisible] = useState(false);
@@ -34,11 +77,9 @@ export function BadgePopup({ badge, onClose }) {
     return () => clearTimeout(timer);
   }, [onClose]);
 
-  const color = BADGE_COLORS[badge.icon] || BADGE_COLORS.trophy;
-
   return (
     <div className={`badge-popup ${visible ? 'badge-popup--visible' : ''}`}>
-      <div className="badge-popup__icon" style={{ background: color, width: 40, height: 40, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '1.1rem', fontWeight: 700 }}>{badge.name.charAt(0)}</div>
+      <BadgeIcon iconKey={badge.icon} size={40} />
       <div className="badge-popup__body">
         <span className="badge-popup__title">Badge Earned!</span>
         <strong className="badge-popup__name">{badge.name}</strong>
@@ -211,8 +252,8 @@ export default function BadgeDisplay({ user, compact = false }) {
         <span className="badge-compact__count">{totalEarned}/{totalAvailable} badges earned</span>
         <div className="badge-compact__icons">
           {earned.map((b) => (
-            <span key={b.id} className="badge-compact__icon" title={b.name} style={{ background: BADGE_COLORS[b.icon] || BADGE_COLORS.trophy, width: 22, height: 22, borderRadius: 6, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.65rem', fontWeight: 700 }}>
-              {b.name.charAt(0)}
+            <span key={b.id} title={b.name}>
+              <BadgeIcon iconKey={b.icon} size={24} />
             </span>
           ))}
         </div>
@@ -250,11 +291,10 @@ export default function BadgeDisplay({ user, compact = false }) {
       </div>
       <div className="badge-grid">
         {badges.map((b) => {
-          const color = BADGE_COLORS[b.icon] || BADGE_COLORS.trophy;
           const earned = b.earned;
           return (
             <div key={b.id} className={`badge-card ${earned ? 'badge-card--earned' : 'badge-card--locked'}`}>
-              <span className="badge-card__icon" style={{ background: color, width: 40, height: 40, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, fontSize: '1.1rem' }}>{b.name.charAt(0)}</span>
+              <BadgeIcon iconKey={b.icon} size={44} />
               <strong className="badge-card__title">{b.name}</strong>
               <span className="badge-card__desc">{b.description}</span>
               {earned && b.earned_at && (

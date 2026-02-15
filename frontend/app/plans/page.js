@@ -260,7 +260,10 @@ export default function PlansPage() {
                 <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--deep-blue, #1e293b)', marginBottom: 4 }}>
                   Day {planProgress.current_day} of {totalDays} — {planProgress.today_verse.title}
                 </div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--gold, #b8860b)', fontWeight: 500, marginBottom: 12 }}>
+                <div
+                  onClick={() => handleStudyVerse(planProgress.today_verse.surah, planProgress.today_verse.verse)}
+                  style={{ fontSize: '0.8rem', color: 'var(--gold, #b8860b)', fontWeight: 500, marginBottom: 12, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
+                >
                   {planProgress.today_verse.surah_name} ({planProgress.today_verse.surah}:{planProgress.today_verse.verse})
                 </div>
 
@@ -430,8 +433,9 @@ export default function PlansPage() {
                       >
                         <span style={{ fontSize: '0.65rem', fontWeight: 600, color: '#888', lineHeight: 1 }}>{surah.number}</span>
                         <span style={{
-                          fontSize: '0.75rem', fontWeight: 700, color: 'var(--deep-blue, #1e293b)',
-                          lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%',
+                          fontSize: '0.72rem', fontWeight: 700, color: 'var(--deep-blue, #1e293b)',
+                          lineHeight: 1.15, textAlign: 'center', wordBreak: 'break-word', maxWidth: '100%',
+                          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
                         }}>{surah.name}</span>
                         <div style={{ width: '80%', height: 4, background: 'rgba(0,0,0,0.1)', borderRadius: 2, overflow: 'hidden', marginTop: 2 }}>
                           <div style={{ height: '100%', width: `${pct}%`, background: 'var(--primary-teal, #0d9488)', borderRadius: 2 }} />
@@ -454,6 +458,9 @@ export default function PlansPage() {
                 <style jsx>{`
                   @media (max-width: 640px) {
                     div > div:first-child { grid-template-columns: repeat(4, 1fr) !important; gap: 6px !important; }
+                  }
+                  @media (max-width: 380px) {
+                    div > div:first-child { grid-template-columns: repeat(3, 1fr) !important; }
                   }
                 `}</style>
               </>

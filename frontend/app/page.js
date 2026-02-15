@@ -689,7 +689,6 @@ function MainApp({ user, userProfile, onResetProfile }) {
   // Daily verse & streak state
   const [dailyVerse, setDailyVerse] = useState(null);
   const [streak, setStreak] = useState({ current_streak: 0, longest_streak: 0 });
-  const [showStreakPopup, setShowStreakPopup] = useState(false);
 
   // Badge popup state
   const [badgePopup, setBadgePopup] = useState(null);
@@ -727,12 +726,6 @@ function MainApp({ user, userProfile, onResetProfile }) {
     }
   }, [onboardingLoaded, onboardingState.hasSeenFeatureIntro]);
 
-  // Auto-dismiss streak popup after 4 seconds
-  useEffect(() => {
-    if (!showStreakPopup) return;
-    const timer = setTimeout(() => setShowStreakPopup(false), 4000);
-    return () => clearTimeout(timer);
-  }, [showStreakPopup]);
 
   // Help menu state
   const [helpMenuOpen, setHelpMenuOpen] = useState(false);
@@ -779,7 +772,6 @@ function MainApp({ user, userProfile, onResetProfile }) {
           .then(data => {
             if (data) {
               setStreak(data);
-              if (data.current_streak > 0) setShowStreakPopup(true);
             }
           })
           .catch(() => {});
@@ -841,6 +833,18 @@ function MainApp({ user, userProfile, onResetProfile }) {
       // URL params take priority over saved state
       setQuery(queryParam);
       setUrlParamsProcessed(true);
+
+      // Parse verse ref (e.g., "7:189") and sync the dropdown
+      const match = queryParam.match(/^(\d+):(\d+)/);
+      if (match) {
+        setPickerSurah(parseInt(match[1]));
+        setPickerVerse(parseInt(match[2]));
+      }
+
+      // Auto-submit the search form
+      setTimeout(() => {
+        document.querySelector('.tafsir-form')?.requestSubmit();
+      }, 200);
 
       // Clear the URL params after reading them (clean URL)
       if (typeof window !== 'undefined') {
@@ -1501,190 +1505,132 @@ function MainApp({ user, userProfile, onResetProfile }) {
           </div>
         </div>
 
-        {/* Navigation Links - Desktop Only */}
+        {/* Navigation Links - Desktop Only (compact) */}
         {!isMobile && (
           <div style={{
             display: 'flex',
-            gap: '12px',
-            marginBottom: '24px',
-            flexWrap: 'wrap',
+            gap: '8px',
+            marginBottom: '16px',
             justifyContent: 'center'
           }}>
-            <a
-              href="/history"
-              style={{
-                padding: '10px 20px',
-                background: 'linear-gradient(135deg, var(--cream) 0%, rgba(212, 175, 55, 0.1) 100%)',
-                border: '2px solid var(--border-light)',
-                borderRadius: '12px',
-                color: 'var(--primary-teal)',
-                fontWeight: '600',
-                textDecoration: 'none',
-                transition: 'all 0.3s ease'
-              }}
-              className="nav-link"
-            >
-              Query History
-            </a>
-            <a
-              href="/saved"
-              style={{
-                padding: '10px 20px',
-                background: 'linear-gradient(135deg, var(--cream) 0%, rgba(212, 175, 55, 0.1) 100%)',
-                border: '2px solid var(--border-light)',
-                borderRadius: '12px',
-                color: 'var(--primary-teal)',
-                fontWeight: '600',
-                textDecoration: 'none',
-                transition: 'all 0.3s ease'
-              }}
-              className="nav-link"
-            >
-              Saved Answers
-            </a>
-            <a
-              href="/annotations"
-              style={{
-                padding: '10px 20px',
-                background: 'linear-gradient(135deg, var(--cream) 0%, rgba(212, 175, 55, 0.1) 100%)',
-                border: '2px solid var(--border-light)',
-                borderRadius: '12px',
-                color: 'var(--primary-teal)',
-                fontWeight: '600',
-                textDecoration: 'none',
-                transition: 'all 0.3s ease'
-              }}
-              className="nav-link"
-            >
-              Reflections
-            </a>
+            {[
+              { href: '/history', label: 'History' },
+              { href: '/saved', label: 'Saved' },
+              { href: '/annotations', label: 'Reflections' },
+            ].map(link => (
+              <a
+                key={link.href}
+                href={link.href}
+                style={{
+                  padding: '6px 16px',
+                  background: 'var(--cream, #faf6f0)',
+                  border: '1px solid var(--border-light)',
+                  borderRadius: '8px',
+                  color: 'var(--primary-teal)',
+                  fontWeight: '600',
+                  textDecoration: 'none',
+                  fontSize: '0.8rem',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                {link.label}
+              </a>
+            ))}
           </div>
         )}
         
         {/* Homepage Dashboard — visible when no response is showing */}
         {!response && !isTafsirLoading && (
           <div className="homepage-dashboard">
-            {/* Daily Verse Card */}
+            {/* Daily Verse — compact clickable card */}
             {dailyVerse && (
-              <div className="daily-verse-card">
-                <div className="daily-verse-label">Verse of the Day</div>
-                <div className="daily-verse-ref">
-                  {dailyVerse.surah_name} ({dailyVerse.surah}:{dailyVerse.verse}) — {dailyVerse.theme}
+              <button
+                className="daily-verse-card"
+                onClick={() => {
+                  setPickerSurah(dailyVerse.surah);
+                  setPickerVerse(dailyVerse.verse);
+                  setQuery(`${dailyVerse.surah}:${dailyVerse.verse}`);
+                  setTimeout(() => {
+                    document.querySelector('.tafsir-form')?.requestSubmit();
+                  }, 100);
+                }}
+              >
+                <div className="daily-verse-top">
+                  <span className="daily-verse-label">Verse of the Day</span>
+                  <span className="daily-verse-ref">
+                    {dailyVerse.surah_name} {dailyVerse.surah}:{dailyVerse.verse}
+                  </span>
                 </div>
-                {dailyVerse.arabic_text && (
-                  <p className="daily-verse-arabic">{dailyVerse.arabic_text}</p>
-                )}
                 {dailyVerse.english_text && (
                   <p className="daily-verse-english">{dailyVerse.english_text}</p>
                 )}
-                <button
-                  className="daily-verse-explore"
-                  onClick={() => {
-                    setPickerSurah(dailyVerse.surah);
-                    setPickerVerse(dailyVerse.verse);
-                    setQuery(`${dailyVerse.surah}:${dailyVerse.verse}`);
-                    setTimeout(() => {
-                      document.querySelector('.tafsir-form')?.requestSubmit();
-                    }, 100);
-                  }}
-                >
-                  Explore this verse
-                </button>
-              </div>
+                <span className="daily-verse-explore-hint">Tap to explore →</span>
+              </button>
             )}
-
-            {/* Badge Summary + Progress Link */}
-            <div className="progress-summary-row">
-              <BadgeDisplay user={user} compact={true} />
-              <a href="/progress" className="progress-link">
-                View Quran Progress Map
-              </a>
-            </div>
 
             {/* Themed Collections Grid */}
             <CollectionsGrid user={user} onStudyVerse={handleStudyVerse} />
 
             <style jsx>{`
               .homepage-dashboard {
-                margin-bottom: 24px;
+                margin-bottom: 16px;
               }
-              .progress-summary-row {
+              .daily-verse-card {
+                width: 100%;
+                padding: 16px 20px;
+                background: linear-gradient(135deg, #f0fdf4 0%, #f0f9ff 100%);
+                border: 1px solid #d1fae5;
+                border-radius: 14px;
+                text-align: left;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                margin-bottom: 16px;
+                font-family: inherit;
+              }
+              .daily-verse-card:hover {
+                border-color: var(--primary-teal, #0d9488);
+                box-shadow: 0 2px 12px rgba(13, 148, 136, 0.1);
+              }
+              .daily-verse-top {
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
-                gap: 12px;
-                padding: 12px 16px;
-                background: var(--cream, #fdfbf7);
-                border: 1px solid var(--border-light, #e5e7eb);
-                border-radius: 12px;
-                margin-bottom: 16px;
-                flex-wrap: wrap;
-              }
-              .progress-link {
-                font-size: 0.85rem;
-                font-weight: 600;
-                color: var(--primary-teal, #0d9488);
-                text-decoration: none;
-                transition: all 0.2s ease;
-              }
-              .progress-link:hover {
-                text-decoration: underline;
-              }
-              .daily-verse-card {
-                padding: 24px;
-                background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 50%, #f0f9ff 100%);
-                border: 1px solid #bbf7d0;
-                border-radius: 16px;
-                text-align: center;
+                gap: 8px;
               }
               .daily-verse-label {
                 text-transform: uppercase;
-                font-size: 0.7rem;
+                font-size: 0.65rem;
                 font-weight: 700;
-                letter-spacing: 0.1em;
+                letter-spacing: 0.08em;
                 color: var(--primary-teal, #0d9488);
-                margin-bottom: 8px;
+                background: rgba(13, 148, 136, 0.08);
+                padding: 3px 8px;
+                border-radius: 4px;
               }
               .daily-verse-ref {
-                font-size: 0.85rem;
+                font-size: 0.78rem;
                 color: #64748b;
-                margin-bottom: 16px;
-                font-weight: 500;
-              }
-              .daily-verse-arabic {
-                font-family: 'Scheherazade New', 'Traditional Arabic', serif;
-                font-size: 1.5rem;
-                direction: rtl;
-                line-height: 2;
-                color: var(--deep-blue, #1e3a5f);
-                margin: 0 0 12px 0;
+                font-weight: 600;
               }
               .daily-verse-english {
-                font-size: 0.95rem;
+                font-size: 0.88rem;
                 color: #374151;
-                line-height: 1.7;
+                line-height: 1.6;
                 font-style: italic;
-                margin: 0 0 20px 0;
+                margin: 0;
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
               }
-              .daily-verse-explore {
-                padding: 10px 24px;
-                background: var(--primary-teal, #0d9488);
-                color: white;
-                border: none;
-                border-radius: 24px;
+              .daily-verse-explore-hint {
+                font-size: 0.75rem;
+                color: var(--primary-teal, #0d9488);
                 font-weight: 600;
-                font-size: 0.9rem;
-                cursor: pointer;
-                transition: all 0.2s ease;
-              }
-              .daily-verse-explore:hover {
-                transform: translateY(-1px);
-                box-shadow: 0 4px 12px rgba(13, 148, 136, 0.3);
-              }
-              @media (max-width: 768px) {
-                .daily-verse-arabic {
-                  font-size: 1.3rem;
-                }
+                align-self: flex-end;
               }
             `}</style>
           </div>
@@ -1783,107 +1729,122 @@ function MainApp({ user, userProfile, onResetProfile }) {
 
         {response && !response.needs_clarification && (
           <>
-            {/* Sticky Result Navigation */}
+            {/* Sticky Result Navigation with Save & Share */}
             <div style={{
               position: 'sticky',
               top: 'calc(env(safe-area-inset-top) + 56px)',
               zIndex: 'var(--z-sticky, 200)',
               background: 'white',
-              borderBottom: '2px solid var(--border-light)',
-              padding: '12px 16px',
-              marginBottom: '24px',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+              borderBottom: '1px solid var(--border-light)',
+              padding: '10px 16px',
+              marginBottom: '20px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
               display: 'flex',
-              gap: '12px',
               alignItems: 'center',
               justifyContent: 'space-between',
-              borderRadius: '12px'
+              borderRadius: '12px',
+              gap: '8px',
             }}>
-              <div style={{ display: 'flex', gap: '8px', flex: 1, alignItems: 'center' }}>
-                <button
-                  onClick={() => {
-                    if (abortControllerRef.current) {
-                      abortControllerRef.current.abort();
-                    }
-                    setIsTafsirLoading(false);
-                    setResponse(null);
-                    setError('');
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
-                  style={{
-                    padding: '8px 16px',
-                    background: 'var(--primary-teal)',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    fontSize: '0.9rem',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    transition: 'all 0.2s ease',
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.05)'; e.currentTarget.style.opacity = '0.9'; }}
-                  onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.opacity = '1'; }}
-                  title={!isMobile ? 'Back (Esc)' : 'Back'}
+              {/* Left: Back button */}
+              <button
+                onClick={() => {
+                  if (abortControllerRef.current) {
+                    abortControllerRef.current.abort();
+                  }
+                  setIsTafsirLoading(false);
+                  setResponse(null);
+                  setError('');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                style={{
+                  padding: '7px 14px',
+                  background: 'var(--primary-teal)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '0.82rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  transition: 'all 0.2s ease',
+                  flexShrink: 0,
+                }}
+                onMouseEnter={e => { e.currentTarget.style.opacity = '0.85'; }}
+                onMouseLeave={e => { e.currentTarget.style.opacity = '1'; }}
+                title={!isMobile ? 'Back (Esc)' : 'Back'}
+              >
+                ←
+                {isTafsirLoading ? ' Stop' : ' Back'}
+                {!isMobile && <kbd style={{
+                  background: 'rgba(255,255,255,0.2)',
+                  padding: '1px 5px',
+                  borderRadius: '3px',
+                  fontSize: '0.7rem',
+                }}>Esc</kbd>}
+              </button>
+
+              {/* Center: Query label */}
+              <div style={{
+                fontSize: '0.8rem',
+                color: '#555',
+                fontWeight: '600',
+                padding: '4px 10px',
+                background: 'var(--cream)',
+                borderRadius: '6px',
+                border: '1px solid var(--border-light)',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                minWidth: 0,
+              }}>
+                {query.substring(0, 20)}{query.length > 20 ? '…' : ''}
+              </div>
+
+              {/* Right: Save & Share actions */}
+              <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                <button onClick={handleSaveSearch} style={{
+                  padding: '6px 12px',
+                  background: 'var(--cream, #faf6f0)',
+                  border: '1px solid var(--border-light, #e5e7eb)',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  color: 'var(--primary-teal, #0d9488)',
+                  fontSize: '0.78rem',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(13,148,136,0.08)'; e.currentTarget.style.borderColor = 'var(--primary-teal, #0d9488)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'var(--cream, #faf6f0)'; e.currentTarget.style.borderColor = 'var(--border-light, #e5e7eb)'; }}
                 >
-                  {isTafsirLoading ? 'Stop' : 'Back'}
-                  {!isMobile && <kbd style={{
-                    background: 'rgba(255,255,255,0.2)',
-                    padding: '2px 6px',
-                    borderRadius: '4px',
-                    fontSize: '0.75rem',
-                    marginLeft: '4px'
-                  }}>Esc</kbd>}
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                  Save
+                </button>
+                <button onClick={handleShareLink} style={{
+                  padding: '6px 12px',
+                  background: 'var(--cream, #faf6f0)',
+                  border: '1px solid var(--border-light, #e5e7eb)',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  color: 'var(--primary-teal, #0d9488)',
+                  fontSize: '0.78rem',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(13,148,136,0.08)'; e.currentTarget.style.borderColor = 'var(--primary-teal, #0d9488)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'var(--cream, #faf6f0)'; e.currentTarget.style.borderColor = 'var(--border-light, #e5e7eb)'; }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                  Share
                 </button>
               </div>
-              <div style={{
-                fontSize: '0.85rem',
-                color: '#666',
-                fontWeight: '600',
-                padding: '4px 12px',
-                background: 'var(--cream)',
-                borderRadius: '8px',
-                border: '1px solid var(--border-light)'
-              }}>
-                Query: {query.substring(0, 30)}{query.length > 30 ? '...' : ''}
-              </div>
-            </div>
-
-            {/* Save & Share */}
-            <div style={{
-              marginBottom: '12px',
-              display: 'flex',
-              justifyContent: 'flex-end',
-              gap: '10px'
-            }}>
-              <button onClick={handleSaveSearch} style={{
-                padding: '6px 14px',
-                background: 'transparent',
-                border: '1px solid var(--primary-teal, #0d9488)',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                fontWeight: '500',
-                color: 'var(--primary-teal, #0d9488)',
-                fontSize: '0.8rem',
-                transition: 'all 0.2s ease'
-              }}>
-                Save
-              </button>
-              <button onClick={handleShareLink} style={{
-                padding: '6px 14px',
-                background: 'transparent',
-                border: '1px solid var(--primary-teal, #0d9488)',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                fontWeight: '500',
-                color: 'var(--primary-teal, #0d9488)',
-                fontSize: '0.8rem',
-                transition: 'all 0.2s ease'
-              }}>
-                Share
-              </button>
             </div>
 
             <ErrorBoundary>
@@ -2042,51 +2003,6 @@ function MainApp({ user, userProfile, onResetProfile }) {
         )}
       </div>
 
-        {/* Streak Popup Toast — auto-dismisses after 4s */}
-        {showStreakPopup && streak.current_streak > 0 && (
-          <div style={{
-            position: 'fixed',
-            bottom: 80,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 8000,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            padding: '10px 18px',
-            background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
-            border: '1px solid #fbbf24',
-            borderRadius: 12,
-            boxShadow: '0 4px 20px rgba(251, 191, 36, 0.3)',
-            animation: 'streakSlideUp 0.35s ease',
-            maxWidth: 320,
-          }}>
-            <span style={{ fontSize: '1.1rem', fontWeight: 700, color: '#92400e' }}>
-              {streak.current_streak} day streak
-            </span>
-            <span style={{ fontSize: '0.78rem', color: '#a16207' }}>
-              Best: {streak.longest_streak}
-            </span>
-            <button
-              onClick={() => setShowStreakPopup(false)}
-              style={{
-                background: 'none', border: 'none',
-                color: '#92400e', cursor: 'pointer',
-                fontSize: '0.85rem', fontWeight: 600,
-                padding: '2px 6px', marginLeft: 4,
-              }}
-              aria-label="Dismiss streak notification"
-            >
-              x
-            </button>
-            <style jsx>{`
-              @keyframes streakSlideUp {
-                from { opacity: 0; transform: translateX(-50%) translateY(20px); }
-                to { opacity: 1; transform: translateX(-50%) translateY(0); }
-              }
-            `}</style>
-          </div>
-        )}
 
         {/* Bottom Navigation for PWA */}
         <BottomNav user={user} />
