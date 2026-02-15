@@ -39,3 +39,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Capacitor — keep ios/ project but exclude build artifacts
+ios/App/App/public/
+ios/App/Pods/
+ios/DerivedData/
+ios/build/
+*.xcworkspace/xcuserdata/
