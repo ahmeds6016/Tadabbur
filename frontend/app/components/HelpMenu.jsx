@@ -47,12 +47,11 @@ const helpContent = {
       }
     ],
     shortcuts: [
-      { keys: ['Ctrl', 'K'], action: 'Focus search bar' },
-      { keys: ['Esc'], action: 'Clear search results' },
-      { keys: ['Alt', 'H'], action: 'Go to Home' },
-      { keys: ['Alt', 'S'], action: 'Go to Saved' },
-      { keys: ['Alt', 'N'], action: 'Go to Reflections' },
-      { keys: ['Alt', 'B'], action: 'Toggle sidebar' }
+      { keys: ['Ctrl', 'K'], action: 'Scroll to verse picker' },
+      { keys: ['Esc'], action: 'Cancel request / clear results' },
+      { keys: ['Alt', 'S'], action: 'Save current result' },
+      { keys: ['Alt', 'H'], action: 'Open help menu' },
+      { keys: ['Alt', 'N'], action: 'New search (clear and scroll up)' }
     ]
   },
   results: {

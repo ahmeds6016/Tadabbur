@@ -1304,10 +1304,12 @@ function MainApp({ user, userProfile, onResetProfile }) {
 
     try {
       // Create shareable link via backend
+      const token = await user.getIdToken();
       const res = await fetch(`${BACKEND_URL}/share`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
         },
         body: JSON.stringify({
           query: query,
@@ -1884,6 +1886,7 @@ function MainApp({ user, userProfile, onResetProfile }) {
               </button>
             </div>
 
+            <ErrorBoundary>
             <EnhancedResultsDisplay
               data={response}
               user={user}
@@ -1930,6 +1933,7 @@ function MainApp({ user, userProfile, onResetProfile }) {
               onAnnotationClose={handleAnnotationClose}
               onGeneralReflection={handleGeneralReflection}
             />
+            </ErrorBoundary>
 
             {/* Contextual Reflection Prompt */}
             {response.reflection_prompt && user && (

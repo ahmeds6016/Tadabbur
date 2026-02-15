@@ -65,8 +65,10 @@ export default function SavedSearchesPage() {
   };
 
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteError, setDeleteError] = useState(null);
 
   const handleDelete = async (id) => {
+    setDeleteError(null);
     try {
       const token = await user.getIdToken();
       const res = await fetch(`${BACKEND_URL}/saved-searches/${id}`, {
@@ -76,9 +78,11 @@ export default function SavedSearchesPage() {
 
       if (res.ok) {
         setSaved(saved.filter(item => item.id !== id));
+      } else {
+        setDeleteError('Could not delete this item. Please try again.');
       }
-    } catch (err) {
-      // Delete failed silently — user can retry
+    } catch {
+      setDeleteError('Could not delete this item. Please try again.');
     }
   };
 
@@ -188,6 +192,19 @@ export default function SavedSearchesPage() {
                 </button>
               ))}
             </div>
+          </div>
+        )}
+
+        {deleteError && (
+          <div style={{
+            padding: '12px 16px',
+            background: '#fef2f2',
+            color: '#dc2626',
+            borderRadius: 8,
+            fontSize: '0.9rem',
+            marginBottom: 16,
+          }}>
+            {deleteError}
           </div>
         )}
 
