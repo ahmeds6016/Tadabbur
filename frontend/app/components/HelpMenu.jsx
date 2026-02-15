@@ -303,7 +303,7 @@ export default function HelpMenu({ currentPage = 'home', isOpen, onClose, onRepl
 
               <div className="faq-item">
                 <h4>What is Tafsir Simplified?</h4>
-                <p>Tafsir Simplified provides AI-powered classical tafsir commentary on any verse of the Quran. Each response draws from Ibn Kathir and Al-Qurtubi, plus insights from 5 scholarly sources including Asbab Al-Nuzul, A Thematic Commentary, Ihya Ulum Al-Din, Madarij Al-Salikin, and Riyad-us-Saliheen.</p>
+                <p>Tafsir Simplified helps you explore any verse of the Quran through the lens of classical scholarship. The AI synthesizes and presents content from authenticated sources — including Ibn Kathir, Al-Qurtubi, and five additional scholarly works — rather than generating its own interpretations. Every response is shaped by your chosen learning persona, so the commentary meets you at your level.</p>
               </div>
 
               <div className="faq-item">
@@ -323,7 +323,7 @@ export default function HelpMenu({ currentPage = 'home', isOpen, onClose, onRepl
 
               <div className="faq-item">
                 <h4>How do I save my work?</h4>
-                <p>Click the save button at the top of any response to bookmark it. You can also select any text to add a personal reflection. Access saved answers and reflections from the navigation sidebar.</p>
+                <p>Save any response to revisit later, select text to add personal reflections, and track your exploration across all 114 surahs. You can also follow reading plans, browse themed verse collections, and earn badges as you go — everything is accessible from the navigation bar.</p>
               </div>
 
               <div className="faq-item">
@@ -333,7 +333,12 @@ export default function HelpMenu({ currentPage = 'home', isOpen, onClose, onRepl
 
               <div className="faq-item">
                 <h4>What do personas do?</h4>
-                <p>Your persona affects the tone, depth, and formatting of responses. For example, a student persona gets more detailed explanations, while a general audience persona gets accessible summaries focused on practical takeaways.</p>
+                <p>Your persona shapes how the same scholarship is presented to you. A New Revert receives patient, foundational guidance. A Curious Explorer gets reflective, open-ended interpretations. A Practicing Muslim receives balanced daily wisdom. A Student gets structured academic analysis. An Advanced Learner receives detailed classical commentary. Same sources, different depth.</p>
+              </div>
+
+              <div className="faq-item">
+                <h4>Are my reflections private?</h4>
+                <p>Yes — your personal reflections are encrypted and stored securely. They are only accessible to you when signed in. No one else — including us — can read your private reflections. When you share a response, only the scholarly commentary is shared, never your personal notes.</p>
               </div>
             </div>
           )}

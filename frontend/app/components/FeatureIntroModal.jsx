@@ -6,22 +6,22 @@ const FEATURE_STEPS = [
   {
     title: 'Welcome to Tafsir Simplified',
     titleWithName: (name) => `Welcome, ${name}!`,
-    description: 'Get classical tafsir commentary on any verse of the Quran, powered by AI and grounded in 5 scholarly sources.',
+    description: 'Quranic commentary drawn from classical scholarly sources — synthesized and personalized to your learning style, not generated from scratch.',
     iconLabel: 'Q',
   },
   {
     title: 'Choose a Surah and Verse Range',
-    description: 'Pick from all 114 surahs. Select a single verse or a range -- the app automatically adjusts the range limit based on verse length and included scholarly commentary to keep responses focused.',
+    description: 'Browse all 114 surahs and select any verse or range. The app adjusts the range based on available commentary so every response is complete.',
     iconLabel: 'S',
   },
   {
     title: 'Grounded in Classical Scholarship',
-    description: 'Responses draw from sources including Asbab Al-Nuzul, A Thematic Commentary, Ihya Ulum Al-Din, Madarij Al-Salikin, and Riyad-us-Saliheen -- matched automatically based on verse themes.',
+    description: 'Each response draws from multiple authenticated scholarly works — matched to your chosen verses and presented through the lens of your learning persona.',
     iconLabel: 'C',
   },
   {
-    title: 'Save, Reflect, and Explore',
-    description: 'Save answers for later, add personal reflections to any text, track your journey across all 114 surahs, and find help anytime with the ? button.',
+    title: 'Your Learning Journey',
+    description: 'Save answers, write reflections, follow reading plans, track your progress across the Quran, and earn badges as you grow. Your reflections are encrypted and private — only you can see them.',
     iconLabel: 'R',
   }
 ];

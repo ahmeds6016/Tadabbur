@@ -101,7 +101,7 @@ export default function SharedPage() {
     <div className="container">
       <div className="card main-app">
         <div className="header">
-          <h1>Tafsir Simplified - Shared Content</h1>
+          <h1>Tafsir Simplified</h1>
         </div>
 
         {/* Shared Query Info */}
@@ -130,31 +130,6 @@ export default function SharedPage() {
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div style={{
-          display: 'flex',
-          gap: '12px',
-          marginBottom: '24px',
-          flexWrap: 'wrap',
-          justifyContent: 'center'
-        }}>
-          <Link
-            href="/"
-            style={{
-              padding: '10px 20px',
-              background: 'var(--gradient-teal-gold)',
-              border: 'none',
-              borderRadius: '12px',
-              color: 'white',
-              fontWeight: '600',
-              textDecoration: 'none',
-              transition: 'all 0.3s ease',
-              display: 'inline-block'
-            }}
-          >
-            Go to Home
-          </Link>
-        </div>
 
         {/* Results Display */}
         <div className="results-container">
@@ -241,12 +216,51 @@ export default function SharedPage() {
           border: '2px solid var(--border-light)'
         }}>
           <p style={{ margin: 0, fontSize: '0.9rem', color: '#666' }}>
-            This content was shared from <strong>Tafsir Simplified</strong>
+            Shared from <strong>Tafsir Simplified</strong>
           </p>
           <p style={{ margin: '8px 0 0 0', fontSize: '0.85rem', color: '#888' }}>
-            Deep verse commentary from classical scholars
+            Classical Quranic commentary personalized to your learning style
           </p>
         </div>
+      </div>
+
+      {/* Spacer for sticky bottom bar */}
+      <div style={{ height: 80 }} />
+
+      {/* Sticky bottom navigation */}
+      <div style={{
+        position: 'fixed',
+        bottom: 0,
+        left: '50%',
+        transform: 'translateX(-50%)',
+        width: 'min(1200px, 100%)',
+        background: 'rgba(255, 255, 255, 0.98)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        borderTop: '1px solid var(--border-light, #e5e7eb)',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: '12px 24px',
+        paddingBottom: 'calc(12px + env(safe-area-inset-bottom))',
+        zIndex: 1000,
+        boxShadow: '0 -2px 10px rgba(0, 0, 0, 0.05)',
+        borderRadius: '16px 16px 0 0',
+      }}>
+        <Link
+          href="/"
+          style={{
+            padding: '12px 28px',
+            background: 'linear-gradient(135deg, var(--primary-teal, #0d9488) 0%, var(--gold, #d4af37) 100%)',
+            color: 'white',
+            textDecoration: 'none',
+            borderRadius: '12px',
+            fontWeight: '700',
+            fontSize: '0.95rem',
+          }}
+        >
+          Explore Tafsir Simplified
+        </Link>
       </div>
     </div>
   );

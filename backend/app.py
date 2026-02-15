@@ -4,12 +4,14 @@ import re
 import traceback
 import time
 import hashlib
+import base64
 import threading
 import logging
 from functools import wraps
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from typing import Tuple, Optional, Dict, List, Any
+from cryptography.fernet import Fernet
 
 # Configure logging - use INFO in production, DEBUG for development
 log_level = logging.DEBUG if os.environ.get('FLASK_DEBUG') else logging.INFO
@@ -65,6 +67,7 @@ GCP_INFRASTRUCTURE_PROJECT = os.environ.get("GCP_INFRASTRUCTURE_PROJECT", "tafsi
 LOCATION = os.environ.get("GCP_LOCATION", "us-central1")
 GEMINI_MODEL_ID = os.environ.get("GEMINI_MODEL_ID", "gemini-2.5-flash")  # Upgraded: 65K output tokens (vs 8K in 2.0) - eliminates truncation-based malformed JSON
 FIREBASE_SECRET_FULL_PATH = os.environ.get("FIREBASE_SECRET_FULL_PATH")
+REFLECTION_ENCRYPTION_SECRET = os.environ.get("REFLECTION_ENCRYPTION_SECRET", "")
 
 # UPDATED: New sliding window vector index configuration (1536 dimensions)
 INDEX_ENDPOINT_ID = os.environ.get("INDEX_ENDPOINT_ID", "3478417184655409152")
@@ -149,6 +152,50 @@ ANALYTICS = defaultdict(int)  # Usage analytics
 cache_lock = threading.Lock()
 rate_limit_lock = threading.Lock()
 analytics_lock = threading.Lock()
+
+# ============================================================================
+# REFLECTION ENCRYPTION (at-rest encryption for user reflections)
+# ============================================================================
+
+def _get_user_fernet(uid: str) -> Optional[Fernet]:
+    """Derive a per-user Fernet key from UID + server secret via HMAC-SHA256."""
+    if not REFLECTION_ENCRYPTION_SECRET:
+        return None
+    # HMAC-SHA256 produces 32 bytes → base64-encode for Fernet (which needs 32 url-safe base64 bytes)
+    import hmac
+    dk = hmac.new(
+        REFLECTION_ENCRYPTION_SECRET.encode('utf-8'),
+        uid.encode('utf-8'),
+        hashlib.sha256
+    ).digest()
+    # Fernet requires a 32-byte url-safe base64-encoded key
+    fernet_key = base64.urlsafe_b64encode(dk)
+    return Fernet(fernet_key)
+
+
+def _encrypt_text(text: str, uid: str) -> str:
+    """Encrypt text for storage. Returns original text if encryption is not configured."""
+    if not text:
+        return text
+    f = _get_user_fernet(uid)
+    if not f:
+        return text
+    return f.encrypt(text.encode('utf-8')).decode('utf-8')
+
+
+def _decrypt_text(token: str, uid: str) -> str:
+    """Decrypt text from storage. Returns original text if decryption fails or is not configured."""
+    if not token:
+        return token
+    f = _get_user_fernet(uid)
+    if not f:
+        return token
+    try:
+        return f.decrypt(token.encode('utf-8')).decode('utf-8')
+    except Exception:
+        # Data was stored before encryption was enabled — return as-is
+        return token
+
 
 # ============================================================================
 # NEW: PERSONA SYSTEM FOR ADAPTIVE RESPONSES
@@ -7002,7 +7049,7 @@ def get_verse_annotations(surah, verse):
                     'surah': data.get('surah'),
                     'verse': data.get('verse'),
                     'type': data.get('type', 'personal_insight'),
-                    'content': data.get('content', ''),
+                    'content': _decrypt_text(data.get('content', ''), uid),
                     'tags': data.get('tags', []),
                     'linkedVerses': data.get('linkedVerses', []),
                     'createdAt': created_at,
@@ -7057,7 +7104,7 @@ def get_user_annotations():
             annotation_obj = {
                 'id': doc.id,
                 'type': data.get('type', 'personal_insight'),
-                'content': data.get('content', ''),
+                'content': _decrypt_text(data.get('content', ''), uid),
                 'tags': data.get('tags', []),
                 'createdAt': created_at,
                 'updatedAt': updated_at,
@@ -7083,7 +7130,7 @@ def get_user_annotations():
 
             # Add highlight reflection fields
             if data.get('highlighted_text'):
-                annotation_obj['highlighted_text'] = data.get('highlighted_text')
+                annotation_obj['highlighted_text'] = _decrypt_text(data.get('highlighted_text'), uid)
                 annotation_obj['query_context'] = data.get('query_context', '')
 
             annotations.append(annotation_obj)
@@ -7114,10 +7161,13 @@ def create_annotation():
         annotations_ref = users_db.collection('users').document(uid).collection('annotations')
         doc_ref = annotations_ref.document()
 
+        # Encrypt sensitive content before storage
+        encrypted_content = _encrypt_text(content, uid)
+
         # Base annotation data
         annotation_data = {
             'type': annotation_type,
-            'content': content,
+            'content': encrypted_content,
             'tags': tags,
             'reflection_type': reflection_type,
             'isPrivate': data.get('isPrivate', True),
@@ -7175,7 +7225,7 @@ def create_annotation():
             highlighted_text = data.get('highlighted_text')
             if not highlighted_text:
                 return jsonify({"error": "Highlighted text is required for highlight reflections"}), 400
-            annotation_data['highlighted_text'] = highlighted_text
+            annotation_data['highlighted_text'] = _encrypt_text(highlighted_text, uid)
             annotation_data['query_context'] = data.get('query_context', '')
 
         doc_ref.set(annotation_data)
@@ -7217,7 +7267,7 @@ def update_annotation(annotation_id):
         update_data = {'updatedAt': firestore.SERVER_TIMESTAMP}
 
         if 'content' in data:
-            update_data['content'] = data['content']
+            update_data['content'] = _encrypt_text(data['content'], uid)
         if 'tags' in data:
             update_data['tags'] = data['tags']
         if 'linkedVerses' in data:
@@ -7266,10 +7316,12 @@ def search_annotations():
         results = []
         for doc in annotations_ref.stream():
             data = doc.to_dict()
-            content = data.get('content', '').lower()
+            # Decrypt content before searching
+            decrypted_content = _decrypt_text(data.get('content', ''), uid)
+            content_lower = decrypted_content.lower()
 
             # Text search
-            if query_text and query_text in content:
+            if query_text and query_text in content_lower:
                 match = True
             elif tag and tag in data.get('tags', []):
                 match = True
@@ -7288,7 +7340,7 @@ def search_annotations():
                     'verse': data.get('verse'),
                     'verseRef': f"{data.get('surah')}:{data.get('verse')}",
                     'type': data.get('type'),
-                    'content': data.get('content'),
+                    'content': decrypted_content,
                     'tags': data.get('tags', []),
                     'createdAt': created_at
                 })

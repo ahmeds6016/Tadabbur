@@ -208,9 +208,9 @@ function AuthComponent() {
     <div className="container">
       <div className="card">
         <h1 style={{ textAlign: 'center', marginBottom: '16px' }}>Welcome to Tafsir Simplified</h1>
-        <p style={{ fontSize: '1.1rem', color: '#666', marginBottom: '32px', textAlign: 'center' }}>
+        <p style={{ fontSize: '1rem', color: '#666', marginBottom: '32px', textAlign: 'center', lineHeight: '1.6' }}>
           {isSignUp
-            ? 'Create an account to explore classical Islamic tafsir with AI-powered insights.'
+            ? 'Quranic commentary drawn from classical scholarship and personalized to how you learn — with progress tracking, reflections, and reading plans to support your journey.'
             : 'Sign in to continue your Quranic journey.'}
         </p>
         <form onSubmit={handleAuthAction} className="form">
@@ -1333,8 +1333,8 @@ function MainApp({ user, userProfile, onResetProfile }) {
       if (navigator.share && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
         try {
           await navigator.share({
-            title: 'Tafsir Simplified Response',
-            text: 'Check out this Islamic Q&A response',
+            title: `Tafsir Simplified — ${query}`,
+            text: 'Classical Quranic commentary synthesized from scholarly sources — personalized to your learning style.',
             url: shareUrl
           });
 
@@ -1907,7 +1907,7 @@ function MainApp({ user, userProfile, onResetProfile }) {
                   </svg>
                 </div>
                 <div className="reflection-prompt-body">
-                  <p className="reflection-prompt-label">Reflect on this verse</p>
+                  <p className="reflection-prompt-label">Reflection</p>
                   <p className="reflection-prompt-text">{response.reflection_prompt}</p>
                   <button
                     className="reflection-prompt-btn"
@@ -1922,7 +1922,7 @@ function MainApp({ user, userProfile, onResetProfile }) {
                       updateStreak();
                     }}
                   >
-                    Write a Reflection
+                    Reflect
                   </button>
                 </div>
 

@@ -136,31 +136,31 @@
       "icon": "",
       "name": "New Revert",
       "description": "Starting fresh with an open heart",
-      "longDescription": "Gentle guidance with warmth, patience, and encouragement for those beginning their Islamic journey"
+      "longDescription": "Patient, foundational guidance that builds understanding step by step as you begin your journey with the Quran"
     },
     "curious_explorer": {
       "icon": "",
       "name": "Curious Explorer",
       "description": "Exploring the Quran with an open mind",
-      "longDescription": "Thoughtful and reflective interpretations for those drawn to explore spiritual meaning and wisdom"
+      "longDescription": "Reflective interpretations that honor your curiosity and invite deeper contemplation at your own pace"
     },
     "practicing_muslim": {
       "icon": "",
       "name": "Practicing Muslim",
       "description": "Seeking balanced, daily guidance",
-      "longDescription": "Balanced reflections for steady spiritual growth and daily connection"
+      "longDescription": "Balanced reflections connecting Quranic wisdom to daily life — practical, steady, and grounding"
     },
     "student": {
       "icon": "",
       "name": "Islamic Studies Student",
       "description": "Learning through structured study",
-      "longDescription": "Comprehensive tafsir grounded in authentic sources for academic learning"
+      "longDescription": "Structured academic analysis with source-grounded depth for serious study"
     },
     "advanced_learner": {
       "icon": "",
       "name": "Advanced Learner",
       "description": "Engaging with depth and precision",
-      "longDescription": "Detailed analysis with advanced insights and classical commentary for deep understanding"
+      "longDescription": "Detailed classical commentary with scholarly nuance for readers seeking the fullest depth"
     }
   }
 }
