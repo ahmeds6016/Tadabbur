@@ -38,10 +38,10 @@ export function BadgePopup({ badge, onClose }) {
 
   return (
     <div className={`badge-popup ${visible ? 'badge-popup--visible' : ''}`}>
-      <div className="badge-popup__icon" style={{ background: color, width: 40, height: 40, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '1.1rem', fontWeight: 700 }}>{badge.title.charAt(0)}</div>
+      <div className="badge-popup__icon" style={{ background: color, width: 40, height: 40, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '1.1rem', fontWeight: 700 }}>{badge.name.charAt(0)}</div>
       <div className="badge-popup__body">
         <span className="badge-popup__title">Badge Earned!</span>
-        <strong className="badge-popup__name">{badge.title}</strong>
+        <strong className="badge-popup__name">{badge.name}</strong>
         <span className="badge-popup__desc">{badge.description}</span>
       </div>
       <button className="badge-popup__close" onClick={() => { setVisible(false); setTimeout(onClose, 300); }} aria-label="Dismiss badge notification">
@@ -211,8 +211,8 @@ export default function BadgeDisplay({ user, compact = false }) {
         <span className="badge-compact__count">{totalEarned}/{totalAvailable} badges earned</span>
         <div className="badge-compact__icons">
           {earned.map((b) => (
-            <span key={b.id} className="badge-compact__icon" title={b.title} style={{ background: BADGE_COLORS[b.icon] || BADGE_COLORS.trophy, width: 22, height: 22, borderRadius: 6, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.65rem', fontWeight: 700 }}>
-              {b.title.charAt(0)}
+            <span key={b.id} className="badge-compact__icon" title={b.name} style={{ background: BADGE_COLORS[b.icon] || BADGE_COLORS.trophy, width: 22, height: 22, borderRadius: 6, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.65rem', fontWeight: 700 }}>
+              {b.name.charAt(0)}
             </span>
           ))}
         </div>
@@ -254,8 +254,8 @@ export default function BadgeDisplay({ user, compact = false }) {
           const earned = b.earned;
           return (
             <div key={b.id} className={`badge-card ${earned ? 'badge-card--earned' : 'badge-card--locked'}`}>
-              <span className="badge-card__icon" style={{ background: color, width: 40, height: 40, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, fontSize: '1.1rem' }}>{b.title.charAt(0)}</span>
-              <strong className="badge-card__title">{b.title}</strong>
+              <span className="badge-card__icon" style={{ background: color, width: 40, height: 40, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, fontSize: '1.1rem' }}>{b.name.charAt(0)}</span>
+              <strong className="badge-card__title">{b.name}</strong>
               <span className="badge-card__desc">{b.description}</span>
               {earned && b.earned_at && (
                 <span className="badge-card__date">
