@@ -2,23 +2,25 @@
 import { useState, useEffect, useCallback } from 'react';
 import { BACKEND_URL } from '../lib/config';
 
-const COLLECTION_ICONS = {
-  patience: 'Pa',
-  trust: 'Tr',
-  mercy: 'Me',
-  gratitude: 'Gr',
-  knowledge: 'Kn',
-  remembrance: 'Dh',
-  family: 'Fa',
-  justice: 'Ju',
-  hereafter: 'Ak',
-  repentance: 'Re',
-  worship: 'Ib',
-  charity: 'Sa',
+// Color palette for collection cards (consistent, no emoji/abbreviations)
+const COLLECTION_COLORS = {
+  patience: '#0D9488',
+  trust: '#2563EB',
+  mercy: '#EC4899',
+  gratitude: '#D97706',
+  knowledge: '#7C3AED',
+  remembrance: '#059669',
+  family: '#DC2626',
+  justice: '#4F46E5',
+  hereafter: '#0891B2',
+  repentance: '#10B981',
+  worship: '#B45309',
+  charity: '#16A34A',
 };
 
-export default function CollectionsGrid({ user, onStudyVerse }) {
+export default function CollectionsGrid({ user, onStudyVerse, maxDisplay = 3 }) {
   const [collections, setCollections] = useState([]);
+  const [displayCollections, setDisplayCollections] = useState([]);
   const [progress, setProgress] = useState({});
   const [expandedId, setExpandedId] = useState(null);
   const [expandedData, setExpandedData] = useState({});
@@ -50,6 +52,17 @@ export default function CollectionsGrid({ user, onStudyVerse }) {
     fetchCollections();
     return () => { cancelled = true; };
   }, []);
+
+  // Randomly select a subset to display
+  useEffect(() => {
+    if (collections.length === 0) return;
+    if (maxDisplay >= collections.length) {
+      setDisplayCollections(collections);
+    } else {
+      const shuffled = [...collections].sort(() => Math.random() - 0.5);
+      setDisplayCollections(shuffled.slice(0, maxDisplay));
+    }
+  }, [collections, maxDisplay]);
 
   // Fetch user progress for each collection
   useEffect(() => {
@@ -161,17 +174,17 @@ export default function CollectionsGrid({ user, onStudyVerse }) {
     );
   }
 
-  if (collections.length === 0) return null;
+  if (displayCollections.length === 0) return null;
 
   return (
     <div className="collections-grid">
-      {collections.map((col) => {
+      {displayCollections.map((col) => {
         const isExpanded = expandedId === col.id;
         const colProgress = progress[col.id];
         const studied = colProgress?.completed_count || colProgress?.studied_count || 0;
         const total = col.verse_count || 1;
         const pct = Math.round((studied / total) * 100);
-        const icon = COLLECTION_ICONS[col.icon] || COLLECTION_ICONS[col.id] || '\u{1F4D6}';
+        const dotColor = COLLECTION_COLORS[col.icon] || COLLECTION_COLORS[col.id] || '#0D9488';
         const verses = expandedData[col.id]?.verses || [];
         const isLoadingVerses = expandLoading === col.id;
 
@@ -181,8 +194,8 @@ export default function CollectionsGrid({ user, onStudyVerse }) {
             className={`collection-card ${isExpanded ? 'expanded' : ''}`}
           >
             <div className="card-header">
-              <span className="card-icon" role="img" aria-label={col.title}>
-                {icon}
+              <span className="card-icon" style={{ background: dotColor }} aria-label={col.title}>
+                {col.title.charAt(0)}
               </span>
               <div className="card-info">
                 <h3 className="card-title">{col.title}</h3>
@@ -288,8 +301,15 @@ export default function CollectionsGrid({ user, onStudyVerse }) {
         }
 
         .card-icon {
-          font-size: 1.8rem;
-          line-height: 1;
+          width: 36px;
+          height: 36px;
+          border-radius: 10px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 1rem;
+          font-weight: 700;
+          color: white;
           flex-shrink: 0;
         }
 
@@ -475,7 +495,9 @@ export default function CollectionsGrid({ user, onStudyVerse }) {
           }
 
           .card-icon {
-            font-size: 1.5rem;
+            width: 32px;
+            height: 32px;
+            font-size: 0.9rem;
           }
 
           .card-title {

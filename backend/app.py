@@ -96,14 +96,11 @@ RAG_OPTIMIZED_CONFIG = {
     }
 }
 
-# Persona-based verse limits (to prevent overwhelming responses)
-PERSONA_VERSE_LIMITS = {
-    'new_revert': 5,          # Simple, focused responses
-    'curious_explorer': 7,    # Accessible exploration
-    'practicing_muslim': 8,   # Balanced depth
-    'student': 10,            # Academic depth
-    'advanced_learner': 12    # Comprehensive analysis
-}
+# Verse limit per response — uniform across all personas.
+# The dynamic range map (verse_range_map.json) already handles per-verse
+# token budgeting.  Persona depth affects content DENSITY, not verse count,
+# so a separate persona-based limit is counterproductive.
+VERSE_LIMIT = 5
 
 # Source coverage information
 # Ibn Kathir: Complete Quran (114 Surahs)
@@ -144,7 +141,7 @@ TAFSIR_CHUNKS = {}
 CHUNK_SOURCE_MAP = {}  # Maps chunk_id to source name
 VERSE_METADATA = {}  # NEW: Stores structured metadata for direct queries
 RESPONSE_CACHE = {}  # In-memory cache
-SCHOLARLY_PIPELINE_VERSION = "7.0"  # Bump: collections, badges, recommendations, reading plans
+SCHOLARLY_PIPELINE_VERSION = "8.0"  # Bump: dynamic verse range (30k budget, max 5 verses, per-verse output allocation)
 USER_RATE_LIMITS = defaultdict(list)  # Rate limiting
 ANALYTICS = defaultdict(int)  # Usage analytics
 
@@ -2087,7 +2084,7 @@ def enforce_persona_verse_limit(response_json: Dict, persona_name: str, requeste
         return response_json, False, 0, 0
 
     original_count = len(verses)
-    verse_limit = PERSONA_VERSE_LIMITS.get(persona_name, 8)
+    verse_limit = VERSE_LIMIT
 
     requested_set = set()
     if requested_verses:
@@ -2636,7 +2633,7 @@ Topics mapped to verse references:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 RETRIEVAL LIMITS:
-- Maximum 10 verses total per response
+- Maximum 5 verses total per response
 - Prioritize quality over quantity
 - Prefer verses with both Ibn Kathir AND Al-Qurtubi when possible
 """
@@ -2909,10 +2906,10 @@ def validate_and_sanitize_plan(plan):
         print("   ❌ All verses rejected - LLM hallucinated non-existent references")
         return None
 
-    # Enforce max 10 verses
+    # Enforce max 5 verses (matches ABSOLUTE_MAX_VERSES)
     total_verses = len(validated_primary) + len(validated_contextual)
-    if total_verses > 10:
-        trim_amount = total_verses - 10
+    if total_verses > 5:
+        trim_amount = total_verses - 5
         validated_contextual = validated_contextual[:-trim_amount] if trim_amount < len(validated_contextual) else []
 
     # Keep both tafsir sources - per-verse filtering happens in get_tafsir_for_verse()
@@ -3304,15 +3301,15 @@ def initialize_firebase():
 initialize_firebase()
 load_chunks_from_verse_files_enhanced() # UPDATED CALL
 
-# Precompute per-verse token budgets from actual TAFSIR_CHUNKS data
-# and export the static range map (hardcoded, validated per-verse limits)
-from services.token_budget_service import precompute_verse_budgets, export_range_map
-precompute_verse_budgets(TAFSIR_CHUNKS, QURAN_METADATA)
-try:
-    export_range_map()
-    print("INFO: Static verse range map exported to data/verse_range_map.json")
-except Exception as e:
-    print(f"WARNING: Could not export static range map: {e}")
+# Load the static verse range map (ground-truth validated with full payload:
+# prompt template + verse text + tafsir chunks + scholarly sources + output allocation).
+# Falls back to in-memory precomputation if the static map is missing.
+from services.token_budget_service import load_range_map, precompute_verse_budgets
+if not load_range_map():
+    print("WARNING: Static range map not found — falling back to in-memory precomputation")
+    precompute_verse_budgets(TAFSIR_CHUNKS, QURAN_METADATA)
+else:
+    print("INFO: Loaded ground-truth verse range map from data/verse_range_map.json")
 
 vertexai.init(project=GCP_INFRASTRUCTURE_PROJECT, location=LOCATION)
 
@@ -4558,17 +4555,12 @@ YOUR ROLE AS SCHOLARLY EDITOR
 VERSE LIMITS - CRITICAL FOR PERFORMANCE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-🚨 STRICT VERSE LIMITS BASED ON PERSONA:
-• new_revert: Maximum 5 verses
-• curious_explorer: Maximum 7 verses
-• practicing_muslim: Maximum 8 verses
-• student: Maximum 10 verses
-• advanced_learner: Maximum 12 verses
+🚨 STRICT VERSE LIMIT: Maximum {VERSE_LIMIT} verses per response.
 
 IMPORTANT: Even if more verses are provided in the source material, you MUST:
 1. Select only the MOST RELEVANT verses that directly answer the query
-2. Stay WITHIN the persona's maximum verse limit
-3. Prioritize quality over quantity - better to have 3 highly relevant verses than 10 tangentially related ones
+2. Stay WITHIN the {VERSE_LIMIT}-verse limit
+3. Prioritize quality over quantity
 4. For broad queries, focus on the most foundational or representative verses
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -4606,7 +4598,7 @@ VOCABULARY ADAPTATION BY PERSONA:
 JSON Structure (verse text ALREADY provided by backend - you focus on tafsir):
 
 CRITICAL VERSE SELECTION RULES:
-• Maximum verses for {persona_name}: {PERSONA_VERSE_LIMITS.get(persona_name, 8)} verses
+• Maximum verses: {VERSE_LIMIT} verses
 • Include ONLY the most directly relevant verses to the query
 • If more verses are provided in source material, SELECT and PRIORITIZE based on relevance
 • Better to have fewer highly relevant verses than many tangentially related ones
@@ -4632,7 +4624,7 @@ However, USE the Additional Scholarly Sources (if provided above) EXTENSIVELY to
             "text_saheeh_international": "English translation (from verse_data)",
             "arabic_text": "Arabic text (from verse_data)"
         }}
-        // LIMIT: Maximum {PERSONA_VERSE_LIMITS.get(persona_name, 8)} verses for {persona_name} persona
+        // LIMIT: Maximum {VERSE_LIMIT} verses
     ],
 
     "tafsir_explanations": [
@@ -4701,7 +4693,7 @@ IMPORTANT: Always use **Bold Header** format for sub-headers (e.g., **Divine Wil
 CRITICAL REMINDERS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-1. **ENFORCE VERSE LIMITS** - {persona_name} gets MAXIMUM {PERSONA_VERSE_LIMITS.get(persona_name, 8)} verses. Select only the MOST relevant ones.
+1. **ENFORCE VERSE LIMITS** - MAXIMUM {VERSE_LIMIT} verses. Select only the MOST relevant ones.
 2. **CONSISTENT FORMAT** - ALL personas use short paragraphs with **bolded sub-headers**. NO bullets, NO emojis.
 3. **You are an EDITOR, not an author** - Polish what's there, don't create new interpretations
 4. **PRESERVE ACCURACY** - Never change meanings, attributions, or theological positions
@@ -5746,10 +5738,10 @@ def get_range_limit():
         # Graceful fallback: return the existing hard limit
         try:
             s_max = QURAN_METADATA.get(surah, {}).get("verses", 0) if surah else 0
-            fallback = min(start + 9, s_max) if surah and start and s_max else 10
+            fallback = min(start + 4, s_max) if surah and start and s_max else 5
         except Exception:
             s_max = 0
-            fallback = 10
+            fallback = 5
         return jsonify({"maxEnd": fallback, "surahMax": s_max}), 200
 
 
@@ -7607,16 +7599,16 @@ def tafsir_handler_enhanced():
                 surah_only_match = re.match(r'^(?:surah\s+)?(\d{1,3})$', query.strip().lower())
                 if surah_only_match or re.match(r'^surah\s+\d{1,3}$', query.strip().lower()):
                     help_message = '📚 Full surah queries are not currently supported.'
-                    help_text = 'Please specify a verse or verse range (max 10 verses):\n• Single verse: "67:1"\n• Verse range: "67:1-10"\n• Analysis: "historical context of 67:1"'
+                    help_text = 'Please specify a verse or verse range (max 5 verses):\n• Single verse: "67:1"\n• Verse range: "67:1-5"\n• Analysis: "historical context of 67:1"'
                     example_suggestions = [
                         '67:1 (First verse)',
-                        '67:1-10 (First 10 verses)',
+                        '67:1-5 (First 5 verses)',
                         '67:15-24 (Middle section)',
                         'linguistic analysis of 67:1'
                     ] if not suggestions else suggestions
                 else:
                     help_message = '🤔 I couldn\'t find that verse. Let me help you format it correctly.'
-                    help_text = 'Try one of these formats:\n• Numeric: "2:255"\n• Named: "Surah Al-Baqarah verse 255"\n• Range: "2:255-257" (max 10 verses)\n• Analysis: "historical context of 2:255"'
+                    help_text = 'Try one of these formats:\n• Numeric: "2:255"\n• Named: "Surah Al-Baqarah verse 255"\n• Range: "2:255-257" (max 5 verses)\n• Analysis: "historical context of 2:255"'
                     example_suggestions = [
                         '2:255 (Ayatul Kursi)',
                         'Surah Al-Fatihah verse 1',
@@ -7640,16 +7632,15 @@ def tafsir_handler_enhanced():
             surah, start_verse, end_verse = verse_range
             verse_count = end_verse - start_verse + 1
 
-            # Hard cap: maximum 10 verses per query
-            if verse_count > 10:
+            # Hard cap: maximum 5 verses per query (matches ABSOLUTE_MAX_VERSES)
+            if verse_count > 5:
                 return jsonify({
                     'error': 'verse_range_too_large',
-                    'message': f'Please narrow your range to 10 verses or less.\n\nYou requested {verse_count} verses ({surah}:{start_verse}-{end_verse}).\n\nTry smaller ranges like:\n- {surah}:{start_verse}-{start_verse+9}\n- {surah}:{start_verse+10}-{start_verse+19}',
+                    'message': f'Please narrow your range to 5 verses or less.\n\nYou requested {verse_count} verses ({surah}:{start_verse}-{end_verse}).\n\nTry smaller ranges like:\n- {surah}:{start_verse}-{start_verse+4}',
                     'requested_verses': verse_count,
-                    'max_verses': 10,
+                    'max_verses': 5,
                     'suggestions': [
-                        f'{surah}:{start_verse}-{min(start_verse+9, end_verse)}',
-                        f'{surah}:{min(start_verse+10, end_verse)}-{min(start_verse+19, end_verse)}' if verse_count > 10 else None
+                        f'{surah}:{start_verse}-{min(start_verse+4, end_verse)}'
                     ]
                 }), 400
 
@@ -7976,11 +7967,11 @@ def tafsir_handler_enhanced():
 
                     # Log verse count for monitoring
                     verse_count = len(final_json.get('verses', []))
-                    verse_limit = PERSONA_VERSE_LIMITS.get(persona_name, 8)
+                    verse_limit = VERSE_LIMIT
                     if verse_count > verse_limit:
-                        print(f"   ⚠️  VERSE LIMIT EXCEEDED: {verse_count} verses returned (limit: {verse_limit} for {persona_name})")
+                        print(f"   ⚠️  VERSE LIMIT EXCEEDED: {verse_count} verses returned (limit: {verse_limit})")
                     else:
-                        print(f"   ✅ Verse count: {verse_count}/{verse_limit} for {persona_name}")
+                        print(f"   ✅ Verse count: {verse_count}/{verse_limit}")
 
                     # Cache the response (Route 1)
                     with cache_lock:
@@ -8282,11 +8273,11 @@ def tafsir_handler_enhanced():
 
                         # Log verse count for monitoring
                         verse_count = len(final_json.get('verses', []))
-                        verse_limit = PERSONA_VERSE_LIMITS.get(persona_name, 8)
+                        verse_limit = VERSE_LIMIT
                         if verse_count > verse_limit:
-                            print(f"   ⚠️  VERSE LIMIT EXCEEDED: {verse_count} verses returned (limit: {verse_limit} for {persona_name})")
+                            print(f"   ⚠️  VERSE LIMIT EXCEEDED: {verse_count} verses returned (limit: {verse_limit})")
                         else:
-                            print(f"   ✅ Verse count: {verse_count}/{verse_limit} for {persona_name}")
+                            print(f"   ✅ Verse count: {verse_count}/{verse_limit}")
 
                         # Cache the response (Route 2)
                         with cache_lock:
@@ -8628,12 +8619,12 @@ def tafsir_handler_enhanced():
 
                 # Log verse count for monitoring
                 verse_count = len(final_json.get('verses', []))
-                verse_limit = PERSONA_VERSE_LIMITS.get(persona_name, 8)
+                verse_limit = VERSE_LIMIT
                 if verse_count > verse_limit:
-                    print(f"   ⚠️  VERSE LIMIT EXCEEDED: {verse_count} verses returned (limit: {verse_limit} for {persona_name})")
+                    print(f"   ⚠️  VERSE LIMIT EXCEEDED: {verse_count} verses returned (limit: {verse_limit})")
                     perf_metrics['verse_limit_exceeded'] = True
                 else:
-                    print(f"   ✅ Verse count: {verse_count}/{verse_limit} for {persona_name}")
+                    print(f"   ✅ Verse count: {verse_count}/{verse_limit}")
                 perf_metrics['verse_count'] = verse_count
 
                 # Cache with thread safety (in-memory)

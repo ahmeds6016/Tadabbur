@@ -19,11 +19,10 @@ from config.token_budget import (
     ABSOLUTE_MAX_VERSES,
     CHARS_PER_TOKEN_AR,
     CHARS_PER_TOKEN_EN,
+    OUTPUT_TOKENS_PER_VERSE,
     PRACTICAL_INPUT_BUDGET,
     PROMPT_OVERHEAD_TOKENS,
-    OUTPUT_RESERVE_TOKENS,
     SCHOLARLY_RESERVE_TOKENS,
-    RAG_OVERHEAD_TOKENS,
     SAFETY_FACTOR,
     VERSE_AND_TAFSIR_BUDGET,
     VERSE_TEXT_TOKENS_PER_VERSE,
@@ -101,11 +100,10 @@ class TestBudgetConstants:
         assert VERSE_AND_TAFSIR_BUDGET > 0
 
     def test_components_sum_to_practical(self):
+        """Verify per-query fixed costs + verse budget = practical budget."""
         total = (
             PROMPT_OVERHEAD_TOKENS
-            + OUTPUT_RESERVE_TOKENS
             + SCHOLARLY_RESERVE_TOKENS
-            + RAG_OVERHEAD_TOKENS
             + VERSE_AND_TAFSIR_BUDGET
         )
         assert total == PRACTICAL_INPUT_BUDGET
@@ -114,7 +112,10 @@ class TestBudgetConstants:
         assert SAFETY_FACTOR == 0.90
 
     def test_absolute_max_verses(self):
-        assert ABSOLUTE_MAX_VERSES == 10
+        assert ABSOLUTE_MAX_VERSES == 5
+
+    def test_output_tokens_per_verse_is_positive(self):
+        assert OUTPUT_TOKENS_PER_VERSE > 0
 
 
 # ===================================================================
@@ -144,34 +145,31 @@ class TestPrecomputation:
         assert len(svc._PREFIX_SUMS[112]) == 5  # 4 verses + leading 0
         assert len(svc._MAX_END_LOOKUP[112]) == 4  # one entry per start verse
 
-    def test_verse_cost_uses_actual_chunk_size(self):
-        """Verify per-verse cost = VERSE_TEXT_TOKENS_PER_VERSE + actual tafsir tokens."""
+    def test_verse_cost_includes_output_allocation(self):
+        """Per-verse cost = VERSE_TEXT + tafsir + OUTPUT_TOKENS_PER_VERSE."""
         # 4000 chars each source = 8000 chars total = 2000 tokens tafsir
         chunks = _make_chunks([(112, 1, 4000, 4000)])
         svc.precompute_verse_budgets(chunks, SMALL_SURAH_META)
 
-        expected = VERSE_TEXT_TOKENS_PER_VERSE + math.ceil(8000 / CHARS_PER_TOKEN_EN)
+        expected = VERSE_TEXT_TOKENS_PER_VERSE + math.ceil(8000 / CHARS_PER_TOKEN_EN) + OUTPUT_TOKENS_PER_VERSE
         assert svc._VERSE_TOKEN_COSTS[112][0] == expected
 
-    def test_missing_chunk_gives_zero_tafsir(self):
-        """Verse with no tafsir chunks has cost = just the verse text allowance."""
+    def test_missing_chunk_gives_text_plus_output_only(self):
+        """Verse with no tafsir chunks: cost = verse text + output allocation."""
         chunks = {}  # no chunks at all
         svc.precompute_verse_budgets(chunks, SMALL_SURAH_META)
-        # Every verse cost should be just the verse text allowance
         for cost in svc._VERSE_TOKEN_COSTS[112]:
-            assert cost == VERSE_TEXT_TOKENS_PER_VERSE
+            assert cost == VERSE_TEXT_TOKENS_PER_VERSE + OUTPUT_TOKENS_PER_VERSE
 
     def test_prefix_sums_correct(self):
-        # verse 1: 1000 chars total → 250 tokens tafsir + 250 verse text = 500
-        # verse 2: 2000 chars total → 500 tokens tafsir + 250 verse text = 750
         chunks = _make_chunks([(112, 1, 500, 500), (112, 2, 1000, 1000)])
         svc.precompute_verse_budgets(chunks, SMALL_SURAH_META)
 
         prefix = svc._PREFIX_SUMS[112]
-        c1 = VERSE_TEXT_TOKENS_PER_VERSE + math.ceil(1000 / CHARS_PER_TOKEN_EN)
-        c2 = VERSE_TEXT_TOKENS_PER_VERSE + math.ceil(2000 / CHARS_PER_TOKEN_EN)
-        c3 = VERSE_TEXT_TOKENS_PER_VERSE  # no chunks for verse 3
-        c4 = VERSE_TEXT_TOKENS_PER_VERSE  # no chunks for verse 4
+        c1 = VERSE_TEXT_TOKENS_PER_VERSE + math.ceil(1000 / CHARS_PER_TOKEN_EN) + OUTPUT_TOKENS_PER_VERSE
+        c2 = VERSE_TEXT_TOKENS_PER_VERSE + math.ceil(2000 / CHARS_PER_TOKEN_EN) + OUTPUT_TOKENS_PER_VERSE
+        c3 = VERSE_TEXT_TOKENS_PER_VERSE + OUTPUT_TOKENS_PER_VERSE
+        c4 = VERSE_TEXT_TOKENS_PER_VERSE + OUTPUT_TOKENS_PER_VERSE
 
         assert prefix[0] == 0
         assert prefix[1] == c1
@@ -215,8 +213,9 @@ class TestComputeMaxEnd:
 
     def test_huge_tafsir_restricts_range(self):
         """Huge tafsir chunks should restrict the range significantly."""
-        # Each verse: 80K chars per source = 160K chars = 40K tokens
-        # Budget = ~23K tokens → only 1 verse fits
+        # Each verse: 80K chars per source = 160K chars = 40K tokens + output alloc
+        # Per-verse: 250 + 40000 + 3500 = 43750 tokens
+        # Budget = ~37800 tokens → only 1 verse fits (even that's over budget)
         meta = {2: {"name": "Al-Baqarah", "verses": 10}}
         chunks = _make_chunks([
             (2, v, 80_000, 80_000) for v in range(1, 11)
@@ -288,7 +287,7 @@ class TestCostQueries:
         chunks = _make_chunks([(112, 1, 4000, 4000)])
         svc.precompute_verse_budgets(chunks, SMALL_SURAH_META)
         cost = svc.get_verse_token_cost(112, 1)
-        expected = VERSE_TEXT_TOKENS_PER_VERSE + math.ceil(8000 / CHARS_PER_TOKEN_EN)
+        expected = VERSE_TEXT_TOKENS_PER_VERSE + math.ceil(8000 / CHARS_PER_TOKEN_EN) + OUTPUT_TOKENS_PER_VERSE
         assert cost == expected
 
     def test_get_verse_token_cost_unknown_surah(self):
@@ -300,8 +299,8 @@ class TestCostQueries:
         ])
         svc.precompute_verse_budgets(chunks, SMALL_SURAH_META)
 
-        c1 = VERSE_TEXT_TOKENS_PER_VERSE + math.ceil(4000 / CHARS_PER_TOKEN_EN)
-        c2 = VERSE_TEXT_TOKENS_PER_VERSE + math.ceil(2000 / CHARS_PER_TOKEN_EN)
+        c1 = VERSE_TEXT_TOKENS_PER_VERSE + math.ceil(4000 / CHARS_PER_TOKEN_EN) + OUTPUT_TOKENS_PER_VERSE
+        c2 = VERSE_TEXT_TOKENS_PER_VERSE + math.ceil(2000 / CHARS_PER_TOKEN_EN) + OUTPUT_TOKENS_PER_VERSE
 
         assert svc.get_range_token_cost(112, 1, 1) == c1
         assert svc.get_range_token_cost(112, 1, 2) == c1 + c2

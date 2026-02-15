@@ -2,21 +2,22 @@
 import { useState, useEffect, useCallback } from 'react';
 import { BACKEND_URL } from '../lib/config';
 
-const BADGE_ICONS = {
-  fire: 'St',
-  calendar: 'Ca',
-  star: 'Sr',
-  search: 'Se',
-  brain: 'Br',
-  graduation: 'Gr',
-  compass: 'Co',
-  globe: 'Gl',
-  pen: 'Pe',
-  heart: 'He',
-  crown: 'Cr',
-  book: 'Bk',
-  trophy: 'Tr',
-  rocket: 'Rk',
+// Color palette for badge icons (colored circles, no abbreviations)
+const BADGE_COLORS = {
+  fire: '#EF4444',
+  calendar: '#2563EB',
+  star: '#EAB308',
+  search: '#8B5CF6',
+  brain: '#EC4899',
+  graduation: '#059669',
+  compass: '#0891B2',
+  globe: '#6366F1',
+  pen: '#D97706',
+  heart: '#F43F5E',
+  crown: '#B45309',
+  book: '#0D9488',
+  trophy: '#D4AF37',
+  rocket: '#7C3AED',
 };
 
 /** Toast-style popup shown when a badge is newly earned. */
@@ -33,11 +34,11 @@ export function BadgePopup({ badge, onClose }) {
     return () => clearTimeout(timer);
   }, [onClose]);
 
-  const emoji = BADGE_ICONS[badge.icon] || BADGE_ICONS.trophy;
+  const color = BADGE_COLORS[badge.icon] || BADGE_COLORS.trophy;
 
   return (
     <div className={`badge-popup ${visible ? 'badge-popup--visible' : ''}`}>
-      <div className="badge-popup__icon">{emoji}</div>
+      <div className="badge-popup__icon" style={{ background: color, width: 40, height: 40, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '1.1rem', fontWeight: 700 }}>{badge.title.charAt(0)}</div>
       <div className="badge-popup__body">
         <span className="badge-popup__title">Badge Earned!</span>
         <strong className="badge-popup__name">{badge.title}</strong>
@@ -210,8 +211,8 @@ export default function BadgeDisplay({ user, compact = false }) {
         <span className="badge-compact__count">{totalEarned}/{totalAvailable} badges earned</span>
         <div className="badge-compact__icons">
           {earned.map((b) => (
-            <span key={b.id} className="badge-compact__icon" title={b.title}>
-              {BADGE_ICONS[b.icon] || BADGE_ICONS.trophy}
+            <span key={b.id} className="badge-compact__icon" title={b.title} style={{ background: BADGE_COLORS[b.icon] || BADGE_COLORS.trophy, width: 22, height: 22, borderRadius: 6, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.65rem', fontWeight: 700 }}>
+              {b.title.charAt(0)}
             </span>
           ))}
         </div>
@@ -249,11 +250,11 @@ export default function BadgeDisplay({ user, compact = false }) {
       </div>
       <div className="badge-grid">
         {badges.map((b) => {
-          const emoji = BADGE_ICONS[b.icon] || BADGE_ICONS.trophy;
+          const color = BADGE_COLORS[b.icon] || BADGE_COLORS.trophy;
           const earned = b.earned;
           return (
             <div key={b.id} className={`badge-card ${earned ? 'badge-card--earned' : 'badge-card--locked'}`}>
-              <span className="badge-card__icon">{emoji}</span>
+              <span className="badge-card__icon" style={{ background: color, width: 40, height: 40, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, fontSize: '1.1rem' }}>{b.title.charAt(0)}</span>
               <strong className="badge-card__title">{b.title}</strong>
               <span className="badge-card__desc">{b.description}</span>
               {earned && b.earned_at && (

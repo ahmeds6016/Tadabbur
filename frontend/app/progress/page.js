@@ -80,15 +80,8 @@ export default function ProgressPage() {
   const surahs = progress?.surahs || [];
 
   return (
-    <div className="container">
+    <div className="container" style={{ paddingBottom: 100 }}>
       <div className="card">
-        {/* Back navigation */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-          <Link href="/" style={{ color: 'var(--primary-teal)', fontWeight: '600', textDecoration: 'none', fontSize: '0.95rem' }}>
-            &larr; Back to Home
-          </Link>
-        </div>
-
         {/* Header */}
         <div className="progress-header">
           <h1 className="progress-title">Your Quran Journey</h1>
@@ -138,7 +131,7 @@ export default function ProgressPage() {
                   key={surah.number}
                   className={`surah-tile ${complete ? 'surah-tile--complete' : ''}`}
                   style={{ backgroundColor: bg }}
-                  onClick={() => { window.location.href = `/?q=${surah.number}:1`; }}
+                  onClick={() => { window.location.href = `/?query=${surah.number}:1`; }}
                   title={`${surah.name} - ${surah.explored_count}/${surah.total_verses} verses explored`}
                 >
                   <span className="surah-tile__number">{surah.number}</span>

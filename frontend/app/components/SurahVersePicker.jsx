@@ -120,23 +120,23 @@ const SURAHS = [
   { number: 114, name: 'An-Nas', englishName: 'The Mankind', verseCount: 6 }
 ];
 
-// Max verses per query
-const MAX_VERSE_RANGE = 10;
+// Max verses per query (matches backend ABSOLUTE_MAX_VERSES)
+const MAX_VERSE_RANGE = 5;
 
 // All quick select options - will be randomized
 const ALL_QUICK_SELECTS = [
   { query: '2:255', label: 'Ayatul Kursi' },
-  { query: '1:1-7', label: 'Al-Fatihah' },
+  { query: '1:1-5', label: 'Al-Fatihah' },
   { query: '112:1-4', label: 'Al-Ikhlas' },
-  { query: '55:1-13', label: 'Ar-Rahman' },
-  { query: '36:1-12', label: 'Ya-Sin' },
+  { query: '55:1-5', label: 'Ar-Rahman' },
+  { query: '36:1-5', label: 'Ya-Sin' },
   { query: '67:1-5', label: 'Al-Mulk' },
-  { query: '31:12-19', label: "Luqman's Advice" },
+  { query: '31:12-16', label: "Luqman's Advice" },
   { query: '49:11-13', label: 'Brotherhood' },
   { query: '17:23-24', label: 'Parents' },
-  { query: '12:1-6', label: 'Yusuf' },
-  { query: '18:9-16', label: 'Cave Companions' },
-  { query: '28:7-13', label: 'Baby Musa' },
+  { query: '12:1-5', label: 'Yusuf' },
+  { query: '18:9-13', label: 'Cave Companions' },
+  { query: '28:7-11', label: 'Baby Musa' },
 ];
 
 export default function SurahVersePicker({ onSelect, initialSurah = null, initialVerse = null, externalSurah = null, externalVerse = null }) {

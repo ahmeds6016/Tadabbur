@@ -7,6 +7,7 @@ import remarkBreaks from 'remark-breaks';
 import { auth } from '../lib/firebase';
 import { BACKEND_URL } from '../lib/config';
 import ConfirmDialog from '../components/ConfirmDialog';
+import BottomNav from '../components/BottomNav';
 
 export default function SavedSearchesPage() {
   const [user, setUser] = useState(null);
@@ -144,13 +145,10 @@ export default function SavedSearchesPage() {
   }
 
   return (
-    <div className="container">
+    <div className="container" style={{ paddingBottom: 100 }}>
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
           <h1>Saved Answers</h1>
-          <Link href="/">
-            <button>← Back to Search</button>
-          </Link>
         </div>
 
         {/* Folder Filter */}
@@ -386,6 +384,8 @@ export default function SavedSearchesPage() {
         onConfirm={() => { handleDelete(deleteTarget); setDeleteTarget(null); }}
         onCancel={() => setDeleteTarget(null)}
       />
+
+      <BottomNav user={user} />
     </div>
   );
 }

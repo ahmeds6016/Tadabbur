@@ -25,6 +25,7 @@ from config.token_budget import (
     CHARS_PER_TOKEN_AR,
     CHARS_PER_TOKEN_EN,
     CHARS_PER_TOKEN_MIXED,
+    OUTPUT_TOKENS_PER_VERSE,
     SAFETY_FACTOR,
     VERSE_AND_TAFSIR_BUDGET,
     VERSE_TEXT_TOKENS_PER_VERSE,
@@ -81,11 +82,12 @@ def precompute_verse_budgets(
       1. Look up actual tafsir chunk text for ibn-kathir and al-qurtubi.
       2. Convert char length → tokens (English ratio: 4 chars/token).
       3. Add fixed verse-text allowance (250 tokens for Arabic/English/transliteration).
-      4. Build prefix sums per surah for O(1) range-cost queries.
-      5. Precompute max-end-verse for every (surah, start) pair.
+      4. Add per-verse OUTPUT allocation (3500 tokens for Gemini response depth).
+      5. Build prefix sums per surah for O(1) range-cost queries.
+      6. Precompute max-end-verse for every (surah, start) pair.
 
     Scholarly source cost is accounted for separately as a fixed budget
-    reservation (SCHOLARLY_RESERVE_TOKENS = 3500) because scholarly content
+    reservation (SCHOLARLY_RESERVE_TOKENS = 4000) because scholarly content
     is capped at MAX_TOTAL_SCHOLARLY_CHARS = 14000 per query regardless of
     verse count.
     """
@@ -109,8 +111,8 @@ def precompute_verse_budgets(
 
             tafsir_tokens = math.ceil(tafsir_chars / CHARS_PER_TOKEN_EN) if tafsir_chars > 0 else 0
 
-            # --- Per-verse total: actual tafsir + fixed verse-text allowance ---
-            verse_total = VERSE_TEXT_TOKENS_PER_VERSE + tafsir_tokens
+            # --- Per-verse total: actual tafsir + verse-text + output allocation ---
+            verse_total = VERSE_TEXT_TOKENS_PER_VERSE + tafsir_tokens + OUTPUT_TOKENS_PER_VERSE
             costs.append(verse_total)
 
             total_verses += 1

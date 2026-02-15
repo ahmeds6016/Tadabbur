@@ -6,6 +6,7 @@ import ReflectionDetailPanel from '../components/ReflectionDetailPanel';
 import { Flame, Trophy, Calendar, BookOpen, Clock, TrendingUp, Lightbulb, HelpCircle, CheckSquare, Heart, Link2 } from 'lucide-react';
 import { auth } from '../lib/firebase';
 import { BACKEND_URL } from '../lib/config';
+import BottomNav from '../components/BottomNav';
 
 // Core 5 reflection types with Lucide icons
 const ANNOTATION_TYPE_CONFIG = {
@@ -692,13 +693,10 @@ export default function MyReflectionsPage() {
   }
 
   return (
-    <div className="container">
+    <div className="container" style={{ paddingBottom: 100 }}>
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
           <h1>My Reflections</h1>
-          <Link href="/">
-            <button>← Back to Search</button>
-          </Link>
         </div>
 
         {/* Search Bar */}
@@ -1533,6 +1531,8 @@ export default function MyReflectionsPage() {
         onClose={() => setSelectedAnnotation(null)}
         onDelete={handleDeleteAnnotation}
       />
+
+      <BottomNav user={user} />
     </div>
   );
 }

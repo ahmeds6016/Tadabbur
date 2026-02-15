@@ -4,6 +4,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import Link from 'next/link';
 import { auth } from '../lib/firebase';
 import { BACKEND_URL } from '../lib/config';
+import BottomNav from '../components/BottomNav';
 
 export default function QueryHistoryPage() {
   const [user, setUser] = useState(null);
@@ -99,13 +100,10 @@ export default function QueryHistoryPage() {
   }
 
   return (
-    <div className="container">
+    <div className="container" style={{ paddingBottom: 100 }}>
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
           <h1>Query History</h1>
-          <Link href="/">
-            <button>← Back to Search</button>
-          </Link>
         </div>
 
         <p style={{ marginBottom: '24px', color: '#666' }}>
@@ -175,6 +173,8 @@ export default function QueryHistoryPage() {
           border-color: var(--gold);
         }
       `}</style>
+
+      <BottomNav user={user} />
     </div>
   );
 }

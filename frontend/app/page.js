@@ -28,7 +28,6 @@ import TafsirLogo from './components/Logo';
 import SurahVersePicker from './components/SurahVersePicker';
 import CollectionsGrid from './components/CollectionsGrid';
 import RecommendationBar from './components/RecommendationBar';
-import ReadingPlanCard from './components/ReadingPlanCard';
 import BadgeDisplay, { BadgePopup } from './components/BadgeDisplay';
 import { ToastContainer } from './components/ui/Toast';
 import { TafsirSkeleton, Skeleton } from './components/ui/SkeletonLoader';
@@ -690,12 +689,18 @@ function MainApp({ user, userProfile, onResetProfile }) {
   // Daily verse & streak state
   const [dailyVerse, setDailyVerse] = useState(null);
   const [streak, setStreak] = useState({ current_streak: 0, longest_streak: 0 });
+  const [showStreakPopup, setShowStreakPopup] = useState(false);
 
   // Badge popup state
   const [badgePopup, setBadgePopup] = useState(null);
 
   // Toast notifications
   const { toasts, showSuccess, showError } = useToast();
+
+  // Save-to-folder dialog state
+  const [showFolderPicker, setShowFolderPicker] = useState(false);
+  const [existingFolders, setExistingFolders] = useState([]);
+  const [newFolderName, setNewFolderName] = useState('');
 
   // Annotation state (lifted from EnhancedResultsDisplay)
   const [annotations, setAnnotations] = useState({});
@@ -721,6 +726,13 @@ function MainApp({ user, userProfile, onResetProfile }) {
       setShowFeatureIntro(true);
     }
   }, [onboardingLoaded, onboardingState.hasSeenFeatureIntro]);
+
+  // Auto-dismiss streak popup after 4 seconds
+  useEffect(() => {
+    if (!showStreakPopup) return;
+    const timer = setTimeout(() => setShowStreakPopup(false), 4000);
+    return () => clearTimeout(timer);
+  }, [showStreakPopup]);
 
   // Help menu state
   const [helpMenuOpen, setHelpMenuOpen] = useState(false);
@@ -764,7 +776,12 @@ function MainApp({ user, userProfile, onResetProfile }) {
           headers: { Authorization: `Bearer ${token}` }
         })
           .then(res => res.ok ? res.json() : null)
-          .then(data => { if (data) setStreak(data); })
+          .then(data => {
+            if (data) {
+              setStreak(data);
+              if (data.current_streak > 0) setShowStreakPopup(true);
+            }
+          })
           .catch(() => {});
       });
     }
@@ -850,10 +867,29 @@ function MainApp({ user, userProfile, onResetProfile }) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
+  // Open folder picker before saving
   const handleSaveSearch = useCallback(async () => {
-    if (!response || !query) return;
+    if (!response || !query || !user) return;
+    // Fetch existing folders first
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch(`${BACKEND_URL}/saved-searches/folders`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setExistingFolders((data.folders || []).map(f => f.name));
+      }
+    } catch { /* non-critical */ }
+    setNewFolderName('');
+    setShowFolderPicker(true);
+  }, [response, query, user]);
 
-    // Extract snippet from response
+  // Actually save with the chosen folder
+  const doSaveToFolder = useCallback(async (folderName) => {
+    if (!response || !query) return;
+    setShowFolderPicker(false);
+
     const snippet = response.summary ||
       (response.tafsir_explanations && response.tafsir_explanations[0]?.explanation?.substring(0, 200)) ||
       'Tafsir result';
@@ -869,7 +905,7 @@ function MainApp({ user, userProfile, onResetProfile }) {
         body: JSON.stringify({
           query: query,
           approach: approach,
-          folder: 'Uncategorized',
+          folder: folderName || 'Uncategorized',
           title: query,
           responseSnippet: snippet,
           fullResponse: response
@@ -877,16 +913,15 @@ function MainApp({ user, userProfile, onResetProfile }) {
       });
 
       if (res.ok) {
-        showSuccess('Answer saved! View it in your Saved Searches.');
+        showSuccess(`Saved to "${folderName || 'Uncategorized'}"`);
         if (!onboardingState.hasViewedSaved) {
           markStepComplete('hasViewedSaved');
         }
       } else {
-        showError('Failed to save search. Please try again.');
+        showError('Failed to save. Please try again.');
       }
-    } catch (err) {
-      // Save failed silently — non-critical
-      showError('Failed to save search. Please try again.');
+    } catch {
+      showError('Failed to save. Please try again.');
     }
   }, [response, query, user, approach, onboardingState.hasViewedSaved, markStepComplete, showSuccess, showError]);
 
@@ -1527,17 +1562,6 @@ function MainApp({ user, userProfile, onResetProfile }) {
         {/* Homepage Dashboard — visible when no response is showing */}
         {!response && !isTafsirLoading && (
           <div className="homepage-dashboard">
-            {/* Streak Display */}
-            {streak.current_streak > 0 && (
-              <div className="streak-card">
-                <div className="streak-flame" style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--primary-teal)' }}>{streak.current_streak >= 7 ? 'S' : 'S'}</div>
-                <div className="streak-info">
-                  <span className="streak-count">{streak.current_streak} day streak</span>
-                  <span className="streak-sub">Longest: {streak.longest_streak} days</span>
-                </div>
-              </div>
-            )}
-
             {/* Daily Verse Card */}
             {dailyVerse && (
               <div className="daily-verse-card">
@@ -1566,9 +1590,6 @@ function MainApp({ user, userProfile, onResetProfile }) {
                 </button>
               </div>
             )}
-
-            {/* Active Reading Plan */}
-            <ReadingPlanCard user={user} onStudyVerse={handleStudyVerse} />
 
             {/* Badge Summary + Progress Link */}
             <div className="progress-summary-row">
@@ -1606,32 +1627,6 @@ function MainApp({ user, userProfile, onResetProfile }) {
               }
               .progress-link:hover {
                 text-decoration: underline;
-              }
-              .streak-card {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                padding: 14px 18px;
-                background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-                border: 1px solid #fbbf24;
-                border-radius: 12px;
-                margin-bottom: 16px;
-              }
-              .streak-flame {
-                font-size: 1.6rem;
-              }
-              .streak-info {
-                display: flex;
-                flex-direction: column;
-              }
-              .streak-count {
-                font-weight: 700;
-                color: #92400e;
-                font-size: 1.05rem;
-              }
-              .streak-sub {
-                font-size: 0.8rem;
-                color: #a16207;
               }
               .daily-verse-card {
                 padding: 24px;
@@ -2043,6 +2038,52 @@ function MainApp({ user, userProfile, onResetProfile }) {
         )}
       </div>
 
+        {/* Streak Popup Toast — auto-dismisses after 4s */}
+        {showStreakPopup && streak.current_streak > 0 && (
+          <div style={{
+            position: 'fixed',
+            bottom: 80,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 8000,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            padding: '10px 18px',
+            background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+            border: '1px solid #fbbf24',
+            borderRadius: 12,
+            boxShadow: '0 4px 20px rgba(251, 191, 36, 0.3)',
+            animation: 'streakSlideUp 0.35s ease',
+            maxWidth: 320,
+          }}>
+            <span style={{ fontSize: '1.1rem', fontWeight: 700, color: '#92400e' }}>
+              {streak.current_streak} day streak
+            </span>
+            <span style={{ fontSize: '0.78rem', color: '#a16207' }}>
+              Best: {streak.longest_streak}
+            </span>
+            <button
+              onClick={() => setShowStreakPopup(false)}
+              style={{
+                background: 'none', border: 'none',
+                color: '#92400e', cursor: 'pointer',
+                fontSize: '0.85rem', fontWeight: 600,
+                padding: '2px 6px', marginLeft: 4,
+              }}
+              aria-label="Dismiss streak notification"
+            >
+              x
+            </button>
+            <style jsx>{`
+              @keyframes streakSlideUp {
+                from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+                to { opacity: 1; transform: translateX(-50%) translateY(0); }
+              }
+            `}</style>
+          </div>
+        )}
+
         {/* Bottom Navigation for PWA */}
         <BottomNav user={user} />
 
@@ -2090,6 +2131,123 @@ function MainApp({ user, userProfile, onResetProfile }) {
           queryContext={currentVerse?.queryContext || query}
           shareId={currentShareId}
         />
+
+        {/* Folder Picker Dialog */}
+        {showFolderPicker && (
+          <>
+            <div
+              onClick={() => setShowFolderPicker(false)}
+              style={{
+                position: 'fixed', inset: 0,
+                background: 'rgba(0,0,0,0.4)',
+                zIndex: 9000,
+              }}
+            />
+            <div style={{
+              position: 'fixed',
+              bottom: 0, left: 0, right: 0,
+              background: 'var(--cream, #faf6f0)',
+              borderRadius: '16px 16px 0 0',
+              padding: '20px 20px 32px',
+              zIndex: 9001,
+              maxHeight: '60vh',
+              overflowY: 'auto',
+              boxShadow: '0 -4px 20px rgba(0,0,0,0.15)',
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <h3 style={{ margin: 0, fontSize: '1.05rem', color: 'var(--deep-blue, #1e3a5f)' }}>Save to Folder</h3>
+                <button
+                  onClick={() => setShowFolderPicker(false)}
+                  style={{ background: 'none', border: 'none', fontSize: '1.1rem', color: '#6b7280', cursor: 'pointer' }}
+                >
+                  x
+                </button>
+              </div>
+
+              {/* Existing folders */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
+                <button
+                  onClick={() => doSaveToFolder('Uncategorized')}
+                  style={{
+                    padding: '10px 14px',
+                    background: 'white',
+                    border: '1px solid var(--border-light, #e5e7eb)',
+                    borderRadius: 8,
+                    textAlign: 'left',
+                    fontSize: '0.9rem',
+                    cursor: 'pointer',
+                    color: 'var(--foreground, #2c3e50)',
+                  }}
+                >
+                  Uncategorized
+                </button>
+                {existingFolders.filter(f => f !== 'Uncategorized').map(folder => (
+                  <button
+                    key={folder}
+                    onClick={() => doSaveToFolder(folder)}
+                    style={{
+                      padding: '10px 14px',
+                      background: 'white',
+                      border: '1px solid var(--border-light, #e5e7eb)',
+                      borderRadius: 8,
+                      textAlign: 'left',
+                      fontSize: '0.9rem',
+                      cursor: 'pointer',
+                      color: 'var(--foreground, #2c3e50)',
+                    }}
+                  >
+                    {folder}
+                  </button>
+                ))}
+              </div>
+
+              {/* Create new folder */}
+              <div style={{ borderTop: '1px solid var(--border-light, #e5e7eb)', paddingTop: 12 }}>
+                <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 6 }}>
+                  Create new folder
+                </label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input
+                    type="text"
+                    value={newFolderName}
+                    onChange={(e) => setNewFolderName(e.target.value)}
+                    placeholder="Folder name..."
+                    maxLength={40}
+                    style={{
+                      flex: 1,
+                      padding: '8px 12px',
+                      border: '1px solid var(--border-light, #e5e7eb)',
+                      borderRadius: 8,
+                      fontSize: '0.9rem',
+                      outline: 'none',
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && newFolderName.trim()) {
+                        doSaveToFolder(newFolderName.trim());
+                      }
+                    }}
+                  />
+                  <button
+                    onClick={() => newFolderName.trim() && doSaveToFolder(newFolderName.trim())}
+                    disabled={!newFolderName.trim()}
+                    style={{
+                      padding: '8px 16px',
+                      background: newFolderName.trim() ? 'var(--primary-teal, #0d9488)' : '#e5e7eb',
+                      color: newFolderName.trim() ? 'white' : '#9ca3af',
+                      border: 'none',
+                      borderRadius: 8,
+                      fontSize: '0.85rem',
+                      fontWeight: 600,
+                      cursor: newFolderName.trim() ? 'pointer' : 'not-allowed',
+                    }}
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </>
   );
