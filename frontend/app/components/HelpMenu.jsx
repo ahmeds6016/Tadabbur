@@ -1,5 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Home, BookOpen, Star, FileText } from 'lucide-react';
 
 const helpContent = {
   home: {
@@ -141,10 +143,18 @@ const helpContent = {
   }
 };
 
-export default function HelpMenu({ currentPage = 'home', isOpen, onClose, onReplayFeatureIntro }) {
+export default function HelpMenu({ currentPage = 'home', isOpen, onClose, onReplayFeatureIntro, user }) {
   const [expandedSection, setExpandedSection] = useState(null);
   const [activeTab, setActiveTab] = useState('help');
   const content = helpContent[currentPage] || helpContent.home;
+  const router = useRouter();
+
+  const helpNavItems = [
+    { label: 'Home', icon: Home, path: '/' },
+    { label: 'Plans', icon: BookOpen, path: '/plans' },
+    { label: 'Saved', icon: Star, path: '/saved' },
+    user && { label: 'Reflections', icon: FileText, path: '/annotations' }
+  ].filter(Boolean);
 
   useEffect(() => {
     if (isOpen) {
@@ -216,7 +226,7 @@ export default function HelpMenu({ currentPage = 'home', isOpen, onClose, onRepl
           </button>
         </div>
 
-        <div className="help-content">
+        <div className="help-content" style={{ paddingBottom: 80 }}>
           {activeTab === 'help' && (
             <>
               {content.sections.map((section, idx) => (
@@ -303,7 +313,7 @@ export default function HelpMenu({ currentPage = 'home', isOpen, onClose, onRepl
 
               <div className="faq-item">
                 <h4>What is Tafsir Simplified?</h4>
-                <p>Tafsir Simplified helps you explore any verse of the Quran through the lens of classical scholarship. The AI synthesizes and presents content from authenticated sources — including Ibn Kathir, Al-Qurtubi, and five additional scholarly works — rather than generating its own interpretations. Every response is shaped by your chosen learning persona, so the commentary meets you at your level.</p>
+                <p>Tafsir Simplified helps you explore any verse of the Quran through the lens of classical scholarship. Advanced language modeling is used to synthesize authenticated scholarly sources for clarity — including Ibn Kathir, Al-Qurtubi, and five additional works. Every response is shaped by your chosen learning persona, so the commentary meets you at your level.</p>
               </div>
 
               <div className="faq-item">
@@ -342,6 +352,24 @@ export default function HelpMenu({ currentPage = 'home', isOpen, onClose, onRepl
               </div>
             </div>
           )}
+        </div>
+
+        {/* Bottom Navigation — mirrors app-wide nav inside help panel (mobile only) */}
+        <div className="help-bottom-nav">
+          {helpNavItems.map((item) => {
+            const IconComp = item.icon;
+            return (
+              <button
+                key={item.path}
+                className="help-nav-item"
+                onClick={() => { onClose(); router.push(item.path); }}
+                aria-label={item.label}
+              >
+                <IconComp size={20} strokeWidth={2} />
+                <span>{item.label}</span>
+              </button>
+            );
+          })}
         </div>
 
         <style jsx>{`
@@ -639,11 +667,61 @@ export default function HelpMenu({ currentPage = 'home', isOpen, onClose, onRepl
             line-height: 1.6;
           }
 
+          .help-bottom-nav {
+            display: none;
+            border-top: 1px solid var(--border-light, #e5e7eb);
+            background: rgba(255, 255, 255, 0.98);
+            padding: 8px 0;
+            padding-bottom: calc(8px + env(safe-area-inset-bottom));
+            flex-shrink: 0;
+          }
+
+          .help-nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3px;
+            background: none;
+            border: none;
+            padding: 8px 4px;
+            cursor: pointer;
+            color: var(--text-muted, #6b7280);
+            font-size: 0.62rem;
+            font-weight: 600;
+            transition: color 0.2s ease;
+          }
+
+          .help-nav-item:active {
+            color: var(--primary-teal, #0d9488);
+          }
+
           /* Mobile adjustments */
           @media (max-width: 768px) {
             .help-panel {
               width: 100%;
-              max-width: 400px;
+              max-width: 100%;
+            }
+
+            .help-header {
+              padding-top: calc(16px + env(safe-area-inset-top));
+            }
+
+            .help-close {
+              width: 40px;
+              height: 40px;
+              font-size: 1.6rem;
+            }
+
+            .help-bottom-nav {
+              display: flex;
+              justify-content: space-around;
+            }
+          }
+
+          @media (min-width: 769px) {
+            .help-panel {
+              max-width: 450px;
             }
           }
         `}</style>

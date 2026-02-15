@@ -219,7 +219,7 @@ export default function SharedPage() {
             Shared from <strong>Tafsir Simplified</strong>
           </p>
           <p style={{ margin: '8px 0 0 0', fontSize: '0.85rem', color: '#888' }}>
-            Classical Quranic commentary personalized to your learning style
+            A deeper understanding of this ayah.
           </p>
         </div>
       </div>

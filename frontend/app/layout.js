@@ -26,8 +26,8 @@ const amiri = Amiri({
 });
 
 export const metadata = {
-  title: "Tafsir Simplified - تفسير مبسط | AI-Powered Islamic Commentary",
-  description: "Explore authentic classical Islamic tafsir with AI-powered semantic search. Access insights from Ibn Kathir, al-Qurtubi, and other renowned scholars. Personalized Quranic commentary for every knowledge level - from new Muslims to advanced scholars.",
+  title: "Tafsir Simplified - تفسير مبسط | Classical Quranic Commentary",
+  description: "Explore authentic classical Islamic tafsir synthesized from scholarly sources. Access insights from Ibn Kathir, al-Qurtubi, and other renowned scholars. Personalized Quranic commentary for every knowledge level - from new Muslims to advanced scholars.",
   keywords: [
     "tafsir",
     "quran",
@@ -52,7 +52,7 @@ export const metadata = {
 
   openGraph: {
     title: "Tafsir Simplified - تفسير مبسط",
-    description: "AI-powered access to classical Islamic tafsir from Ibn Kathir, al-Qurtubi, and renowned scholars",
+    description: "Classical Islamic tafsir from Ibn Kathir, al-Qurtubi, and renowned scholars — synthesized for clarity",
     type: "website",
     locale: "en_US",
     alternateLocale: ["ar_SA"],
@@ -62,7 +62,7 @@ export const metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Tafsir Simplified - Islamic Commentary Platform",
-    description: "AI-Powered Classical Quranic Commentary for Modern Learners",
+    description: "Classical Quranic Commentary for Modern Learners",
   },
 
   robots: {

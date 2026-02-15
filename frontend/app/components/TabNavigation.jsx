@@ -1,12 +1,14 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 export default function TabNavigation({
   children,
   tabs = [],
   defaultTab = 0,
   storageKey = 'selected-tab',
-  resetKey = null  // Add reset key prop
+  resetKey = null,
+  onReflect = null,       // (sectionName) => void — reflect on current section
+  onReflectAll = null,    // () => void — reflect on entire response
 }) {
   const [activeTab, setActiveTab] = useState(() => {
     if (typeof window === 'undefined') return defaultTab;
@@ -20,6 +22,26 @@ export default function TabNavigation({
     const saved = localStorage.getItem(`${storageKey}-viewed`);
     return saved ? new Set(JSON.parse(saved)) : new Set();
   });
+
+  // Overflow menu state for reflect
+  const [showReflectMenu, setShowReflectMenu] = useState(false);
+  const menuRef = useRef(null);
+
+  // Close overflow menu on outside click
+  useEffect(() => {
+    if (!showReflectMenu) return;
+    const handler = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setShowReflectMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    document.addEventListener('touchstart', handler);
+    return () => {
+      document.removeEventListener('mousedown', handler);
+      document.removeEventListener('touchstart', handler);
+    };
+  }, [showReflectMenu]);
 
   // Check if we're on mobile
   const [isMobile, setIsMobile] = useState(false);
@@ -53,6 +75,17 @@ export default function TabNavigation({
   // Filter out empty tabs (sections with no content)
   const validTabs = tabs.filter(tab => tab.content);
 
+  // Get current section name for reflect
+  const currentSectionName = validTabs[activeTab]?.sectionName || validTabs[activeTab]?.label || '';
+
+  // Small reflect icon SVG (pencil/pen)
+  const reflectIcon = (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 20h9"/>
+      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+    </svg>
+  );
+
   // Don't use tabs on desktop - show all content with section labels
   if (!isMobile) {
     return (
@@ -60,8 +93,21 @@ export default function TabNavigation({
         {validTabs.map((tab, index) => (
           <section key={index} className="desktop-section" aria-label={tab.label}>
             <header className="desktop-section-header">
-              <span className="tab-icon">{tab.icon}</span>
-              <h2 className="tab-label">{tab.label}</h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1 }}>
+                <span className="tab-icon">{tab.icon}</span>
+                <h2 className="tab-label">{tab.label}</h2>
+              </div>
+              {onReflect && tab.sectionName && (
+                <button
+                  className="section-reflect-btn"
+                  onClick={() => onReflect(tab.sectionName)}
+                  title={`Reflect on ${tab.label}`}
+                  aria-label={`Reflect on ${tab.label}`}
+                >
+                  {reflectIcon}
+                  <span>Reflect</span>
+                </button>
+              )}
             </header>
             <div className="desktop-section-body">
               {tab.content}
@@ -87,6 +133,7 @@ export default function TabNavigation({
           .desktop-section-header {
             display: flex;
             align-items: center;
+            justify-content: space-between;
             gap: 10px;
             margin-bottom: 12px;
           }
@@ -100,6 +147,27 @@ export default function TabNavigation({
             font-weight: 700;
             color: #065f46;
             margin: 0;
+          }
+
+          .section-reflect-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 10px;
+            background: none;
+            border: 1px solid #ddd6fe;
+            border-radius: 6px;
+            color: #7c3aed;
+            font-size: 0.72rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            white-space: nowrap;
+          }
+
+          .section-reflect-btn:hover {
+            background: #f5f3ff;
+            border-color: #c4b5fd;
           }
 
           .desktop-section-body {
@@ -143,6 +211,58 @@ export default function TabNavigation({
               )}
             </button>
           ))}
+
+          {/* Reflect action in tab bar — shows when current tab has a section or entire-response reflect is available */}
+          {onReflect && (currentSectionName || onReflectAll) && (
+            <div className="tab-reflect-area" ref={menuRef}>
+              <button
+                className="tab-reflect-btn"
+                onClick={() => {
+                  // If current tab has a section AND there's also a reflectAll, show menu for choice
+                  if (currentSectionName && onReflectAll) {
+                    setShowReflectMenu(!showReflectMenu);
+                  } else if (currentSectionName) {
+                    onReflect(currentSectionName);
+                  } else if (onReflectAll) {
+                    // On a tab with no section (e.g., Verses) — go straight to entire response
+                    onReflectAll();
+                  }
+                }}
+                title="Reflect"
+                aria-label="Reflect on this section"
+              >
+                {reflectIcon}
+              </button>
+
+              {/* Overflow menu for reflect scope */}
+              {showReflectMenu && (
+                <div className="reflect-menu">
+                  {currentSectionName && (
+                    <button
+                      className="reflect-menu-item"
+                      onClick={() => {
+                        setShowReflectMenu(false);
+                        onReflect(currentSectionName);
+                      }}
+                    >
+                      <span className="reflect-menu-label">Reflect on {validTabs[activeTab]?.label || 'section'}</span>
+                    </button>
+                  )}
+                  {onReflectAll && (
+                    <button
+                      className="reflect-menu-item"
+                      onClick={() => {
+                        setShowReflectMenu(false);
+                        onReflectAll();
+                      }}
+                    >
+                      <span className="reflect-menu-label">Reflect on entire response</span>
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -170,6 +290,7 @@ export default function TabNavigation({
         .tab-headers {
           display: flex;
           width: 100%;
+          align-items: center;
         }
 
         .tab-header {
@@ -224,6 +345,74 @@ export default function TabNavigation({
 
         .tab-header.active .tab-count {
           background: var(--primary-teal, #0d9488);
+        }
+
+        /* Reflect button in tab bar */
+        .tab-reflect-area {
+          position: relative;
+          display: flex;
+          align-items: center;
+          padding: 0 8px;
+          flex-shrink: 0;
+        }
+
+        .tab-reflect-btn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 32px;
+          height: 32px;
+          background: none;
+          border: 1px solid #ddd6fe;
+          border-radius: 8px;
+          color: #7c3aed;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+
+        .tab-reflect-btn:active {
+          background: #f5f3ff;
+        }
+
+        /* Overflow menu */
+        .reflect-menu {
+          position: absolute;
+          top: 100%;
+          right: 0;
+          margin-top: 4px;
+          background: white;
+          border: 1px solid #e5e7eb;
+          border-radius: 10px;
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+          min-width: 200px;
+          z-index: 100;
+          overflow: hidden;
+        }
+
+        .reflect-menu-item {
+          display: block;
+          width: 100%;
+          padding: 12px 16px;
+          background: none;
+          border: none;
+          text-align: left;
+          cursor: pointer;
+          transition: background 0.15s ease;
+          font-size: 0.82rem;
+          color: #374151;
+        }
+
+        .reflect-menu-item:hover,
+        .reflect-menu-item:active {
+          background: #f5f3ff;
+        }
+
+        .reflect-menu-item + .reflect-menu-item {
+          border-top: 1px solid #f3f4f6;
+        }
+
+        .reflect-menu-label {
+          font-weight: 500;
         }
 
         .tab-content {

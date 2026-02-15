@@ -1334,7 +1334,7 @@ function MainApp({ user, userProfile, onResetProfile }) {
         try {
           await navigator.share({
             title: `Tafsir Simplified — ${query}`,
-            text: 'Classical Quranic commentary synthesized from scholarly sources — personalized to your learning style.',
+            text: 'A deeper understanding of this ayah.',
             url: shareUrl
           });
 
@@ -1930,8 +1930,8 @@ function MainApp({ user, userProfile, onResetProfile }) {
                   .reflection-prompt-card {
                     display: flex;
                     gap: 16px;
-                    padding: 20px 24px;
-                    margin-top: 24px;
+                    padding: 16px 20px;
+                    margin-top: 16px;
                     background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 50%, #ede9fe 100%);
                     border: 1px solid #ddd6fe;
                     border-radius: 16px;
@@ -2023,6 +2023,7 @@ function MainApp({ user, userProfile, onResetProfile }) {
           isOpen={helpMenuOpen}
           onClose={() => setHelpMenuOpen(false)}
           onReplayFeatureIntro={() => setShowFeatureIntro(true)}
+          user={user}
         />
 
         {/* Floating Help Button */}
@@ -2703,47 +2704,6 @@ function EnhancedResultsDisplay({
   return (
     <>
       <div className="results-container">
-        {/* General Reflection Button */}
-      {user && (
-        <div style={{
-          position: 'relative',
-          display: 'flex',
-          justifyContent: 'flex-end',
-          marginBottom: '20px',
-          paddingRight: '20px'
-        }}>
-          <button
-            onClick={() => {
-              setCurrentVerse({ reflectionType: 'general', queryContext: query });
-              setAnnotationDialogOpen(true);
-              ensureShareId().catch(() => {});
-            }}
-            style={{
-              background: 'var(--primary-teal)',
-              border: 'none',
-              color: 'white',
-              padding: '12px 24px',
-              borderRadius: '24px',
-              cursor: 'pointer',
-              fontSize: '1rem',
-              fontWeight: '700',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              boxShadow: 'var(--shadow-medium)',
-              transition: 'all 0.3s ease'
-            }}
-            className="unified-add-note-btn"
-            onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-            onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-          >
-            Reflect on Entire Response
-          </button>
-        </div>
-      )}
-
-      {/* All annotation panels are now handled by the unified AnnotationDialog at the bottom */}
-
       {/* Scholarly Sources Attribution */}
       {scholarly_sources.length > 0 && (
         <div style={{
@@ -2751,8 +2711,8 @@ function EnhancedResultsDisplay({
           flexWrap: 'wrap',
           gap: '6px',
           alignItems: 'center',
-          marginBottom: '12px',
-          padding: '8px 12px',
+          marginBottom: '8px',
+          padding: '6px 10px',
           background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
           borderRadius: '8px',
           border: '1px solid #e2e8f0',
@@ -2850,35 +2810,9 @@ function EnhancedResultsDisplay({
             label: 'Tafsir',
             icon: '',
             count: tafsir_explanations.length,
+            sectionName: 'Tafsir Explanations',
             content: (
               <div className="tafsir-section">
-                {/* Tafsir Reflection Button */}
-                {user && (
-                  <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'flex-end' }}>
-                    <button
-                      onClick={() => {
-                        setCurrentVerse({ reflectionType: 'section', sectionName: 'Tafsir Explanations', queryContext: query });
-                        setAnnotationDialogOpen(true);
-                        ensureShareId().catch(() => {});
-                      }}
-                      style={{
-                        padding: '8px 16px',
-                        background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
-                        border: 'none',
-                        borderRadius: '8px',
-                        color: 'white',
-                        fontSize: '0.85rem',
-                        fontWeight: '600',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease'
-                      }}
-                      onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-                      onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                    >
-                      Reflect
-                    </button>
-                  </div>
-                )}
           {tafsir_explanations.map((tafsir, index) => (
             <details key={index} className="tafsir-details enhanced" open>
               <summary>
@@ -2990,35 +2924,9 @@ function EnhancedResultsDisplay({
             label: lessons_practical_applications.length === 1 ? 'Lesson' : 'Lessons',
             icon: '',
             count: lessons_practical_applications.length,
+            sectionName: 'Lessons & Practical Applications',
             content: (
               <div className="lessons-section">
-                {/* Lessons Reflection Button */}
-                {user && (
-                  <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'flex-end' }}>
-                    <button
-                      onClick={() => {
-                        setCurrentVerse({ reflectionType: 'section', sectionName: 'Lessons & Practical Applications', queryContext: query });
-                        setAnnotationDialogOpen(true);
-                        ensureShareId().catch(() => {});
-                      }}
-                      style={{
-                        padding: '8px 16px',
-                        background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
-                        border: 'none',
-                        borderRadius: '8px',
-                        color: 'white',
-                        fontSize: '0.85rem',
-                        fontWeight: '600',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease'
-                      }}
-                      onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-                      onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                    >
-                      Reflect
-                    </button>
-                  </div>
-                )}
           <div style={{ display: 'grid', gap: '16px' }}>
             {lessons_practical_applications.map((lesson, index) => (
               <div
@@ -3207,35 +3115,9 @@ function EnhancedResultsDisplay({
           summary && {
             label: 'Summary',
             icon: '',
+            sectionName: 'Summary',
             content: (
               <div className="summary-section">
-                {/* Summary Reflection Button */}
-                {user && (
-                  <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'flex-end' }}>
-                    <button
-                      onClick={() => {
-                        setCurrentVerse({ reflectionType: 'section', sectionName: 'Summary', queryContext: query });
-                        setAnnotationDialogOpen(true);
-                        ensureShareId().catch(() => {});
-                      }}
-                      style={{
-                        padding: '8px 16px',
-                        background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
-                        border: 'none',
-                        borderRadius: '8px',
-                        color: 'white',
-                        fontSize: '0.85rem',
-                        fontWeight: '600',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease'
-                      }}
-                      onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-                      onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                    >
-                      Reflect
-                    </button>
-                  </div>
-                )}
           <div className="summary-content">
             <p>{summary}</p>
           </div>
@@ -3245,6 +3127,16 @@ function EnhancedResultsDisplay({
         ].filter(Boolean)} // Remove null/false entries
         defaultTab={0}
         storageKey="tafsir-selected-tab"
+        onReflect={user ? (sectionName) => {
+          setCurrentVerse({ reflectionType: 'section', sectionName, queryContext: query });
+          setAnnotationDialogOpen(true);
+          ensureShareId().catch(() => {});
+        } : null}
+        onReflectAll={user ? () => {
+          setCurrentVerse({ reflectionType: 'general', queryContext: query });
+          setAnnotationDialogOpen(true);
+          ensureShareId().catch(() => {});
+        } : null}
       />
       </div>
 

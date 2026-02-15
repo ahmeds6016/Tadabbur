@@ -736,7 +736,7 @@ button:hover:not(:disabled) {
    ============================================================================ */
 
 .results-container {
-  margin-top: 48px;
+  margin-top: 32px;
   animation: fadeInUp 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
