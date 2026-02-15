@@ -6253,19 +6253,19 @@ def update_collection_progress(collection_id):
 # ============================================================================
 
 BADGE_DEFINITIONS = {
-    "streak_3": {"name": "Getting Started", "description": "Maintained a 3-day learning streak", "category": "streak", "threshold": 3},
-    "streak_7": {"name": "Week of Wisdom", "description": "7 consecutive days of engagement", "category": "streak", "threshold": 7},
-    "streak_30": {"name": "Month of Devotion", "description": "30-day learning streak", "category": "streak", "threshold": 30},
-    "explore_10": {"name": "Curious Mind", "description": "Explored 10 unique verses", "category": "exploration", "threshold": 10},
-    "explore_100": {"name": "Deep Diver", "description": "Explored 100 unique verses", "category": "exploration", "threshold": 100},
-    "explore_500": {"name": "Quranic Scholar", "description": "Explored 500 unique verses", "category": "exploration", "threshold": 500},
-    "surahs_10": {"name": "Surah Explorer", "description": "Explored verses from 10 different surahs", "category": "exploration", "threshold": 10},
-    "surahs_50": {"name": "Quran Traveler", "description": "Explored verses from 50 different surahs", "category": "exploration", "threshold": 50},
-    "reflect_1": {"name": "First Reflection", "description": "Wrote your first reflection", "category": "reflection", "threshold": 1},
-    "reflect_10": {"name": "Thoughtful Heart", "description": "Wrote 10 reflections", "category": "reflection", "threshold": 10},
-    "reflect_50": {"name": "Reflection Master", "description": "Wrote 50 reflections", "category": "reflection", "threshold": 50},
-    "collection_complete": {"name": "Collection Complete", "description": "Completed a themed verse collection", "category": "special", "threshold": 1},
-    "plan_complete": {"name": "Journey Complete", "description": "Finished a reading plan", "category": "special", "threshold": 1},
+    "streak_3": {"name": "Getting Started", "description": "Maintained a 3-day learning streak", "icon": "fire", "category": "streak", "threshold": 3},
+    "streak_7": {"name": "Week of Wisdom", "description": "7 consecutive days of engagement", "icon": "calendar", "category": "streak", "threshold": 7},
+    "streak_30": {"name": "Month of Devotion", "description": "30-day learning streak", "icon": "crown", "category": "streak", "threshold": 30},
+    "explore_10": {"name": "Curious Mind", "description": "Explored 10 unique verses", "icon": "search", "category": "exploration", "threshold": 10},
+    "explore_100": {"name": "Deep Diver", "description": "Explored 100 unique verses", "icon": "compass", "category": "exploration", "threshold": 100},
+    "explore_500": {"name": "Quranic Scholar", "description": "Explored 500 unique verses", "icon": "graduation", "category": "exploration", "threshold": 500},
+    "surahs_10": {"name": "Surah Explorer", "description": "Explored verses from 10 different surahs", "icon": "globe", "category": "exploration", "threshold": 10},
+    "surahs_50": {"name": "Quran Traveler", "description": "Explored verses from 50 different surahs", "icon": "rocket", "category": "exploration", "threshold": 50},
+    "reflect_1": {"name": "First Reflection", "description": "Wrote your first reflection", "icon": "pen", "category": "reflection", "threshold": 1},
+    "reflect_10": {"name": "Thoughtful Heart", "description": "Wrote 10 reflections", "icon": "heart", "category": "reflection", "threshold": 10},
+    "reflect_50": {"name": "Reflection Master", "description": "Wrote 50 reflections", "icon": "brain", "category": "reflection", "threshold": 50},
+    "collection_complete": {"name": "Collection Complete", "description": "Completed a themed verse collection", "icon": "book", "category": "special", "threshold": 1},
+    "plan_complete": {"name": "Journey Complete", "description": "Finished a reading plan", "icon": "star", "category": "special", "threshold": 1},
 }
 
 
