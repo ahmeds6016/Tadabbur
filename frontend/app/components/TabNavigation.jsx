@@ -78,12 +78,12 @@ export default function TabNavigation({
   // Get current section name for reflect
   const currentSectionName = validTabs[activeTab]?.sectionName || validTabs[activeTab]?.label || '';
 
-  // Three-dot icon for overflow menu
+  // Vertical three-dot icon (kebab menu)
   const dotsIcon = (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-      <circle cx="12" cy="5" r="2"/>
-      <circle cx="12" cy="12" r="2"/>
-      <circle cx="12" cy="19" r="2"/>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+      <circle cx="12" cy="4" r="2.5"/>
+      <circle cx="12" cy="12" r="2.5"/>
+      <circle cx="12" cy="20" r="2.5"/>
     </svg>
   );
 
@@ -203,19 +203,19 @@ export default function TabNavigation({
             display: flex;
             align-items: center;
             justify-content: center;
-            width: 32px;
-            height: 32px;
-            background: #f3f4f6;
-            border: 1px solid #e5e7eb;
+            width: 36px;
+            height: 36px;
+            background: #e5e7eb;
+            border: 1px solid #d1d5db;
             border-radius: 8px;
-            color: #6b7280;
+            color: #374151;
             cursor: pointer;
             transition: all 0.15s ease;
           }
 
           .section-dots-btn:hover {
-            background: #e5e7eb;
-            color: #374151;
+            background: #d1d5db;
+            color: #1f2937;
           }
 
           .section-dots-menu {
@@ -442,19 +442,19 @@ export default function TabNavigation({
           display: flex;
           align-items: center;
           justify-content: center;
-          width: 32px;
-          height: 32px;
-          background: #f3f4f6;
-          border: 1px solid #e5e7eb;
+          width: 36px;
+          height: 36px;
+          background: #e5e7eb;
+          border: 1px solid #d1d5db;
           border-radius: 8px;
-          color: #6b7280;
+          color: #374151;
           cursor: pointer;
           transition: all 0.15s ease;
         }
 
         .tab-dots-btn:active {
-          background: #e5e7eb;
-          color: #374151;
+          background: #d1d5db;
+          color: #1f2937;
         }
 
         /* Overflow menu */
