@@ -1525,6 +1525,11 @@ summary:focus-visible {
 
 /* PWA Standalone Mode Adjustments */
 @media (display-mode: standalone) {
+  /* Prevent overscroll bounce and ensure proper viewport height */
+  html, body {
+    overscroll-behavior-y: none;
+  }
+
   /* Add safe area padding for iPhone notch/home bar */
   body {
     padding-top: env(safe-area-inset-top);
@@ -1563,13 +1568,18 @@ summary:focus-visible {
 @supports (-webkit-touch-callout: none) {
   /* iOS specific styles */
   @media (display-mode: standalone) {
-    /* Prevent overscroll bounce */
-    body {
-      position: fixed;
-      width: 100%;
-      height: 100vh;
-      overflow-y: auto;
+    /* Prevent overscroll bounce without breaking position:fixed children */
+    html, body {
+      overscroll-behavior-y: none;
+      height: 100dvh;
+      height: 100vh; /* fallback for older iOS */
       -webkit-overflow-scrolling: touch;
+    }
+
+    @supports (height: 100dvh) {
+      html, body {
+        height: 100dvh;
+      }
     }
   }
 }

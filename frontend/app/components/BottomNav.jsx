@@ -121,6 +121,16 @@ export default function BottomNav({ user }) {
             }
           }
 
+          /* Ensure pinned in PWA standalone mode */
+          @media (display-mode: standalone) {
+            .bottom-nav {
+              position: fixed;
+              bottom: 0;
+              left: 0;
+              right: 0;
+            }
+          }
+
           @media (min-width: 1024px) {
             .bottom-nav {
               display: none;
