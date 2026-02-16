@@ -414,9 +414,10 @@ export default function SurahVersePicker({ onSelect, initialSurah = null, initia
 
   return (
     <div style={{
-      background: 'var(--cream, #faf6f0)',
-      borderRadius: '12px',
-      padding: '16px',
+      background: 'white',
+      borderRadius: '10px',
+      padding: '12px',
+      boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
       marginBottom: '16px'
     }}>
       {/* Quick Select Buttons */}
