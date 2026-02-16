@@ -5,7 +5,7 @@
  * without offline functionality, since the app requires backend API access.
  */
 
-const VERSION = 'v1.0.0';
+const VERSION = 'v2.0.0-tadabbur';
 
 // Install event - called when service worker is first installed
 self.addEventListener('install', (event) => {
