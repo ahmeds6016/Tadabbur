@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { onAuthStateChanged } from 'firebase/auth';
+import { ChevronRight, ChevronDown } from 'lucide-react';
 import { auth } from '../lib/firebase';
 import { BACKEND_URL } from '../lib/config';
 import BadgeDisplay from '../components/BadgeDisplay';
@@ -17,6 +18,7 @@ export default function PlansPage() {
   const [error, setError] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState(null);
+  const [expandedPlanId, setExpandedPlanId] = useState(null);
 
   // Progress map state
   const [quranProgress, setQuranProgress] = useState(null);
@@ -167,35 +169,27 @@ export default function PlansPage() {
     );
   }
 
+  const tabs = [
+    { id: 'plans', label: `My Plans${activePlans.length ? ` (${activePlans.length})` : ''}` },
+    { id: 'browse', label: 'Browse' },
+    { id: 'progress', label: 'Progress Map' },
+  ];
+
   return (
     <>
-      <div style={{ maxWidth: 800, margin: '0 auto', padding: '20px 16px 120px' }}>
-        {/* Tab navigation */}
-        <div style={{
-          display: 'flex',
-          borderBottom: '1px solid var(--border-light, #e5e7eb)',
-          marginBottom: 16,
-        }}>
-          {[
-            { id: 'plans', label: `My Plans${activePlans.length ? ` (${activePlans.length})` : ''}` },
-            { id: 'browse', label: 'Browse Plans' },
-            { id: 'progress', label: 'Progress Map' },
-          ].map(t => (
+      <div className="plans-page">
+        {/* Page header */}
+        <div className="plans-header">
+          <h1 className="plans-title">Reading Plans</h1>
+        </div>
+
+        {/* Segmented control */}
+        <div className="segmented-control">
+          {tabs.map(t => (
             <button
               key={t.id}
-              onClick={() => setTab(t.id)}
-              style={{
-                flex: 1,
-                padding: '10px 8px',
-                background: 'none',
-                border: 'none',
-                borderBottom: `2px solid ${tab === t.id ? 'var(--primary-teal, #0d9488)' : 'transparent'}`,
-                marginBottom: -1,
-                fontSize: '0.85rem',
-                fontWeight: tab === t.id ? 600 : 400,
-                color: tab === t.id ? 'var(--primary-teal, #0d9488)' : '#6b7280',
-                cursor: 'pointer',
-              }}
+              onClick={() => { setTab(t.id); setExpandedPlanId(null); }}
+              className={`segment ${tab === t.id ? 'active' : ''}`}
             >
               {t.label}
             </button>
@@ -203,134 +197,99 @@ export default function PlansPage() {
         </div>
 
         {error && (
-          <div style={{
-            padding: '10px 14px', background: '#fef2f2', color: '#dc2626',
-            borderRadius: 8, fontSize: '0.85rem', marginBottom: 12,
-          }}>
-            {error}
-          </div>
+          <div className="error-banner">{error}</div>
         )}
 
         {/* ===================== MY PLANS TAB ===================== */}
         {tab === 'plans' && (
           <>
             {activePlans.length > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div className="plan-list">
                 {activePlans.map((ap) => {
                   const plan = plans.find(p => p.id === ap.plan_id);
                   if (!plan) return null;
                   const totalDays = ap.duration_days || plan.duration_days;
                   const completedCount = ap.completed_days?.length || 0;
                   const progressPct = totalDays > 0 ? Math.round((completedCount / totalDays) * 100) : 0;
+                  const isExpanded = expandedPlanId === ap.plan_id;
 
                   return (
-                    <div key={ap.plan_id} style={{
-                      background: 'white',
-                      border: '1px solid var(--primary-teal, #0d9488)',
-                      borderRadius: 12,
-                      padding: 16,
-                    }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-                        <div>
-                          <div style={{
-                            fontSize: '0.7rem', fontWeight: 600,
-                            textTransform: 'uppercase', letterSpacing: '0.05em',
-                            color: 'var(--primary-teal, #0d9488)', marginBottom: 4,
-                          }}>
-                            {ap.category || plan.category} · Day {ap.current_day} of {totalDays}
+                    <div key={ap.plan_id} className={`plan-row ${isExpanded ? 'expanded' : ''}`}>
+                      {/* Collapsed row — always visible, tappable */}
+                      <div
+                        className="plan-row-header"
+                        onClick={() => setExpandedPlanId(isExpanded ? null : ap.plan_id)}
+                      >
+                        <div className="plan-row-left">
+                          <div className="plan-row-title">{ap.title || plan.title}</div>
+                          <div className="plan-row-meta">
+                            Day {ap.current_day}/{totalDays}
+                            {ap.category || plan.category ? ` · ${ap.category || plan.category}` : ''}
                           </div>
-                          <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--deep-blue, #1e293b)' }}>
-                            {ap.title || plan.title}
-                          </h2>
                         </div>
-                        <span style={{
-                          fontSize: '0.75rem', fontWeight: 700,
-                          color: 'var(--primary-teal, #0d9488)',
-                          background: 'rgba(13, 148, 136, 0.08)',
-                          padding: '4px 10px', borderRadius: 6,
-                        }}>
-                          {progressPct}%
-                        </span>
+                        <div className="plan-row-right">
+                          <div className="plan-row-progress-mini">
+                            <div className="mini-bar">
+                              <div className="mini-bar-fill" style={{ width: `${progressPct}%` }} />
+                            </div>
+                            <span className="mini-pct">{progressPct}%</span>
+                          </div>
+                          {isExpanded ? <ChevronDown size={18} color="#9ca3af" /> : <ChevronRight size={18} color="#9ca3af" />}
+                        </div>
                       </div>
 
-                      {/* Description */}
-                      <p style={{ fontSize: '0.82rem', color: '#6b7280', lineHeight: 1.5, margin: '0 0 10px' }}>
-                        {ap.description || plan.description}
-                      </p>
+                      {/* Expanded detail */}
+                      {isExpanded && (
+                        <div className="plan-row-detail">
+                          {(ap.description || plan.description) && (
+                            <p className="plan-desc">{ap.description || plan.description}</p>
+                          )}
 
-                      {/* Progress bar */}
-                      <div style={{ height: 5, background: 'var(--border-light, #e5e7eb)', borderRadius: 3, overflow: 'hidden', marginBottom: 10 }}>
-                        <div style={{ height: '100%', width: `${progressPct}%`, background: 'var(--primary-teal, #0d9488)', borderRadius: 3, transition: 'width 0.3s ease' }} />
-                      </div>
-
-                      {/* Today's verse detail */}
-                      {ap.today_verse && (
-                        <div style={{
-                          padding: 12, background: 'var(--cream, #faf6f0)',
-                          borderRadius: 8, marginBottom: 10,
-                          border: '1px solid var(--border-light, #e5e7eb)',
-                        }}>
-                          <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--deep-blue, #1e293b)', marginBottom: 4 }}>
-                            Today: {ap.today_verse.title}
-                          </div>
-                          <div
-                            onClick={() => handleStudyVerse(ap.today_verse.surah, ap.today_verse.verse)}
-                            style={{ fontSize: '0.78rem', color: 'var(--primary-teal, #0d9488)', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2, marginBottom: 6 }}
-                          >
-                            {ap.today_verse.surah_name} ({ap.today_verse.surah}:{ap.today_verse.verse})
-                          </div>
-                          {ap.today_verse.prompt && (
-                            <div style={{ fontSize: '0.78rem', color: '#6b7280', fontStyle: 'italic', lineHeight: 1.4 }}>
-                              Reflect: {ap.today_verse.prompt}
+                          {/* Today's verse */}
+                          {ap.today_verse && (
+                            <div className="today-verse">
+                              <div className="today-label">Today: {ap.today_verse.title}</div>
+                              <div
+                                className="today-ref"
+                                onClick={() => handleStudyVerse(ap.today_verse.surah, ap.today_verse.verse)}
+                              >
+                                {ap.today_verse.surah_name} ({ap.today_verse.surah}:{ap.today_verse.verse})
+                              </div>
+                              {ap.today_verse.prompt && (
+                                <div className="today-prompt">Reflect: {ap.today_verse.prompt}</div>
+                              )}
                             </div>
                           )}
+
+                          <div className="plan-actions">
+                            {ap.today_verse && (
+                              <button
+                                className="btn-primary"
+                                onClick={() => handleStudyVerse(ap.today_verse.surah, ap.today_verse.verse)}
+                                disabled={actionLoading}
+                              >
+                                Study Verse
+                              </button>
+                            )}
+                            <button
+                              className="btn-secondary"
+                              onClick={() => handleCompleteDay(ap.plan_id, ap.current_day)}
+                              disabled={actionLoading}
+                            >
+                              {actionLoading ? 'Saving...' : 'Complete Day'}
+                            </button>
+                          </div>
                         </div>
                       )}
-
-                      {/* Action buttons */}
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        {ap.today_verse && (
-                          <button
-                            onClick={() => handleStudyVerse(ap.today_verse.surah, ap.today_verse.verse)}
-                            disabled={actionLoading}
-                            style={{
-                              flex: 1, padding: '9px 14px', background: 'var(--primary-teal, #0d9488)',
-                              color: 'white', border: 'none', borderRadius: 8, fontSize: '0.82rem',
-                              fontWeight: 600, cursor: actionLoading ? 'not-allowed' : 'pointer', opacity: actionLoading ? 0.5 : 1,
-                            }}
-                          >
-                            Study Verse
-                          </button>
-                        )}
-                        <button
-                          onClick={() => handleCompleteDay(ap.plan_id, ap.current_day)}
-                          disabled={actionLoading}
-                          style={{
-                            flex: 1, padding: '9px 14px', background: 'var(--cream, #faf6f0)',
-                            color: 'var(--deep-blue, #1e293b)', border: '1px solid var(--border-light, #e5e7eb)',
-                            borderRadius: 8, fontSize: '0.82rem', fontWeight: 600,
-                            cursor: actionLoading ? 'not-allowed' : 'pointer', opacity: actionLoading ? 0.5 : 1,
-                          }}
-                        >
-                          {actionLoading ? 'Saving...' : 'Complete Day'}
-                        </button>
-                      </div>
                     </div>
                   );
                 })}
               </div>
             ) : (
-              <div style={{ textAlign: 'center', padding: '40px 20px', color: '#6b7280' }}>
-                <p style={{ fontSize: '1rem', marginBottom: 8 }}>No active plans</p>
-                <p style={{ fontSize: '0.85rem', marginBottom: 16 }}>Start one or more reading plans from the Browse tab.</p>
-                <button
-                  onClick={() => setTab('browse')}
-                  style={{
-                    padding: '10px 20px', background: 'var(--primary-teal, #0d9488)',
-                    color: 'white', border: 'none', borderRadius: 8, fontSize: '0.85rem',
-                    fontWeight: 600, cursor: 'pointer',
-                  }}
-                >
+              <div className="empty-state">
+                <p className="empty-title">No active plans</p>
+                <p className="empty-desc">Start a reading plan from Browse.</p>
+                <button className="btn-primary" onClick={() => setTab('browse')}>
                   Browse Plans
                 </button>
               </div>
@@ -343,16 +302,10 @@ export default function PlansPage() {
           <div>
             {/* Category filters */}
             {categories.length > 1 && (
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+              <div className="cat-filters">
                 <button
                   onClick={() => setCategoryFilter(null)}
-                  style={{
-                    padding: '6px 12px', borderRadius: 16, fontSize: '0.78rem', fontWeight: 600,
-                    background: !categoryFilter ? 'var(--primary-teal, #0d9488)' : 'white',
-                    color: !categoryFilter ? 'white' : '#6b7280',
-                    border: `1px solid ${!categoryFilter ? 'var(--primary-teal, #0d9488)' : 'var(--border-light, #e5e7eb)'}`,
-                    cursor: 'pointer',
-                  }}
+                  className={`cat-chip ${!categoryFilter ? 'active' : ''}`}
                 >
                   All ({plans.length})
                 </button>
@@ -362,13 +315,7 @@ export default function PlansPage() {
                     <button
                       key={cat}
                       onClick={() => setCategoryFilter(cat)}
-                      style={{
-                        padding: '6px 12px', borderRadius: 16, fontSize: '0.78rem', fontWeight: 600,
-                        background: categoryFilter === cat ? 'var(--primary-teal, #0d9488)' : 'white',
-                        color: categoryFilter === cat ? 'white' : '#6b7280',
-                        border: `1px solid ${categoryFilter === cat ? 'var(--primary-teal, #0d9488)' : 'var(--border-light, #e5e7eb)'}`,
-                        cursor: 'pointer',
-                      }}
+                      className={`cat-chip ${categoryFilter === cat ? 'active' : ''}`}
                     >
                       {cat} ({count})
                     </button>
@@ -377,41 +324,54 @@ export default function PlansPage() {
               </div>
             )}
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div className="plan-list">
               {filteredPlans.map((plan) => {
                 const isActive = activePlanIds.has(plan.id);
+                const isExpanded = expandedPlanId === plan.id;
+
                 return (
-                  <div key={plan.id} style={{
-                    padding: '14px 16px',
-                    border: `1px solid ${isActive ? 'var(--primary-teal, #0d9488)' : 'var(--border-light, #e5e7eb)'}`,
-                    borderRadius: 10, background: isActive ? 'rgba(13, 148, 136, 0.04)' : 'white',
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-                      <div style={{ minWidth: 0, flex: 1 }}>
-                        <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--deep-blue, #1e293b)', marginBottom: 2 }}>
-                          {plan.title}
-                        </div>
-                        <div style={{ fontSize: '0.72rem', color: 'var(--gold, #b8860b)', fontWeight: 500, marginBottom: 6 }}>
+                  <div key={plan.id} className={`plan-row ${isActive ? 'is-active' : ''} ${isExpanded ? 'expanded' : ''}`}>
+                    <div
+                      className="plan-row-header"
+                      onClick={() => setExpandedPlanId(isExpanded ? null : plan.id)}
+                    >
+                      <div className="plan-row-left">
+                        <div className="plan-row-title">{plan.title}</div>
+                        <div className="plan-row-meta">
                           {plan.duration_days} days · {plan.category}
                         </div>
-                        <div style={{ fontSize: '0.82rem', color: '#6b7280', lineHeight: 1.5 }}>
-                          {plan.description}
-                        </div>
                       </div>
-                      <button
-                        onClick={() => handleStart(plan.id)}
-                        disabled={actionLoading || isActive}
-                        style={{
-                          flexShrink: 0, padding: '8px 16px',
-                          background: isActive ? 'var(--border-light, #e5e7eb)' : 'var(--primary-teal, #0d9488)',
-                          color: isActive ? '#6b7280' : 'white', border: 'none', borderRadius: 8,
-                          fontSize: '0.78rem', fontWeight: 600,
-                          cursor: (actionLoading || isActive) ? 'not-allowed' : 'pointer', opacity: actionLoading ? 0.5 : 1,
-                        }}
-                      >
-                        {isActive ? 'Active' : 'Start'}
-                      </button>
+                      <div className="plan-row-right">
+                        {isActive ? (
+                          <span className="active-pill">Active</span>
+                        ) : (
+                          <button
+                            className="start-btn"
+                            onClick={(e) => { e.stopPropagation(); handleStart(plan.id); }}
+                            disabled={actionLoading}
+                          >
+                            Start
+                          </button>
+                        )}
+                        {isExpanded ? <ChevronDown size={18} color="#9ca3af" /> : <ChevronRight size={18} color="#9ca3af" />}
+                      </div>
                     </div>
+
+                    {isExpanded && (
+                      <div className="plan-row-detail">
+                        <p className="plan-desc">{plan.description}</p>
+                        {!isActive && (
+                          <button
+                            className="btn-primary"
+                            onClick={() => handleStart(plan.id)}
+                            disabled={actionLoading}
+                            style={{ alignSelf: 'flex-start' }}
+                          >
+                            {actionLoading ? 'Starting...' : 'Start Plan'}
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -493,8 +453,8 @@ export default function PlansPage() {
                 </div>
               </>
             ) : (
-              <div style={{ textAlign: 'center', padding: '40px 20px', color: '#6b7280', fontSize: '0.9rem' }}>
-                Loading progress map...
+              <div className="empty-state">
+                <p className="empty-desc">Loading progress map...</p>
               </div>
             )}
           </div>
@@ -502,6 +462,316 @@ export default function PlansPage() {
       </div>
 
       <style jsx>{`
+        /* ===== Page layout ===== */
+        .plans-page {
+          max-width: 600px;
+          margin: 0 auto;
+          padding: 16px 16px calc(60px + env(safe-area-inset-bottom, 0px));
+        }
+
+        .plans-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 4px 0 12px;
+        }
+
+        .plans-title {
+          font-size: 1.5rem;
+          font-weight: 700;
+          color: #1a1a1a;
+          margin: 0;
+        }
+
+        /* ===== Segmented control ===== */
+        .segmented-control {
+          display: flex;
+          background: #f3f4f6;
+          border-radius: 10px;
+          padding: 3px;
+          margin-bottom: 16px;
+          gap: 2px;
+        }
+
+        .segment {
+          flex: 1;
+          padding: 8px 4px;
+          border: none;
+          border-radius: 8px;
+          background: transparent;
+          font-size: 0.78rem;
+          font-weight: 500;
+          color: #6b7280;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          text-align: center;
+          white-space: nowrap;
+        }
+
+        .segment.active {
+          background: white;
+          color: #1a1a1a;
+          font-weight: 600;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        }
+
+        /* ===== Error banner ===== */
+        .error-banner {
+          padding: 10px 14px;
+          background: #fef2f2;
+          color: #dc2626;
+          border-radius: 8px;
+          font-size: 0.85rem;
+          margin-bottom: 12px;
+        }
+
+        /* ===== Plan list ===== */
+        .plan-list {
+          display: flex;
+          flex-direction: column;
+          gap: 1px;
+          background: #e5e7eb;
+          border-radius: 12px;
+          overflow: hidden;
+        }
+
+        /* ===== Plan row (accordion) ===== */
+        .plan-row {
+          background: white;
+        }
+
+        .plan-row.is-active {
+          background: rgba(13, 148, 136, 0.03);
+        }
+
+        .plan-row-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          padding: 12px 14px;
+          cursor: pointer;
+          -webkit-tap-highlight-color: transparent;
+          touch-action: manipulation;
+        }
+
+        .plan-row-header:active {
+          background: #f9fafb;
+        }
+
+        .plan-row-left {
+          flex: 1;
+          min-width: 0;
+        }
+
+        .plan-row-title {
+          font-size: 0.9rem;
+          font-weight: 600;
+          color: #1a1a1a;
+          line-height: 1.3;
+        }
+
+        .plan-row-meta {
+          font-size: 0.72rem;
+          color: #9ca3af;
+          margin-top: 2px;
+        }
+
+        .plan-row-right {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-shrink: 0;
+        }
+
+        /* Mini progress bar (My Plans collapsed view) */
+        .plan-row-progress-mini {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+
+        .mini-bar {
+          width: 40px;
+          height: 4px;
+          background: #e5e7eb;
+          border-radius: 2px;
+          overflow: hidden;
+        }
+
+        .mini-bar-fill {
+          height: 100%;
+          background: var(--primary-teal, #0d9488);
+          border-radius: 2px;
+          transition: width 0.3s ease;
+        }
+
+        .mini-pct {
+          font-size: 0.68rem;
+          font-weight: 600;
+          color: var(--primary-teal, #0d9488);
+          min-width: 28px;
+          text-align: right;
+        }
+
+        /* Active pill (Browse tab) */
+        .active-pill {
+          font-size: 0.68rem;
+          font-weight: 600;
+          color: var(--primary-teal, #0d9488);
+          background: rgba(13, 148, 136, 0.08);
+          padding: 3px 8px;
+          border-radius: 6px;
+        }
+
+        .start-btn {
+          font-size: 0.75rem;
+          font-weight: 600;
+          color: white;
+          background: var(--primary-teal, #0d9488);
+          border: none;
+          border-radius: 6px;
+          padding: 5px 12px;
+          cursor: pointer;
+        }
+
+        .start-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        /* Expanded detail */
+        .plan-row-detail {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          padding: 0 14px 14px;
+          border-top: 1px solid #f3f4f6;
+        }
+
+        .plan-desc {
+          font-size: 0.82rem;
+          color: #6b7280;
+          line-height: 1.5;
+          margin: 0;
+          padding-top: 10px;
+        }
+
+        .today-verse {
+          padding: 10px 12px;
+          background: #faf8f5;
+          border-radius: 8px;
+          border: 1px solid #f0ebe3;
+        }
+
+        .today-label {
+          font-size: 0.8rem;
+          font-weight: 600;
+          color: #1a1a1a;
+          margin-bottom: 4px;
+        }
+
+        .today-ref {
+          font-size: 0.78rem;
+          color: var(--primary-teal, #0d9488);
+          cursor: pointer;
+          text-decoration: underline;
+          text-underline-offset: 2px;
+          margin-bottom: 4px;
+        }
+
+        .today-prompt {
+          font-size: 0.75rem;
+          color: #6b7280;
+          font-style: italic;
+          line-height: 1.4;
+        }
+
+        .plan-actions {
+          display: flex;
+          gap: 8px;
+        }
+
+        .btn-primary {
+          flex: 1;
+          padding: 8px 14px;
+          background: var(--primary-teal, #0d9488);
+          color: white;
+          border: none;
+          border-radius: 8px;
+          font-size: 0.82rem;
+          font-weight: 600;
+          cursor: pointer;
+        }
+
+        .btn-primary:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        .btn-secondary {
+          flex: 1;
+          padding: 8px 14px;
+          background: #f9fafb;
+          color: #374151;
+          border: 1px solid #e5e7eb;
+          border-radius: 8px;
+          font-size: 0.82rem;
+          font-weight: 600;
+          cursor: pointer;
+        }
+
+        .btn-secondary:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        /* ===== Category filter chips ===== */
+        .cat-filters {
+          display: flex;
+          gap: 6px;
+          flex-wrap: wrap;
+          margin-bottom: 12px;
+        }
+
+        .cat-chip {
+          padding: 5px 12px;
+          border-radius: 16px;
+          font-size: 0.75rem;
+          font-weight: 600;
+          border: 1px solid #e5e7eb;
+          background: white;
+          color: #6b7280;
+          cursor: pointer;
+          transition: all 0.15s;
+        }
+
+        .cat-chip.active {
+          background: var(--primary-teal, #0d9488);
+          color: white;
+          border-color: var(--primary-teal, #0d9488);
+        }
+
+        /* ===== Empty state ===== */
+        .empty-state {
+          text-align: center;
+          padding: 40px 20px;
+        }
+
+        .empty-title {
+          font-size: 1rem;
+          font-weight: 600;
+          color: #374151;
+          margin: 0 0 4px;
+        }
+
+        .empty-desc {
+          font-size: 0.85rem;
+          color: #9ca3af;
+          margin: 0 0 16px;
+        }
+
+        /* ===== Surah grid (progress map) ===== */
         .surah-grid-plans {
           display: grid;
           grid-template-columns: repeat(6, 1fr);
@@ -551,6 +821,13 @@ export default function PlansPage() {
           border-radius: 2px;
           overflow: hidden;
           margin-top: 2px;
+        }
+
+        @media (min-width: 1024px) {
+          .plans-page {
+            padding: 24px 24px 40px;
+            max-width: 640px;
+          }
         }
       `}</style>
 

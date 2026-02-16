@@ -569,11 +569,13 @@ button:hover:not(:disabled) {
 }
 
 .logout-button {
-  background: var(--deep-blue);
+  background: transparent;
+  color: #6b7280;
   font-size: 0.7rem;
-  padding: 5px 10px;
-  border-radius: 12px;
+  padding: 4px 10px;
+  border-radius: 6px;
   font-weight: 600;
+  border: 1px solid #d1d5db;
 }
 
 .toggle-auth {
@@ -1137,8 +1139,8 @@ button:hover:not(:disabled) {
   }
 
   .persona-badge {
-    font-size: 0.7rem !important;
-    padding: 4px 8px !important;
+    font-size: 0.68rem !important;
+    padding: 3px 8px !important;
     background: var(--primary-teal) !important;
     color: white !important;
     border-radius: 6px !important;
@@ -1147,8 +1149,9 @@ button:hover:not(:disabled) {
   }
 
   .logout-button {
-    padding: 8px 14px !important;
-    font-size: 0.8rem !important;
+    padding: 3px 8px !important;
+    font-size: 0.68rem !important;
+    border-radius: 6px !important;
   }
 
   .tafsir-form {
@@ -1397,41 +1400,40 @@ button:hover:not(:disabled) {
 
 @media (max-width: 360px) {
   .container {
-    padding: 6px;
+    padding: 4px 4px 0 4px;
   }
 
   .main-app {
-    padding: 6px;
+    padding: 0;
   }
 
   .header {
-    padding: 10px 8px;
-    gap: 8px;
-    margin-bottom: 10px;
-    border-radius: 12px;
+    padding: 0;
+    gap: 6px;
+    margin-bottom: 6px;
   }
 
   .header h1 {
-    font-size: 1.3rem;
+    font-size: 0.9rem;
   }
 
   .header h1::after {
-    font-size: 0.7rem;
+    font-size: 0.6rem;
   }
 
   .user-info {
-    padding: 6px 8px;
+    padding: 0;
     gap: 4px;
   }
 
   .persona-badge {
-    font-size: 0.7rem !important;
-    padding: 5px 10px !important;
+    font-size: 0.65rem !important;
+    padding: 3px 6px !important;
   }
 
   .logout-button {
-    padding: 5px 8px !important;
-    font-size: 0.65rem !important;
+    padding: 3px 6px !important;
+    font-size: 0.6rem !important;
   }
 
   .tafsir-form {

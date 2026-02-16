@@ -749,32 +749,37 @@ export function FloatingHelpButton({ onClick }) {
         .floating-help-button {
           position: fixed;
           bottom: 24px;
-          right: 24px;
-          width: 56px;
-          height: 56px;
+          right: 16px;
+          width: 44px;
+          height: 44px;
           border-radius: 50%;
           background: linear-gradient(135deg, var(--primary-teal) 0%, var(--gold) 100%);
           color: white;
           border: none;
-          box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+          box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
           cursor: pointer;
           z-index: 998;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 1.5rem;
-          transition: all 0.3s ease;
+          font-size: 1.2rem;
+          font-weight: 700;
+          transition: all 0.2s ease;
         }
 
         .floating-help-button:hover {
-          transform: scale(1.1) rotate(10deg);
-          box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+          transform: scale(1.05);
+          box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
         }
 
-        /* Hide on mobile if bottom nav is present */
-        @media (max-width: 768px) {
+        @media (max-width: 1023px) {
           .floating-help-button {
-            bottom: 80px; /* Above bottom navigation */
+            /* Position above bottom nav (52px) + safe area */
+            bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+            right: 12px;
+            width: 40px;
+            height: 40px;
+            font-size: 1.1rem;
           }
         }
       `}</style>

@@ -192,6 +192,10 @@ export default function CollectionsGrid({ user, onStudyVerse, maxDisplay = 3 }) 
           <div
             key={col.id}
             className={`collection-card ${isExpanded ? 'expanded' : ''}`}
+            onClick={() => handleExpand(col.id)}
+            role="button"
+            tabIndex={0}
+            aria-expanded={isExpanded}
           >
             <div className="card-header">
               <span className="card-icon" style={{ background: dotColor }} aria-label={col.title}>
@@ -204,13 +208,16 @@ export default function CollectionsGrid({ user, onStudyVerse, maxDisplay = 3 }) 
                   {col.category ? ` \u00B7 ${col.category}` : ''}
                 </span>
               </div>
+              {user && (
+                <span className="card-pct">{studied}/{total}</span>
+              )}
             </div>
 
-            {col.description && (
+            {isExpanded && col.description && (
               <p className="card-description">{col.description}</p>
             )}
 
-            {user && (
+            {isExpanded && user && (
               <div className="progress-section">
                 <div className="progress-track">
                   <div
@@ -221,14 +228,6 @@ export default function CollectionsGrid({ user, onStudyVerse, maxDisplay = 3 }) 
                 <span className="progress-label">{studied}/{total} studied</span>
               </div>
             )}
-
-            <button
-              className="explore-btn"
-              onClick={() => handleExpand(col.id)}
-              aria-expanded={isExpanded}
-            >
-              {isExpanded ? 'Collapse' : 'Explore'}
-            </button>
 
             {isExpanded && (
               <div className="verse-list">
@@ -277,27 +276,37 @@ export default function CollectionsGrid({ user, onStudyVerse, maxDisplay = 3 }) 
           background: white;
           border: 1px solid var(--border-light, #e5e7eb);
           border-radius: 12px;
-          padding: 20px;
+          padding: 14px 16px;
           display: flex;
           flex-direction: column;
-          gap: 12px;
+          gap: 10px;
           transition: box-shadow 0.2s ease, border-color 0.2s ease;
+          cursor: pointer;
+          -webkit-tap-highlight-color: transparent;
         }
 
-        .collection-card:hover {
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        .collection-card:active {
+          background: #f9fafb;
         }
 
         .collection-card.expanded {
           grid-column: 1 / -1;
           border-color: var(--primary-teal, #0D9488);
-          box-shadow: 0 4px 16px rgba(13, 148, 136, 0.12);
+          box-shadow: 0 2px 8px rgba(13, 148, 136, 0.1);
         }
 
         .card-header {
           display: flex;
-          align-items: flex-start;
-          gap: 12px;
+          align-items: center;
+          gap: 10px;
+        }
+
+        .card-pct {
+          font-size: 0.7rem;
+          font-weight: 600;
+          color: #9ca3af;
+          flex-shrink: 0;
+          margin-left: auto;
         }
 
         .card-icon {
@@ -369,23 +378,7 @@ export default function CollectionsGrid({ user, onStudyVerse, maxDisplay = 3 }) 
           flex-shrink: 0;
         }
 
-        .explore-btn {
-          width: 100%;
-          padding: 8px 16px;
-          background: var(--cream, #FDFBF7);
-          border: 1px solid var(--primary-teal, #0D9488);
-          border-radius: 8px;
-          color: var(--primary-teal, #0D9488);
-          font-size: 0.85rem;
-          font-weight: 600;
-          cursor: pointer;
-          transition: background 0.2s ease, color 0.2s ease;
-        }
-
-        .explore-btn:hover {
-          background: var(--primary-teal, #0D9488);
-          color: white;
-        }
+        /* Explore button removed — entire card is tappable */
 
         .verse-list {
           display: flex;

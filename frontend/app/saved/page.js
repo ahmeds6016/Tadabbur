@@ -149,10 +149,11 @@ export default function SavedSearchesPage() {
   }
 
   return (
-    <div className="container" style={{ paddingBottom: 100 }}>
-      <div className="card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-          <h1>Saved Answers</h1>
+    <div className="saved-page">
+      <div className="saved-inner">
+        <div className="saved-header">
+          <h1 className="saved-title">Saved Answers</h1>
+          <div className="saved-count">{saved.length}</div>
         </div>
 
         {/* Folder Filter */}
@@ -384,8 +385,48 @@ export default function SavedSearchesPage() {
       </div>
 
       <style jsx>{`
+        .saved-page {
+          max-width: 600px;
+          margin: 0 auto;
+          padding: 16px 16px calc(60px + env(safe-area-inset-bottom, 0px));
+        }
+
+        .saved-inner {
+          /* No card wrapper — direct feed */
+        }
+
+        .saved-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 4px 0 12px;
+        }
+
+        .saved-title {
+          font-size: 1.5rem;
+          font-weight: 700;
+          color: #1a1a1a;
+          margin: 0;
+        }
+
+        .saved-count {
+          font-size: 0.8rem;
+          font-weight: 600;
+          color: #6b7280;
+          background: #f3f4f6;
+          padding: 4px 10px;
+          border-radius: 12px;
+        }
+
         .saved-item:hover {
           border-color: var(--primary-teal-light, #5eead4);
+        }
+
+        @media (min-width: 1024px) {
+          .saved-page {
+            padding: 24px 24px 40px;
+            max-width: 640px;
+          }
         }
       `}</style>
 

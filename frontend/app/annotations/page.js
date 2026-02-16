@@ -364,7 +364,7 @@ export default function MyReflectionsPage() {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 8px 0 16px;
+          padding: 4px 0 12px;
         }
 
         .reflections-title {
