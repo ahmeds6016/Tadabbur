@@ -8,22 +8,19 @@ const helpContent = {
     title: 'Getting Started',
     sections: [
       {
-        title: 'Browse Surahs',
+        title: 'How to Explore',
         items: [
           {
             label: 'Surah Picker',
-            description: 'Select any of the 114 surahs from the dropdown to explore its verses',
-            tour: 'search'
+            description: 'Select any of the 114 surahs from the dropdown. Each surah shows its English and Arabic name.'
           },
           {
             label: 'Verse Range',
-            description: 'Pick a start and end verse — the app adjusts the max range based on commentary length',
-            tour: 'search'
+            description: 'Pick a start and end verse. The app automatically limits the range based on how much scholarly commentary exists for those verses, so responses are never cut short.'
           },
           {
-            label: 'Scholarly Commentary',
-            description: 'Each response includes classical tafsir plus insights from 5 scholarly sources when relevant',
-            tour: 'search'
+            label: 'Persona & Learning Goal',
+            description: 'Your persona (shown in the header) shapes the tone and depth of every response. Your learning goal — application, understanding, or balanced — shapes whether you get practical takeaways or deeper scholarly context.'
           }
         ]
       },
@@ -32,18 +29,19 @@ const helpContent = {
         items: [
           {
             label: 'Add Reflections',
-            description: 'Select any text in the results to add personal notes',
-            tour: 'annotations'
+            description: 'Highlight any text in the results to attach a personal note. Choose from types like Insight, Question, Application, or Du\'a. Reflections are encrypted and only visible to you.'
           },
           {
             label: 'Save Answers',
-            description: 'Bookmark important responses for later review',
-            tour: 'save'
+            description: 'Tap the bookmark icon to save any response. Organize saves into folders and revisit them from the Saved tab in the bottom navigation.'
           },
           {
             label: 'Share',
-            description: 'Generate shareable links for any answer',
-            tour: 'share'
+            description: 'Generate a public link for any response. Shared pages include the scholarly commentary but never your private reflections.'
+          },
+          {
+            label: 'Reading Plans',
+            description: 'Follow structured verse-by-verse journeys through thematic topics. Track your progress and pick up where you left off from the Plans tab.'
           }
         ]
       }
@@ -60,47 +58,44 @@ const helpContent = {
     title: 'Understanding Results',
     sections: [
       {
-        title: 'Result Sections',
+        title: 'What Each Section Contains',
         items: [
           {
             label: 'Verses',
-            description: 'Quranic verses with Arabic text and translation',
-            tour: 'verses'
+            description: 'The Arabic text of each verse followed by the Saheeh International English translation. Verses are numbered with their surah and ayah reference.'
           },
           {
-            label: 'Tafsir',
-            description: 'Classical commentary from multiple scholars',
-            tour: 'tafsir'
+            label: 'Tafsir (Commentary)',
+            description: 'A synthesized explanation drawing from Ibn Kathir, Al-Qurtubi, and other classical mufassirun. The depth and language adapt to your chosen persona.'
+          },
+          {
+            label: 'Scholarly Sources',
+            description: 'When relevant, you\'ll see insights from up to 5 additional classical works: Asbab Al-Nuzul (reasons of revelation), A Thematic Commentary, Ihya Ulum Al-Din, Madarij Al-Salikin, and Riyad-us-Saliheen. These are matched to your verses automatically.'
           },
           {
             label: 'Lessons',
-            description: 'Practical applications for daily life',
-            tour: 'lessons'
+            description: 'Practical takeaways organized by type — principles, contemplations, historical context, and action items. Each lesson is a self-contained insight you can reflect on or share.'
           },
           {
-            label: 'Summary',
-            description: 'Key takeaways from the response',
-            tour: 'summary'
+            label: 'Reflection Prompt',
+            description: 'A personalized question at the end of each response designed to deepen your connection with the verses. Use it as a journaling prompt or discussion starter.'
           }
         ]
       },
       {
-        title: 'Actions',
+        title: 'Actions You Can Take',
         items: [
           {
-            label: 'Annotate Text',
-            description: 'Select any text to add your thoughts',
-            tour: 'annotations'
+            label: 'Highlight to Annotate',
+            description: 'Select any text in the response to open the annotation panel. Your notes are encrypted and private — only visible when you\'re signed in.'
           },
           {
-            label: 'Save Answer',
-            description: 'Keep this response for future reference',
-            tour: 'save'
+            label: 'Save for Later',
+            description: 'Tap the save icon to bookmark this response. You can organize bookmarks into folders from the Saved page.'
           },
           {
-            label: 'Share',
-            description: 'Generate a shareable link for this answer',
-            tour: 'share'
+            label: 'Share a Response',
+            description: 'Tap the share icon to copy a public link. The shared page shows the full scholarly commentary but excludes your private reflections.'
           }
         ]
       }
@@ -117,12 +112,12 @@ const helpContent = {
       {
         title: 'Reflection Types',
         items: [
-          { label: 'Insight', description: 'Personal understanding or revelation' },
-          { label: 'Question', description: 'Something to explore further' },
-          { label: 'Application', description: 'How to apply in daily life' },
-          { label: "Du'a", description: 'Personal supplication or prayer' },
-          { label: 'Connection', description: 'Link to other verses or concepts' },
-          { label: 'Memorization', description: 'Verses to memorize' }
+          { label: 'Insight', description: 'A personal understanding or realization from the text' },
+          { label: 'Question', description: 'Something to explore further or discuss with a scholar' },
+          { label: 'Application', description: 'A concrete way to apply this teaching in daily life' },
+          { label: "Du'a", description: 'A personal supplication inspired by the verse' },
+          { label: 'Connection', description: 'A link to another verse, hadith, or concept' },
+          { label: 'Memorization', description: 'Mark verses you want to commit to memory' }
         ]
       },
       {
@@ -134,7 +129,7 @@ const helpContent = {
           },
           {
             label: 'View All Reflections',
-            description: 'Access all your saved reflections from the Reflections tab in the sidebar'
+            description: 'Access all your saved reflections from the Reflections tab in the bottom navigation'
           }
         ]
       }
@@ -167,13 +162,6 @@ export default function HelpMenu({ currentPage = 'home', isOpen, onClose, onRepl
       document.body.style.overflow = '';
     };
   }, [isOpen]);
-
-  const handleReplayIntro = () => {
-    onClose();
-    if (onReplayFeatureIntro) {
-      onReplayFeatureIntro();
-    }
-  };
 
   if (!isOpen) return null;
 
@@ -244,18 +232,9 @@ export default function HelpMenu({ currentPage = 'home', isOpen, onClose, onRepl
                   <div className={`section-content ${expandedSection === idx ? 'expanded' : ''}`}>
                     {section.items.map((item, itemIdx) => (
                       <div key={itemIdx} className="help-item">
-                        <span className="item-icon">{item.icon}</span>
                         <div className="item-content">
                           <strong>{item.label}</strong>
                           <p>{item.description}</p>
-                          {item.tour && onReplayFeatureIntro && (
-                            <button
-                              className="tour-link"
-                              onClick={handleReplayIntro}
-                            >
-                              Show me how
-                            </button>
-                          )}
                         </div>
                       </div>
                     ))}
@@ -263,8 +242,8 @@ export default function HelpMenu({ currentPage = 'home', isOpen, onClose, onRepl
                 </div>
               ))}
 
-              <div className="help-cta">
-                {onReplayFeatureIntro && (
+              {onReplayFeatureIntro && (
+                <div className="help-cta">
                   <button
                     className="replay-intro-btn"
                     onClick={() => {
@@ -272,16 +251,10 @@ export default function HelpMenu({ currentPage = 'home', isOpen, onClose, onRepl
                       onReplayFeatureIntro();
                     }}
                   >
-                    Replay Feature Introduction
+                    Replay Introduction
                   </button>
-                )}
-                <button
-                  className="start-tour-btn"
-                  onClick={handleReplayIntro}
-                >
-                  Replay Introduction
-                </button>
-              </div>
+                </div>
+              )}
             </>
           )}
 
@@ -516,11 +489,6 @@ export default function HelpMenu({ currentPage = 'home', isOpen, onClose, onRepl
             background: var(--cream);
           }
 
-          .item-icon {
-            font-size: 1.5rem;
-            flex-shrink: 0;
-          }
-
           .item-content {
             flex: 1;
           }
@@ -535,23 +503,7 @@ export default function HelpMenu({ currentPage = 'home', isOpen, onClose, onRepl
             margin: 0;
             color: #666;
             font-size: 0.9rem;
-          }
-
-          .tour-link {
-            margin-top: 8px;
-            padding: 4px 12px;
-            background: var(--primary-teal);
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 0.85rem;
-            cursor: pointer;
-            transition: all 0.2s ease;
-          }
-
-          .tour-link:hover {
-            background: var(--gold);
-            transform: translateX(2px);
+            line-height: 1.5;
           }
 
           .help-cta {
@@ -562,7 +514,7 @@ export default function HelpMenu({ currentPage = 'home', isOpen, onClose, onRepl
             text-align: center;
           }
 
-          .start-tour-btn {
+          .replay-intro-btn {
             padding: 12px 24px;
             background: linear-gradient(135deg, var(--primary-teal) 0%, var(--gold) 100%);
             color: white;
@@ -572,29 +524,10 @@ export default function HelpMenu({ currentPage = 'home', isOpen, onClose, onRepl
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
-          }
-
-          .replay-intro-btn {
-            padding: 12px 24px;
-            background: white;
-            color: var(--primary-teal, #10b981);
-            border: 2px solid var(--primary-teal, #10b981);
-            border-radius: 12px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-bottom: 10px;
             width: 100%;
           }
 
           .replay-intro-btn:hover {
-            background: var(--cream, #faf6f0);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
-          }
-
-          .start-tour-btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
           }

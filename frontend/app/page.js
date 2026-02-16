@@ -1660,7 +1660,7 @@ function MainApp({ user, userProfile, onResetProfile }) {
           <div style={{ textAlign: 'center', padding: '20px 0' }}>
             <div className="loading-spinner"></div>
             <p style={{ color: 'var(--text-secondary, #6b7280)', marginTop: '12px', fontSize: '0.95rem' }}>
-              Preparing your tafsir...
+              Preparing your reflection...
             </p>
           </div>
         )}
