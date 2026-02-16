@@ -388,7 +388,7 @@ export default function SavedSearchesPage() {
         .saved-page {
           max-width: 600px;
           margin: 0 auto;
-          padding: 16px 16px calc(60px + env(safe-area-inset-bottom, 0px));
+          padding: calc(16px + env(safe-area-inset-top, 0px)) 16px calc(60px + env(safe-area-inset-bottom, 0px));
         }
 
         .saved-inner {

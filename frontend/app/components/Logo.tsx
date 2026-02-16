@@ -62,26 +62,31 @@ export const TafsirLogo: React.FC<LogoProps> = ({
           strokeOpacity="0.3"
         />
 
-        {/* Arabic ت — bold, centered, the primary mark */}
+        {/* Arabic تفسير — top line */}
         <text
           x="50"
-          y="56"
+          y="48"
           fontFamily="'Amiri', 'Traditional Arabic', serif"
-          fontSize="30"
+          fontSize="22"
           fontWeight="700"
           fill="white"
           textAnchor="middle"
         >
-          ت
+          تفسير
         </text>
 
-        {/* Subtle gold accent line at bottom */}
-        <rect
-          x="30" y="74" width="40" height="2.5"
-          rx="1.25"
+        {/* Arabic مبسط — bottom line, gold accent */}
+        <text
+          x="50"
+          y="68"
+          fontFamily="'Amiri', 'Traditional Arabic', serif"
+          fontSize="18"
+          fontWeight="600"
           fill="url(#logoAccent)"
-          fillOpacity="0.7"
-        />
+          textAnchor="middle"
+        >
+          مُبَسَّط
+        </text>
       </svg>
 
       <style jsx>{`

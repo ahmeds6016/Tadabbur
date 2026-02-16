@@ -226,17 +226,7 @@ a {
   margin: 0;
 }
 
-/* Arabic subtitle — inline next to title */
-.header h1::after {
-  content: 'تفسير مبسط';
-  font-size: 0.8rem;
-  font-family: var(--font-amiri), 'Amiri', 'Traditional Arabic', serif;
-  color: var(--gold-text);
-  margin-left: 8px;
-  letter-spacing: 0.05em;
-  -webkit-text-fill-color: var(--gold-text);
-  display: inline;
-}
+/* Arabic text is now embedded in the logo SVG — no separate ::after needed */
 
 .user-info {
   display: flex;
@@ -570,12 +560,12 @@ button:hover:not(:disabled) {
 
 .logout-button {
   background: transparent;
-  color: #6b7280;
+  color: var(--primary-teal);
   font-size: 0.7rem;
-  padding: 4px 10px;
+  padding: 3px 8px;
   border-radius: 6px;
   font-weight: 600;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--primary-teal);
 }
 
 .toggle-auth {
@@ -1118,10 +1108,6 @@ button:hover:not(:disabled) {
     font-size: 1rem;
   }
 
-  .header h1::after {
-    font-size: 0.7rem;
-  }
-
   .user-info {
     flex-direction: row;
     flex-wrap: nowrap;
@@ -1152,6 +1138,8 @@ button:hover:not(:disabled) {
     padding: 3px 8px !important;
     font-size: 0.68rem !important;
     border-radius: 6px !important;
+    color: var(--primary-teal) !important;
+    border: 1px solid var(--primary-teal) !important;
   }
 
   .tafsir-form {
@@ -1284,10 +1272,6 @@ button:hover:not(:disabled) {
     line-height: 1.2;
   }
 
-  .header h1::after {
-    font-size: 0.65rem;
-  }
-
   .user-info {
     gap: 4px;
   }
@@ -1302,7 +1286,7 @@ button:hover:not(:disabled) {
   }
 
   .logout-button {
-    padding: 4px 8px !important;
+    padding: 3px 6px !important;
     font-size: 0.65rem !important;
   }
 
@@ -1415,10 +1399,6 @@ button:hover:not(:disabled) {
 
   .header h1 {
     font-size: 0.9rem;
-  }
-
-  .header h1::after {
-    font-size: 0.6rem;
   }
 
   .user-info {

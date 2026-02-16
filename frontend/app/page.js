@@ -27,7 +27,6 @@ import ErrorBoundary from './components/ErrorBoundary';
 import TafsirLogo from './components/Logo';
 import SurahVersePicker from './components/SurahVersePicker';
 import CollectionsGrid from './components/CollectionsGrid';
-import RecommendationBar from './components/RecommendationBar';
 import BadgeDisplay, { BadgePopup } from './components/BadgeDisplay';
 import { ToastContainer } from './components/ui/Toast';
 import { TafsirSkeleton, Skeleton } from './components/ui/SkeletonLoader';
@@ -1891,15 +1890,6 @@ function MainApp({ user, userProfile, onResetProfile }) {
               onGeneralReflection={handleGeneralReflection}
             />
             </ErrorBoundary>
-
-
-            {/* Verse Recommendations */}
-            {response.recommendations && (
-              <RecommendationBar
-                recommendations={response.recommendations}
-                onStudyVerse={handleStudyVerse}
-              />
-            )}
           </>
         )}
       </div>
@@ -2613,7 +2603,6 @@ function EnhancedResultsDisplay({
           verses.length > 0 && {
             label: verses.length === 1 ? 'Verse' : 'Verses',
             icon: '',
-            count: verses.length,
             content: (
               <div className="verses-section">
           {verses.map((verse, index) => {
@@ -2665,7 +2654,6 @@ function EnhancedResultsDisplay({
           tafsir_explanations.length > 0 && {
             label: 'Tafsir',
             icon: '',
-            count: tafsir_explanations.length,
             sectionName: 'Tafsir Explanations',
             content: (
               <div className="tafsir-section">
@@ -2832,7 +2820,6 @@ function EnhancedResultsDisplay({
           lessons_practical_applications.length > 0 && {
             label: lessons_practical_applications.length === 1 ? 'Lesson' : 'Lessons',
             icon: '',
-            count: lessons_practical_applications.length,
             sectionName: 'Lessons & Practical Applications',
             content: (
               <div className="lessons-section">
