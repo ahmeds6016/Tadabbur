@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import Link from 'next/link';
 import ReflectionDetailPanel from '../components/ReflectionDetailPanel';
-import { Flame, Trophy, Calendar, BookOpen, Clock, TrendingUp, Lightbulb, HelpCircle, CheckSquare, Heart, Link2 } from 'lucide-react';
+import { Lightbulb, HelpCircle, CheckSquare, Heart, Link2, BookOpen, ChevronDown, Search, X } from 'lucide-react';
 import { auth } from '../lib/firebase';
 import { BACKEND_URL } from '../lib/config';
 import BottomNav from '../components/BottomNav';
@@ -36,177 +36,18 @@ const LEGACY_TYPE_MAPPING = {
 
 // Helper function to get config for any type (core, legacy, or custom)
 const getTypeConfig = (type) => {
-  // Check core types first
   if (ANNOTATION_TYPE_CONFIG[type]) {
     return ANNOTATION_TYPE_CONFIG[type];
   }
-
-  // Map legacy types to core types
   if (LEGACY_TYPE_MAPPING[type]) {
     return ANNOTATION_TYPE_CONFIG[LEGACY_TYPE_MAPPING[type]];
   }
-
-  // For unknown/custom types, use default styling
   return {
     iconComponent: BookOpen,
     label: type ? type.charAt(0).toUpperCase() + type.slice(1).replace(/_/g, ' ') : 'Custom',
     color: '#6B7280'
   };
 };
-
-// Reflection Calendar Component
-function ReflectionCalendar({ annotations }) {
-  const today = new Date();
-  const currentMonth = today.getMonth();
-  const currentYear = today.getFullYear();
-
-  // Create activity map for the calendar
-  const activityMap = new Map();
-  annotations.forEach(annotation => {
-    if (annotation.createdAt?.seconds) {
-      const date = new Date(annotation.createdAt.seconds * 1000);
-      const dateKey = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
-      activityMap.set(dateKey, (activityMap.get(dateKey) || 0) + 1);
-    }
-  });
-
-  // Generate calendar days
-  const firstDay = new Date(currentYear, currentMonth, 1).getDay();
-  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-  const days = [];
-
-  // Add empty cells for days before month starts
-  for (let i = 0; i < firstDay; i++) {
-    days.push(null);
-  }
-
-  // Add days of the month
-  for (let day = 1; day <= daysInMonth; day++) {
-    days.push(day);
-  }
-
-  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'];
-
-  return (
-    <div>
-      <h3 style={{
-        textAlign: 'center',
-        marginBottom: '20px',
-        color: 'var(--foreground)',
-        fontSize: '1.2rem'
-      }}>
-        {monthNames[currentMonth]} {currentYear}
-      </h3>
-
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(7, 1fr)',
-        gap: '4px',
-        marginBottom: '16px'
-      }}>
-        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-          <div
-            key={day}
-            style={{
-              textAlign: 'center',
-              fontSize: '0.75rem',
-              fontWeight: '700',
-              color: '#666',
-              padding: '8px 0'
-            }}
-          >
-            {day}
-          </div>
-        ))}
-
-        {days.map((day, index) => {
-          const dateKey = day ? `${currentYear}-${currentMonth}-${day}` : null;
-          const count = dateKey ? activityMap.get(dateKey) || 0 : 0;
-          const isToday = day === today.getDate();
-
-          // Color intensity based on number of reflections
-          const getBackgroundColor = () => {
-            if (!day) return 'transparent';
-            if (count === 0) return '#f3f4f6';
-            if (count === 1) return 'rgba(13, 148, 136, 0.2)';
-            if (count === 2) return 'rgba(13, 148, 136, 0.4)';
-            if (count === 3) return 'rgba(13, 148, 136, 0.6)';
-            return 'rgba(13, 148, 136, 0.8)';
-          };
-
-          return (
-            <div
-              key={index}
-              style={{
-                aspectRatio: '1',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: getBackgroundColor(),
-                borderRadius: '8px',
-                border: isToday ? '2px solid var(--gold)' : '1px solid #e5e7eb',
-                cursor: day ? 'pointer' : 'default',
-                position: 'relative',
-                transition: 'all 0.3s ease'
-              }}
-              title={count > 0 ? `${count} reflection${count > 1 ? 's' : ''}` : ''}
-            >
-              {day && (
-                <>
-                  <div style={{
-                    fontSize: '0.9rem',
-                    fontWeight: isToday ? '700' : '500',
-                    color: count > 2 ? 'white' : 'var(--foreground)'
-                  }}>
-                    {day}
-                  </div>
-                  {count > 0 && (
-                    <div style={{
-                      fontSize: '0.65rem',
-                      fontWeight: '600',
-                      color: count > 2 ? 'white' : 'var(--primary-teal)',
-                      marginTop: '2px'
-                    }}>
-                      {count}
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Legend */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '16px',
-        marginTop: '20px',
-        fontSize: '0.85rem'
-      }}>
-        <span style={{ color: '#666' }}>Less</span>
-        {[0, 1, 2, 3, 4].map(level => (
-          <div
-            key={level}
-            style={{
-              width: '20px',
-              height: '20px',
-              borderRadius: '4px',
-              background: level === 0 ? '#f3f4f6' :
-                `rgba(13, 148, 136, ${level * 0.2})`,
-              border: '1px solid #e5e7eb'
-            }}
-          />
-        ))}
-        <span style={{ color: '#666' }}>More</span>
-      </div>
-    </div>
-  );
-}
 
 export default function MyReflectionsPage() {
   const [user, setUser] = useState(null);
@@ -216,15 +57,9 @@ export default function MyReflectionsPage() {
   const [selectedType, setSelectedType] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  const [expandedId, setExpandedId] = useState(null);
   const [sortBy, setSortBy] = useState('newest');
-  const [dateRange, setDateRange] = useState({ start: '', end: '' });
-  const [showStats, setShowStats] = useState(false);
-  const [showAnalytics, setShowAnalytics] = useState(false);
-  const [selectedTypes, setSelectedTypes] = useState([]);
-  const [selectedTags, setSelectedTags] = useState([]);
-  const [showCalendar, setShowCalendar] = useState(false);
   const [selectedAnnotation, setSelectedAnnotation] = useState(null);
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -235,19 +70,6 @@ export default function MyReflectionsPage() {
       setIsLoading(false);
     });
     return () => unsubscribe();
-  }, []);
-
-  // Time tracking: Track time spent on annotations page
-  useEffect(() => {
-    // Track immediately on mount
-    trackTimeSpent();
-
-    // Then track every minute
-    const interval = setInterval(() => {
-      trackTimeSpent();
-    }, 60000); // 60 seconds
-
-    return () => clearInterval(interval);
   }, []);
 
   const fetchAnnotations = async (currentUser, tag = null, type = null) => {
@@ -288,13 +110,11 @@ export default function MyReflectionsPage() {
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
-
     try {
       const token = await user.getIdToken();
       const res = await fetch(`${BACKEND_URL}/annotations/search?q=${encodeURIComponent(searchQuery)}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-
       if (res.ok) {
         const data = await res.json();
         setAnnotations(data.results || []);
@@ -311,9 +131,13 @@ export default function MyReflectionsPage() {
   };
 
   const handleTypeFilter = (type) => {
-    setSelectedType(type);
+    setSelectedType(type === selectedType ? null : type);
     setSelectedTag(null);
-    fetchAnnotations(user, null, type);
+    if (type === selectedType) {
+      fetchAnnotations(user);
+    } else {
+      fetchAnnotations(user, null, type);
+    }
   };
 
   const handleClearFilters = () => {
@@ -329,12 +153,9 @@ export default function MyReflectionsPage() {
       const token = await user.getIdToken();
       const response = await fetch(`${BACKEND_URL}/annotations/${annotationId}`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
-        // Remove from local state
         setAnnotations(prev => prev.filter(a => a.id !== annotationId));
       }
     } catch (error) {
@@ -346,19 +167,19 @@ export default function MyReflectionsPage() {
     if (!timestamp) return 'Recently';
     try {
       const date = new Date(timestamp.seconds * 1000);
-      return date.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
+      const now = new Date();
+      const diffMs = now - date;
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+      if (diffDays === 0) return 'Today';
+      if (diffDays === 1) return 'Yesterday';
+      if (diffDays < 7) return `${diffDays}d ago`;
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     } catch {
       return 'Recently';
     }
   };
 
-  // Sort annotations based on selected criteria
   const sortAnnotations = (annotationsList) => {
     const sorted = [...annotationsList];
     switch(sortBy) {
@@ -366,313 +187,18 @@ export default function MyReflectionsPage() {
         return sorted.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
       case 'oldest':
         return sorted.sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
-      case 'surah':
-        return sorted.sort((a, b) => {
-          if (a.surah === b.surah) return a.verse - b.verse;
-          return a.surah - b.surah;
-        });
-      case 'type':
-        return sorted.sort((a, b) => (a.type || '').localeCompare(b.type || ''));
       default:
         return sorted;
     }
   };
 
-  // Filter by date range
-  const filterByDateRange = (annotationsList) => {
-    if (!dateRange.start && !dateRange.end) return annotationsList;
-
-    return annotationsList.filter(annotation => {
-      if (!annotation.createdAt?.seconds) return false;
-      const annotationDate = new Date(annotation.createdAt.seconds * 1000);
-
-      if (dateRange.start) {
-        const startDate = new Date(dateRange.start);
-        if (annotationDate < startDate) return false;
-      }
-
-      if (dateRange.end) {
-        const endDate = new Date(dateRange.end);
-        endDate.setHours(23, 59, 59, 999); // Include full day
-        if (annotationDate > endDate) return false;
-      }
-
-      return true;
-    });
-  };
-
-  // Time tracking functions (localStorage-based)
-  const getTimeTrackingData = () => {
-    if (typeof window === 'undefined') {
-      return { today: 0, week: 0 };
-    }
-
-    try {
-      const data = JSON.parse(localStorage.getItem('tafsir-time-tracking') || '{}');
-      const today = new Date().toISOString().split('T')[0];
-      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-
-      // Calculate today's time
-      const todayTime = data[today] || 0;
-
-      // Calculate last 7 days time
-      let weekTime = 0;
-      Object.entries(data).forEach(([date, minutes]) => {
-        if (date >= weekAgo) {
-          weekTime += minutes;
-        }
-      });
-
-      return {
-        today: todayTime,
-        week: weekTime
-      };
-    } catch (e) {
-      return { today: 0, week: 0 };
-    }
-  };
-
-  const trackTimeSpent = () => {
-    if (typeof window === 'undefined') return;
-
-    const today = new Date().toISOString().split('T')[0];
-    try {
-      const data = JSON.parse(localStorage.getItem('tafsir-time-tracking') || '{}');
-      // Add 1 minute (called every minute when page is active)
-      data[today] = (data[today] || 0) + 1;
-
-      // Clean up old data (keep last 30 days only)
-      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-      Object.keys(data).forEach(date => {
-        if (date < thirtyDaysAgo) {
-          delete data[date];
-        }
-      });
-
-      localStorage.setItem('tafsir-time-tracking', JSON.stringify(data));
-    } catch (e) {
-      console.error('Failed to track time:', e);
-    }
-  };
-
-  // Calculate comprehensive statistics
-  const calculateStats = () => {
-    const stats = {
-      totalReflections: annotations.length,
-      byType: {},
-      bySurah: {},
-      byMonth: {},
-      byDayOfWeek: {},
-      topTags: {},
-      recentDays: 0,
-      averageLength: 0,
-      longestStreak: 0,
-      currentStreak: 0,
-      totalWords: 0,
-      mostActiveDay: null,
-      mostAnnotatedVerse: null,
-      reflectionGrowth: []
-    };
-
-    const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
-    const sortedAnnotations = [...annotations].sort((a, b) =>
-      (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0)
-    );
-
-    let totalLength = 0;
-    let totalWords = 0;
-    const dayActivity = {};
-    const verseActivity = {};
-    const dailyActivity = new Map();
-
-    sortedAnnotations.forEach((annotation, index) => {
-      // By type
-      const typeKey = annotation.type || 'uncategorized';
-      stats.byType[typeKey] = (stats.byType[typeKey] || 0) + 1;
-
-      // By surah (only for verse-type reflections)
-      if (annotation.reflection_type === 'verse' && annotation.surah && annotation.verse) {
-        const surahKey = `Surah ${annotation.surah}`;
-        stats.bySurah[surahKey] = (stats.bySurah[surahKey] || 0) + 1;
-
-        // By verse
-        const verseKey = `${annotation.surah}:${annotation.verse}`;
-        verseActivity[verseKey] = (verseActivity[verseKey] || 0) + 1;
-      }
-
-      // Tags frequency
-      annotation.tags?.forEach(tag => {
-        stats.topTags[tag] = (stats.topTags[tag] || 0) + 1;
-      });
-
-      // Date analysis
-      if (annotation.createdAt?.seconds) {
-        const date = new Date(annotation.createdAt.seconds * 1000);
-
-        // By month
-        const monthKey = date.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
-        stats.byMonth[monthKey] = (stats.byMonth[monthKey] || 0) + 1;
-
-        // By day of week
-        const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'long' });
-        stats.byDayOfWeek[dayOfWeek] = (stats.byDayOfWeek[dayOfWeek] || 0) + 1;
-
-        // Daily activity for streaks
-        const dayKey = date.toISOString().split('T')[0];
-        dailyActivity.set(dayKey, (dailyActivity.get(dayKey) || 0) + 1);
-        dayActivity[dayKey] = (dayActivity[dayKey] || 0) + 1;
-
-        // Recent activity
-        if (annotation.createdAt.seconds * 1000 > thirtyDaysAgo) {
-          stats.recentDays++;
-        }
-      }
-
-      // Content analysis
-      const content = annotation.content || '';
-      totalLength += content.length;
-      totalWords += content.split(/\s+/).filter(w => w.length > 0).length;
-    });
-
-    // Calculate streaks
-    const sortedDays = Array.from(dailyActivity.keys()).sort();
-    let currentStreak = 0;
-    let longestStreak = 0;
-    let tempStreak = 0;
-    let lastDate = null;
-
-    sortedDays.forEach(dayKey => {
-      const currentDate = new Date(dayKey);
-
-      if (lastDate) {
-        const dayDiff = (currentDate - lastDate) / (1000 * 60 * 60 * 24);
-
-        if (dayDiff === 1) {
-          tempStreak++;
-        } else {
-          longestStreak = Math.max(longestStreak, tempStreak);
-          tempStreak = 1;
-        }
-      } else {
-        tempStreak = 1;
-      }
-
-      lastDate = currentDate;
-    });
-
-    longestStreak = Math.max(longestStreak, tempStreak);
-
-    // Check if streak is current
-    const today = new Date().toISOString().split('T')[0];
-    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-
-    if (dailyActivity.has(today) || dailyActivity.has(yesterday)) {
-      currentStreak = tempStreak;
-    }
-
-    // Find most active day
-    let maxDay = null;
-    let maxCount = 0;
-    Object.entries(dayActivity).forEach(([day, count]) => {
-      if (count > maxCount) {
-        maxCount = count;
-        maxDay = day;
-      }
-    });
-
-    // Find most annotated verse
-    let maxVerse = null;
-    let maxVerseCount = 0;
-    Object.entries(verseActivity).forEach(([verse, count]) => {
-      if (count > maxVerseCount) {
-        maxVerseCount = count;
-        maxVerse = verse;
-      }
-    });
-
-    // Sort top tags
-    stats.topTags = Object.entries(stats.topTags)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 10)
-      .reduce((obj, [tag, count]) => {
-        obj[tag] = count;
-        return obj;
-      }, {});
-
-    stats.averageLength = annotations.length > 0 ? Math.round(totalLength / annotations.length) : 0;
-    stats.totalWords = totalWords;
-    stats.longestStreak = longestStreak;
-    stats.currentStreak = currentStreak;
-    stats.mostActiveDay = maxDay;
-    stats.mostAnnotatedVerse = maxVerse;
-
-    // Find last reflection date
-    if (sortedAnnotations.length > 0) {
-      const lastAnnotation = sortedAnnotations[sortedAnnotations.length - 1];
-      if (lastAnnotation.createdAt?.seconds) {
-        stats.lastReflectionDate = new Date(lastAnnotation.createdAt.seconds * 1000);
-      }
-    }
-
-    // Get time tracking data from localStorage
-    const timeData = getTimeTrackingData();
-    stats.timeSpentToday = timeData.today;
-    stats.timeSpentWeek = timeData.week;
-
-    return stats;
-  };
-
-  // Advanced filtering with multi-select
-  const applyAdvancedFilters = (annotationsList) => {
-    let filtered = [...annotationsList];
-
-    // Filter by multiple types
-    if (selectedTypes.length > 0) {
-      filtered = filtered.filter(a => selectedTypes.includes(a.type));
-    }
-
-    // Filter by multiple tags
-    if (selectedTags.length > 0) {
-      filtered = filtered.filter(a =>
-        a.tags?.some(tag => selectedTags.includes(tag))
-      );
-    }
-
-    // Apply date range filter
-    filtered = filterByDateRange(filtered);
-
-    // Apply sorting
-    return sortAnnotations(filtered);
-  };
-
-  // Smart tag suggestions based on content
-  const getSuggestedTags = (content) => {
-    const suggestions = [];
-    const lowerContent = content.toLowerCase();
-
-    // Islamic concept tags
-    if (lowerContent.includes('allah')) suggestions.push('tawheed');
-    if (lowerContent.includes('prophet') || lowerContent.includes('muhammad')) suggestions.push('seerah');
-    if (lowerContent.includes('prayer') || lowerContent.includes('salah')) suggestions.push('ibadah');
-    if (lowerContent.includes('patience') || lowerContent.includes('sabr')) suggestions.push('character');
-    if (lowerContent.includes('grateful') || lowerContent.includes('shukr')) suggestions.push('gratitude');
-    if (lowerContent.includes('parent')) suggestions.push('family');
-    if (lowerContent.includes('forgive')) suggestions.push('repentance');
-
-    // Emotion/mood tags
-    if (lowerContent.includes('happy') || lowerContent.includes('joy')) suggestions.push('joy');
-    if (lowerContent.includes('sad') || lowerContent.includes('difficult')) suggestions.push('trial');
-    if (lowerContent.includes('hope')) suggestions.push('hope');
-    if (lowerContent.includes('fear')) suggestions.push('khawf');
-
-    // Remove duplicates
-    return [...new Set(suggestions)];
-  };
+  const hasActiveFilters = selectedTag || selectedType || searchQuery;
+  const displayAnnotations = sortAnnotations(annotations);
 
   if (isLoading) {
     return (
       <div className="container">
-        <div className="card">
+        <div className="card" style={{ display: 'flex', justifyContent: 'center', padding: '60px 20px' }}>
           <div className="loading-spinner"></div>
         </div>
       </div>
@@ -682,10 +208,10 @@ export default function MyReflectionsPage() {
   if (!user) {
     return (
       <div className="container">
-        <div className="card">
-          <h1>Please sign in to view your reflections</h1>
+        <div className="card" style={{ textAlign: 'center', padding: '60px 20px' }}>
+          <p style={{ fontSize: '1rem', color: '#6b7280', marginBottom: '16px' }}>Sign in to view your reflections</p>
           <Link href="/">
-            <button style={{ marginTop: '20px' }}>Go to Home</button>
+            <button style={{ padding: '10px 24px', background: '#1a1a1a', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}>Go Home</button>
           </Link>
         </div>
       </div>
@@ -693,841 +219,405 @@ export default function MyReflectionsPage() {
   }
 
   return (
-    <div className="container" style={{ paddingBottom: 100 }}>
-      <div className="card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-          <h1>My Reflections</h1>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '24px', fontSize: '0.75rem', color: '#15803d' }}>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-          </svg>
-          <span>Encrypted &amp; private — only you can access your reflections</span>
-        </div>
+    <div className="reflections-page">
+      {/* Header */}
+      <div className="reflections-header">
+        <h1 className="reflections-title">Reflections</h1>
+        <div className="reflections-count">{annotations.length}</div>
+      </div>
 
-        {/* Search Bar */}
-        <div style={{ marginBottom: '24px' }}>
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              placeholder="Search your reflections..."
-              style={{
-                flex: 1,
-                padding: '12px 20px',
-                border: '2px solid var(--border-medium)',
-                borderRadius: '12px',
-                fontSize: '1rem'
-              }}
-            />
-            <button
-              onClick={handleSearch}
-              style={{
-                padding: '12px 24px',
-                background: 'var(--gradient-teal-gold)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '12px',
-                fontWeight: '700',
-                cursor: 'pointer'
-              }}
-            >
-              Search
-            </button>
-          </div>
-        </div>
-
-        {/* Filters */}
-        <div style={{ marginBottom: '24px' }}>
-          {/* Type Filters */}
-          <div style={{ marginBottom: '16px' }}>
-            <h3 style={{ fontSize: '0.9rem', fontWeight: '700', marginBottom: '8px', color: '#666' }}>Filter by Type:</h3>
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              {Object.entries(ANNOTATION_TYPE_CONFIG).map(([type, config]) => {
-                const IconComponent = config.iconComponent;
-                return (
-                  <button
-                    key={type}
-                    onClick={() => handleTypeFilter(type)}
-                    style={{
-                      background: selectedType === type ? config.color : 'white',
-                      color: selectedType === type ? 'white' : config.color,
-                      border: `2px solid ${config.color}`,
-                      padding: '6px 14px',
-                      borderRadius: '20px',
-                      fontSize: '0.85rem',
-                      fontWeight: '600',
-                      cursor: 'pointer',
-                      transition: 'all 0.3s ease',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px'
-                    }}
-                  >
-                    {IconComponent && <IconComponent size={16} strokeWidth={2} />}
-                    {config.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Tag Filters */}
-          {allTags.length > 0 && (
-            <div style={{ marginBottom: '16px' }}>
-              <h3 style={{ fontSize: '0.9rem', fontWeight: '700', marginBottom: '8px', color: '#666' }}>Filter by Tag:</h3>
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                {allTags.map(tag => (
-                  <button
-                    key={tag}
-                    onClick={() => handleTagFilter(tag)}
-                    style={{
-                      background: selectedTag === tag ? 'var(--primary-teal)' : 'var(--cream)',
-                      color: selectedTag === tag ? 'white' : 'var(--primary-teal)',
-                      border: '2px solid var(--primary-teal)',
-                      padding: '6px 14px',
-                      borderRadius: '20px',
-                      fontSize: '0.85rem',
-                      fontWeight: '600',
-                      cursor: 'pointer',
-                      transition: 'all 0.3s ease'
-                    }}
-                  >
-                    #{tag}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Clear Filters */}
-          {(selectedTag || selectedType || searchQuery) && (
-            <button
-              onClick={handleClearFilters}
-              style={{
-                background: 'transparent',
-                color: 'var(--error-color)',
-                border: '2px solid var(--error-color)',
-                padding: '8px 16px',
-                borderRadius: '12px',
-                fontSize: '0.85rem',
-                fontWeight: '600',
-                cursor: 'pointer'
-              }}
-            >
-              Clear Filters
-            </button>
-          )}
-        </div>
-
-        {/* Stats */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-            gap: '16px',
-            marginBottom: '32px',
-            padding: '20px',
-            background: 'linear-gradient(135deg, var(--cream) 0%, rgba(212, 175, 55, 0.05) 100%)',
-            borderRadius: '16px',
-            border: '2px solid var(--border-light)'
-          }}
-        >
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '2rem', fontWeight: '800', color: 'var(--primary-teal)' }}>
-              {annotations.length}
-            </div>
-            <div style={{ fontSize: '0.85rem', color: '#666', fontWeight: '600' }}>Total Reflections</div>
-          </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '2rem', fontWeight: '800', color: 'var(--gold)' }}>
-              {allTags.length}
-            </div>
-            <div style={{ fontSize: '0.85rem', color: '#666', fontWeight: '600' }}>Unique Tags</div>
-          </div>
-        </div>
-
-        {/* Analytics Dashboard Toggle */}
-        <div style={{
-          display: 'flex',
-          gap: '12px',
-          marginBottom: '24px',
-          flexWrap: 'wrap'
-        }}>
-          <button
-            onClick={() => setShowAnalytics(!showAnalytics)}
-            style={{
-              padding: '10px 20px',
-              background: showAnalytics ? 'var(--primary-teal)' : 'white',
-              color: showAnalytics ? 'white' : 'var(--primary-teal)',
-              border: '2px solid var(--primary-teal)',
-              borderRadius: '12px',
-              fontSize: '0.9rem',
-              fontWeight: '600',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}
-          >
-            {showAnalytics ? 'Hide' : 'Show'} Analytics Dashboard
+      {/* Search */}
+      <div className="search-bar">
+        <Search size={16} className="search-icon" />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+          placeholder="Search reflections..."
+          className="search-input"
+        />
+        {searchQuery && (
+          <button className="search-clear" onClick={() => { setSearchQuery(''); fetchAnnotations(user); }}>
+            <X size={14} />
           </button>
-
-          <button
-            onClick={() => setShowCalendar(!showCalendar)}
-            style={{
-              padding: '10px 20px',
-              background: showCalendar ? 'var(--gold)' : 'white',
-              color: showCalendar ? 'white' : 'var(--gold)',
-              border: '2px solid var(--gold)',
-              borderRadius: '12px',
-              fontSize: '0.9rem',
-              fontWeight: '600',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}
-          >
-            {showCalendar ? 'Hide' : 'Show'} Reflection Calendar
-          </button>
-        </div>
-
-        {/* Analytics Dashboard */}
-        {showAnalytics && (
-          <div style={{
-            marginBottom: '32px',
-            padding: '24px',
-            background: 'white',
-            borderRadius: '16px',
-            border: '2px solid var(--border-light)',
-            boxShadow: 'var(--shadow-soft)'
-          }}>
-            <h2 style={{
-              fontSize: '1.5rem',
-              fontWeight: '700',
-              color: 'var(--primary-teal)',
-              marginBottom: '24px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px'
-            }}>
-              Your Reflection Journey Analytics
-            </h2>
-
-            {(() => {
-              const stats = calculateStats();
-              return (
-                <>
-                  {/* Key Metrics - Redesigned */}
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                    gap: '16px',
-                    marginBottom: '24px'
-                  }}>
-                    {/* Current Streak */}
-                    <div style={{
-                      padding: '20px',
-                      background: 'linear-gradient(135deg, #10B981 0%, #0D9488 100%)',
-                      color: 'white',
-                      borderRadius: '12px',
-                      textAlign: 'center',
-                      boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)'
-                    }}>
-                      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>
-                        <Flame size={32} strokeWidth={2.5} />
-                      </div>
-                      <div style={{ fontSize: '2.5rem', fontWeight: '800', marginBottom: '4px' }}>
-                        {stats.currentStreak}
-                      </div>
-                      <div style={{ fontSize: '0.85rem', fontWeight: '600', opacity: 0.95 }}>
-                        Current Streak (days)
-                      </div>
-                    </div>
-
-                    {/* Longest Streak */}
-                    <div style={{
-                      padding: '20px',
-                      background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
-                      color: 'white',
-                      borderRadius: '12px',
-                      textAlign: 'center',
-                      boxShadow: '0 4px 12px rgba(245, 158, 11, 0.2)'
-                    }}>
-                      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>
-                        <Trophy size={32} strokeWidth={2.5} />
-                      </div>
-                      <div style={{ fontSize: '2.5rem', fontWeight: '800', marginBottom: '4px' }}>
-                        {stats.longestStreak}
-                      </div>
-                      <div style={{ fontSize: '0.85rem', fontWeight: '600', opacity: 0.95 }}>
-                        Longest Streak
-                      </div>
-                    </div>
-
-                    {/* Last 30 Days */}
-                    <div style={{
-                      padding: '20px',
-                      background: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)',
-                      color: 'white',
-                      borderRadius: '12px',
-                      textAlign: 'center',
-                      boxShadow: '0 4px 12px rgba(139, 92, 246, 0.2)'
-                    }}>
-                      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>
-                        <TrendingUp size={32} strokeWidth={2.5} />
-                      </div>
-                      <div style={{ fontSize: '2.5rem', fontWeight: '800', marginBottom: '4px' }}>
-                        {stats.recentDays}
-                      </div>
-                      <div style={{ fontSize: '0.85rem', fontWeight: '600', opacity: 0.95 }}>
-                        Reflections (Last 30 Days)
-                      </div>
-                    </div>
-
-                    {/* Time Spent */}
-                    <div style={{
-                      padding: '20px',
-                      background: 'linear-gradient(135deg, #06B6D4 0%, #0891B2 100%)',
-                      color: 'white',
-                      borderRadius: '12px',
-                      textAlign: 'center',
-                      boxShadow: '0 4px 12px rgba(6, 182, 212, 0.2)'
-                    }}>
-                      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>
-                        <Clock size={32} strokeWidth={2.5} />
-                      </div>
-                      <div style={{ fontSize: '1.5rem', fontWeight: '800', marginBottom: '4px' }}>
-                        {stats.timeSpentToday}m / {stats.timeSpentWeek}m
-                      </div>
-                      <div style={{ fontSize: '0.85rem', fontWeight: '600', opacity: 0.95 }}>
-                        Time (Today / Week)
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Reflection Types Breakdown */}
-                  <div style={{
-                    marginBottom: '24px',
-                    padding: '20px',
-                    background: 'var(--cream)',
-                    borderRadius: '12px'
-                  }}>
-                    <h3 style={{
-                      fontSize: '1.1rem',
-                      fontWeight: '700',
-                      marginBottom: '16px',
-                      color: 'var(--primary-teal)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px'
-                    }}>
-                      <TrendingUp size={20} strokeWidth={2.5} />
-                      Reflection Types Distribution
-                    </h3>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
-                      {Object.entries(stats.byType).map(([type, count]) => {
-                        const config = getTypeConfig(type);
-                        const IconComponent = config.iconComponent;
-                        const percentage = Math.round((count / stats.totalReflections) * 100);
-                        return (
-                          <div
-                            key={type}
-                            style={{
-                              flex: '1 1 150px',
-                              padding: '12px',
-                              background: 'white',
-                              borderRadius: '8px',
-                              border: `2px solid ${config.color}`,
-                              textAlign: 'center'
-                            }}
-                          >
-                            <div style={{ fontSize: '1.5rem', display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>
-                              {IconComponent ? <IconComponent size={28} strokeWidth={2} color={config.color} /> : config.icon}
-                            </div>
-                            <div style={{
-                              fontSize: '0.85rem',
-                              fontWeight: '600',
-                              color: config.color
-                            }}>
-                              {config.label}
-                            </div>
-                            <div style={{
-                              fontSize: '1.2rem',
-                              fontWeight: '700',
-                              color: 'var(--foreground)'
-                            }}>
-                              {count}
-                            </div>
-                            <div style={{
-                              fontSize: '0.75rem',
-                              color: '#666'
-                            }}>
-                              {percentage}%
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Top Tags */}
-                  {Object.keys(stats.topTags).length > 0 && (
-                    <div style={{
-                      marginBottom: '24px',
-                      padding: '20px',
-                      background: 'var(--cream)',
-                      borderRadius: '12px'
-                    }}>
-                      <h3 style={{
-                        fontSize: '1.1rem',
-                        fontWeight: '700',
-                        marginBottom: '16px',
-                        color: 'var(--primary-teal)'
-                      }}>
-                        Top Tags
-                      </h3>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                        {Object.entries(stats.topTags).map(([tag, count]) => (
-                          <span
-                            key={tag}
-                            style={{
-                              background: 'var(--primary-teal)',
-                              color: 'white',
-                              padding: '6px 14px',
-                              borderRadius: '20px',
-                              fontSize: '0.85rem',
-                              fontWeight: '600',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '6px'
-                            }}
-                          >
-                            #{tag}
-                            <span style={{
-                              background: 'rgba(255, 255, 255, 0.3)',
-                              padding: '2px 6px',
-                              borderRadius: '10px',
-                              fontSize: '0.75rem'
-                            }}>
-                              {count}
-                            </span>
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Day of Week Activity */}
-                  <div style={{
-                    marginBottom: '24px',
-                    padding: '20px',
-                    background: 'var(--cream)',
-                    borderRadius: '12px'
-                  }}>
-                    <h3 style={{
-                      fontSize: '1.1rem',
-                      fontWeight: '700',
-                      marginBottom: '16px',
-                      color: 'var(--primary-teal)'
-                    }}>
-                      Most Active Days
-                    </h3>
-                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                      {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => {
-                        const count = stats.byDayOfWeek[day] || 0;
-                        const maxCount = Math.max(...Object.values(stats.byDayOfWeek));
-                        const height = maxCount > 0 ? (count / maxCount) * 100 : 0;
-                        return (
-                          <div
-                            key={day}
-                            style={{
-                              flex: '1',
-                              minWidth: '60px',
-                              textAlign: 'center'
-                            }}
-                          >
-                            <div style={{
-                              height: '100px',
-                              position: 'relative',
-                              background: '#f3f4f6',
-                              borderRadius: '8px',
-                              overflow: 'hidden'
-                            }}>
-                              <div style={{
-                                position: 'absolute',
-                                bottom: 0,
-                                width: '100%',
-                                height: `${height}%`,
-                                background: 'var(--gradient-teal-gold)',
-                                transition: 'height 0.3s ease'
-                              }} />
-                              <div style={{
-                                position: 'absolute',
-                                top: '50%',
-                                left: '50%',
-                                transform: 'translate(-50%, -50%)',
-                                fontWeight: '700',
-                                fontSize: '0.9rem',
-                                color: height > 50 ? 'white' : 'var(--foreground)'
-                              }}>
-                                {count}
-                              </div>
-                            </div>
-                            <div style={{
-                              fontSize: '0.75rem',
-                              marginTop: '4px',
-                              fontWeight: '600'
-                            }}>
-                              {day.slice(0, 3)}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Insights - Redesigned */}
-                  <div style={{
-                    padding: '20px',
-                    background: 'linear-gradient(135deg, var(--primary-teal) 0%, var(--deep-blue) 100%)',
-                    color: 'white',
-                    borderRadius: '12px',
-                    boxShadow: '0 4px 12px rgba(13, 148, 136, 0.2)'
-                  }}>
-                    <h3 style={{
-                      fontSize: '1.1rem',
-                      fontWeight: '700',
-                      marginBottom: '16px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px'
-                    }}>
-                      <TrendingUp size={20} strokeWidth={2.5} />
-                      Insights
-                    </h3>
-                    <div style={{ display: 'grid', gap: '12px', fontSize: '0.95rem' }}>
-                      {stats.mostAnnotatedVerse && stats.mostAnnotatedVerse !== 'undefined:undefined' && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <BookOpen size={16} />
-                          Most reflected verse: <strong>Surah {stats.mostAnnotatedVerse}</strong>
-                        </div>
-                      )}
-                      {stats.mostActiveDay && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <Calendar size={16} />
-                          Most active day: <strong>{new Date(stats.mostActiveDay).toLocaleDateString()}</strong>
-                        </div>
-                      )}
-                      {stats.lastReflectionDate && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <Clock size={16} />
-                          Last reflection: <strong>{stats.lastReflectionDate.toLocaleDateString()} at {stats.lastReflectionDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</strong>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </>
-              );
-            })()}
-          </div>
-        )}
-
-        {/* Reflection Calendar */}
-        {showCalendar && (
-          <div style={{
-            marginBottom: '32px',
-            padding: '24px',
-            background: 'white',
-            borderRadius: '16px',
-            border: '2px solid var(--border-light)',
-            boxShadow: 'var(--shadow-soft)'
-          }}>
-            <h2 style={{
-              fontSize: '1.5rem',
-              fontWeight: '700',
-              color: 'var(--gold)',
-              marginBottom: '24px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px'
-            }}>
-              Reflection Calendar
-            </h2>
-
-            <ReflectionCalendar annotations={annotations} />
-          </div>
-        )}
-
-        {/* Annotations List */}
-        {annotations.length === 0 ? (
-          <div style={{
-            textAlign: 'center',
-            padding: '80px 20px',
-            background: 'linear-gradient(135deg, #f0fdf4 0%, #fef3c7 100%)',
-            borderRadius: '16px',
-            border: '2px dashed #d1d5db'
-          }}>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'center',
-              marginBottom: '16px',
-              color: '#0D9488'
-            }}>
-              <BookOpen size={64} strokeWidth={1.5} />
-            </div>
-            <p style={{
-              fontSize: '1.5rem',
-              fontWeight: '700',
-              color: '#374151',
-              marginBottom: '8px'
-            }}>
-              No reflections yet
-            </p>
-            <p style={{
-              fontSize: '1rem',
-              color: '#6b7280',
-              lineHeight: '1.6',
-              maxWidth: '400px',
-              margin: '0 auto'
-            }}>
-              {selectedTag || selectedType || searchQuery
-                ? 'No reflections match your filters. Try adjusting them or clearing filters.'
-                : 'Start adding notes to verses as you study to build your personal Quran journal.'}
-            </p>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {annotations.map(annotation => {
-              const typeConfig = getTypeConfig(annotation.type);
-              const isExpanded = expandedId === annotation.id;
-
-              return (
-                <div
-                  key={annotation.id}
-                  onClick={() => setSelectedAnnotation(annotation)}
-                  style={{
-                    padding: '20px',
-                    background: 'white',
-                    borderRadius: '16px',
-                    border: '2px solid var(--border-light)',
-                    borderLeft: `6px solid ${typeConfig.color}`,
-                    transition: 'all 0.3s ease',
-                    cursor: 'pointer'
-                  }}
-                  className="annotation-card"
-                >
-                  {/* Header */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                        {typeConfig.iconComponent && <typeConfig.iconComponent size={20} style={{ color: typeConfig.color }} />}
-                        <span
-                          style={{
-                            background: typeConfig.color,
-                            color: 'white',
-                            padding: '4px 10px',
-                            borderRadius: '12px',
-                            fontSize: '0.75rem',
-                            fontWeight: '700',
-                            textTransform: 'uppercase'
-                          }}
-                        >
-                          {typeConfig.label}
-                        </span>
-                      </div>
-
-                      {/* Context based on reflection type */}
-                      {annotation.reflection_type === 'verse' && annotation.verseRef && (
-                        <div style={{ fontWeight: '700', fontSize: '1.1rem', color: 'var(--primary-teal)' }}>
-                          Verse {annotation.verseRef}
-                        </div>
-                      )}
-
-                      {annotation.reflection_type === 'section' && (
-                        <div>
-                          <div style={{ fontWeight: '700', fontSize: '1.1rem', color: '#8b5cf6', marginBottom: '4px' }}>
-                            Section: {annotation.section_name}
-                          </div>
-                          {annotation.query_context && (
-                            <div style={{ fontSize: '0.9rem', color: '#666', fontStyle: 'italic' }}>
-                              Query: &quot;{annotation.query_context}&quot;
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {annotation.reflection_type === 'general' && (
-                        <div>
-                          <div style={{ fontWeight: '700', fontSize: '1.1rem', color: '#10b981', marginBottom: '4px' }}>
-                            General Reflection
-                          </div>
-                          {annotation.query_context && (
-                            <div style={{ fontSize: '0.9rem', color: '#666', fontStyle: 'italic' }}>
-                              Query: &quot;{annotation.query_context}&quot;
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {annotation.reflection_type === 'highlight' && (
-                        <div>
-                          <div style={{ fontWeight: '700', fontSize: '1.1rem', color: '#f59e0b', marginBottom: '4px' }}>
-                            Highlighted Text
-                          </div>
-                          {annotation.highlighted_text && (
-                            <div style={{
-                              fontSize: '0.9rem',
-                              color: '#666',
-                              fontStyle: 'italic',
-                              background: 'rgba(245, 158, 11, 0.1)',
-                              padding: '8px 12px',
-                              borderRadius: '8px',
-                              borderLeft: '3px solid #f59e0b',
-                              marginTop: '8px'
-                            }}>
-                              &quot;{annotation.highlighted_text}&quot;
-                            </div>
-                          )}
-                          {annotation.query_context && (
-                            <div style={{ fontSize: '0.85rem', color: '#999', marginTop: '4px' }}>
-                              From query: &quot;{annotation.query_context}&quot;
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', marginLeft: '16px' }}>
-                      <div style={{ fontSize: '0.85rem', color: '#999' }}>
-                        {formatDate(annotation.createdAt)}
-                      </div>
-                      {annotation.share_id && (
-                        <a
-                          href={`/shared/${annotation.share_id}`}
-                          onClick={(e) => e.stopPropagation()}
-                          style={{
-                            fontSize: '0.75rem',
-                            color: '#8b5cf6',
-                            fontWeight: '600',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            textDecoration: 'none'
-                          }}
-                        >
-                          View Response
-                        </a>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Content */}
-                  <div style={{ marginBottom: '12px' }}>
-                    <p
-                      style={{
-                        margin: 0,
-                        color: 'var(--foreground)',
-                        fontSize: '0.95rem',
-                        lineHeight: '1.6',
-                        whiteSpace: 'pre-wrap',
-                        maxHeight: '7.2em', // ~4.5 lines for preview
-                        overflow: 'hidden',
-                        position: 'relative'
-                      }}
-                    >
-                      {annotation.content}
-                    </p>
-                    {annotation.content && annotation.content.length > 200 && (
-                      <div style={{
-                        background: 'linear-gradient(to bottom, transparent, white)',
-                        height: '24px',
-                        marginTop: '-24px',
-                        position: 'relative'
-                      }} />
-                    )}
-                  </div>
-
-                  {/* Tags */}
-                  {annotation.tags && annotation.tags.length > 0 && (
-                    <div
-                      style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {annotation.tags.map(tag => (
-                        <span
-                          key={tag}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleTagFilter(tag);
-                          }}
-                          style={{
-                            background: 'var(--cream)',
-                            color: 'var(--primary-teal)',
-                            padding: '4px 10px',
-                            borderRadius: '12px',
-                            fontSize: '0.75rem',
-                            fontWeight: '600',
-                            border: '1px solid var(--border-light)',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          #{tag}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Tap to read hint for long content */}
-                  {annotation.content && annotation.content.length > 200 && (
-                    <div
-                      style={{
-                        color: 'var(--text-muted)',
-                        fontSize: '0.8rem',
-                        marginTop: '8px',
-                        fontStyle: 'italic'
-                      }}
-                    >
-                      Tap to read full reflection
-                    </div>
-                  )}
-
-                  {/* REMOVED: Old Expand/Collapse button - now handled by panel */}
-                  {false && annotation.content && annotation.content.length > 150 && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setExpandedId(isExpanded ? null : annotation.id);
-                      }}
-                      style={{
-                        background: 'transparent',
-                        border: 'none',
-                        color: 'var(--primary-teal)',
-                        cursor: 'pointer',
-                        fontSize: '0.85rem',
-                        fontWeight: '600',
-                        padding: '8px 0',
-                        marginTop: '8px'
-                      }}
-                    >
-                      {isExpanded ? '▲ Show less' : '▼ Show more'}
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
         )}
       </div>
 
+      {/* Type filter chips */}
+      <div className="filter-chips">
+        {Object.entries(ANNOTATION_TYPE_CONFIG).map(([type, config]) => (
+          <button
+            key={type}
+            onClick={() => handleTypeFilter(type)}
+            className={`filter-chip ${selectedType === type ? 'active' : ''}`}
+            style={{
+              '--chip-color': config.color,
+            }}
+          >
+            {config.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Tag filter row */}
+      {allTags.length > 0 && (
+        <div className="tag-row">
+          {allTags.slice(0, 8).map(tag => (
+            <button
+              key={tag}
+              onClick={() => handleTagFilter(tag)}
+              className={`tag-chip ${selectedTag === tag ? 'active' : ''}`}
+            >
+              #{tag}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Active filter indicator */}
+      {hasActiveFilters && (
+        <button className="clear-filters" onClick={handleClearFilters}>
+          Clear filters
+        </button>
+      )}
+
+      {/* Annotations List */}
+      {displayAnnotations.length === 0 ? (
+        <div className="empty-state">
+          <BookOpen size={40} strokeWidth={1.2} color="#d1d5db" />
+          <p className="empty-title">
+            {hasActiveFilters ? 'No matches' : 'No reflections yet'}
+          </p>
+          <p className="empty-desc">
+            {hasActiveFilters
+              ? 'Try different filters.'
+              : 'Reflect on verses as you study to build your journal.'}
+          </p>
+        </div>
+      ) : (
+        <div className="annotations-list">
+          {displayAnnotations.map(annotation => {
+            const typeConfig = getTypeConfig(annotation.type);
+            const IconComp = typeConfig.iconComponent;
+
+            // Build context label
+            let contextLabel = '';
+            if (annotation.reflection_type === 'verse' && annotation.verseRef) {
+              contextLabel = annotation.verseRef;
+            } else if (annotation.reflection_type === 'section' && annotation.section_name) {
+              contextLabel = annotation.section_name;
+            } else if (annotation.reflection_type === 'general') {
+              contextLabel = annotation.query_context || 'General';
+            } else if (annotation.reflection_type === 'highlight') {
+              contextLabel = 'Highlight';
+            }
+
+            return (
+              <div
+                key={annotation.id}
+                className="annotation-card"
+                onClick={() => setSelectedAnnotation(annotation)}
+              >
+                {/* Top row: type badge + date */}
+                <div className="card-top">
+                  <div className="type-badge" style={{ color: typeConfig.color }}>
+                    {IconComp && <IconComp size={14} strokeWidth={2} />}
+                    <span>{typeConfig.label}</span>
+                  </div>
+                  <span className="card-date">{formatDate(annotation.createdAt)}</span>
+                </div>
+
+                {/* Context */}
+                {contextLabel && (
+                  <div className="card-context">{contextLabel}</div>
+                )}
+
+                {/* Content preview */}
+                <p className="card-content">{annotation.content}</p>
+
+                {/* Tags */}
+                {annotation.tags && annotation.tags.length > 0 && (
+                  <div className="card-tags">
+                    {annotation.tags.map(tag => (
+                      <span key={tag} className="card-tag" onClick={(e) => {
+                        e.stopPropagation();
+                        handleTagFilter(tag);
+                      }}>#{tag}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       <style jsx>{`
-        .annotation-card:hover {
-          transform: translateY(-2px);
-          box-shadow: var(--shadow-medium);
-          border-color: var(--gold);
+        .reflections-page {
+          max-width: 600px;
+          margin: 0 auto;
+          padding: 16px 16px calc(60px + env(safe-area-inset-bottom, 0px));
+        }
+
+        .reflections-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 8px 0 16px;
+        }
+
+        .reflections-title {
+          font-size: 1.5rem;
+          font-weight: 700;
+          color: #1a1a1a;
+          margin: 0;
+        }
+
+        .reflections-count {
+          font-size: 0.8rem;
+          font-weight: 600;
+          color: #6b7280;
+          background: #f3f4f6;
+          padding: 4px 10px;
+          border-radius: 12px;
+        }
+
+        /* Search */
+        .search-bar {
+          position: relative;
+          margin-bottom: 12px;
+        }
+
+        .search-bar :global(.search-icon) {
+          position: absolute;
+          left: 12px;
+          top: 50%;
+          transform: translateY(-50%);
+          color: #9ca3af;
+        }
+
+        .search-input {
+          width: 100%;
+          padding: 10px 36px 10px 36px;
+          border: 1px solid #e5e7eb;
+          border-radius: 10px;
+          font-size: 0.9rem;
+          background: #f9fafb;
+          outline: none;
+          transition: border-color 0.15s;
+          box-sizing: border-box;
+        }
+
+        .search-input:focus {
+          border-color: #d1d5db;
+          background: white;
+        }
+
+        .search-clear {
+          position: absolute;
+          right: 10px;
+          top: 50%;
+          transform: translateY(-50%);
+          background: none;
+          border: none;
+          color: #9ca3af;
+          cursor: pointer;
+          padding: 4px;
+          display: flex;
+        }
+
+        /* Filter chips */
+        .filter-chips {
+          display: flex;
+          gap: 6px;
+          overflow-x: auto;
+          padding-bottom: 8px;
+          margin-bottom: 4px;
+          -webkit-overflow-scrolling: touch;
+          scrollbar-width: none;
+        }
+
+        .filter-chips::-webkit-scrollbar {
+          display: none;
+        }
+
+        .filter-chip {
+          flex-shrink: 0;
+          padding: 6px 14px;
+          border: 1px solid #e5e7eb;
+          border-radius: 20px;
+          background: white;
+          font-size: 0.78rem;
+          font-weight: 500;
+          color: #374151;
+          cursor: pointer;
+          transition: all 0.15s;
+          white-space: nowrap;
+        }
+
+        .filter-chip.active {
+          background: var(--chip-color);
+          color: white;
+          border-color: var(--chip-color);
+        }
+
+        /* Tag row */
+        .tag-row {
+          display: flex;
+          gap: 6px;
+          overflow-x: auto;
+          padding-bottom: 8px;
+          margin-bottom: 4px;
+          -webkit-overflow-scrolling: touch;
+          scrollbar-width: none;
+        }
+
+        .tag-row::-webkit-scrollbar {
+          display: none;
+        }
+
+        .tag-chip {
+          flex-shrink: 0;
+          padding: 4px 10px;
+          border: none;
+          border-radius: 12px;
+          background: #f3f4f6;
+          font-size: 0.72rem;
+          font-weight: 500;
+          color: #6b7280;
+          cursor: pointer;
+          transition: all 0.15s;
+          white-space: nowrap;
+        }
+
+        .tag-chip.active {
+          background: #0d9488;
+          color: white;
+        }
+
+        .clear-filters {
+          display: block;
+          background: none;
+          border: none;
+          color: #ef4444;
+          font-size: 0.78rem;
+          font-weight: 500;
+          cursor: pointer;
+          padding: 4px 0;
+          margin-bottom: 8px;
+        }
+
+        /* Empty state */
+        .empty-state {
+          text-align: center;
+          padding: 60px 20px;
+        }
+
+        .empty-title {
+          font-size: 1rem;
+          font-weight: 600;
+          color: #374151;
+          margin: 12px 0 4px;
+        }
+
+        .empty-desc {
+          font-size: 0.85rem;
+          color: #9ca3af;
+          margin: 0;
+          line-height: 1.5;
+        }
+
+        /* Annotations list */
+        .annotations-list {
+          display: flex;
+          flex-direction: column;
+          gap: 1px;
+          background: #e5e7eb;
+          border-radius: 12px;
+          overflow: hidden;
+        }
+
+        .annotation-card {
+          padding: 14px 16px;
+          background: white;
+          cursor: pointer;
+          transition: background 0.1s;
+        }
+
+        .annotation-card:active {
+          background: #f9fafb;
+        }
+
+        .card-top {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 6px;
+        }
+
+        .type-badge {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          font-size: 0.72rem;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.03em;
+        }
+
+        .card-date {
+          font-size: 0.72rem;
+          color: #9ca3af;
+        }
+
+        .card-context {
+          font-size: 0.85rem;
+          font-weight: 600;
+          color: #1a1a1a;
+          margin-bottom: 4px;
+        }
+
+        .card-content {
+          font-size: 0.88rem;
+          color: #4b5563;
+          line-height: 1.5;
+          margin: 0;
+          display: -webkit-box;
+          -webkit-line-clamp: 3;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+
+        .card-tags {
+          display: flex;
+          gap: 6px;
+          margin-top: 8px;
+          flex-wrap: wrap;
+        }
+
+        .card-tag {
+          font-size: 0.68rem;
+          color: #6b7280;
+          background: #f3f4f6;
+          padding: 2px 8px;
+          border-radius: 8px;
+          cursor: pointer;
+        }
+
+        .card-tag:active {
+          background: #e5e7eb;
+        }
+
+        @media (min-width: 1024px) {
+          .reflections-page {
+            padding: 24px 24px 40px;
+            max-width: 640px;
+          }
+
+          .annotation-card:hover {
+            background: #fafafa;
+          }
         }
       `}</style>
 

@@ -126,11 +126,10 @@ export default function QueryHistoryPage() {
               >
                 <div
                   style={{
-                    padding: '20px',
-                    background: 'linear-gradient(135deg, #ffffff 0%, rgba(250, 246, 240, 1) 100%)',
-                    borderRadius: '12px',
-                    border: '2px solid var(--border-light)',
-                    transition: 'all 0.3s ease',
+                    padding: '16px',
+                    background: 'white',
+                    borderRadius: '10px',
+                    border: '1px solid var(--border-light)',
                     cursor: 'pointer'
                   }}
                   className="history-item"
@@ -168,9 +167,7 @@ export default function QueryHistoryPage() {
 
       <style jsx>{`
         .history-item:hover {
-          transform: translateX(4px);
-          box-shadow: var(--shadow-medium);
-          border-color: var(--gold);
+          border-color: var(--primary-teal-light, #5eead4);
         }
       `}</style>
 

@@ -173,25 +173,18 @@ a {
 
 .card {
   background: var(--cream);
-  border-radius: var(--radius-xl, 24px);
-  padding: 40px;
-  box-shadow: var(--shadow-medium);
-  border: 2px solid var(--border-light);
-  margin-bottom: 32px;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: var(--shadow-soft);
+  border: 1px solid var(--border-light);
+  margin-bottom: 20px;
   position: relative;
   overflow: hidden;
-  transition: all 0.3s ease;
-}
-
-.card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-strong);
-  border-color: var(--border-medium);
 }
 
 .main-app {
   max-width: none;
-  padding: 40px;
+  padding: 24px;
 }
 
 /* ============================================================================
@@ -202,11 +195,11 @@ a {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 48px;
-  padding: 32px;
+  margin-bottom: 24px;
+  padding: 20px;
   background: var(--cream);
-  border-radius: 20px;
-  border: 2px solid var(--border-light);
+  border-radius: 16px;
+  border: 1px solid var(--border-light);
   position: relative;
   overflow: hidden;
 }
@@ -218,8 +211,8 @@ a {
 }
 
 .header h1 {
-  font-size: 2.75rem;
-  font-weight: 800;
+  font-size: 1.8rem;
+  font-weight: 700;
   color: var(--deep-blue);
   position: relative;
   letter-spacing: -0.02em;
@@ -242,12 +235,11 @@ a {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 24px;
+  padding: 10px 18px;
   background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(10px);
-  border-radius: 30px;
-  border: 2px solid var(--border-light);
-  box-shadow: var(--shadow-soft);
+  border-radius: 24px;
+  border: 1px solid var(--border-light);
   font-size: 0.9rem;
   font-weight: 600;
   color: var(--deep-blue);
@@ -286,8 +278,6 @@ a {
 .nav-link:hover {
   background: var(--primary-teal) !important;
   color: white !important;
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-medium);
   border-color: var(--primary-teal) !important;
 }
 
@@ -301,8 +291,7 @@ a {
 }
 
 .add-annotation-btn:hover {
-  transform: translateY(-2px) scale(1.05);
-  box-shadow: var(--shadow-medium);
+  box-shadow: var(--shadow-soft);
 }
 
 /* ============================================================================
@@ -315,58 +304,41 @@ a {
 
 .suggestions-toggle {
   background: var(--cream);
-  border: 2px solid var(--border-light);
-  border-radius: 16px;
-  padding: 18px 28px;
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  padding: 14px 20px;
   cursor: pointer;
-  font-size: 1rem;
-  font-weight: 700;
+  font-size: 0.95rem;
+  font-weight: 600;
   color: var(--primary-teal);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s ease;
   position: relative;
   overflow: hidden;
   width: 100%;
   text-align: left;
-  box-shadow: var(--shadow-soft);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .suggestions-toggle:hover {
   background: var(--primary-teal);
   color: white;
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-medium);
   border-color: var(--primary-teal);
 }
 
 .suggestions-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 12px;
-  margin-top: 24px;
-  padding: 32px;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 20px;
   background: var(--cream);
-  border-radius: 20px;
-  border: 2px solid var(--border-light);
+  border-radius: 16px;
+  border: 1px solid var(--border-light);
   position: relative;
-  animation: slideDown 0.4s ease-out;
-}
-
-/* Decorative divider */
-.suggestions-grid::before {
-  content: '---';
-  position: absolute;
-  top: -12px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--background);
-  padding: 0 16px;
-  color: var(--gold);
-  font-size: 1.2rem;
-  letter-spacing: 8px;
+  animation: slideDown 0.3s ease-out;
 }
 
 @keyframes slideDown {
@@ -376,25 +348,22 @@ a {
 
 .suggestion-chip {
   background: white;
-  color: var(--foreground);  /* Ensure text is visible */
-  border: 2px solid var(--border-light);
-  border-radius: 30px;
-  padding: 12px 20px;
+  color: var(--foreground);
+  border: 1px solid var(--border-light);
+  border-radius: 24px;
+  padding: 10px 16px;
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s ease;
   text-align: center;
   position: relative;
   overflow: hidden;
-  box-shadow: var(--shadow-soft);
 }
 
 .suggestion-chip:hover {
   color: white;
   background: var(--primary-teal);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-medium);
   border-color: var(--primary-teal);
 }
 
@@ -408,14 +377,14 @@ a {
 
 .tafsir-form {
   display: flex;
-  gap: 16px;
-  margin-bottom: 40px;
-  padding: 32px;
+  gap: 12px;
+  margin-bottom: 24px;
+  padding: 20px;
   background: var(--cream);
   backdrop-filter: blur(10px);
-  border-radius: 20px;
-  border: 2px solid var(--border-light);
-  box-shadow: var(--shadow-medium);
+  border-radius: 16px;
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-soft);
   position: relative;
   flex-wrap: wrap;
   align-items: center;
@@ -439,10 +408,10 @@ a {
 
 /* SELECT DROPDOWN - ENHANCED */
 .tafsir-form select {
-  padding: 18px 44px 18px 24px;
-  border: 2px solid var(--border-medium);
-  border-radius: 16px;
-  font-size: 1.05rem;
+  padding: 12px 40px 12px 16px;
+  border: 1px solid var(--border-medium);
+  border-radius: 10px;
+  font-size: 1rem;
   font-weight: 600;
   line-height: 1.5;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -456,18 +425,14 @@ a {
   vertical-align: middle;
 }
 
-/* NEW: Hover state for select */
 .tafsir-form select:hover {
   border-color: var(--primary-teal);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-soft);
 }
 
 .tafsir-form select:focus {
   outline: none;
   border-color: var(--primary-teal);
-  box-shadow: 0 0 0 4px rgba(13, 148, 136, 0.1), var(--shadow-soft);
-  transform: translateY(-2px);
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1);
 }
 
 /* INPUT FIELD - COMPACT */
@@ -489,8 +454,7 @@ a {
 .tafsir-form input:focus {
   outline: none;
   border-color: var(--primary-teal);
-  box-shadow: 0 0 0 4px rgba(13, 148, 136, 0.1), var(--shadow-soft);
-  transform: translateY(-2px);
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1);
 }
 
 .tafsir-form input::placeholder {
@@ -545,8 +509,7 @@ a {
 }
 
 .tafsir-form button.search-button:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-strong);
+  box-shadow: var(--shadow-medium);
 }
 
 .tafsir-form button.search-button:active:not(:disabled) {
@@ -596,8 +559,7 @@ button {
 }
 
 button:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-medium);
+  box-shadow: var(--shadow-soft);
 }
 
 .logout-button {
@@ -611,9 +573,9 @@ button:hover:not(:disabled) {
 .toggle-auth {
   background: transparent;
   color: var(--primary-teal);
-  border: 2px solid var(--primary-teal);
+  border: 1px solid var(--primary-teal);
   margin-top: 16px;
-  border-radius: 12px;
+  border-radius: 10px;
 }
 
 .toggle-auth:hover {
@@ -667,20 +629,20 @@ button:hover:not(:disabled) {
 .error {
   color: var(--error-color);
   background: rgba(220, 38, 38, 0.1);
-  border: 2px solid var(--error-color);
-  border-radius: 12px;
-  padding: 16px 20px;
-  margin: 16px 0;
+  border: 1px solid var(--error-color);
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin: 12px 0;
   font-weight: 600;
 }
 
 .rate-limit-warning {
   background: rgba(217, 119, 6, 0.08);
-  border: 2px solid var(--warning-color);
+  border: 1px solid var(--warning-color);
   color: var(--warning-color);
-  border-radius: 12px;
-  padding: 16px 20px;
-  margin: 20px 0;
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin: 16px 0;
   font-weight: 600;
   display: flex;
   align-items: center;
@@ -699,18 +661,17 @@ button:hover:not(:disabled) {
 }
 
 .level-buttons button {
-  padding: 24px;
+  padding: 20px;
   font-size: 1rem;
   font-weight: 600;
-  border-radius: 16px;
+  border-radius: 12px;
   background: white;
   color: var(--foreground);
-  border: 2px solid var(--border-light);
+  border: 1px solid var(--border-light);
   transition: background 0.2s ease, border-color 0.2s ease;
   cursor: pointer;
   position: relative;
   overflow: hidden;
-  box-shadow: var(--shadow-soft);
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
 }
@@ -746,56 +707,25 @@ button:hover:not(:disabled) {
 }
 
 .result-section {
-  margin-bottom: 48px;
-  padding: 40px;
+  margin-bottom: 24px;
+  padding: 24px;
   background: var(--cream);
-  backdrop-filter: blur(10px);
-  border-radius: 24px;
-  border: 2px solid var(--border-light);
+  border-radius: 16px;
+  border: 1px solid var(--border-light);
   position: relative;
-  box-shadow: var(--shadow-medium);
-}
-
-/* Illuminated manuscript left border */
-.result-section::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 6px;
-  height: 100%;
-  background: var(--color-primary, var(--primary-teal));
-  border-radius: 24px 0 0 24px;
+  box-shadow: var(--shadow-soft);
 }
 
 .result-section h2 {
   color: var(--primary-teal);
-  font-size: 1.75rem;
-  font-weight: 800;
-  margin-bottom: 32px;
-  padding-bottom: 16px;
-  border-bottom: 3px solid var(--border-light);
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-light);
   position: relative;
   text-transform: none;
   letter-spacing: 0.01em;
-}
-
-.result-section h2::after {
-  content: '';
-  position: absolute;
-  bottom: -3px;
-  left: 0;
-  width: 80px;
-  height: 3px;
-  background: var(--primary-teal);
-  border-radius: 3px;
-}
-
-.result-section h2::before {
-  content: '';
-  margin-right: 12px;
-  color: var(--gold-text); /* WCAG AA compliant */
-  font-size: 1.2rem;
 }
 
 /* ============================================================================
@@ -804,93 +734,58 @@ button:hover:not(:disabled) {
 
 .verse-card {
   background: white;
-  border-radius: 20px;
-  padding: 32px;
-  margin-bottom: 24px;
-  box-shadow: var(--shadow-medium);
-  border: 2px solid var(--border-light);
+  border-radius: 14px;
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow-soft);
+  border: 1px solid var(--border-light);
   position: relative;
   overflow: hidden;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .verse-card.enhanced {
   background: white;
-  border-left: 6px solid var(--primary-teal);
-}
-
-.verse-card:hover {
-  transform: translateY(-2px); /* Subtle lift instead of dramatic */
-  box-shadow: var(--shadow-medium);
-  border-color: var(--primary-teal-light);
-}
-
-/* Floating animation */
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0px) rotate(0deg);
-  }
-  50% {
-    transform: translateY(-10px) rotate(5deg);
-  }
+  border-left: 3px solid var(--primary-teal);
 }
 
 .verse-ref {
-  font-size: 1rem;
+  font-size: 0.9rem;
   color: var(--primary-teal);
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  margin-bottom: 20px;
-  padding-bottom: 12px;
-  border-bottom: 2px solid var(--border-light);
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-light);
   display: inline-block;
-}
-
-.verse-ref::before {
-  content: '';
-  margin-right: 8px;
-  color: var(--gold-text); /* WCAG AA compliant */
 }
 
 .arabic-text {
   font-family: var(--font-amiri), 'Amiri Quran', 'Scheherazade New', 'Traditional Arabic', serif;
   font-size: clamp(1.6rem, 4vw, 2.4rem);
   line-height: 2.2;
-  margin: 32px 0;
-  padding: 32px;
+  margin: 16px 0;
+  padding: 20px;
   background: var(--cream);
-  border-radius: 16px;
+  border-radius: 12px;
   text-align: center;
   direction: rtl;
-  border: 2px solid var(--border-light);
+  border: 1px solid var(--border-light);
   position: relative;
-  box-shadow: inset 0 2px 8px rgba(212, 175, 55, 0.1);
 }
 
 .translation {
   font-family: 'Georgia', 'Palatino', serif;
   font-style: italic;
-  font-size: 1.15rem;
-  line-height: 1.9;
+  font-size: 1.05rem;
+  line-height: 1.8;
   color: var(--deep-blue);
-  padding: 24px;
+  padding: 16px;
   background: var(--cream);
-  border-radius: 12px;
-  border-left: 4px solid var(--primary-teal);
+  border-radius: 10px;
+  border-left: 3px solid var(--primary-teal);
   position: relative;
-  margin-top: 24px;
-}
-
-.translation::before {
-  content: '"';
-  font-size: 3rem;
-  color: var(--gold);
-  opacity: 0.3;
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  font-family: Georgia, serif;
+  margin-top: 16px;
 }
 
 /* ============================================================================
@@ -898,79 +793,34 @@ button:hover:not(:disabled) {
    ============================================================================ */
 
 .tafsir-details {
-  margin-bottom: 24px;
-  border: 2px solid var(--border-light);
-  border-radius: 16px;
+  margin-bottom: 16px;
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
   background: white;
   overflow: hidden;
-  transition: all 0.3s ease;
-  box-shadow: var(--shadow-soft);
-}
-
-.tafsir-details:hover {
-  box-shadow: var(--shadow-medium);
-  border-color: var(--gold);
 }
 
 .tafsir-details summary {
-  padding: 24px 28px;
+  padding: 16px 20px;
   cursor: pointer;
   background: var(--cream);
   font-weight: 700;
-  font-size: 1.15rem;
+  font-size: 1.05rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  transition: all 0.3s ease;
-  border-bottom: 2px solid transparent;
+  transition: background 0.2s ease;
   position: relative;
 }
 
-/* Animated underline */
-.tafsir-details summary::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 0;
-  height: 2px;
-  background: var(--primary-teal);
-  transition: width 0.4s ease;
-}
-
-.tafsir-details summary:hover::after {
-  width: 100%;
-}
-
 .tafsir-details summary:hover {
-  background: rgba(13, 148, 136, 0.08);
+  background: rgba(13, 148, 136, 0.06);
   color: var(--primary-teal);
-  padding-left: 32px;
-}
-
-/* Icon transition */
-.tafsir-details summary::before {
-  content: '';
-  margin-right: 12px;
-  color: var(--gold-text); /* WCAG AA compliant */
-  transition: transform 0.3s ease;
-  display: inline-block;
-}
-
-.tafsir-details[open] summary::before {
-  transform: rotate(90deg);
 }
 
 .tafsir-details[open] summary {
   background: var(--primary-teal);
   color: white;
-  border-bottom-color: var(--primary-teal-light);
-}
-
-.tafsir-details[open] summary::after {
-  width: 100%;
-  background: white;
-  opacity: 0.3;
 }
 
 .limited-content-badge {
@@ -984,10 +834,10 @@ button:hover:not(:disabled) {
 }
 
 .explanation-content {
-  padding: 32px;
-  line-height: 1.9;
+  padding: 20px;
+  line-height: 1.8;
   background: white;
-  font-size: 1.05rem;
+  font-size: 1rem;
 }
 
 .explanation-content p {
@@ -1004,18 +854,11 @@ button:hover:not(:disabled) {
 }
 
 .cross-ref-item {
-  padding: 16px 20px;
+  padding: 12px 16px;
   background: white;
-  border-radius: 12px;
-  border: 2px solid var(--border-light);
-  border-left: 4px solid var(--primary-teal);
-  transition: all 0.3s ease;
-}
-
-.cross-ref-item:hover {
-  transform: translateX(8px);
-  box-shadow: var(--shadow-soft);
-  border-color: var(--gold);
+  border-radius: 10px;
+  border: 1px solid var(--border-light);
+  border-left: 3px solid var(--primary-teal);
 }
 
 /* ============================================================================
@@ -1028,39 +871,31 @@ button:hover:not(:disabled) {
 }
 
 .lesson-item {
-  padding: 16px 20px;
-  margin-bottom: 12px;
+  padding: 12px 16px 12px 40px;
+  margin-bottom: 10px;
   background: white;
-  border-radius: 12px;
-  border: 2px solid var(--border-light);
-  border-left: 4px solid var(--success-color);
+  border-radius: 10px;
+  border: 1px solid var(--border-light);
+  border-left: 3px solid var(--success-color);
   position: relative;
-  transition: all 0.3s ease;
-  padding-left: 50px;
 }
 
 .lesson-item::before {
   content: '';
   position: absolute;
-  left: 16px;
+  left: 12px;
   top: 50%;
   transform: translateY(-50%);
   background: var(--success-color);
   color: white;
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: bold;
-}
-
-.lesson-item:hover {
-  transform: translateX(8px);
-  box-shadow: var(--shadow-soft);
-  border-color: var(--gold);
 }
 
 /* ============================================================================
@@ -1069,11 +904,11 @@ button:hover:not(:disabled) {
 
 .summary-content {
   background: var(--cream);
-  border-radius: 12px;
-  padding: 24px;
-  border: 2px solid var(--border-light);
-  font-size: 1.1rem;
-  line-height: 1.8;
+  border-radius: 10px;
+  padding: 16px;
+  border: 1px solid var(--border-light);
+  font-size: 1rem;
+  line-height: 1.7;
 }
 
 /* ============================================================================
@@ -1081,31 +916,24 @@ button:hover:not(:disabled) {
    ============================================================================ */
 
 .export-section {
-  margin-top: 48px;
-  padding: 40px;
+  margin-top: 24px;
+  padding: 20px;
   background: var(--deep-blue);
-  border-radius: 24px;
-  border: 2px solid var(--gold);
+  border-radius: 12px;
+  border: 1px solid var(--gold);
   position: relative;
   overflow: hidden;
-  box-shadow: var(--shadow-strong);
 }
 
 .export-section h3 {
   color: white;
-  margin-bottom: 24px;
-  font-size: 1.5rem;
-  font-weight: 800;
+  margin-bottom: 16px;
+  font-size: 1.15rem;
+  font-weight: 700;
   text-transform: none;
   letter-spacing: 0.02em;
   position: relative;
   z-index: 1;
-}
-
-.export-section h3::before {
-  content: '';
-  margin-right: 12px;
-  color: var(--gold);
 }
 
 .export-controls {
@@ -1254,26 +1082,26 @@ button:hover:not(:disabled) {
   }
 
   .card {
-    padding: 20px 16px; /* Reduced internal padding */
-    margin-bottom: 16px;
-    border-radius: 16px; /* Slightly smaller radius for mobile */
+    padding: 16px 14px;
+    margin-bottom: 14px;
+    border-radius: 14px;
   }
 
   .main-app {
-    padding: 16px 12px; /* Much less padding on mobile */
-    min-height: 100vh; /* Ensure full height usage */
+    padding: 14px 12px;
+    min-height: 100vh;
   }
 
   .header {
     flex-direction: column;
-    gap: 16px;
+    gap: 12px;
     text-align: center;
-    padding: 20px 16px; /* Reduced header padding */
-    margin-bottom: 20px;
+    padding: 16px 14px;
+    margin-bottom: 16px;
   }
 
   .header h1 {
-    font-size: 2rem;
+    font-size: 1.5rem;
   }
 
   .header h1::after {
@@ -1317,11 +1145,10 @@ button:hover:not(:disabled) {
     font-size: 0.8rem !important;
   }
 
-  /* ENHANCED: Better mobile form styling */
   .tafsir-form {
     flex-direction: column;
-    gap: 12px;
-    padding: 28px 16px 20px 16px; /* Less horizontal padding */
+    gap: 10px;
+    padding: 16px 14px;
     margin: 0;
   }
 
@@ -1376,28 +1203,14 @@ button:hover:not(:disabled) {
   }
 
   .result-section {
-    padding: 20px 16px; /* Reduced padding */
-    padding-top: 28px; /* Add extra top padding since we're removing the symbol */
+    padding: 16px 14px;
     margin: 0;
   }
 
-  /* Hide the crescent moon symbol on mobile to prevent overlap */
-  .result-section::after {
-    display: none;
-  }
-
-  /* Adjust h2 positioning to prevent overlap issues */
   .result-section h2 {
     position: relative;
-    padding-top: 8px;
-    font-size: 1.3rem; /* Slightly smaller on mobile */
-    margin-bottom: 16px;
-  }
-
-  /* Keep the small ornament before h2 but make it inline */
-  .result-section h2::before {
-    position: static;
-    display: inline-block;
+    font-size: 1.15rem;
+    margin-bottom: 12px;
   }
 
   .verse-card {
@@ -1505,15 +1318,8 @@ button:hover:not(:disabled) {
   }
 
   .result-section {
-    padding: 16px 12px;
-    padding-top: 24px; /* Ensure proper spacing */
+    padding: 14px 12px;
     margin: 0;
-  }
-
-  /* Extra insurance - hide all decorative absolute positioned elements */
-  .result-section::after,
-  .result-section::before {
-    display: none !important;
   }
 
   .verse-card {
@@ -1537,21 +1343,10 @@ button:hover:not(:disabled) {
     padding: 10px 14px;
   }
 
-  /* Ensure h2 titles are not overlapped */
   .result-section h2 {
     margin-top: 0;
     padding-top: 0;
-    z-index: 1;
-    position: relative;
-    font-size: 1.2rem;
-  }
-
-  /* Make the decorative diamond inline on small screens */
-  .result-section h2::before {
-    content: '';
-    position: static !important;
-    display: inline-block;
-    margin-right: 8px;
+    font-size: 1.1rem;
   }
 
   /* Tafsir details on small screens */

@@ -157,7 +157,7 @@
      ========================================================================== */
 
   /* Bottom Navigation */
-  --nav-height: 72px;
+  --nav-height: 52px;
   --nav-height-with-safe: calc(var(--nav-height) + var(--safe-bottom));
 
   /* Header */

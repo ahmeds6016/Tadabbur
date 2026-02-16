@@ -16,7 +16,7 @@ const tourContent = {
       position: 'bottom'
     },
     {
-      target: '.nav-link, .bottom-nav-item',
+      target: '.nav-link, .bottom-nav .nav-item',
       title: 'Track Your Learning',
       content: 'Access your History to review past searches, Saved answers for bookmarked content, and Notes for your personal reflections.',
       position: 'top'
@@ -68,7 +68,7 @@ const tourContent = {
       position: 'bottom'
     },
     {
-      target: '.nav-link, .bottom-nav-item',
+      target: '.nav-link, .bottom-nav .nav-item',
       title: 'Review Your Notes',
       content: 'Visit the Notes page to see all your reflections in one place, filtered by date, type, or tags.',
       position: 'top'

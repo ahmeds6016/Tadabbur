@@ -36,7 +36,7 @@ export default function BottomNav({ user }) {
   return (
     <>
       {/* Spacer to prevent content from being hidden behind bottom nav */}
-      <div style={{ height: 'var(--nav-height-with-safe, calc(72px + env(safe-area-inset-bottom)))' }} />
+      <div style={{ height: 'calc(52px + env(safe-area-inset-bottom, 0px))' }} />
 
       <nav className="bottom-nav">
         {navItems.map((item) => {
@@ -45,13 +45,11 @@ export default function BottomNav({ user }) {
             <button
               key={item.path}
               onClick={() => router.push(item.path)}
-              className={`nav-item bottom-nav-item ${item.active ? 'active' : ''}`}
+              className={`nav-item ${item.active ? 'active' : ''}`}
               aria-label={item.label}
               aria-current={item.active ? 'page' : undefined}
             >
-              <span className="nav-icon">
-                <IconComponent size={22} strokeWidth={item.active ? 2.5 : 2} />
-              </span>
+              <IconComponent size={22} strokeWidth={item.active ? 2.5 : 1.8} />
               <span className="nav-label">{item.label}</span>
             </button>
           );
@@ -61,21 +59,19 @@ export default function BottomNav({ user }) {
           .bottom-nav {
             position: fixed;
             bottom: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: min(1200px, 100%);
+            left: 0;
+            right: 0;
             background: rgba(255, 255, 255, 0.98);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
-            border-top: 1px solid var(--border-light, #e5e7eb);
+            border-top: 0.5px solid rgba(0, 0, 0, 0.12);
             display: flex;
             justify-content: space-around;
-            align-items: center;
-            height: var(--nav-height, 72px);
-            z-index: var(--z-fixed, 1000);
-            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
-            padding-bottom: env(safe-area-inset-bottom);
-            border-radius: 16px 16px 0 0;
+            align-items: stretch;
+            height: calc(52px + env(safe-area-inset-bottom, 0px));
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+            z-index: 1000;
+            -webkit-tap-highlight-color: transparent;
           }
 
           .nav-item {
@@ -84,79 +80,44 @@ export default function BottomNav({ user }) {
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 4px;
+            gap: 2px;
             background: none;
             border: none;
-            padding: 10px 8px;
+            padding: 0;
             cursor: pointer;
-            color: var(--text-muted, #6b7280);
-            transition: all 0.2s ease;
-            position: relative;
-            min-height: 44px;
-          }
-
-          .nav-item:active {
-            background: var(--cream, #faf6f0);
+            color: #8e8e93;
+            transition: color 0.15s ease;
+            user-select: none;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
           }
 
           .nav-item.active {
-            color: var(--primary-teal, #0d9488);
-          }
-
-          .nav-item.active::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 32px;
-            height: 2px;
-            background: var(--primary-teal, #0d9488);
-            border-radius: 0 0 2px 2px;
-          }
-
-          .nav-icon {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 24px;
+            color: #1a1a1a;
           }
 
           .nav-label {
-            font-size: 0.65rem;
-            font-weight: 600;
-            letter-spacing: 0.02em;
+            font-size: 10px;
+            font-weight: 500;
+            line-height: 1;
           }
 
-          @media (hover: none) {
-            .nav-item:active {
-              transform: scale(0.95);
-            }
+          .nav-item.active .nav-label {
+            font-weight: 600;
           }
 
           @media (prefers-color-scheme: dark) {
             .bottom-nav {
-              background: #1f2937;
-              border-top-color: #374151;
-              box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.35);
+              background: rgba(0, 0, 0, 0.95);
+              border-top-color: rgba(255, 255, 255, 0.1);
             }
 
             .nav-item {
-              color: #9ca3af;
+              color: #636366;
             }
 
             .nav-item.active {
-              color: #10b981;
-            }
-
-            .nav-item:active {
-              background: #374151;
-            }
-          }
-
-          @media all and (display-mode: standalone) {
-            .bottom-nav {
-              padding-bottom: calc(env(safe-area-inset-bottom) + 8px);
+              color: #ffffff;
             }
           }
 

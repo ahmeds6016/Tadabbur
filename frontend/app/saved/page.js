@@ -167,7 +167,7 @@ export default function SavedSearchesPage() {
                 style={{
                   background: !selectedFolder ? 'var(--primary-teal)' : 'transparent',
                   color: !selectedFolder ? 'white' : 'var(--primary-teal)',
-                  border: '2px solid var(--primary-teal)',
+                  border: '1px solid var(--primary-teal)',
                   padding: '8px 16px',
                   borderRadius: '20px',
                   fontSize: '0.9rem'
@@ -182,7 +182,7 @@ export default function SavedSearchesPage() {
                   style={{
                     background: selectedFolder === folder.name ? 'var(--primary-teal)' : 'transparent',
                     color: selectedFolder === folder.name ? 'white' : 'var(--primary-teal)',
-                    border: '2px solid var(--primary-teal)',
+                    border: '1px solid var(--primary-teal)',
                     padding: '8px 16px',
                     borderRadius: '20px',
                     fontSize: '0.9rem'
@@ -229,11 +229,10 @@ export default function SavedSearchesPage() {
                   setExpandedId(expandedId === item.id ? null : item.id);
                 }}
                 style={{
-                  padding: '24px',
-                  background: 'linear-gradient(135deg, #ffffff 0%, rgba(250, 246, 240, 1) 100%)',
-                  borderRadius: '16px',
-                  border: '2px solid var(--border-light)',
-                  transition: 'all 0.3s ease',
+                  padding: '16px',
+                  background: 'white',
+                  borderRadius: '12px',
+                  border: '1px solid var(--border-light)',
                   cursor: 'pointer',
                   position: 'relative'
                 }}
@@ -259,7 +258,7 @@ export default function SavedSearchesPage() {
                     style={{
                       background: 'transparent',
                       color: 'var(--error-color)',
-                      border: '2px solid var(--error-color)',
+                      border: '1px solid var(--error-color)',
                       padding: '6px 12px',
                       borderRadius: '8px',
                       fontSize: '0.85rem',
@@ -386,9 +385,7 @@ export default function SavedSearchesPage() {
 
       <style jsx>{`
         .saved-item:hover {
-          transform: translateY(-2px);
-          box-shadow: var(--shadow-medium);
-          border-color: var(--gold);
+          border-color: var(--primary-teal-light, #5eead4);
         }
       `}</style>
 

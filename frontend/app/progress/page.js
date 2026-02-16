@@ -217,19 +217,14 @@ export default function ProgressPage() {
           background: linear-gradient(90deg, var(--primary-teal, #0d9488), var(--gold, #d4a017));
           border-radius: 6px;
           transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-          animation: barPulse 2s ease-in-out infinite;
-        }
-        @keyframes barPulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.85; }
         }
 
         .badges-section {
-          margin-bottom: 28px;
-          padding: 20px;
+          margin-bottom: 24px;
+          padding: 16px;
           background: var(--cream, #faf6f0);
-          border-radius: 16px;
-          border: 2px solid var(--border-light, #e5e7eb);
+          border-radius: 12px;
+          border: 1px solid var(--border-light, #e5e7eb);
         }
 
         .surah-grid {
@@ -263,20 +258,11 @@ export default function ProgressPage() {
           text-align: center;
           min-height: 72px;
         }
-        .surah-tile:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
         .surah-tile:active {
           transform: scale(0.97);
         }
         .surah-tile--complete {
           border-color: var(--gold, #d4a017);
-          animation: completedGlow 2s ease-in-out infinite;
-        }
-        @keyframes completedGlow {
-          0%, 100% { box-shadow: 0 0 6px rgba(251, 191, 36, 0.3); }
-          50% { box-shadow: 0 0 14px rgba(251, 191, 36, 0.6); }
         }
 
         .surah-tile__number {
@@ -289,14 +275,10 @@ export default function ProgressPage() {
           font-size: 0.72rem;
           font-weight: 700;
           color: var(--deep-blue, #1e293b);
-          line-height: 1.15;
+          line-height: 1.2;
           text-align: center;
           word-break: break-word;
           max-width: 100%;
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
         }
         .surah-tile__bar-track {
           width: 80%;
@@ -335,7 +317,6 @@ export default function ProgressPage() {
           flex-shrink: 0;
         }
         .legend-swatch--glow {
-          animation: completedGlow 2s ease-in-out infinite;
         }
       `}</style>
     </div>

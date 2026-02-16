@@ -100,21 +100,13 @@ export function BadgePopup({ badge, onClose }) {
           align-items: center;
           gap: 12px;
           padding: 14px 18px;
-          background: linear-gradient(
-            135deg,
-            rgba(255, 215, 0, 0.15) 0%,
-            rgba(255, 255, 255, 0.97) 40%,
-            rgba(255, 255, 255, 0.97) 60%,
-            rgba(255, 215, 0, 0.15) 100%
-          );
-          background-size: 200% auto;
-          border: 2px solid var(--gold, #d4a017);
-          border-radius: 14px;
-          box-shadow: 0 8px 30px rgba(212, 160, 23, 0.3);
+          background: white;
+          border: 1px solid var(--gold, #d4a017);
+          border-radius: 12px;
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
           transition: top 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
           max-width: 380px;
           width: calc(100% - 32px);
-          animation: goldShimmer 3s linear infinite;
         }
         .badge-popup--visible {
           top: 24px;
@@ -158,10 +150,6 @@ export function BadgePopup({ badge, onClose }) {
         }
         .badge-popup__close:hover {
           color: #666;
-        }
-        @keyframes goldShimmer {
-          0% { background-position: -200% center; }
-          100% { background-position: 200% center; }
         }
       `}</style>
     </div>
@@ -346,19 +334,13 @@ export default function BadgeDisplay({ user, compact = false }) {
           align-items: center;
           text-align: center;
           gap: 6px;
-          padding: 16px 10px;
-          border-radius: 12px;
-          border: 2px solid var(--border-light, #e5e7eb);
+          padding: 14px 10px;
+          border-radius: 10px;
+          border: 1px solid var(--border-light, #e5e7eb);
           background: white;
-          transition: transform 0.15s ease, box-shadow 0.15s ease;
         }
         .badge-card--earned {
           border-color: var(--gold, #d4a017);
-          box-shadow: 0 2px 10px rgba(212, 160, 23, 0.15);
-        }
-        .badge-card--earned:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 16px rgba(212, 160, 23, 0.25);
         }
         .badge-card--locked {
           filter: grayscale(1);

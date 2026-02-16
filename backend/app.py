@@ -6603,6 +6603,301 @@ READING_PLANS = [
             {"day": 7, "title": "Ihsan — Excellence in Faith", "verse": [2, 112], "prompt": "What does it mean to worship Allah as though you see Him?"},
         ],
     },
+    {
+        "id": "gratitude_7",
+        "title": "7-Day Gratitude Reset",
+        "description": "Rewire your perspective through Quranic gratitude. Each day explores a different dimension of shukr — from recognizing hidden blessings to expressing thanks through action. Goal: develop a daily gratitude practice rooted in revelation.",
+        "duration_days": 7,
+        "category": "Spiritual Growth",
+        "days": [
+            {"day": 1, "title": "The Promise of Increase", "verse": [14, 7], "prompt": "What three blessings do you take for granted every day?"},
+            {"day": 2, "title": "Gratitude in the Body", "verse": [16, 78], "prompt": "How do your senses — sight, hearing, heart — serve you today?"},
+            {"day": 3, "title": "Gratitude Through Trial", "verse": [2, 152], "prompt": "Can you find something to be thankful for in a current difficulty?"},
+            {"day": 4, "title": "Creation as a Sign", "verse": [55, 13], "prompt": "Which of Allah's favors around you do you notice right now?"},
+            {"day": 5, "title": "The Grateful Few", "verse": [34, 13], "prompt": "What makes gratitude so rare? How can you be among the grateful?"},
+            {"day": 6, "title": "Gratitude in Worship", "verse": [76, 3], "prompt": "How can your daily prayers become expressions of genuine thanks?"},
+            {"day": 7, "title": "The Eternal Gratitude", "verse": [35, 34], "prompt": "Imagine standing before Allah grateful. What journey brought you there?"},
+        ],
+    },
+    {
+        "id": "tawakkul_5",
+        "title": "5-Day Trust in Allah",
+        "description": "A focused journey into tawakkul — the art of relying on Allah while taking action. Learn the balance between effort and surrender. Goal: release anxiety by anchoring your trust in divine wisdom.",
+        "duration_days": 5,
+        "category": "Spiritual Growth",
+        "days": [
+            {"day": 1, "title": "Allah is Sufficient", "verse": [3, 173], "prompt": "What worry are you carrying that you could hand over to Allah?"},
+            {"day": 2, "title": "Trust and Act", "verse": [3, 159], "prompt": "Where do you confuse tawakkul with passivity?"},
+            {"day": 3, "title": "Nothing Happens by Chance", "verse": [9, 51], "prompt": "Think of a 'setback' that turned out to be Allah's redirection."},
+            {"day": 4, "title": "Provision is Guaranteed", "verse": [65, 3], "prompt": "How would your decisions change if you truly trusted Allah's provision?"},
+            {"day": 5, "title": "The Birds of Tawakkul", "verse": [67, 19], "prompt": "What would it look like to start each day with the trust of a bird leaving its nest?"},
+        ],
+    },
+    {
+        "id": "dua_7",
+        "title": "7-Day Dua Deep Dive",
+        "description": "Explore the most powerful supplications in the Quran — from prophetic prayers to everyday asks. Understand the etiquette, timing, and heart of dua. Goal: transform your prayer life from routine to relationship.",
+        "duration_days": 7,
+        "category": "Worship",
+        "days": [
+            {"day": 1, "title": "I Am Near", "verse": [2, 186], "prompt": "When do you feel closest to Allah during dua?"},
+            {"day": 2, "title": "Adam's Repentance", "verse": [7, 23], "prompt": "What is your go-to dua when you've made a mistake?"},
+            {"day": 3, "title": "Ibrahim's Dua for Wisdom", "verse": [26, 83], "prompt": "What wisdom are you asking Allah for right now?"},
+            {"day": 4, "title": "Musa's Plea for Courage", "verse": [20, 25], "prompt": "What conversation or task do you need Allah's help for?"},
+            {"day": 5, "title": "Yunus in the Darkness", "verse": [21, 87], "prompt": "When have you called out to Allah from your lowest point?"},
+            {"day": 6, "title": "The Dua of the Righteous", "verse": [3, 8], "prompt": "Ask Allah to keep your heart firm after guidance."},
+            {"day": 7, "title": "Between Fear and Hope", "verse": [32, 16], "prompt": "How do you balance fear and hope in your relationship with Allah?"},
+        ],
+    },
+    {
+        "id": "anger_management_5",
+        "title": "5-Day Anger & Forgiveness",
+        "description": "The Quran's guide to mastering your temper and unlocking the freedom of forgiveness. Practical steps from revelation. Goal: respond to provocation with dignity and let go of grudges.",
+        "duration_days": 5,
+        "category": "Character",
+        "days": [
+            {"day": 1, "title": "The Ones Who Restrain", "verse": [3, 134], "prompt": "What triggers your anger most? How do you usually respond?"},
+            {"day": 2, "title": "Repel Evil with Good", "verse": [41, 34], "prompt": "Think of someone who wronged you. What would 'good' look like in response?"},
+            {"day": 3, "title": "The Power of Pardoning", "verse": [42, 43], "prompt": "What grudge is costing you more than the original offense?"},
+            {"day": 4, "title": "Speaking with Grace", "verse": [17, 53], "prompt": "How could gentler words change your most tense relationship?"},
+            {"day": 5, "title": "The Highest Forgiveness", "verse": [24, 22], "prompt": "Can you forgive someone today — not for them, but for your own peace?"},
+        ],
+    },
+    {
+        "id": "women_quran_7",
+        "title": "7-Day Women in the Quran",
+        "description": "Discover the remarkable women honored in the Quran — Maryam, Asiya, the Queen of Sheba, and more. Their courage, faith, and wisdom transcend time. Goal: draw strength and inspiration from their stories.",
+        "duration_days": 7,
+        "category": "Knowledge",
+        "days": [
+            {"day": 1, "title": "Maryam — Chosen Above All", "verse": [3, 42], "prompt": "What does it mean to be chosen by Allah for a difficult mission?"},
+            {"day": 2, "title": "Maryam's Trust in Solitude", "verse": [19, 26], "prompt": "When have you had to trust Allah alone, without anyone's understanding?"},
+            {"day": 3, "title": "Asiya — Courage Against Tyranny", "verse": [66, 11], "prompt": "What does standing for truth look like when it costs everything?"},
+            {"day": 4, "title": "The Mother of Musa", "verse": [28, 7], "prompt": "When have you had to let go and trust Allah with someone you love?"},
+            {"day": 5, "title": "Queen of Sheba — Wisdom and Power", "verse": [27, 44], "prompt": "How do you use wisdom and discernment in your decisions?"},
+            {"day": 6, "title": "Wife of Ibrahim — The Miracle of Hope", "verse": [11, 71], "prompt": "What blessing came to you when you least expected it?"},
+            {"day": 7, "title": "The Believing Women", "verse": [33, 35], "prompt": "Which quality of believing women do you most want to embody?"},
+        ],
+    },
+    {
+        "id": "family_7",
+        "title": "7-Day Family & Relationships",
+        "description": "Quranic wisdom for nurturing your most important relationships — parents, spouse, children, and community. Goal: heal one relationship and strengthen your family bonds through prophetic principles.",
+        "duration_days": 7,
+        "category": "Character",
+        "days": [
+            {"day": 1, "title": "Honoring Parents", "verse": [17, 23], "prompt": "What can you do for your parents today that you've been putting off?"},
+            {"day": 2, "title": "Love Between Spouses", "verse": [30, 21], "prompt": "How do you show mercy and tenderness in your closest relationship?"},
+            {"day": 3, "title": "Raising Righteous Children", "verse": [25, 74], "prompt": "What legacy of faith are you building for the next generation?"},
+            {"day": 4, "title": "Brotherhood and Unity", "verse": [49, 10], "prompt": "Is there a relationship with a fellow believer you need to repair?"},
+            {"day": 5, "title": "Resolving Conflict", "verse": [4, 128], "prompt": "What conflict could be resolved by choosing reconciliation over pride?"},
+            {"day": 6, "title": "Ibrahim's Prayer for Family", "verse": [14, 40], "prompt": "What dua do you make most often for your family?"},
+            {"day": 7, "title": "The Tranquil Home", "verse": [16, 80], "prompt": "What one change would make your home more peaceful?"},
+        ],
+    },
+    {
+        "id": "anxiety_relief_5",
+        "title": "5-Day Anxiety Relief",
+        "description": "When worry overwhelms, the Quran offers anchor points for the anxious heart. This plan walks through specific verses that address fear, overwhelm, and uncertainty. Goal: build a Quranic toolkit for anxious moments.",
+        "duration_days": 5,
+        "category": "Healing",
+        "days": [
+            {"day": 1, "title": "Hearts Find Rest", "verse": [13, 28], "prompt": "When you feel anxious, what thought pattern takes over?"},
+            {"day": 2, "title": "Do Not Grieve", "verse": [9, 40], "prompt": "What would Allah say to you right now about what you're worried about?"},
+            {"day": 3, "title": "No Fear Upon Them", "verse": [2, 277], "prompt": "What does a life without spiritual fear look like?"},
+            {"day": 4, "title": "Ease After Hardship", "verse": [94, 6], "prompt": "Name a past anxiety that resolved in ways you couldn't have planned."},
+            {"day": 5, "title": "The Morning Light", "verse": [93, 3], "prompt": "Allah has not forsaken you. How does this truth change today?"},
+        ],
+    },
+    {
+        "id": "wealth_ethics_7",
+        "title": "7-Day Wealth & Provision",
+        "description": "The Quran's framework for earning, spending, and giving. Not just halal income — but understanding rizq, contentment, and the spiritual dangers of materialism. Goal: align your financial life with Quranic values.",
+        "duration_days": 7,
+        "category": "Ethics",
+        "days": [
+            {"day": 1, "title": "Allah is the Provider", "verse": [11, 6], "prompt": "How does knowing Allah guarantees your provision change your anxiety about money?"},
+            {"day": 2, "title": "The Test of Wealth", "verse": [8, 28], "prompt": "Is wealth a blessing or a test in your life right now?"},
+            {"day": 3, "title": "Spending in Allah's Way", "verse": [2, 261], "prompt": "What would it look like to be more generous this week?"},
+            {"day": 4, "title": "The Danger of Hoarding", "verse": [9, 34], "prompt": "What are you holding onto too tightly?"},
+            {"day": 5, "title": "Contentment vs. Greed", "verse": [20, 131], "prompt": "When is 'enough' actually enough?"},
+            {"day": 6, "title": "Fair Dealings", "verse": [55, 9], "prompt": "How do you ensure justice and honesty in your financial dealings?"},
+            {"day": 7, "title": "The Real Investment", "verse": [35, 29], "prompt": "What investment in akhirah have you made recently?"},
+        ],
+    },
+    {
+        "id": "death_reflection_5",
+        "title": "5-Day Remembering the Akhirah",
+        "description": "Not morbid but motivating — the Quran uses death as the ultimate clarity tool. Reflect on mortality to sharpen your purpose and priorities. Goal: live each day with more intentionality by keeping the end in mind.",
+        "duration_days": 5,
+        "category": "Spiritual Growth",
+        "days": [
+            {"day": 1, "title": "Every Soul Shall Taste Death", "verse": [3, 185], "prompt": "If you had one year left, what would you change today?"},
+            {"day": 2, "title": "The Day of Account", "verse": [99, 7], "prompt": "What 'small' deed do you want to be consistent with?"},
+            {"day": 3, "title": "What Have You Prepared?", "verse": [59, 18], "prompt": "What have you sent ahead for your meeting with Allah?"},
+            {"day": 4, "title": "Distracted by Abundance", "verse": [102, 1], "prompt": "What worldly pursuit is distracting you from what truly matters?"},
+            {"day": 5, "title": "The Soul at Peace", "verse": [89, 27], "prompt": "What would it take for your soul to return to Allah content?"},
+        ],
+    },
+    {
+        "id": "quran_relationship_7",
+        "title": "7-Day Quran Connection",
+        "description": "For those who want to read the Quran but struggle with consistency. Each day focuses on WHY and HOW to build a daily Quran habit. Goal: establish a sustainable daily Quran routine that fits your life.",
+        "duration_days": 7,
+        "category": "Worship",
+        "days": [
+            {"day": 1, "title": "Guidance for the God-Conscious", "verse": [2, 2], "prompt": "What does the Quran mean to you — a book, a guide, a conversation?"},
+            {"day": 2, "title": "Recite and Rise", "verse": [73, 4], "prompt": "What time of day could you dedicate even 5 minutes to Quran?"},
+            {"day": 3, "title": "Healing for Hearts", "verse": [10, 57], "prompt": "Which emotion do you need the Quran to heal right now?"},
+            {"day": 4, "title": "Pondering the Verses", "verse": [38, 29], "prompt": "What verse have you read before but never truly reflected on?"},
+            {"day": 5, "title": "The Weight of Revelation", "verse": [59, 21], "prompt": "If a mountain trembles before the Quran, what should our hearts do?"},
+            {"day": 6, "title": "Remember and Be Reminded", "verse": [54, 17], "prompt": "Who could you share a verse with today?"},
+            {"day": 7, "title": "Spring of the Heart", "verse": [17, 82], "prompt": "What verse has become medicine for your soul this week?"},
+        ],
+    },
+    {
+        "id": "justice_social_7",
+        "title": "7-Day Justice & Social Responsibility",
+        "description": "The Quran as a manifesto for justice — standing for truth, protecting the vulnerable, and building equitable communities. Goal: identify one actionable way to pursue justice in your sphere of influence.",
+        "duration_days": 7,
+        "category": "Ethics",
+        "days": [
+            {"day": 1, "title": "Stand for Justice", "verse": [4, 135], "prompt": "Where do you see injustice that you've been silent about?"},
+            {"day": 2, "title": "Protect the Orphan", "verse": [4, 2], "prompt": "Who are the vulnerable in your community? How can you help?"},
+            {"day": 3, "title": "Speak Truth to Power", "verse": [5, 8], "prompt": "When is standing for justice hardest — when it costs you personally?"},
+            {"day": 4, "title": "Feed the Needy", "verse": [76, 8], "prompt": "What simple act of service could you do this week?"},
+            {"day": 5, "title": "No Superiority", "verse": [49, 13], "prompt": "What biases do you carry? How does the Quran challenge them?"},
+            {"day": 6, "title": "Forbid Wrong", "verse": [3, 110], "prompt": "How do you balance enjoining good while maintaining relationships?"},
+            {"day": 7, "title": "The Earth Inherited", "verse": [21, 105], "prompt": "What kind of world do you want to leave behind?"},
+        ],
+    },
+    {
+        "id": "new_muslim_14",
+        "title": "14-Day New Muslim Essentials",
+        "description": "A gentle, comprehensive introduction to Islam through its most foundational verses. No overwhelm — just one verse per day with context and reflection. Goal: build a solid foundation of understanding and connection with the Quran.",
+        "duration_days": 14,
+        "category": "Foundations",
+        "days": [
+            {"day": 1, "title": "The Opening Prayer", "verse": [1, 1], "prompt": "What drew you to explore Islam?"},
+            {"day": 2, "title": "One God", "verse": [112, 1], "prompt": "How does the concept of One God resonate with you?"},
+            {"day": 3, "title": "Guidance for All", "verse": [2, 2], "prompt": "What guidance are you seeking in your life right now?"},
+            {"day": 4, "title": "No Compulsion in Faith", "verse": [2, 256], "prompt": "How does knowing there's no compulsion in religion make you feel?"},
+            {"day": 5, "title": "Allah's Light", "verse": [24, 35], "prompt": "Where do you see divine light in the world around you?"},
+            {"day": 6, "title": "Be Good to Others", "verse": [4, 36], "prompt": "How can you extend kindness beyond your inner circle today?"},
+            {"day": 7, "title": "The Purpose of Life", "verse": [51, 56], "prompt": "What does worship mean beyond prayer — in your work, your words, your thoughts?"},
+            {"day": 8, "title": "Allah's Mercy", "verse": [39, 53], "prompt": "What past mistakes do you need to release to Allah's mercy?"},
+            {"day": 9, "title": "Patience in Difficulty", "verse": [2, 153], "prompt": "What are you going through that requires patience?"},
+            {"day": 10, "title": "Remembering Allah", "verse": [13, 28], "prompt": "When do you feel most at peace?"},
+            {"day": 11, "title": "Charity of the Heart", "verse": [2, 271], "prompt": "What can you give that costs no money?"},
+            {"day": 12, "title": "The Best of Creation", "verse": [95, 4], "prompt": "What does it mean that humans are created in the best form?"},
+            {"day": 13, "title": "Community", "verse": [3, 103], "prompt": "How are you building your Muslim community?"},
+            {"day": 14, "title": "Your Journey Continues", "verse": [29, 69], "prompt": "What is one commitment you're making for your ongoing journey?"},
+        ],
+    },
+    {
+        "id": "taqwa_7",
+        "title": "7-Day Taqwa Builder",
+        "description": "Taqwa is more than 'fear of God' — it's God-consciousness that shapes every decision. This plan develops your internal compass. Goal: cultivate a habit of checking in with Allah before every choice.",
+        "duration_days": 7,
+        "category": "Spiritual Growth",
+        "days": [
+            {"day": 1, "title": "The Garment of Taqwa", "verse": [7, 26], "prompt": "What does 'wearing' God-consciousness look like in daily life?"},
+            {"day": 2, "title": "Fasting Builds Taqwa", "verse": [2, 183], "prompt": "How has self-restraint strengthened your spiritual awareness?"},
+            {"day": 3, "title": "Prepare Provisions", "verse": [2, 197], "prompt": "What spiritual provision are you packing for your journey?"},
+            {"day": 4, "title": "The Heart That Guards", "verse": [22, 32], "prompt": "What is your heart guarding right now — faith or distraction?"},
+            {"day": 5, "title": "A Way Out", "verse": [65, 2], "prompt": "When has taqwa opened an unexpected door for you?"},
+            {"day": 6, "title": "Near to Allah", "verse": [49, 13], "prompt": "What makes someone truly honorable in Allah's sight?"},
+            {"day": 7, "title": "Gardens Beneath", "verse": [3, 133], "prompt": "What does the reward of taqwa mean for your daily motivation?"},
+        ],
+    },
+    {
+        "id": "morning_routine_5",
+        "title": "5-Day Morning Barakah",
+        "description": "Start each morning with a powerful verse and intention. Designed to be done right after Fajr. Goal: establish a spiritually productive morning routine anchored in the Quran.",
+        "duration_days": 5,
+        "category": "Worship",
+        "days": [
+            {"day": 1, "title": "Dawn Witness", "verse": [17, 78], "prompt": "What intention will you set for today right now?"},
+            {"day": 2, "title": "The Early Hours", "verse": [73, 6], "prompt": "What distraction can you eliminate from your morning?"},
+            {"day": 3, "title": "Begin with Bismillah", "verse": [96, 1], "prompt": "What if you started every single action today with 'In the name of Allah'?"},
+            {"day": 4, "title": "Gratitude at Dawn", "verse": [14, 7], "prompt": "Name five blessings before you check your phone."},
+            {"day": 5, "title": "By the Morning Light", "verse": [93, 1], "prompt": "What does the oath 'By the morning light' tell you about new beginnings?"},
+        ],
+    },
+    {
+        "id": "sincerity_5",
+        "title": "5-Day Ikhlas (Sincerity) Purifier",
+        "description": "The hidden battle of intention — doing things for Allah vs. for approval, ego, or habit. This plan strips away pretense. Goal: purify the intention behind one regular action you do on autopilot.",
+        "duration_days": 5,
+        "category": "Spiritual Growth",
+        "days": [
+            {"day": 1, "title": "For Allah Alone", "verse": [98, 5], "prompt": "Which act of worship feels most 'automatic'? Can you renew its intention?"},
+            {"day": 2, "title": "The Hidden Charity", "verse": [2, 271], "prompt": "When was the last time you did good with zero expectation of recognition?"},
+            {"day": 3, "title": "Showing Off Destroys", "verse": [2, 264], "prompt": "Where in your life might riyaa (showing off) be creeping in?"},
+            {"day": 4, "title": "Actions by Intentions", "verse": [6, 162], "prompt": "If only Allah saw your actions, would you still do them the same way?"},
+            {"day": 5, "title": "The Pure Heart", "verse": [26, 89], "prompt": "What does arriving before Allah with a sound heart mean to you?"},
+        ],
+    },
+    {
+        "id": "salah_revival_7",
+        "title": "7-Day Salah Revival",
+        "description": "You pray, but do you feel it? This plan takes you inside each element of prayer — from the opening takbir to the final salam. Goal: transform at least one daily prayer from routine to truly present.",
+        "duration_days": 7,
+        "category": "Worship",
+        "days": [
+            {"day": 1, "title": "The Call to Succeed", "verse": [23, 1], "prompt": "Rate your khushu (presence) in prayer today. What distracts you?"},
+            {"day": 2, "title": "Standing Before Allah", "verse": [2, 238], "prompt": "What if you treated each prayer as a private meeting with the King?"},
+            {"day": 3, "title": "The Weight of Al-Fatiha", "verse": [1, 5], "prompt": "'You alone we worship, You alone we ask for help.' Is this really true in your life?"},
+            {"day": 4, "title": "Bowing in Humility", "verse": [22, 77], "prompt": "When you bow, what are you surrendering?"},
+            {"day": 5, "title": "The Closest Point", "verse": [96, 19], "prompt": "In sujood, you're closest to Allah. What do you say?"},
+            {"day": 6, "title": "Prayer Through Difficulty", "verse": [2, 45], "prompt": "When has prayer been your refuge during a hard time?"},
+            {"day": 7, "title": "Prayer Prevents", "verse": [29, 45], "prompt": "How has consistent prayer changed your behavior outside of prayer?"},
+        ],
+    },
+    {
+        "id": "nature_signs_5",
+        "title": "5-Day Signs in Nature",
+        "description": "The Quran constantly points to nature as evidence of the Divine — mountains, oceans, bees, stars. This plan trains your eye to see Allah's signs everywhere. Goal: develop the habit of reflecting on creation daily.",
+        "duration_days": 5,
+        "category": "Knowledge",
+        "days": [
+            {"day": 1, "title": "The Heavens and Earth", "verse": [3, 190], "prompt": "Step outside. What in nature catches your attention as a sign?"},
+            {"day": 2, "title": "Water of Life", "verse": [21, 30], "prompt": "Every living thing is from water. How does this connect you to creation?"},
+            {"day": 3, "title": "The Mountains Stand", "verse": [78, 7], "prompt": "What in nature makes you feel small — in the most awe-inspiring way?"},
+            {"day": 4, "title": "The Bee's Inspiration", "verse": [16, 68], "prompt": "Allah inspired the bee. What has Allah inspired in you?"},
+            {"day": 5, "title": "Stars as Guides", "verse": [6, 97], "prompt": "The stars guide physically. What guides you spiritually?"},
+        ],
+    },
+    {
+        "id": "tongue_control_5",
+        "title": "5-Day Guarding the Tongue",
+        "description": "Gossip, lies, harsh words — the tongue is our most dangerous tool. This plan provides Quranic guardrails for speech. Goal: go one full day without saying anything you'd regret.",
+        "duration_days": 5,
+        "category": "Character",
+        "days": [
+            {"day": 1, "title": "Every Word Recorded", "verse": [50, 18], "prompt": "If every word you spoke today was played back, what would change?"},
+            {"day": 2, "title": "The Best Words", "verse": [17, 53], "prompt": "What's one conversation you can improve with gentler words?"},
+            {"day": 3, "title": "No Backbiting", "verse": [49, 12], "prompt": "When are you most tempted to speak about others? What triggers it?"},
+            {"day": 4, "title": "Truth Always", "verse": [33, 70], "prompt": "Where do 'small lies' or exaggerations creep into your speech?"},
+            {"day": 5, "title": "Silence is Golden", "verse": [23, 3], "prompt": "What unnecessary conversations could you drop this week?"},
+        ],
+    },
+    {
+        "id": "leadership_7",
+        "title": "7-Day Quranic Leadership",
+        "description": "Whether you lead a team, a family, or just yourself — the Quran's leadership principles are timeless. From Dhul-Qarnayn to Sulayman. Goal: identify and strengthen one leadership quality this week.",
+        "duration_days": 7,
+        "category": "Character",
+        "days": [
+            {"day": 1, "title": "The Khalifah Mandate", "verse": [2, 30], "prompt": "You are a steward on earth. What are you stewarding?"},
+            {"day": 2, "title": "Consult Others", "verse": [3, 159], "prompt": "When did consulting others lead to a better decision?"},
+            {"day": 3, "title": "Justice Even Against Yourself", "verse": [4, 135], "prompt": "Can you name a time you chose fairness over self-interest?"},
+            {"day": 4, "title": "Sulayman's Gratitude", "verse": [27, 19], "prompt": "How do you use your gifts in service to others?"},
+            {"day": 5, "title": "Dhul-Qarnayn's Humility", "verse": [18, 95], "prompt": "What's the difference between power and authority?"},
+            {"day": 6, "title": "Musa and Teamwork", "verse": [20, 29], "prompt": "Who is your 'Harun' — the person who strengthens your mission?"},
+            {"day": 7, "title": "Servant Leadership", "verse": [5, 2], "prompt": "How can you lead by serving others this week?"},
+        ],
+    },
 ]
 
 
@@ -6650,6 +6945,61 @@ def get_reading_plan(plan_id):
     }), 200
 
 
+@app.route("/reading-plans/active", methods=["GET"])
+@firebase_auth_required
+def get_all_active_plans():
+    """Get all active plans for the user."""
+    uid = request.user["uid"]
+    try:
+        user_doc = users_db.collection("users").document(uid).get()
+        data = user_doc.to_dict() if user_doc.exists else {}
+
+        # Support both old single active_plan and new active_plans dict
+        active_plans = data.get("active_plans", {})
+        # Migrate old format if present
+        old_plan = data.get("active_plan", {})
+        if old_plan and old_plan.get("plan_id") and old_plan["plan_id"] not in active_plans:
+            active_plans[old_plan["plan_id"]] = old_plan
+
+        results = []
+        for pid, plan_data in active_plans.items():
+            plan = next((p for p in READING_PLANS if p["id"] == pid), None)
+            if not plan:
+                continue
+            current_day = plan_data.get("current_day", 1)
+            today_verse = None
+            if 1 <= current_day <= len(plan["days"]):
+                day_data = plan["days"][current_day - 1]
+                surah, verse_num = day_data["verse"]
+                surah_name = QURAN_METADATA.get(surah, {}).get("name", f"Surah {surah}")
+                today_verse = {
+                    "surah": surah,
+                    "verse": verse_num,
+                    "surah_name": surah_name,
+                    "title": day_data.get("title", ""),
+                    "prompt": day_data.get("prompt", ""),
+                }
+            completed_days = plan_data.get("completed_days", [])
+            is_complete = len(completed_days) >= plan["duration_days"]
+            results.append({
+                "active": not is_complete,
+                "plan_id": pid,
+                "title": plan["title"],
+                "description": plan["description"],
+                "duration_days": plan["duration_days"],
+                "category": plan["category"],
+                "current_day": current_day,
+                "completed_days": completed_days,
+                "started_at": plan_data.get("started_at"),
+                "completed_at": plan_data.get("completed_at"),
+                "today_verse": today_verse,
+            })
+
+        return jsonify({"plans": results}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/reading-plans/<plan_id>/progress", methods=["GET"])
 @firebase_auth_required
 def get_plan_progress(plan_id):
@@ -6658,14 +7008,20 @@ def get_plan_progress(plan_id):
     try:
         user_doc = users_db.collection("users").document(uid).get()
         data = user_doc.to_dict() if user_doc.exists else {}
-        active_plan = data.get("active_plan", {})
 
-        if active_plan.get("plan_id") != plan_id:
+        # Check new active_plans dict first, fall back to old active_plan
+        active_plans = data.get("active_plans", {})
+        plan_progress = active_plans.get(plan_id)
+        if not plan_progress:
+            old_plan = data.get("active_plan", {})
+            if old_plan.get("plan_id") == plan_id:
+                plan_progress = old_plan
+        if not plan_progress:
             return jsonify({"active": False, "plan_id": plan_id}), 200
 
         # Look up today's verse from the plan data
         plan = next((p for p in READING_PLANS if p["id"] == plan_id), None)
-        current_day = active_plan.get("current_day", 1)
+        current_day = plan_progress.get("current_day", 1)
         today_verse = None
         if plan and 1 <= current_day <= len(plan["days"]):
             day_data = plan["days"][current_day - 1]
@@ -6676,16 +7032,16 @@ def get_plan_progress(plan_id):
                 "verse": verse_num,
                 "surah_name": surah_name,
                 "title": day_data.get("title", ""),
-                "reflection": day_data.get("reflection", ""),
+                "prompt": day_data.get("prompt", ""),
             }
 
         return jsonify({
             "active": True,
             "plan_id": plan_id,
             "current_day": current_day,
-            "completed_days": active_plan.get("completed_days", []),
-            "started_at": active_plan.get("started_at"),
-            "completed_at": active_plan.get("completed_at"),
+            "completed_days": plan_progress.get("completed_days", []),
+            "started_at": plan_progress.get("started_at"),
+            "completed_at": plan_progress.get("completed_at"),
             "today_verse": today_verse,
         }), 200
     except Exception as e:
@@ -6708,15 +7064,26 @@ def update_plan_progress(plan_id):
         user_ref = users_db.collection("users").document(uid)
 
         if action == "start":
-            user_ref.set({
-                "active_plan": {
-                    "plan_id": plan_id,
-                    "current_day": 1,
-                    "completed_days": [],
-                    "started_at": datetime.now(timezone.utc).isoformat(),
-                    "completed_at": None,
-                }
-            }, merge=True)
+            # Read current active_plans dict
+            user_doc = user_ref.get()
+            user_data = user_doc.to_dict() if user_doc.exists else {}
+            active_plans = user_data.get("active_plans", {})
+
+            # Migrate old single active_plan if present
+            old_plan = user_data.get("active_plan", {})
+            if old_plan and old_plan.get("plan_id") and old_plan["plan_id"] not in active_plans:
+                active_plans[old_plan["plan_id"]] = old_plan
+
+            # Add the new plan (or restart it)
+            active_plans[plan_id] = {
+                "plan_id": plan_id,
+                "current_day": 1,
+                "completed_days": [],
+                "started_at": datetime.now(timezone.utc).isoformat(),
+                "completed_at": None,
+            }
+
+            user_ref.set({"active_plans": active_plans}, merge=True)
             return jsonify({"status": "started", "plan_id": plan_id, "current_day": 1}), 200
 
         elif action == "complete_day":
@@ -6726,9 +7093,15 @@ def update_plan_progress(plan_id):
 
             user_doc = user_ref.get()
             user_data = user_doc.to_dict() if user_doc.exists else {}
-            active = user_data.get("active_plan", {})
+            active_plans = user_data.get("active_plans", {})
 
-            if active.get("plan_id") != plan_id:
+            # Migrate old format
+            old_plan = user_data.get("active_plan", {})
+            if old_plan and old_plan.get("plan_id") and old_plan["plan_id"] not in active_plans:
+                active_plans[old_plan["plan_id"]] = old_plan
+
+            active = active_plans.get(plan_id)
+            if not active:
                 return jsonify({"error": "This plan is not active"}), 400
 
             completed = active.get("completed_days", [])
@@ -6738,16 +7111,15 @@ def update_plan_progress(plan_id):
             next_day = min(day_num + 1, plan["duration_days"])
             is_complete = len(completed) >= plan["duration_days"]
 
-            update_data = {
-                "active_plan": {
-                    "plan_id": plan_id,
-                    "current_day": next_day,
-                    "completed_days": completed,
-                    "started_at": active.get("started_at"),
-                    "completed_at": datetime.now(timezone.utc).isoformat() if is_complete else None,
-                }
+            active_plans[plan_id] = {
+                "plan_id": plan_id,
+                "current_day": next_day,
+                "completed_days": completed,
+                "started_at": active.get("started_at"),
+                "completed_at": datetime.now(timezone.utc).isoformat() if is_complete else None,
             }
-            user_ref.set(update_data, merge=True)
+
+            user_ref.set({"active_plans": active_plans}, merge=True)
 
             # Track the verse as explored
             verse_info = plan["days"][day_num - 1]["verse"]
@@ -9837,6 +10209,250 @@ def get_shared_content(share_id):
         print(f"Error retrieving shared content: {e}")
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
+
+# ============================================================================
+# MUSLIM NAME DICTIONARY
+# ============================================================================
+
+MUSLIM_NAMES = {
+    "male": [
+        {"name": "Muhammad", "arabic": "محمد", "meaning": "Praised, commendable", "origin": "Prophetic", "quranic": True, "reference": "47:2"},
+        {"name": "Ahmad", "arabic": "أحمد", "meaning": "Most praised, most commendable", "origin": "Prophetic", "quranic": True, "reference": "61:6"},
+        {"name": "Ibrahim", "arabic": "إبراهيم", "meaning": "Father of many nations", "origin": "Prophetic", "quranic": True, "reference": "2:124"},
+        {"name": "Yusuf", "arabic": "يوسف", "meaning": "God increases, adds", "origin": "Prophetic", "quranic": True, "reference": "12:4"},
+        {"name": "Adam", "arabic": "آدم", "meaning": "Made from earth, the first human", "origin": "Prophetic", "quranic": True, "reference": "2:31"},
+        {"name": "Isa", "arabic": "عيسى", "meaning": "God is salvation", "origin": "Prophetic", "quranic": True, "reference": "3:45"},
+        {"name": "Musa", "arabic": "موسى", "meaning": "Drawn from the water", "origin": "Prophetic", "quranic": True, "reference": "20:9"},
+        {"name": "Nuh", "arabic": "نوح", "meaning": "Rest, comfort", "origin": "Prophetic", "quranic": True, "reference": "71:1"},
+        {"name": "Dawud", "arabic": "داود", "meaning": "Beloved", "origin": "Prophetic", "quranic": True, "reference": "38:17"},
+        {"name": "Sulayman", "arabic": "سليمان", "meaning": "Man of peace", "origin": "Prophetic", "quranic": True, "reference": "27:15"},
+        {"name": "Ismail", "arabic": "إسماعيل", "meaning": "God hears", "origin": "Prophetic", "quranic": True, "reference": "2:125"},
+        {"name": "Ishaq", "arabic": "إسحاق", "meaning": "He laughs, joy", "origin": "Prophetic", "quranic": True, "reference": "37:112"},
+        {"name": "Yaqub", "arabic": "يعقوب", "meaning": "Supplanter, follower", "origin": "Prophetic", "quranic": True, "reference": "2:132"},
+        {"name": "Ayyub", "arabic": "أيوب", "meaning": "The patient one, returning to God", "origin": "Prophetic", "quranic": True, "reference": "21:83"},
+        {"name": "Yunus", "arabic": "يونس", "meaning": "Dove", "origin": "Prophetic", "quranic": True, "reference": "10:98"},
+        {"name": "Idris", "arabic": "إدريس", "meaning": "Studious, learned", "origin": "Prophetic", "quranic": True, "reference": "19:56"},
+        {"name": "Harun", "arabic": "هارون", "meaning": "Mountaineer, exalted", "origin": "Prophetic", "quranic": True, "reference": "20:30"},
+        {"name": "Zakariya", "arabic": "زكريا", "meaning": "God remembers", "origin": "Prophetic", "quranic": True, "reference": "19:2"},
+        {"name": "Yahya", "arabic": "يحيى", "meaning": "God gives life", "origin": "Prophetic", "quranic": True, "reference": "19:7"},
+        {"name": "Ilyas", "arabic": "إلياس", "meaning": "The Lord is my God", "origin": "Prophetic", "quranic": True, "reference": "37:123"},
+        {"name": "Omar", "arabic": "عمر", "meaning": "Long-lived, flourishing", "origin": "Companion", "quranic": False},
+        {"name": "Ali", "arabic": "علي", "meaning": "Exalted, noble, sublime", "origin": "Companion", "quranic": False},
+        {"name": "Uthman", "arabic": "عثمان", "meaning": "Young bustard (a bird), wise", "origin": "Companion", "quranic": False},
+        {"name": "Abu Bakr", "arabic": "أبو بكر", "meaning": "Father of the young camel", "origin": "Companion", "quranic": False},
+        {"name": "Khalid", "arabic": "خالد", "meaning": "Eternal, immortal", "origin": "Companion", "quranic": False},
+        {"name": "Hamza", "arabic": "حمزة", "meaning": "Lion, strong, steadfast", "origin": "Companion", "quranic": False},
+        {"name": "Bilal", "arabic": "بلال", "meaning": "Moisture, freshness, the caller to prayer", "origin": "Companion", "quranic": False},
+        {"name": "Salman", "arabic": "سلمان", "meaning": "Safe, peaceful", "origin": "Companion", "quranic": False},
+        {"name": "Zaid", "arabic": "زيد", "meaning": "Growth, abundance", "origin": "Companion", "quranic": True, "reference": "33:37"},
+        {"name": "Talha", "arabic": "طلحة", "meaning": "A kind of tree, fruitful", "origin": "Companion", "quranic": False},
+        {"name": "Imran", "arabic": "عمران", "meaning": "Prosperity, long-lived", "origin": "Quranic", "quranic": True, "reference": "3:33"},
+        {"name": "Luqman", "arabic": "لقمان", "meaning": "Wise man", "origin": "Quranic", "quranic": True, "reference": "31:12"},
+        {"name": "Dhul-Kifl", "arabic": "ذو الكفل", "meaning": "Possessor of the double portion", "origin": "Quranic", "quranic": True, "reference": "21:85"},
+        {"name": "Rahman", "arabic": "رحمن", "meaning": "The Most Merciful (divine attribute)", "origin": "Divine Attribute", "quranic": True, "reference": "55:1"},
+        {"name": "Rahim", "arabic": "رحيم", "meaning": "The Most Compassionate", "origin": "Divine Attribute", "quranic": True, "reference": "1:1"},
+        {"name": "Kareem", "arabic": "كريم", "meaning": "Generous, noble", "origin": "Divine Attribute", "quranic": True, "reference": "82:6"},
+        {"name": "Aziz", "arabic": "عزيز", "meaning": "Mighty, powerful, beloved", "origin": "Divine Attribute", "quranic": True, "reference": "59:23"},
+        {"name": "Hakeem", "arabic": "حكيم", "meaning": "Wise, judicious", "origin": "Divine Attribute", "quranic": True, "reference": "2:32"},
+        {"name": "Latif", "arabic": "لطيف", "meaning": "Gentle, subtle, kind", "origin": "Divine Attribute", "quranic": True, "reference": "6:103"},
+        {"name": "Rashid", "arabic": "راشد", "meaning": "Rightly guided", "origin": "Arabic", "quranic": False},
+        {"name": "Tariq", "arabic": "طارق", "meaning": "Morning star, he who knocks at the door", "origin": "Quranic", "quranic": True, "reference": "86:1"},
+        {"name": "Faisal", "arabic": "فيصل", "meaning": "Decisive, resolute judge", "origin": "Arabic", "quranic": False},
+        {"name": "Hassan", "arabic": "حسن", "meaning": "Beautiful, handsome, good", "origin": "Prophetic Family", "quranic": False},
+        {"name": "Hussain", "arabic": "حسين", "meaning": "Beautiful, handsome (diminutive)", "origin": "Prophetic Family", "quranic": False},
+        {"name": "Jamal", "arabic": "جمال", "meaning": "Beauty, grace", "origin": "Arabic", "quranic": False},
+        {"name": "Samir", "arabic": "سمير", "meaning": "Entertaining companion, friend", "origin": "Arabic", "quranic": False},
+        {"name": "Nasir", "arabic": "ناصر", "meaning": "Helper, supporter, protector", "origin": "Arabic", "quranic": False},
+        {"name": "Mansur", "arabic": "منصور", "meaning": "Victorious, divinely aided", "origin": "Arabic", "quranic": False},
+        {"name": "Saeed", "arabic": "سعيد", "meaning": "Happy, fortunate, blessed", "origin": "Quranic", "quranic": True, "reference": "11:108"},
+        {"name": "Muadh", "arabic": "معاذ", "meaning": "Protected, sheltered by God", "origin": "Companion", "quranic": False},
+        {"name": "Amir", "arabic": "أمير", "meaning": "Prince, commander, leader", "origin": "Arabic", "quranic": False},
+        {"name": "Nabil", "arabic": "نبيل", "meaning": "Noble, distinguished", "origin": "Arabic", "quranic": False},
+        {"name": "Rayan", "arabic": "ريان", "meaning": "Gate of Paradise for those who fast, lush", "origin": "Islamic", "quranic": False},
+        {"name": "Zain", "arabic": "زين", "meaning": "Beauty, grace, adornment", "origin": "Arabic", "quranic": False},
+        {"name": "Yaser", "arabic": "ياسر", "meaning": "Wealthy, prosperous, easy", "origin": "Companion", "quranic": False},
+        {"name": "Sami", "arabic": "سامي", "meaning": "Elevated, sublime, exalted", "origin": "Arabic", "quranic": False},
+        {"name": "Noor", "arabic": "نور", "meaning": "Light, radiance", "origin": "Quranic", "quranic": True, "reference": "24:35"},
+        {"name": "Hadi", "arabic": "هادي", "meaning": "Guide, leader to righteousness", "origin": "Divine Attribute", "quranic": True, "reference": "22:54"},
+        {"name": "Basim", "arabic": "باسم", "meaning": "Smiling, cheerful", "origin": "Arabic", "quranic": False},
+        {"name": "Farid", "arabic": "فريد", "meaning": "Unique, precious, incomparable", "origin": "Arabic", "quranic": False},
+        {"name": "Idrees", "arabic": "إدريس", "meaning": "Studious, interpreter", "origin": "Prophetic", "quranic": True, "reference": "19:56"},
+        {"name": "Junaid", "arabic": "جنيد", "meaning": "Young warrior, soldier", "origin": "Arabic", "quranic": False},
+        {"name": "Kamil", "arabic": "كامل", "meaning": "Perfect, complete", "origin": "Arabic", "quranic": False},
+        {"name": "Majid", "arabic": "ماجد", "meaning": "Glorious, noble, magnificent", "origin": "Divine Attribute", "quranic": True, "reference": "85:15"},
+        {"name": "Nasser", "arabic": "ناصر", "meaning": "Supporter, helper", "origin": "Arabic", "quranic": False},
+        {"name": "Qasim", "arabic": "قاسم", "meaning": "Distributer, divider", "origin": "Prophetic Family", "quranic": False},
+        {"name": "Rafi", "arabic": "رفيع", "meaning": "High, exalted, sublime", "origin": "Arabic", "quranic": False},
+        {"name": "Sadiq", "arabic": "صادق", "meaning": "Truthful, honest, sincere", "origin": "Arabic", "quranic": False},
+        {"name": "Taha", "arabic": "طه", "meaning": "Quranic letters opening Surah Taha", "origin": "Quranic", "quranic": True, "reference": "20:1"},
+        {"name": "Yaseen", "arabic": "يس", "meaning": "Quranic letters, 'Heart of the Quran'", "origin": "Quranic", "quranic": True, "reference": "36:1"},
+        {"name": "Waqar", "arabic": "وقار", "meaning": "Dignity, poise, self-respect", "origin": "Arabic", "quranic": False},
+        {"name": "Usman", "arabic": "عثمان", "meaning": "The chosen one, wise", "origin": "Companion", "quranic": False},
+        {"name": "Shakir", "arabic": "شاكر", "meaning": "Grateful, thankful", "origin": "Quranic", "quranic": True, "reference": "2:158"},
+        {"name": "Rafiq", "arabic": "رفيق", "meaning": "Gentle companion, kind friend", "origin": "Arabic", "quranic": False},
+        {"name": "Naeem", "arabic": "نعيم", "meaning": "Comfort, bliss, paradise", "origin": "Quranic", "quranic": True, "reference": "5:65"},
+        {"name": "Mumin", "arabic": "مؤمن", "meaning": "Believer, faithful one", "origin": "Quranic", "quranic": True, "reference": "40:28"},
+        {"name": "Labib", "arabic": "لبيب", "meaning": "Intelligent, sensible", "origin": "Arabic", "quranic": False},
+        {"name": "Ihsan", "arabic": "إحسان", "meaning": "Excellence, perfection in worship", "origin": "Islamic", "quranic": False},
+        {"name": "Ghazi", "arabic": "غازي", "meaning": "Conqueror, warrior", "origin": "Arabic", "quranic": False},
+        {"name": "Furqan", "arabic": "فرقان", "meaning": "Criterion between right and wrong", "origin": "Quranic", "quranic": True, "reference": "25:1"},
+        {"name": "Ehsan", "arabic": "احسان", "meaning": "Benevolence, charity, compassion", "origin": "Islamic", "quranic": False},
+        {"name": "Danish", "arabic": "دانش", "meaning": "Knowledge, wisdom, learning", "origin": "Persian-Islamic", "quranic": False},
+        {"name": "Burhan", "arabic": "برهان", "meaning": "Proof, evidence, clear argument", "origin": "Quranic", "quranic": True, "reference": "4:174"},
+        {"name": "Asad", "arabic": "أسد", "meaning": "Lion, brave, courageous", "origin": "Arabic", "quranic": False},
+        {"name": "Anas", "arabic": "أنس", "meaning": "Friendliness, affection, love", "origin": "Companion", "quranic": False},
+        {"name": "Muaz", "arabic": "معاذ", "meaning": "Refuge, protected", "origin": "Companion", "quranic": False},
+        {"name": "Mikail", "arabic": "ميكائيل", "meaning": "Angel Mikail, who is like God", "origin": "Angelic", "quranic": True, "reference": "2:98"},
+        {"name": "Jibreel", "arabic": "جبريل", "meaning": "Angel Gabriel, strength of God", "origin": "Angelic", "quranic": True, "reference": "2:97"},
+        {"name": "Sufyan", "arabic": "سفيان", "meaning": "Moving swiftly, lightning", "origin": "Companion", "quranic": False},
+        {"name": "Marwan", "arabic": "مروان", "meaning": "A type of fragrant stone, solid", "origin": "Arabic", "quranic": False},
+        {"name": "Hashim", "arabic": "هاشم", "meaning": "Crusher, generous provider", "origin": "Prophetic Ancestry", "quranic": False},
+        {"name": "Abdullah", "arabic": "عبدالله", "meaning": "Servant of Allah", "origin": "Islamic", "quranic": True, "reference": "72:19"},
+        {"name": "Abdulrahman", "arabic": "عبدالرحمن", "meaning": "Servant of the Most Merciful", "origin": "Islamic", "quranic": False},
+        {"name": "Abdelkarim", "arabic": "عبدالكريم", "meaning": "Servant of the Most Generous", "origin": "Islamic", "quranic": False},
+        {"name": "Tawfiq", "arabic": "توفيق", "meaning": "Divine guidance, success from God", "origin": "Arabic", "quranic": False},
+        {"name": "Shafi", "arabic": "شافي", "meaning": "Healer, one who cures", "origin": "Arabic", "quranic": False},
+        {"name": "Rayhan", "arabic": "ريحان", "meaning": "Sweet basil, fragrance of Paradise", "origin": "Quranic", "quranic": True, "reference": "55:12"},
+        {"name": "Owais", "arabic": "أويس", "meaning": "Little wolf, gifted", "origin": "Historical", "quranic": False},
+        {"name": "Muneeb", "arabic": "منيب", "meaning": "One who turns to God in repentance", "origin": "Quranic", "quranic": True, "reference": "50:33"},
+    ],
+    "female": [
+        {"name": "Maryam", "arabic": "مريم", "meaning": "Beloved, star of the sea, exalted", "origin": "Quranic", "quranic": True, "reference": "3:36"},
+        {"name": "Aisha", "arabic": "عائشة", "meaning": "Living, prosperous, alive", "origin": "Prophetic Family", "quranic": False},
+        {"name": "Fatimah", "arabic": "فاطمة", "meaning": "One who abstains, weaned", "origin": "Prophetic Family", "quranic": False},
+        {"name": "Khadijah", "arabic": "خديجة", "meaning": "Born prematurely, trustworthy", "origin": "Prophetic Family", "quranic": False},
+        {"name": "Zainab", "arabic": "زينب", "meaning": "Fragrant flower, father's precious jewel", "origin": "Prophetic Family", "quranic": False},
+        {"name": "Hawa", "arabic": "حواء", "meaning": "Eve, life-giver, mother of humanity", "origin": "Prophetic", "quranic": False},
+        {"name": "Asiya", "arabic": "آسية", "meaning": "One who heals, pillar of strength", "origin": "Quranic Figure", "quranic": False},
+        {"name": "Sarah", "arabic": "سارة", "meaning": "Princess, noble woman, pure", "origin": "Prophetic Family", "quranic": False},
+        {"name": "Hajar", "arabic": "هاجر", "meaning": "Emigrant, flight to God", "origin": "Prophetic Family", "quranic": False},
+        {"name": "Ruqayyah", "arabic": "رقية", "meaning": "Rise, ascent, enchantment", "origin": "Prophetic Family", "quranic": False},
+        {"name": "Sumayya", "arabic": "سمية", "meaning": "High, exalted — first martyr in Islam", "origin": "Companion", "quranic": False},
+        {"name": "Hafsa", "arabic": "حفصة", "meaning": "Young lioness, gatherer", "origin": "Prophetic Family", "quranic": False},
+        {"name": "Umm Kulthum", "arabic": "أم كلثوم", "meaning": "Mother of the chubby-cheeked one", "origin": "Prophetic Family", "quranic": False},
+        {"name": "Nusaybah", "arabic": "نسيبة", "meaning": "Noble lineage — warrior companion", "origin": "Companion", "quranic": False},
+        {"name": "Safiyyah", "arabic": "صفية", "meaning": "Pure, sincere, best friend", "origin": "Prophetic Family", "quranic": False},
+        {"name": "Jannah", "arabic": "جنة", "meaning": "Paradise, garden", "origin": "Quranic", "quranic": True, "reference": "2:35"},
+        {"name": "Noor", "arabic": "نور", "meaning": "Light, divine radiance", "origin": "Quranic", "quranic": True, "reference": "24:35"},
+        {"name": "Iman", "arabic": "إيمان", "meaning": "Faith, belief", "origin": "Islamic", "quranic": True, "reference": "49:14"},
+        {"name": "Amina", "arabic": "آمنة", "meaning": "Trustworthy, faithful, secure", "origin": "Prophetic Family", "quranic": False},
+        {"name": "Rahma", "arabic": "رحمة", "meaning": "Mercy, compassion", "origin": "Quranic", "quranic": True, "reference": "21:107"},
+        {"name": "Sakina", "arabic": "سكينة", "meaning": "Tranquility, divine peace", "origin": "Quranic", "quranic": True, "reference": "2:248"},
+        {"name": "Layla", "arabic": "ليلى", "meaning": "Night, dark beauty, intoxicating", "origin": "Arabic", "quranic": False},
+        {"name": "Yasmin", "arabic": "ياسمين", "meaning": "Jasmine flower, symbol of grace", "origin": "Persian-Islamic", "quranic": False},
+        {"name": "Amira", "arabic": "أميرة", "meaning": "Princess, leader, prosperous", "origin": "Arabic", "quranic": False},
+        {"name": "Hana", "arabic": "هناء", "meaning": "Happiness, bliss, felicity", "origin": "Arabic", "quranic": False},
+        {"name": "Dina", "arabic": "دينة", "meaning": "Faith, obedience, devotion", "origin": "Arabic", "quranic": False},
+        {"name": "Salma", "arabic": "سلمى", "meaning": "Peaceful, safe, secure", "origin": "Arabic", "quranic": False},
+        {"name": "Zahra", "arabic": "زهراء", "meaning": "Radiant, luminous, flower", "origin": "Prophetic Family", "quranic": False},
+        {"name": "Naima", "arabic": "نعيمة", "meaning": "Blissful, living in comfort", "origin": "Arabic", "quranic": False},
+        {"name": "Huda", "arabic": "هدى", "meaning": "Guidance, right path", "origin": "Quranic", "quranic": True, "reference": "2:2"},
+        {"name": "Sabira", "arabic": "صابرة", "meaning": "Patient, enduring with grace", "origin": "Islamic", "quranic": False},
+        {"name": "Barakah", "arabic": "بركة", "meaning": "Blessing, abundance", "origin": "Islamic", "quranic": False},
+        {"name": "Amal", "arabic": "أمل", "meaning": "Hope, aspiration, expectation", "origin": "Arabic", "quranic": False},
+        {"name": "Samira", "arabic": "سميرة", "meaning": "Entertaining companion, night conversationalist", "origin": "Arabic", "quranic": False},
+        {"name": "Nasreen", "arabic": "نسرين", "meaning": "Wild rose, sweetbrier", "origin": "Persian-Islamic", "quranic": False},
+        {"name": "Farida", "arabic": "فريدة", "meaning": "Unique, precious, rare gem", "origin": "Arabic", "quranic": False},
+        {"name": "Malika", "arabic": "ملكة", "meaning": "Queen, sovereign", "origin": "Arabic", "quranic": False},
+        {"name": "Jamila", "arabic": "جميلة", "meaning": "Beautiful, elegant, graceful", "origin": "Arabic", "quranic": False},
+        {"name": "Karima", "arabic": "كريمة", "meaning": "Generous, noble, precious", "origin": "Arabic", "quranic": False},
+        {"name": "Latifa", "arabic": "لطيفة", "meaning": "Gentle, kind, subtle", "origin": "Arabic", "quranic": False},
+        {"name": "Marwa", "arabic": "مروة", "meaning": "A hill in Makkah, flint stone", "origin": "Quranic", "quranic": True, "reference": "2:158"},
+        {"name": "Safa", "arabic": "صفا", "meaning": "A hill in Makkah, pure, clear", "origin": "Quranic", "quranic": True, "reference": "2:158"},
+        {"name": "Taqwa", "arabic": "تقوى", "meaning": "God-consciousness, piety", "origin": "Quranic", "quranic": True, "reference": "2:197"},
+        {"name": "Baraka", "arabic": "بركة", "meaning": "Blessing, sacred gift", "origin": "Islamic", "quranic": False},
+        {"name": "Rania", "arabic": "رانية", "meaning": "Gazing, queenly", "origin": "Arabic", "quranic": False},
+        {"name": "Lubna", "arabic": "لبنى", "meaning": "A tree with sweet sap, softness", "origin": "Arabic", "quranic": False},
+        {"name": "Inaya", "arabic": "عناية", "meaning": "Care, concern, divine providence", "origin": "Arabic", "quranic": False},
+        {"name": "Duaa", "arabic": "دعاء", "meaning": "Supplication, prayer to God", "origin": "Islamic", "quranic": True, "reference": "2:186"},
+        {"name": "Shifa", "arabic": "شفاء", "meaning": "Healing, cure, remedy", "origin": "Quranic", "quranic": True, "reference": "10:57"},
+        {"name": "Isra", "arabic": "إسراء", "meaning": "Night journey (of the Prophet)", "origin": "Quranic", "quranic": True, "reference": "17:1"},
+        {"name": "Tasneem", "arabic": "تسنيم", "meaning": "A fountain in Paradise", "origin": "Quranic", "quranic": True, "reference": "83:27"},
+        {"name": "Salsabil", "arabic": "سلسبيل", "meaning": "A spring in Paradise, smooth flowing", "origin": "Quranic", "quranic": True, "reference": "76:18"},
+        {"name": "Kawther", "arabic": "كوثر", "meaning": "Abundance, a river in Paradise", "origin": "Quranic", "quranic": True, "reference": "108:1"},
+        {"name": "Firdaws", "arabic": "فردوس", "meaning": "The highest level of Paradise", "origin": "Quranic", "quranic": True, "reference": "18:107"},
+        {"name": "Sidra", "arabic": "سدرة", "meaning": "Lote tree at the boundary of heaven", "origin": "Quranic", "quranic": True, "reference": "53:14"},
+        {"name": "Tasnim", "arabic": "تسنيم", "meaning": "Spring of Paradise", "origin": "Quranic", "quranic": True, "reference": "83:27"},
+        {"name": "Sundus", "arabic": "سندس", "meaning": "Fine green silk of Paradise", "origin": "Quranic", "quranic": True, "reference": "18:31"},
+        {"name": "Abeer", "arabic": "عبير", "meaning": "Fragrance, perfume", "origin": "Arabic", "quranic": False},
+        {"name": "Afaf", "arabic": "عفاف", "meaning": "Chastity, purity, modesty", "origin": "Islamic", "quranic": False},
+        {"name": "Basma", "arabic": "بسمة", "meaning": "A smile", "origin": "Arabic", "quranic": False},
+        {"name": "Dana", "arabic": "دانة", "meaning": "Large pearl, precious gem", "origin": "Arabic", "quranic": False},
+        {"name": "Hadiya", "arabic": "هدية", "meaning": "Gift, guide to righteousness", "origin": "Arabic", "quranic": False},
+        {"name": "Ihsan", "arabic": "إحسان", "meaning": "Excellence, doing beautiful deeds", "origin": "Islamic", "quranic": False},
+        {"name": "Lina", "arabic": "لينة", "meaning": "Tender, young palm tree", "origin": "Quranic", "quranic": True, "reference": "59:5"},
+        {"name": "Maha", "arabic": "مها", "meaning": "Wild cow (symbol of beautiful eyes), moon-like", "origin": "Arabic", "quranic": False},
+        {"name": "Nadia", "arabic": "نادية", "meaning": "The caller, the generous one", "origin": "Arabic", "quranic": False},
+        {"name": "Rabia", "arabic": "رابعة", "meaning": "Spring, fourth (named for Rabia al-Adawiyyah)", "origin": "Historical", "quranic": False},
+        {"name": "Sumaiya", "arabic": "سمية", "meaning": "High above, first female martyr", "origin": "Companion", "quranic": False},
+        {"name": "Tamara", "arabic": "تمارة", "meaning": "Date palm, date fruit", "origin": "Arabic", "quranic": False},
+        {"name": "Wafa", "arabic": "وفاء", "meaning": "Loyalty, faithfulness", "origin": "Arabic", "quranic": False},
+        {"name": "Yara", "arabic": "يارة", "meaning": "Small butterfly, friend", "origin": "Arabic", "quranic": False},
+        {"name": "Zubaida", "arabic": "زبيدة", "meaning": "Cream of the crop, best portion", "origin": "Historical", "quranic": False},
+        {"name": "Anisa", "arabic": "أنيسة", "meaning": "Friendly companion, source of comfort", "origin": "Arabic", "quranic": False},
+        {"name": "Bushra", "arabic": "بشرى", "meaning": "Good news, glad tidings", "origin": "Quranic", "quranic": True, "reference": "10:64"},
+        {"name": "Ghada", "arabic": "غادة", "meaning": "Graceful, delicate young woman", "origin": "Arabic", "quranic": False},
+        {"name": "Hanifa", "arabic": "حنيفة", "meaning": "Upright, true believer", "origin": "Quranic", "quranic": True, "reference": "6:79"},
+        {"name": "Lamya", "arabic": "لمياء", "meaning": "Dark-lipped beauty, radiant", "origin": "Arabic", "quranic": False},
+        {"name": "Manal", "arabic": "منال", "meaning": "Achievement, attainment", "origin": "Arabic", "quranic": False},
+        {"name": "Najwa", "arabic": "نجوى", "meaning": "Whispered conversation, secret talk", "origin": "Quranic", "quranic": True, "reference": "58:7"},
+        {"name": "Rawda", "arabic": "روضة", "meaning": "Garden, meadow of paradise", "origin": "Arabic", "quranic": False},
+        {"name": "Sahar", "arabic": "سحر", "meaning": "Dawn, early morning", "origin": "Arabic", "quranic": False},
+        {"name": "Thuraya", "arabic": "ثريا", "meaning": "Star cluster (Pleiades), chandelier", "origin": "Arabic", "quranic": False},
+        {"name": "Wahida", "arabic": "واحدة", "meaning": "Unique, singular, the only one", "origin": "Arabic", "quranic": False},
+        {"name": "Zara", "arabic": "زهرة", "meaning": "Flower, blooming, radiance", "origin": "Arabic", "quranic": False},
+        {"name": "Asma", "arabic": "أسماء", "meaning": "Supreme, excellent, precious", "origin": "Companion", "quranic": False},
+        {"name": "Bilqis", "arabic": "بلقيس", "meaning": "Queen of Sheba, wisdom and power", "origin": "Quranic Figure", "quranic": False},
+        {"name": "Daliya", "arabic": "داليا", "meaning": "Grapevine, gentle", "origin": "Arabic", "quranic": False},
+        {"name": "Fadila", "arabic": "فاضلة", "meaning": "Virtuous, outstanding, excellent", "origin": "Arabic", "quranic": False},
+        {"name": "Ghufran", "arabic": "غفران", "meaning": "Forgiveness, pardon", "origin": "Quranic", "quranic": True, "reference": "2:286"},
+        {"name": "Hayat", "arabic": "حياة", "meaning": "Life, existence", "origin": "Quranic", "quranic": True, "reference": "2:179"},
+        {"name": "Ibtisam", "arabic": "ابتسام", "meaning": "Smiling, cheerful", "origin": "Arabic", "quranic": False},
+        {"name": "Khawla", "arabic": "خولة", "meaning": "Gazelle, female deer", "origin": "Companion", "quranic": False},
+        {"name": "Mizan", "arabic": "ميزان", "meaning": "Balance, scale of justice", "origin": "Quranic", "quranic": True, "reference": "55:7"},
+        {"name": "Nur Jahan", "arabic": "نور جهان", "meaning": "Light of the world", "origin": "Persian-Islamic", "quranic": False},
+        {"name": "Qamar", "arabic": "قمر", "meaning": "Moon, moonlight", "origin": "Quranic", "quranic": True, "reference": "54:1"},
+        {"name": "Reem", "arabic": "ريم", "meaning": "White gazelle, gentle beauty", "origin": "Arabic", "quranic": False},
+        {"name": "Shahida", "arabic": "شهيدة", "meaning": "Witness, one who testifies to truth", "origin": "Islamic", "quranic": False},
+        {"name": "Umama", "arabic": "أمامة", "meaning": "Young mother, three hundred camels", "origin": "Prophetic Family", "quranic": False},
+    ],
+}
+
+
+@app.route("/names", methods=["GET"])
+def get_muslim_names():
+    """Get Muslim name dictionary. Optional query params: gender, search, origin, quranic."""
+    gender = request.args.get("gender")  # male, female, or None for both
+    search = request.args.get("search", "").lower().strip()
+    origin_filter = request.args.get("origin")
+    quranic_only = request.args.get("quranic") == "true"
+
+    results = {}
+    for g in ["male", "female"]:
+        if gender and gender != g:
+            continue
+        names = MUSLIM_NAMES[g]
+        if search:
+            names = [n for n in names if search in n["name"].lower() or search in n["meaning"].lower()]
+        if origin_filter:
+            names = [n for n in names if n["origin"] == origin_filter]
+        if quranic_only:
+            names = [n for n in names if n.get("quranic")]
+        results[g] = names
+
+    # Collect unique origins for filter
+    all_origins = set()
+    for g in ["male", "female"]:
+        for n in MUSLIM_NAMES[g]:
+            all_origins.add(n["origin"])
+
+    return jsonify({
+        "names": results,
+        "total_male": len(MUSLIM_NAMES["male"]),
+        "total_female": len(MUSLIM_NAMES["female"]),
+        "origins": sorted(all_origins),
+    }), 200
+
 
 # --- Main ---
 if __name__ == "__main__":
