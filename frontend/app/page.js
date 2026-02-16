@@ -1486,7 +1486,7 @@ function MainApp({ user, userProfile, onResetProfile }) {
         <div className="card main-app">
         <div className="header">
           <div className="header-logo">
-            <TafsirLogo size={50} showText={false} />
+            <TafsirLogo size={32} showText={false} />
             <h1>Tafsir Simplified</h1>
           </div>
           <div className="user-info" data-persona-icon={personaIcon}>
@@ -1616,15 +1616,11 @@ function MainApp({ user, userProfile, onResetProfile }) {
                 font-weight: 600;
               }
               .daily-verse-english {
-                font-size: 0.88rem;
+                font-size: 0.85rem;
                 color: #374151;
-                line-height: 1.6;
+                line-height: 1.5;
                 font-style: italic;
                 margin: 0;
-                display: -webkit-box;
-                -webkit-line-clamp: 2;
-                -webkit-box-orient: vertical;
-                overflow: hidden;
               }
               .daily-verse-explore-hint {
                 font-size: 0.75rem;

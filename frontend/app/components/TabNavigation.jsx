@@ -209,19 +209,17 @@ export default function TabNavigation({
             display: flex;
             align-items: center;
             justify-content: center;
-            width: 36px;
-            height: 36px;
-            background: #e5e7eb;
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            color: #374151;
+            width: 32px;
+            height: 32px;
+            background: transparent;
+            border: none;
+            border-radius: 6px;
             cursor: pointer;
             transition: all 0.15s ease;
           }
 
           .section-dots-btn:hover {
-            background: #d1d5db;
-            color: #1f2937;
+            background: #f3f4f6;
           }
 
           .section-dots-menu {
@@ -435,12 +433,12 @@ export default function TabNavigation({
           background: var(--primary-teal, #0d9488);
         }
 
-        /* Three-dot button in tab bar */
+        /* Three-dot button in tab bar — seamless, no background */
         .tab-dots-area {
           position: relative;
           display: flex;
           align-items: center;
-          padding: 0 8px;
+          padding: 0 6px;
           flex-shrink: 0;
         }
 
@@ -448,19 +446,16 @@ export default function TabNavigation({
           display: flex;
           align-items: center;
           justify-content: center;
-          width: 36px;
-          height: 36px;
-          background: #e5e7eb;
-          border: 1px solid #d1d5db;
-          border-radius: 8px;
-          color: #374151;
+          width: 32px;
+          height: 100%;
+          background: transparent;
+          border: none;
           cursor: pointer;
-          transition: all 0.15s ease;
+          padding: 8px 4px;
         }
 
         .tab-dots-btn:active {
-          background: #d1d5db;
-          color: #1f2937;
+          opacity: 0.5;
         }
 
         /* Overflow menu */

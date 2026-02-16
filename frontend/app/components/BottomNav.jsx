@@ -39,21 +39,23 @@ export default function BottomNav({ user }) {
       <div style={{ height: 'calc(52px + env(safe-area-inset-bottom, 0px))' }} />
 
       <nav className="bottom-nav">
-        {navItems.map((item) => {
-          const IconComponent = item.icon;
-          return (
-            <button
-              key={item.path}
-              onClick={() => router.push(item.path)}
-              className={`nav-item ${item.active ? 'active' : ''}`}
-              aria-label={item.label}
-              aria-current={item.active ? 'page' : undefined}
-            >
-              <IconComponent size={22} strokeWidth={item.active ? 2.5 : 1.8} />
-              <span className="nav-label">{item.label}</span>
-            </button>
-          );
-        })}
+        <div className="bottom-nav-inner">
+          {navItems.map((item) => {
+            const IconComponent = item.icon;
+            return (
+              <button
+                key={item.path}
+                onClick={() => router.push(item.path)}
+                className={`nav-item ${item.active ? 'active' : ''}`}
+                aria-label={item.label}
+                aria-current={item.active ? 'page' : undefined}
+              >
+                <IconComponent size={22} strokeWidth={item.active ? 2.5 : 1.8} />
+                <span className="nav-label">{item.label}</span>
+              </button>
+            );
+          })}
+        </div>
 
         <style jsx>{`
           .bottom-nav {
@@ -61,17 +63,22 @@ export default function BottomNav({ user }) {
             bottom: 0;
             left: 0;
             right: 0;
+            z-index: 1000;
+            /* Background extends all the way to the bottom edge including safe area */
             background: rgba(255, 255, 255, 0.98);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
             border-top: 0.5px solid rgba(0, 0, 0, 0.12);
+            /* Total height = nav + safe area. padding-bottom pushes the bg to the edge. */
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+            -webkit-tap-highlight-color: transparent;
+          }
+
+          .bottom-nav-inner {
             display: flex;
             justify-content: space-around;
             align-items: stretch;
-            height: calc(52px + env(safe-area-inset-bottom, 0px));
-            padding-bottom: env(safe-area-inset-bottom, 0px);
-            z-index: 1000;
-            -webkit-tap-highlight-color: transparent;
+            height: 52px;
           }
 
           .nav-item {
@@ -118,16 +125,6 @@ export default function BottomNav({ user }) {
 
             .nav-item.active {
               color: #ffffff;
-            }
-          }
-
-          /* Ensure pinned in PWA standalone mode */
-          @media (display-mode: standalone) {
-            .bottom-nav {
-              position: fixed;
-              bottom: 0;
-              left: 0;
-              right: 0;
             }
           }
 

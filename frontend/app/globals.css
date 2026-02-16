@@ -195,23 +195,22 @@ a {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
-  padding: 20px;
-  background: var(--cream);
-  border-radius: 16px;
-  border: 1px solid var(--border-light);
+  margin-bottom: 12px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
   position: relative;
-  overflow: hidden;
 }
 
 .header-logo {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 10px;
 }
 
 .header h1 {
-  font-size: 1.8rem;
+  font-size: 1.15rem;
   font-weight: 700;
   color: var(--deep-blue);
   position: relative;
@@ -219,35 +218,34 @@ a {
   margin: 0;
 }
 
-/* Arabic subtitle */
+/* Arabic subtitle — inline next to title */
 .header h1::after {
   content: 'تفسير مبسط';
-  display: block;
-  font-size: 1.2rem;
+  font-size: 0.8rem;
   font-family: var(--font-amiri), 'Amiri', 'Traditional Arabic', serif;
-  color: var(--gold-text); /* WCAG AA compliant */
-  margin-top: 8px;
+  color: var(--gold-text);
+  margin-left: 8px;
   letter-spacing: 0.05em;
-  -webkit-text-fill-color: var(--gold-text); /* WCAG AA compliant */
+  -webkit-text-fill-color: var(--gold-text);
+  display: inline;
 }
 
 .user-info {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 18px;
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(10px);
-  border-radius: 24px;
-  border: 1px solid var(--border-light);
-  font-size: 0.9rem;
+  gap: 8px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  font-size: 0.78rem;
   font-weight: 600;
   color: var(--deep-blue);
 }
 
 .user-info::before {
   content: attr(data-persona-icon);
-  font-size: 1.5rem;
+  font-size: 1.1rem;
 }
 
 .persona-badge {
@@ -564,9 +562,9 @@ button:hover:not(:disabled) {
 
 .logout-button {
   background: var(--deep-blue);
-  font-size: 13px;
-  padding: 8px 16px;
-  border-radius: 20px;
+  font-size: 0.7rem;
+  padding: 5px 10px;
+  border-radius: 12px;
   font-weight: 600;
 }
 
@@ -1525,61 +1523,26 @@ summary:focus-visible {
 
 /* PWA Standalone Mode Adjustments */
 @media (display-mode: standalone) {
-  /* Prevent overscroll bounce and ensure proper viewport height */
   html, body {
     overscroll-behavior-y: none;
+    /* Use min-height not height — height: 100vh clips on iOS */
+    min-height: 100vh;
+    min-height: 100dvh;
   }
 
-  /* Add safe area padding for iPhone notch/home bar */
   body {
-    padding-top: env(safe-area-inset-top);
+    /* Only horizontal safe areas on body — vertical handled by components */
     padding-left: env(safe-area-inset-left);
     padding-right: env(safe-area-inset-right);
   }
 
-  /* Ensure header doesn't go under notch */
-  .header {
-    padding-top: calc(12px + env(safe-area-inset-top));
-    margin-top: 0;
-  }
-
-  /* Ensure bottom content isn't hidden by home bar - reduce padding since we have bottom nav */
   .container {
+    /* Top safe area on the content container, not body */
+    padding-top: calc(12px + env(safe-area-inset-top));
     padding-bottom: 8px;
   }
 
-  /* More compact header in PWA */
-  .header h1 {
-    font-size: 1.5rem;
-  }
-
-  .header h1::after {
-    font-size: 0.75rem;
-    margin-top: 4px;
-  }
-
-  /* Compact card padding in PWA */
   .card.main-app {
     padding: 12px;
-  }
-}
-
-/* iOS Specific PWA Fixes */
-@supports (-webkit-touch-callout: none) {
-  /* iOS specific styles */
-  @media (display-mode: standalone) {
-    /* Prevent overscroll bounce without breaking position:fixed children */
-    html, body {
-      overscroll-behavior-y: none;
-      height: 100dvh;
-      height: 100vh; /* fallback for older iOS */
-      -webkit-overflow-scrolling: touch;
-    }
-
-    @supports (height: 100dvh) {
-      html, body {
-        height: 100dvh;
-      }
-    }
   }
 }
