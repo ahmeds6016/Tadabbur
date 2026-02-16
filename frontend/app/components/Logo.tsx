@@ -8,7 +8,7 @@ interface LogoProps {
 
 /**
  * Tadabbur Logo
- * Clean, modern rounded-square with open book motif and Arabic تدبّر
+ * Circular medallion with gold ornamental border, cream center, dark green Arabic تدبر
  */
 export const TadabburLogo: React.FC<LogoProps> = ({
   size = 120,
@@ -25,54 +25,64 @@ export const TadabburLogo: React.FC<LogoProps> = ({
         className="logo-svg"
       >
         <defs>
-          <linearGradient id="logoBg" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#0D9488" />
-            <stop offset="100%" stopColor="#0F766E" />
-          </linearGradient>
-          <linearGradient id="logoAccent" x1="0%" y1="0%" x2="100%" y2="100%">
+          <linearGradient id="goldBorder" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#D4AF37" />
+            <stop offset="50%" stopColor="#F4D668" />
             <stop offset="100%" stopColor="#C49B2A" />
           </linearGradient>
+          <linearGradient id="darkGold" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#8B6914" />
+            <stop offset="100%" stopColor="#6B5210" />
+          </linearGradient>
+          <radialGradient id="creamCenter" cx="50%" cy="45%" r="50%">
+            <stop offset="0%" stopColor="#FDF8EE" />
+            <stop offset="100%" stopColor="#F5EDDA" />
+          </radialGradient>
         </defs>
 
-        {/* Rounded square background */}
-        <rect
-          x="2" y="2" width="96" height="96"
-          rx="22"
-          fill="url(#logoBg)"
-        />
+        {/* Outer cream circle */}
+        <circle cx="50" cy="50" r="48" fill="#FAF6F0" />
 
-        {/* Open book shape — two pages */}
-        <path
-          d="M50 28 C50 28 34 30 22 36 L22 72 C34 66 50 64 50 64"
-          fill="white"
-          fillOpacity="0.15"
-        />
-        <path
-          d="M50 28 C50 28 66 30 78 36 L78 72 C66 66 50 64 50 64"
-          fill="white"
-          fillOpacity="0.2"
-        />
+        {/* Gold ornamental ring — outer */}
+        <circle cx="50" cy="50" r="44" fill="url(#goldBorder)" />
 
-        {/* Book spine */}
-        <line
-          x1="50" y1="28" x2="50" y2="64"
-          stroke="white"
-          strokeWidth="1.5"
-          strokeOpacity="0.3"
-        />
+        {/* Gold pattern dots around the ring */}
+        {Array.from({ length: 24 }).map((_, i) => {
+          const angle = (i * 15) * (Math.PI / 180);
+          const x = 50 + 41.5 * Math.cos(angle);
+          const y = 50 + 41.5 * Math.sin(angle);
+          return (
+            <circle
+              key={i}
+              cx={x}
+              cy={y}
+              r="1"
+              fill="#8B6914"
+              opacity="0.6"
+            />
+          );
+        })}
 
-        {/* Arabic تدبّر — centered, gold accent */}
+        {/* Inner dark border ring */}
+        <circle cx="50" cy="50" r="38" fill="#3D2E14" />
+
+        {/* Second gold ring — inner */}
+        <circle cx="50" cy="50" r="36" fill="url(#goldBorder)" />
+
+        {/* Cream/parchment center */}
+        <circle cx="50" cy="50" r="33" fill="url(#creamCenter)" />
+
+        {/* Arabic تدبر — dark green, centered */}
         <text
           x="50"
-          y="56"
+          y="57"
           fontFamily="'Amiri', 'Traditional Arabic', serif"
-          fontSize="26"
+          fontSize="28"
           fontWeight="700"
-          fill="url(#logoAccent)"
+          fill="#1A5632"
           textAnchor="middle"
         >
-          تدبّر
+          تدبر
         </text>
       </svg>
 
