@@ -1,5 +1,5 @@
 /**
- * Tafsir Simplified - Minimal Service Worker for PWA Installation
+ * Tadabbur - Minimal Service Worker for PWA Installation
  *
  * This minimal service worker enables PWA installation ("Add to Home Screen")
  * without offline functionality, since the app requires backend API access.

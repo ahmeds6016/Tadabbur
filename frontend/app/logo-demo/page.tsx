@@ -1,27 +1,27 @@
 'use client';
 
-import { TafsirLogo, TafsirLogoSimple } from '../components/Logo';
+import { TadabburLogo, TadabburLogoSimple } from '../components/Logo';
 
 /**
  * Logo Demo Page
- * Shows different variations and sizes of the Tafsir Simplified logo
+ * Shows different variations and sizes of the Tadabbur logo
  */
 export default function LogoDemoPage() {
   return (
     <div className="logo-demo-page">
       <div className="container">
-        <h1>Tafsir Simplified Logo Showcase</h1>
-        <p className="subtitle">Beautiful Arabic calligraphy with classical Islamic design</p>
+        <h1>Tadabbur Logo Showcase</h1>
+        <p className="subtitle">Modern teal identity with Arabic calligraphy</p>
 
         {/* Main Logo Section */}
         <section className="logo-section">
           <h2>Main Logo</h2>
           <div className="logo-display">
-            <TafsirLogo size={240} />
+            <TadabburLogo size={240} />
           </div>
           <div className="arabic-text">
-            <p>تفسير مُبَسَّط</p>
-            <p className="transliteration">Tafsīr Mubaṣṣaṭ</p>
+            <p>تدبّر</p>
+            <p className="transliteration">Tadabbur</p>
           </div>
         </section>
 
@@ -30,19 +30,19 @@ export default function LogoDemoPage() {
           <h2>Size Variations</h2>
           <div className="size-grid">
             <div className="size-item">
-              <TafsirLogo size={80} showText={false} />
+              <TadabburLogo size={80} showText={false} />
               <span>80px</span>
             </div>
             <div className="size-item">
-              <TafsirLogo size={120} />
+              <TadabburLogo size={120} />
               <span>120px</span>
             </div>
             <div className="size-item">
-              <TafsirLogo size={160} />
+              <TadabburLogo size={160} />
               <span>160px</span>
             </div>
             <div className="size-item">
-              <TafsirLogo size={200} />
+              <TadabburLogo size={200} />
               <span>200px</span>
             </div>
           </div>
@@ -53,15 +53,15 @@ export default function LogoDemoPage() {
           <h2>Simple Logo (For Navigation)</h2>
           <div className="simple-grid">
             <div className="simple-item">
-              <TafsirLogoSimple size={32} />
+              <TadabburLogoSimple size={32} />
               <span>32px</span>
             </div>
             <div className="simple-item">
-              <TafsirLogoSimple size={48} />
+              <TadabburLogoSimple size={48} />
               <span>48px</span>
             </div>
             <div className="simple-item">
-              <TafsirLogoSimple size={64} />
+              <TadabburLogoSimple size={64} />
               <span>64px</span>
             </div>
           </div>
@@ -72,19 +72,19 @@ export default function LogoDemoPage() {
           <h2>On Different Backgrounds</h2>
           <div className="background-grid">
             <div className="bg-item bg-white">
-              <TafsirLogo size={120} showText={false} />
+              <TadabburLogo size={120} showText={false} />
               <span>White</span>
             </div>
             <div className="bg-item bg-cream">
-              <TafsirLogo size={120} showText={false} />
+              <TadabburLogo size={120} showText={false} />
               <span>Cream</span>
             </div>
             <div className="bg-item bg-teal">
-              <TafsirLogo size={120} showText={false} />
+              <TadabburLogo size={120} showText={false} />
               <span>Teal</span>
             </div>
             <div className="bg-item bg-dark">
-              <TafsirLogo size={120} showText={false} />
+              <TadabburLogo size={120} showText={false} />
               <span>Dark</span>
             </div>
           </div>
@@ -96,15 +96,15 @@ export default function LogoDemoPage() {
           <div className="usage-examples">
             <div className="example-card">
               <div className="header-example">
-                <TafsirLogoSimple size={40} />
-                <span className="app-name">Tafsir Simplified</span>
+                <TadabburLogoSimple size={40} />
+                <span className="app-name">Tadabbur</span>
               </div>
               <p>Navigation Header</p>
             </div>
 
             <div className="example-card">
               <div className="loading-example">
-                <TafsirLogo size={100} showText={false} />
+                <TadabburLogo size={100} showText={false} />
                 <div className="loading-text">Loading...</div>
               </div>
               <p>Loading State</p>
@@ -112,7 +112,7 @@ export default function LogoDemoPage() {
 
             <div className="example-card">
               <div className="splash-example">
-                <TafsirLogo size={180} />
+                <TadabburLogo size={180} />
               </div>
               <p>Splash Screen</p>
             </div>

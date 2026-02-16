@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.tafsirsimplified.app',
-  appName: 'Tafsir Simplified',
+  appId: 'com.tadabbur.app',
+  appName: 'Tadabbur',
   webDir: 'out',
 
   // Load from production server — keeps a single deployment pipeline,
@@ -13,7 +13,7 @@ const config: CapacitorConfig = {
   },
 
   ios: {
-    scheme: 'tafsirsimplified',
+    scheme: 'tadabbur',
     contentInset: 'automatic',
     backgroundColor: '#FDFBF7',
     preferredContentMode: 'mobile',

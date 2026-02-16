@@ -101,7 +101,7 @@ export default function SharedPage() {
     <div className="container">
       <div className="card main-app">
         <div className="header">
-          <h1>Tafsir Simplified</h1>
+          <h1>Tadabbur</h1>
         </div>
 
         {/* Shared Query Info */}
@@ -121,7 +121,7 @@ export default function SharedPage() {
                 {query}
               </p>
               <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#666' }}>
-                Deep Tafsir Commentary
+                Deep Quranic Reflection
               </p>
             </div>
             <div style={{ fontSize: '0.85rem', color: '#666' }}>
@@ -391,7 +391,7 @@ export default function SharedPage() {
           border: '2px solid var(--border-light)'
         }}>
           <p style={{ margin: 0, fontSize: '0.9rem', color: '#666' }}>
-            Shared from <strong>Tafsir Simplified</strong>
+            Shared from <strong>Tadabbur</strong>
           </p>
           <p style={{ margin: '8px 0 0 0', fontSize: '0.85rem', color: '#888' }}>
             A deeper understanding of this ayah.
@@ -434,7 +434,7 @@ export default function SharedPage() {
             fontSize: '0.95rem',
           }}
         >
-          Explore Tafsir Simplified
+          Explore Tadabbur
         </Link>
       </div>
     </div>

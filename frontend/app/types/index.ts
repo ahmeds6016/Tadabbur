@@ -1,5 +1,5 @@
 /**
- * TypeScript Type Definitions for Tafsir Simplified
+ * TypeScript Type Definitions for Tadabbur
  */
 
 // User types

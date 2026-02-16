@@ -82,7 +82,7 @@ export default function PWAProvider({ children }) {
               <div className="flex-1">
                 <div className="flex items-center gap-2">
                   
-                  <p className="font-semibold text-white">Install Tafsir Simplified</p>
+                  <p className="font-semibold text-white">Install Tadabbur</p>
                 </div>
                 <p className="text-xs text-white/90 mt-1">
                   Quick access to Quranic commentary

@@ -26,43 +26,43 @@ const amiri = Amiri({
 });
 
 export const metadata = {
-  title: "Tafsir Simplified - تفسير مبسط | Classical Quranic Commentary",
-  description: "Explore authentic classical Islamic tafsir synthesized from scholarly sources. Access insights from Ibn Kathir, al-Qurtubi, and other renowned scholars. Personalized Quranic commentary for every knowledge level - from new Muslims to advanced scholars.",
+  title: "Tadabbur - تدبّر | Quranic Reflection & Classical Commentary",
+  description: "Reflect deeply on the Quran through classical scholarship. Tadabbur synthesizes insights from Ibn Kathir, al-Qurtubi, and five additional scholarly works — personalized to your learning journey.",
   keywords: [
+    "tadabbur",
+    "تدبّر",
     "tafsir",
     "quran",
+    "quran reflection",
     "islamic studies",
     "quranic commentary",
     "ibn kathir",
     "al-qurtubi",
-    "tafsir ibn kathir",
     "islamic learning",
     "quran explanation",
     "arabic quran",
-    "quran translation",
     "islamic education",
-    "muslim learning",
     "quranic exegesis",
     "تفسير",
     "القرآن"
   ],
-  authors: [{ name: "Tafsir Simplified Team" }],
-  creator: "Tafsir Simplified",
-  publisher: "Tafsir Simplified",
+  authors: [{ name: "Tadabbur" }],
+  creator: "Tadabbur",
+  publisher: "Tadabbur",
 
   openGraph: {
-    title: "Tafsir Simplified - تفسير مبسط",
-    description: "Classical Islamic tafsir from Ibn Kathir, al-Qurtubi, and renowned scholars — synthesized for clarity",
+    title: "Tadabbur - تدبّر",
+    description: "Deep Quranic reflection through classical scholarship — personalized to your journey",
     type: "website",
     locale: "en_US",
     alternateLocale: ["ar_SA"],
-    siteName: "Tafsir Simplified",
+    siteName: "Tadabbur",
   },
 
   twitter: {
     card: "summary_large_image",
-    title: "Tafsir Simplified - Islamic Commentary Platform",
-    description: "Classical Quranic Commentary for Modern Learners",
+    title: "Tadabbur - Quranic Reflection Platform",
+    description: "Deep Quranic reflection through classical scholarship",
   },
 
   robots: {
@@ -120,7 +120,7 @@ export default function RootLayout({ children }) {
         {/* Meta tags for Islamic content */}
         <meta name="format-detection" content="telephone=no" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-title" content="Tafsir" />
+        <meta name="apple-mobile-web-app-title" content="Tadabbur" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="mobile-web-app-capable" content="yes" />
       </head>

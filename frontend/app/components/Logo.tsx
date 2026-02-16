@@ -7,10 +7,10 @@ interface LogoProps {
 }
 
 /**
- * Tafsir Simplified Logo
- * Clean, modern rounded-square with open book motif and Arabic letter
+ * Tadabbur Logo
+ * Clean, modern rounded-square with open book motif and Arabic تدبّر
  */
-export const TafsirLogo: React.FC<LogoProps> = ({
+export const TadabburLogo: React.FC<LogoProps> = ({
   size = 120,
   className = '',
 }) => {
@@ -62,30 +62,17 @@ export const TafsirLogo: React.FC<LogoProps> = ({
           strokeOpacity="0.3"
         />
 
-        {/* Arabic تفسير — top line */}
+        {/* Arabic تدبّر — centered, gold accent */}
         <text
           x="50"
-          y="48"
+          y="56"
           fontFamily="'Amiri', 'Traditional Arabic', serif"
-          fontSize="22"
+          fontSize="26"
           fontWeight="700"
-          fill="white"
-          textAnchor="middle"
-        >
-          تفسير
-        </text>
-
-        {/* Arabic مبسط — bottom line, gold accent */}
-        <text
-          x="50"
-          y="68"
-          fontFamily="'Amiri', 'Traditional Arabic', serif"
-          fontSize="18"
-          fontWeight="600"
           fill="url(#logoAccent)"
           textAnchor="middle"
         >
-          مُبَسَّط
+          تدبّر
         </text>
       </svg>
 
@@ -108,13 +95,17 @@ export const TafsirLogo: React.FC<LogoProps> = ({
 /**
  * Simplified logo variant for headers/navigation
  */
-export const TafsirLogoSimple: React.FC<LogoProps> = ({
+export const TadabburLogoSimple: React.FC<LogoProps> = ({
   size = 48,
   className = ''
 }) => {
   return (
-    <TafsirLogo size={size} className={className} showText={false} />
+    <TadabburLogo size={size} className={className} showText={false} />
   );
 };
 
-export default TafsirLogo;
+// Backward-compatible aliases
+export const TafsirLogo = TadabburLogo;
+export const TafsirLogoSimple = TadabburLogoSimple;
+
+export default TadabburLogo;

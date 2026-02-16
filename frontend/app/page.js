@@ -24,7 +24,7 @@ import FeatureIntroModal from './components/FeatureIntroModal';
 import FloatingAnnotateButton from './components/FloatingAnnotateButton';
 import ConfirmDialog from './components/ConfirmDialog';
 import ErrorBoundary from './components/ErrorBoundary';
-import TafsirLogo from './components/Logo';
+import TadabburLogo from './components/Logo';
 import SurahVersePicker from './components/SurahVersePicker';
 import CollectionsGrid from './components/CollectionsGrid';
 import BadgeDisplay, { BadgePopup } from './components/BadgeDisplay';
@@ -206,7 +206,7 @@ function AuthComponent() {
   return (
     <div className="container">
       <div className="card">
-        <h1 style={{ textAlign: 'center', marginBottom: '16px' }}>Welcome to Tafsir Simplified</h1>
+        <h1 style={{ textAlign: 'center', marginBottom: '16px' }}>Welcome to Tadabbur</h1>
         <p style={{ fontSize: '1rem', color: '#666', marginBottom: '32px', textAlign: 'center', lineHeight: '1.6' }}>
           {isSignUp
             ? 'Quranic commentary drawn from classical scholarship and personalized to how you learn — with progress tracking, reflections, and reading plans to support your journey.'
@@ -1332,7 +1332,7 @@ function MainApp({ user, userProfile, onResetProfile }) {
       if (navigator.share && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
         try {
           await navigator.share({
-            title: `Tafsir Simplified — ${query}`,
+            title: `Tadabbur — ${query}`,
             text: 'A deeper understanding of this ayah.',
             url: shareUrl
           });
@@ -1485,8 +1485,8 @@ function MainApp({ user, userProfile, onResetProfile }) {
         <div className="card main-app">
         <div className="header">
           <div className="header-logo">
-            <TafsirLogo size={32} showText={false} />
-            <h1>Tafsir Simplified</h1>
+            <TadabburLogo size={32} showText={false} />
+            <h1>Tadabbur</h1>
           </div>
           <div className="user-info" data-persona-icon={personaIcon}>
             <span>{user.displayName || user.email?.split('@')[0] || 'User'}</span>

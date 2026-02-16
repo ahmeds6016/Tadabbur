@@ -36,21 +36,21 @@
       "id": 1,
       "greetingId": 1,
       "title": "Gentle Welcome",
-      "message": "It's a blessing to have you here.\n\nEvery heart meets the Qur'an in its own way — through seeking, returning, reflecting, or teaching. However your path began, Tafsir Simplified is here to walk beside you, gently guiding you toward understanding and connection.",
+      "message": "It's a blessing to have you here.\n\nEvery heart meets the Qur'an in its own way — through seeking, returning, reflecting, or teaching. However your path began, Tadabbur is here to walk beside you, gently guiding you toward understanding and connection.",
       "callToAction": "Choose the path that feels like yours:"
     },
     {
       "id": 2,
       "greetingId": 2,
       "title": "Journey-Focused",
-      "message": "Every journey with the Qur'an begins in a different place — some with questions, some with longing, others with years of study. Wherever you are, Tafsir Simplified will walk beside you, at your pace, with the tone and guidance that best fit your path.",
+      "message": "Every journey with the Qur'an begins in a different place — some with questions, some with longing, others with years of study. Wherever you are, Tadabbur will walk beside you, at your pace, with the tone and guidance that best fit your path.",
       "callToAction": "Take a moment to choose the journey that feels closest to your heart:"
     },
     {
       "id": 3,
       "greetingId": 3,
       "title": "Warmth & Invitation",
-      "message": "We're truly glad you're here.\n\nEvery journey with the Qur'an is unique — some are just beginning, others are deepening, and some are guiding others along the way. Tafsir Simplified will walk with you at your own pace, helping you connect with the meanings of the Qur'an in the way that speaks most to you.",
+      "message": "We're truly glad you're here.\n\nEvery journey with the Qur'an is unique — some are just beginning, others are deepening, and some are guiding others along the way. Tadabbur will walk with you at your own pace, helping you connect with the meanings of the Qur'an in the way that speaks most to you.",
       "callToAction": "Choose the path that reflects your journey:"
     },
     {
@@ -64,14 +64,14 @@
       "id": 5,
       "greetingId": 5,
       "title": "Personal & Intimate",
-      "message": "Thank you for trusting us with your journey.\n\nWhether you're taking your first steps with the Qur'an, returning after time away, or deepening decades of study — this is your space. We've designed Tafsir Simplified to meet you exactly where you are, with the kindness and depth you need.",
+      "message": "Thank you for trusting us with your journey.\n\nWhether you're taking your first steps with the Qur'an, returning after time away, or deepening decades of study — this is your space. We've designed Tadabbur to meet you exactly where you are, with the kindness and depth you need.",
       "callToAction": "Tell us about your journey:"
     },
     {
       "id": 6,
       "greetingId": 1,
       "title": "Hopeful & Encouraging",
-      "message": "We're honored you chose to begin here.\n\nThe Qur'an is a living guide — it meets you in joy and in hardship, in questions and in certainty. Tafsir Simplified is here to help those sacred words come alive for you, in whatever way your heart needs most.",
+      "message": "We're honored you chose to begin here.\n\nThe Qur'an is a living guide — it meets you in joy and in hardship, in questions and in certainty. Tadabbur is here to help those sacred words come alive for you, in whatever way your heart needs most.",
       "callToAction": "Choose the companion for your journey:"
     },
     {
@@ -85,7 +85,7 @@
       "id": 8,
       "greetingId": 3,
       "title": "Dignified & Respectful",
-      "message": "Your journey with the Qur'an is sacred — and so is this moment.\n\nWhether you're discovering these verses for the first time or returning to them after years of study, know that you belong here. Tafsir Simplified exists to serve your understanding, honor your pace, and meet you with the depth or simplicity you need.",
+      "message": "Your journey with the Qur'an is sacred — and so is this moment.\n\nWhether you're discovering these verses for the first time or returning to them after years of study, know that you belong here. Tadabbur exists to serve your understanding, honor your pace, and meet you with the depth or simplicity you need.",
       "callToAction": "How would you describe your relationship with the Qur'an today?"
     },
     {
@@ -99,7 +99,7 @@
       "id": 10,
       "greetingId": 5,
       "title": "Minimalist & Reverent",
-      "message": "Thank you for being here.\n\nThe Qur'an is a gift — one that reveals itself differently to each person. Whether you're beginning your journey, continuing it, or teaching others, Tafsir Simplified will walk with you, offering the guidance you need at the depth that serves you best.",
+      "message": "Thank you for being here.\n\nThe Qur'an is a gift — one that reveals itself differently to each person. Whether you're beginning your journey, continuing it, or teaching others, Tadabbur will walk with you, offering the guidance you need at the depth that serves you best.",
       "callToAction": "Where are you in your journey?"
     },
     {

@@ -4,10 +4,10 @@ import { Z_INDEX } from '../utils/zIndex';
 
 const FEATURE_STEPS = [
   {
-    title: 'Welcome to Tafsir Simplified',
+    title: 'Welcome to Tadabbur',
     titleWithName: (name) => `Welcome, ${name}!`,
-    description: 'Quranic commentary drawn from classical scholarly sources — synthesized and personalized to your learning style, not generated from scratch.',
-    iconLabel: 'Q',
+    description: 'Deep Quranic reflection drawn from classical scholarly sources — synthesized and personalized to your learning journey, not generated from scratch.',
+    iconLabel: 'T',
   },
   {
     title: 'Choose a Surah and Verse Range',

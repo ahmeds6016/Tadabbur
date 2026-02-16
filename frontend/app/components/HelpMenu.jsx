@@ -312,8 +312,8 @@ export default function HelpMenu({ currentPage = 'home', isOpen, onClose, onRepl
               <h3>Frequently Asked Questions</h3>
 
               <div className="faq-item">
-                <h4>What is Tafsir Simplified?</h4>
-                <p>Tafsir Simplified helps you explore any verse of the Quran through the lens of classical scholarship. Advanced language modeling is used to synthesize authenticated scholarly sources for clarity — including Ibn Kathir, Al-Qurtubi, and five additional works. Every response is shaped by your chosen learning persona, so the commentary meets you at your level.</p>
+                <h4>What is Tadabbur?</h4>
+                <p>Tadabbur helps you reflect deeply on any verse of the Quran through the lens of classical scholarship. Advanced language modeling synthesizes authenticated scholarly sources — including Ibn Kathir, Al-Qurtubi, and five additional works — into clear, personalized commentary shaped by your chosen learning persona.</p>
               </div>
 
               <div className="faq-item">

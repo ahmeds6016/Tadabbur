@@ -1,5 +1,5 @@
 /**
- * Centralized configuration for the Tafsir Simplified app.
+ * Centralized configuration for the Tadabbur app.
  * Import this file instead of hardcoding values.
  */
 

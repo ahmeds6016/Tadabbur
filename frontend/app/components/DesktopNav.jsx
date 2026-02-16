@@ -106,7 +106,7 @@ export default function DesktopNav({ user, stats = {}, collapsed = false, onTogg
             <span className="nav-logo">
               <BookOpen size={24} strokeWidth={2} />
             </span>
-            <span className="nav-text">Tafsir Simplified</span>
+            <span className="nav-text">Tadabbur</span>
           </div>
         )}
       </div>

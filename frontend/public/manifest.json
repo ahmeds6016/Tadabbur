@@ -1,7 +1,7 @@
 {
-  "name": "Tafsir Simplified",
-  "short_name": "Tafsir",
-  "description": "Access simplified Quranic commentary (tafsir) with AI-powered insights",
+  "name": "Tadabbur",
+  "short_name": "Tadabbur",
+  "description": "Deep Quranic reflection through classical scholarship — personalized to your journey",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#FDFBF7",
