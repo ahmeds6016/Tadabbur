@@ -1,23 +1,39 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <!-- Background -->
-  <rect width="512" height="512" rx="64" fill="#10b981"/>
+  <defs>
+    <linearGradient id="goldBorder" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#D4AF37"/>
+      <stop offset="50%" stop-color="#F4D668"/>
+      <stop offset="100%" stop-color="#C49B2A"/>
+    </linearGradient>
+    <radialGradient id="creamCenter" cx="50%" cy="45%" r="50%">
+      <stop offset="0%" stop-color="#FDF8EE"/>
+      <stop offset="100%" stop-color="#F5EDDA"/>
+    </radialGradient>
+  </defs>
 
-  <!-- White circle background for letter -->
-  <circle cx="256" cy="256" r="180" fill="white" opacity="0.95"/>
+  <!-- Cream outer circle -->
+  <circle cx="256" cy="256" r="246" fill="#FAF6F0"/>
 
-  <!-- Letter T for Tafsir in Emerald -->
-  <text x="256" y="320"
-        font-family="Arial, sans-serif"
-        font-size="240"
-        font-weight="bold"
-        text-anchor="middle"
-        fill="#10b981">T</text>
+  <!-- Gold ornamental ring — outer -->
+  <circle cx="256" cy="256" r="226" fill="url(#goldBorder)"/>
 
-  <!-- Optional: Arabic character ت (ta) -->
-  <text x="256" y="380"
-        font-family="Arial, sans-serif"
-        font-size="48"
-        text-anchor="middle"
-        fill="#059669"
-        opacity="0.8">تفسير</text>
+  <!-- Inner dark border ring -->
+  <circle cx="256" cy="256" r="195" fill="#3D2E14"/>
+
+  <!-- Second gold ring — inner -->
+  <circle cx="256" cy="256" r="185" fill="url(#goldBorder)"/>
+
+  <!-- Cream/parchment center -->
+  <circle cx="256" cy="256" r="170" fill="url(#creamCenter)"/>
+
+  <!-- Arabic تدبر — dark green, centered -->
+  <text
+    x="256"
+    y="292"
+    font-family="'Amiri', 'Traditional Arabic', serif"
+    font-size="144"
+    font-weight="700"
+    fill="#1A5632"
+    text-anchor="middle"
+  >تدبر</text>
 </svg>
