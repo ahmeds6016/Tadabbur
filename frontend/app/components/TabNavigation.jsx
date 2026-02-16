@@ -78,13 +78,19 @@ export default function TabNavigation({
   // Get current section name for reflect
   const currentSectionName = validTabs[activeTab]?.sectionName || validTabs[activeTab]?.label || '';
 
-  // Vertical three-dot icon (kebab menu)
+  // Vertical three-dot icon — explicit inline styles, no CSS inheritance
   const dotsIcon = (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-      <circle cx="12" cy="4" r="2.5"/>
-      <circle cx="12" cy="12" r="2.5"/>
-      <circle cx="12" cy="20" r="2.5"/>
-    </svg>
+    <span style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: '3px',
+    }}>
+      <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#1f2937', display: 'block' }} />
+      <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#1f2937', display: 'block' }} />
+      <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#1f2937', display: 'block' }} />
+    </span>
   );
 
   // Track which desktop section has its menu open

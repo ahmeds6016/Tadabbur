@@ -432,22 +432,20 @@ export default function SurahVersePicker({ onSelect, initialSurah = null, initia
             type="button"
             onClick={() => handleQuickSelect(item)}
             style={{
-              padding: '10px 8px',
+              padding: '6px 6px',
               background: 'white',
               border: '1px solid var(--primary-teal, #0d9488)',
               borderRadius: '8px',
-              fontSize: '0.78rem',
-              lineHeight: '1.3',
+              fontSize: '0.72rem',
+              lineHeight: '1.25',
               color: 'var(--primary-teal, #0d9488)',
               cursor: 'pointer',
               fontWeight: '600',
               textAlign: 'center',
               transition: 'all 0.2s ease',
-              wordBreak: 'break-word',
-              minHeight: '44px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.background = 'var(--primary-teal, #0d9488)';
