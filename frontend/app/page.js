@@ -8,7 +8,9 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
-  updateProfile
+  updateProfile,
+  sendPasswordResetEmail,
+  sendEmailVerification
 } from 'firebase/auth';
 import { auth } from './lib/firebase';
 import { BACKEND_URL, getPersonaTheme, getPersonaIcon } from './lib/config';
@@ -71,6 +73,7 @@ export default function HomePage() {
   const [user, setUser] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const fetchUserProfile = async (currentUser) => {
     if (!currentUser) return;
@@ -105,7 +108,7 @@ export default function HomePage() {
       isMounted = false;
       unsubscribe();
     };
-  }, []);
+  }, [refreshKey]);
 
   if (isLoading) {
     return (
@@ -123,6 +126,15 @@ export default function HomePage() {
 
   if (!user) {
     return <AuthComponent />;
+  }
+
+  if (user && !user.emailVerified && !userProfile) {
+    return (
+      <EmailVerificationGate
+        user={user}
+        onVerified={() => setRefreshKey(k => k + 1)}
+      />
+    );
   }
 
   if (user && !userProfile) {
@@ -150,12 +162,12 @@ function AuthComponent() {
   const [nameInfo, setNameInfo] = useState(null);
   const [nameInfoDismissed, setNameInfoDismissed] = useState(false);
   const [error, setError] = useState('');
-  const [isSignUp, setIsSignUp] = useState(true);
+  const [authMode, setAuthMode] = useState('signUp'); // 'signUp' | 'signIn' | 'forgotPassword' | 'resetSent'
   const nameDebounceRef = useRef(null);
 
   // Debounced name info lookup
   useEffect(() => {
-    if (!isSignUp) return;
+    if (authMode !== 'signUp') return;
     clearTimeout(nameDebounceRef.current);
     setNameInfoDismissed(false);
     if (!firstName || firstName.trim().length < 2) {
@@ -167,7 +179,7 @@ function AuthComponent() {
       setNameInfo(info);
     }, 400);
     return () => clearTimeout(nameDebounceRef.current);
-  }, [firstName, isSignUp]);
+  }, [firstName, authMode]);
 
   const handleFirstNameChange = (value) => {
     setFirstName(value);
@@ -175,12 +187,17 @@ function AuthComponent() {
     setFirstNameError(valid ? null : err);
   };
 
+  const switchMode = (mode) => {
+    setError('');
+    setAuthMode(mode);
+  };
+
   const handleAuthAction = async (e) => {
     e.preventDefault();
     setError('');
 
     // Validate firstName if provided (sign-up only)
-    if (isSignUp && firstName.trim()) {
+    if (authMode === 'signUp' && firstName.trim()) {
       const { valid, error: err } = validateFirstName(firstName);
       if (!valid) {
         setFirstNameError(err);
@@ -189,11 +206,15 @@ function AuthComponent() {
     }
 
     try {
-      if (isSignUp) {
+      if (authMode === 'signUp') {
         const cred = await createUserWithEmailAndPassword(auth, email, password);
-        // Set displayName if firstName provided
         if (firstName.trim()) {
           await updateProfile(cred.user, { displayName: firstName.trim() });
+        }
+        try {
+          await sendEmailVerification(cred.user);
+        } catch (verifyErr) {
+          console.warn('Could not send verification email:', verifyErr.message);
         }
       } else {
         await signInWithEmailAndPassword(auth, email, password);
@@ -203,92 +224,362 @@ function AuthComponent() {
     }
   };
 
+  const handlePasswordReset = async (e) => {
+    e.preventDefault();
+    setError('');
+    try {
+      await sendPasswordResetEmail(auth, email);
+      setAuthMode('resetSent');
+    } catch (err) {
+      if (err.code === 'auth/user-not-found') {
+        setError('No account found with this email address.');
+      } else if (err.code === 'auth/invalid-email') {
+        setError('Please enter a valid email address.');
+      } else if (err.code === 'auth/too-many-requests') {
+        setError('Too many requests. Please wait a few minutes and try again.');
+      } else {
+        setError(err.message);
+      }
+    }
+  };
+
   return (
     <div className="container">
       <div className="card">
-        <h1 style={{ textAlign: 'center', marginBottom: '16px' }}>Welcome to Tadabbur</h1>
-        <p style={{ fontSize: '1rem', color: '#666', marginBottom: '32px', textAlign: 'center', lineHeight: '1.6' }}>
-          {isSignUp
-            ? 'Quranic commentary drawn from classical scholarship and personalized to how you learn — with progress tracking, reflections, and reading plans to support your journey.'
-            : 'Sign in to continue your Quranic journey.'}
-        </p>
-        <form onSubmit={handleAuthAction} className="form">
-          {isSignUp && (
-            <div style={{ marginBottom: '12px' }}>
-              <input
-                type="text"
-                value={firstName}
-                onChange={(e) => handleFirstNameChange(e.target.value)}
-                placeholder="First name (optional)"
-                autoComplete="given-name"
-                style={{ width: '100%' }}
-              />
-              {firstNameError && (
-                <p style={{ color: '#dc2626', fontSize: '0.85rem', margin: '4px 0 0 0' }}>
-                  {firstNameError}
-                </p>
-              )}
-              {/* Name info card */}
-              {nameInfo && !nameInfoDismissed && (
-                <div style={{
-                  marginTop: '8px',
-                  padding: '12px 16px',
-                  background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
-                  borderRadius: '10px',
-                  border: '1px solid var(--primary-teal)',
-                  position: 'relative',
-                  animation: 'fadeIn 0.3s ease'
-                }}>
-                  <button
-                    type="button"
-                    onClick={() => setNameInfoDismissed(true)}
-                    style={{
-                      position: 'absolute', top: '6px', right: '8px',
-                      background: 'none', border: 'none', cursor: 'pointer',
-                      fontSize: '1.1rem', color: '#999', lineHeight: 1
-                    }}
-                    aria-label="Dismiss"
-                  >
-                    x
-                  </button>
-                  <p style={{
-                    fontWeight: '600', color: 'var(--primary-teal)',
-                    margin: '0 0 4px 0', fontSize: '0.95rem'
+
+        {/* ---- SIGN UP ---- */}
+        {authMode === 'signUp' && (
+          <>
+            <h1 style={{ textAlign: 'center', marginBottom: '16px' }}>Welcome to Tadabbur</h1>
+            <p style={{ fontSize: '1rem', color: '#666', marginBottom: '32px', textAlign: 'center', lineHeight: '1.6' }}>
+              Quranic commentary drawn from classical scholarship and personalized to how you learn — with progress tracking, reflections, and reading plans to support your journey.
+            </p>
+            <form onSubmit={handleAuthAction} className="form">
+              <div style={{ marginBottom: '12px' }}>
+                <input
+                  type="text"
+                  value={firstName}
+                  onChange={(e) => handleFirstNameChange(e.target.value)}
+                  placeholder="First name (optional)"
+                  autoComplete="given-name"
+                  style={{ width: '100%' }}
+                />
+                {firstNameError && (
+                  <p style={{ color: '#dc2626', fontSize: '0.85rem', margin: '4px 0 0 0' }}>
+                    {firstNameError}
+                  </p>
+                )}
+                {nameInfo && !nameInfoDismissed && (
+                  <div style={{
+                    marginTop: '8px',
+                    padding: '12px 16px',
+                    background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
+                    borderRadius: '10px',
+                    border: '1px solid var(--primary-teal)',
+                    position: 'relative',
+                    animation: 'fadeIn 0.3s ease'
                   }}>
-                    About this name
-                  </p>
-                  <p style={{ margin: 0, color: '#555', fontSize: '0.9rem', lineHeight: '1.5' }}>
-                    {nameInfo.short}
-                  </p>
-                </div>
-              )}
+                    <button
+                      type="button"
+                      onClick={() => setNameInfoDismissed(true)}
+                      style={{
+                        position: 'absolute', top: '6px', right: '8px',
+                        background: 'none', border: 'none', cursor: 'pointer',
+                        fontSize: '1.1rem', color: '#999', lineHeight: 1
+                      }}
+                      aria-label="Dismiss"
+                    >
+                      x
+                    </button>
+                    <p style={{
+                      fontWeight: '600', color: 'var(--primary-teal)',
+                      margin: '0 0 4px 0', fontSize: '0.95rem'
+                    }}>
+                      About this name
+                    </p>
+                    <p style={{ margin: 0, color: '#555', fontSize: '0.9rem', lineHeight: '1.5' }}>
+                      {nameInfo.short}
+                    </p>
+                  </div>
+                )}
+              </div>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Email"
+                required
+                style={{ marginBottom: '12px', width: '100%' }}
+              />
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Password"
+                required
+                style={{ marginBottom: '16px', width: '100%' }}
+              />
+              <button type="submit" style={{ width: '100%' }}>Sign Up</button>
+            </form>
+            {error && <p className="error">{error}</p>}
+            <button onClick={() => switchMode('signIn')} className="toggle-auth">
+              Already have an account? Sign In
+            </button>
+          </>
+        )}
+
+        {/* ---- SIGN IN ---- */}
+        {authMode === 'signIn' && (
+          <>
+            <h1 style={{ textAlign: 'center', marginBottom: '16px' }}>Welcome to Tadabbur</h1>
+            <p style={{ fontSize: '1rem', color: '#666', marginBottom: '32px', textAlign: 'center', lineHeight: '1.6' }}>
+              Sign in to continue your Quranic journey.
+            </p>
+            <form onSubmit={handleAuthAction} className="form">
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Email"
+                required
+                style={{ marginBottom: '12px', width: '100%' }}
+              />
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Password"
+                required
+                style={{ marginBottom: '8px', width: '100%' }}
+              />
+              <button
+                type="button"
+                onClick={() => switchMode('forgotPassword')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--primary-teal)',
+                  fontSize: '0.9rem',
+                  cursor: 'pointer',
+                  padding: '0',
+                  marginBottom: '16px',
+                  textAlign: 'right',
+                  display: 'block',
+                  width: '100%',
+                  fontWeight: '500',
+                  textDecoration: 'underline',
+                  textUnderlineOffset: '3px'
+                }}
+              >
+                Forgot password?
+              </button>
+              <button type="submit" style={{ width: '100%' }}>Sign In</button>
+            </form>
+            {error && <p className="error">{error}</p>}
+            <button onClick={() => switchMode('signUp')} className="toggle-auth">
+              Need an account? Sign Up
+            </button>
+          </>
+        )}
+
+        {/* ---- FORGOT PASSWORD ---- */}
+        {authMode === 'forgotPassword' && (
+          <>
+            <h1 style={{ textAlign: 'center', marginBottom: '16px' }}>Reset Password</h1>
+            <p style={{ fontSize: '1rem', color: '#666', marginBottom: '32px', textAlign: 'center', lineHeight: '1.6' }}>
+              Enter your email address and we&apos;ll send you a link to reset your password.
+            </p>
+            <form onSubmit={handlePasswordReset} className="form">
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Email"
+                required
+                style={{ marginBottom: '16px', width: '100%' }}
+              />
+              <button type="submit" style={{ width: '100%' }}>Send Reset Link</button>
+            </form>
+            {error && <p className="error">{error}</p>}
+            <button onClick={() => switchMode('signIn')} className="toggle-auth">
+              Back to Sign In
+            </button>
+          </>
+        )}
+
+        {/* ---- RESET EMAIL SENT ---- */}
+        {authMode === 'resetSent' && (
+          <>
+            <h1 style={{ textAlign: 'center', marginBottom: '16px' }}>Check Your Email</h1>
+            <div style={{ textAlign: 'center', padding: '16px 0' }}>
+              <div style={{
+                width: '64px',
+                height: '64px',
+                borderRadius: '50%',
+                background: 'rgba(5, 150, 105, 0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 20px',
+                fontSize: '1.5rem',
+                color: 'var(--primary-teal)',
+                fontWeight: '700'
+              }}>
+                &#x2713;
+              </div>
+              <p style={{ fontSize: '1rem', color: '#666', lineHeight: '1.6', marginBottom: '8px' }}>
+                We&apos;ve sent a password reset link to:
+              </p>
+              <p style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--primary-teal)', marginBottom: '24px' }}>
+                {email}
+              </p>
+              <p style={{ fontSize: '0.9rem', color: '#999', lineHeight: '1.5' }}>
+                Check your inbox and follow the link to create a new password. The link expires in 1 hour.
+              </p>
             </div>
-          )}
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="Email"
-            required
-            style={{ marginBottom: '12px', width: '100%' }}
-          />
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Password"
-            required
-            style={{ marginBottom: '16px', width: '100%' }}
-          />
-          <button type="submit" style={{ width: '100%' }}>
-            {isSignUp ? 'Sign Up' : 'Sign In'}
-          </button>
-        </form>
+            <button
+              onClick={() => { setEmail(''); switchMode('signIn'); }}
+              style={{ width: '100%' }}
+            >
+              Back to Sign In
+            </button>
+          </>
+        )}
+
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// EMAIL VERIFICATION GATE
+// ============================================================================
+
+function EmailVerificationGate({ user, onVerified }) {
+  const [error, setError] = useState('');
+  const [resendDisabled, setResendDisabled] = useState(false);
+  const [resendCountdown, setResendCountdown] = useState(0);
+  const [checking, setChecking] = useState(false);
+
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        await user.reload();
+        if (user.emailVerified) {
+          clearInterval(interval);
+          onVerified();
+        }
+      } catch {
+        // Reload failed, skip this cycle
+      }
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [user, onVerified]);
+
+  useEffect(() => {
+    if (resendCountdown <= 0) {
+      setResendDisabled(false);
+      return;
+    }
+    const timer = setTimeout(() => setResendCountdown(c => c - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [resendCountdown]);
+
+  const handleResend = async () => {
+    setError('');
+    try {
+      await sendEmailVerification(user);
+      setResendDisabled(true);
+      setResendCountdown(60);
+    } catch (err) {
+      if (err.code === 'auth/too-many-requests') {
+        setError('Too many requests. Please wait a few minutes before trying again.');
+      } else {
+        setError(err.message);
+      }
+    }
+  };
+
+  const handleCheckNow = async () => {
+    setChecking(true);
+    setError('');
+    try {
+      await user.reload();
+      if (user.emailVerified) {
+        onVerified();
+      } else {
+        setError('Email not yet verified. Please check your inbox and click the verification link.');
+      }
+    } catch {
+      setError('Could not check verification status. Please try again.');
+    }
+    setChecking(false);
+  };
+
+  return (
+    <div className="container">
+      <div className="card">
+        <h1 style={{ textAlign: 'center', marginBottom: '16px' }}>Verify Your Email</h1>
+        <div style={{ textAlign: 'center', padding: '16px 0' }}>
+          <div style={{
+            width: '64px',
+            height: '64px',
+            borderRadius: '50%',
+            background: 'rgba(13, 148, 136, 0.1)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 20px',
+            fontSize: '1.8rem'
+          }}>
+            &#x2709;
+          </div>
+          <p style={{ fontSize: '1rem', color: '#666', lineHeight: '1.6', marginBottom: '8px' }}>
+            We&apos;ve sent a verification link to:
+          </p>
+          <p style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--primary-teal)', marginBottom: '24px' }}>
+            {user.email}
+          </p>
+          <p style={{ fontSize: '0.9rem', color: '#999', lineHeight: '1.5', marginBottom: '24px' }}>
+            Please check your inbox and click the link to verify your email address.
+            This page will automatically update once verified.
+          </p>
+        </div>
+
+        <button
+          onClick={handleCheckNow}
+          disabled={checking}
+          style={{ width: '100%', marginBottom: '12px' }}
+        >
+          {checking ? 'Checking...' : "I've Verified My Email"}
+        </button>
+
+        <button
+          onClick={handleResend}
+          disabled={resendDisabled}
+          className="toggle-auth"
+          style={{ width: '100%', marginBottom: '12px' }}
+        >
+          {resendDisabled
+            ? `Resend in ${resendCountdown}s`
+            : 'Resend Verification Email'}
+        </button>
+
         {error && <p className="error">{error}</p>}
-        <button onClick={() => setIsSignUp(!isSignUp)} className="toggle-auth">
-          {isSignUp
-            ? 'Already have an account? Sign In'
-            : 'Need an account? Sign Up'}
+
+        <button
+          onClick={() => signOut(auth)}
+          style={{
+            width: '100%',
+            background: 'transparent',
+            color: '#999',
+            border: '1px solid #ddd',
+            borderRadius: '10px',
+            marginTop: '8px',
+            fontSize: '0.9rem'
+          }}
+        >
+          Sign Out
         </button>
       </div>
     </div>
