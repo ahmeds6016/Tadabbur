@@ -57,7 +57,7 @@ CORS(app, resources={r"/*": {
         "http://localhost:3000",
         "https://tafsir-frontend-612616741510.us-central1.run.app"
     ]
-}}, supports_credentials=True)
+}}, supports_credentials=True, max_age=86400)
 
 # --- Configuration (UPDATED for new sliding window vector index) ---
 # Firebase project (Auth, Firestore, Users, Quran texts)
@@ -1889,27 +1889,33 @@ def load_chunks_from_verse_files_enhanced():
         all_verses = []
         source_counts = {"ibn-kathir": 0, "al-qurtubi": 0}
 
-        for file_path, source in source_files:
+        def _load_one_file(file_path, source):
+            """Load a single GCS file and return (verses, source, file_path) or None."""
             try:
                 blob = bucket.blob(file_path)
                 if not blob.exists():
                     print(f"WARNING: File not found: {file_path}")
-                    continue
-
+                    return None
                 contents = blob.download_as_text()
                 data = json.loads(contents)
                 verses = data.get('verses', [])
-
                 for verse in verses:
                     verse['_source'] = source
-
-                all_verses.extend(verses)
-                source_counts[source] += len(verses)
-                print(f"INFO: Loaded {len(verses)} verses from {file_path}")
-
+                return (verses, source, file_path)
             except Exception as e:
                 print(f"ERROR loading {file_path}: {e}")
-                continue
+                return None
+
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=7) as executor:
+            futures = [executor.submit(_load_one_file, fp, src) for fp, src in source_files]
+            for future in futures:
+                result = future.result()
+                if result:
+                    verses, source, file_path = result
+                    all_verses.extend(verses)
+                    source_counts[source] += len(verses)
+                    print(f"INFO: Loaded {len(verses)} verses from {file_path}")
 
         print(f"INFO: Total verses loaded: {len(all_verses)}")
 
@@ -1936,10 +1942,14 @@ def load_chunks_from_verse_files_enhanced():
                 except (ValueError, IndexError) as e:
                     print(f"WARNING: Could not parse verse_number '{verse_num}': {e}")
                     continue
-            elif isinstance(verse_num, list) and verse_num:
-                # Handle list format: [183, 184]
-                verse_numbers_list = verse_num
-                verse_num = verse_num[0]  # Use first for chunk_id
+            elif isinstance(verse_num, list):
+                if verse_num:
+                    # Handle list format: [183, 184]
+                    verse_numbers_list = verse_num
+                    verse_num = verse_num[0]  # Use first for chunk_id
+                else:
+                    # Empty list [] — no verse number available, skip
+                    continue
             elif verse_num is None:
                 verse_num = 0
                 verse_numbers_list = [0]
@@ -2424,9 +2434,6 @@ def filter_unavailable_sources(response_json):
                     sanitized = sanitized.replace('\n\n\n', '\n\n')
 
                 modified_for_debug = sanitized[:150].replace('\n', '\\n')
-                print(f"🔧 HEADING FIX v5: {explanation.get('source', 'unknown')}")
-                print(f"   BEFORE: {original_for_debug}")
-                print(f"   AFTER:  {modified_for_debug}")
 
             explanation['explanation'] = sanitized
             filtered_explanations.append(explanation)
@@ -5485,7 +5492,7 @@ def get_profile():
         user_doc = users_db.collection("users").document(uid).get()
         if user_doc.exists:
             return jsonify(user_doc.to_dict()), 200
-        return jsonify({"error": "Profile not found"}), 404
+        return jsonify({"profile": None, "is_new_user": True}), 200
     except Exception as e:
         print(f"ERROR in /get_profile: {type(e).__name__} - {e}")
         return jsonify({"error": str(e)}), 500
@@ -6253,6 +6260,34 @@ def get_collection_progress(collection_id):
             "total_count": len(col["verses"]),
             "percentage": round(len(explored) / len(col["verses"]) * 100) if col["verses"] else 0,
         }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/collections/progress", methods=["GET"])
+@firebase_auth_required
+def get_all_collection_progress():
+    """Get user's progress for all collections in a single request."""
+    uid = request.user["uid"]
+    try:
+        user_doc = users_db.collection("users").document(uid).get()
+        data = user_doc.to_dict() if user_doc.exists else {}
+        all_progress = data.get("collection_progress", {})
+
+        result = {}
+        for col in THEMED_COLLECTIONS:
+            cid = col["id"]
+            progress = all_progress.get(cid, {})
+            explored = progress.get("explored", [])
+            result[cid] = {
+                "collection_id": cid,
+                "explored": explored,
+                "completed_count": len(explored),
+                "total_count": len(col["verses"]),
+                "percentage": round(len(explored) / len(col["verses"]) * 100) if col["verses"] else 0,
+            }
+
+        return jsonify(result), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -7438,6 +7473,72 @@ def get_verse_annotations(surah, verse):
     # Call the inner function for GET requests
     return handle_get()
 
+
+@app.route("/annotations/verses", methods=["GET"])
+@firebase_auth_required
+def get_batch_verse_annotations():
+    """Get annotations for multiple verses in a single request.
+    Query params: surah (int), from_verse (int), to_verse (int)
+    """
+    try:
+        uid = request.user['uid']
+        surah_num = request.args.get('surah', type=int)
+        from_verse = request.args.get('from_verse', type=int)
+        to_verse = request.args.get('to_verse', type=int)
+
+        if not all([surah_num, from_verse, to_verse]):
+            return jsonify({"error": "surah, from_verse, and to_verse are required"}), 400
+        if to_verse < from_verse:
+            return jsonify({"error": "to_verse must be >= from_verse"}), 400
+        if to_verse - from_verse > 20:
+            return jsonify({"error": "Maximum 20 verses per batch request"}), 400
+        if surah_num not in QURAN_METADATA:
+            return jsonify({"error": f"Invalid surah number: {surah_num}"}), 400
+
+        annotations_ref = users_db.collection('users').document(uid).collection('annotations')
+        query = annotations_ref.where(filter=FieldFilter('surah', '==', surah_num)) \
+                              .where(filter=FieldFilter('verse', '>=', from_verse)) \
+                              .where(filter=FieldFilter('verse', '<=', to_verse)) \
+                              .order_by('verse') \
+                              .order_by('createdAt', direction='DESCENDING')
+
+        result = {}
+        for v in range(from_verse, to_verse + 1):
+            result[str(v)] = []
+
+        for doc in query.stream():
+            data = doc.to_dict()
+            verse_key = str(data.get('verse', 0))
+
+            created_at = data.get('createdAt')
+            if created_at and hasattr(created_at, 'timestamp'):
+                created_at = {'seconds': int(created_at.timestamp())}
+            updated_at = data.get('updatedAt')
+            if updated_at and hasattr(updated_at, 'timestamp'):
+                updated_at = {'seconds': int(updated_at.timestamp())}
+
+            if verse_key in result:
+                result[verse_key].append({
+                    'id': doc.id,
+                    'surah': data.get('surah'),
+                    'verse': data.get('verse'),
+                    'type': data.get('type', 'personal_insight'),
+                    'content': _decrypt_text(data.get('content', ''), uid),
+                    'tags': data.get('tags', []),
+                    'linkedVerses': data.get('linkedVerses', []),
+                    'createdAt': created_at,
+                    'updatedAt': updated_at,
+                    'isPrivate': data.get('isPrivate', True)
+                })
+
+        total = sum(len(v) for v in result.values())
+        return jsonify({'annotations': result, 'count': total, 'surah': surah_num}), 200
+
+    except Exception as e:
+        print(f"ERROR in /annotations/verses: {type(e).__name__} - {e}")
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/annotations/user", methods=["GET"])
 @firebase_auth_required
 def get_user_annotations():
@@ -8136,10 +8237,7 @@ def tafsir_handler_enhanced():
                 return jsonify(cached_response), 200
         perf_metrics['stages']['cache_check'] = (time.time() - stage_start) * 1000
 
-        print(f"\n{'='*70}")
-        print(f"📥 QUERY: {query}")
-        print(f"🎯 APPROACH: {approach.upper()}")
-        print(f"{'='*70}")
+        print(f"[TAFSIR] query={query} approach={approach}")
 
         # ENHANCED CLASSIFICATION
         classification = classify_query_enhanced(query)

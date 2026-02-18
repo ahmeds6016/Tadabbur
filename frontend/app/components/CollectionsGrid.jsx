@@ -72,23 +72,14 @@ export default function CollectionsGrid({ user, onStudyVerse, maxDisplay = 3 }) 
     async function fetchProgress() {
       try {
         const token = await user.getIdToken();
-        const results = await Promise.all(
-          collections.map(async (col) => {
-            try {
-              const res = await fetch(
-                `${BACKEND_URL}/collections/${col.id}/progress`,
-                { headers: { Authorization: `Bearer ${token}` } }
-              );
-              if (!res.ok) return [col.id, null];
-              const data = await res.json();
-              return [col.id, data];
-            } catch {
-              return [col.id, null];
-            }
-          })
+        const res = await fetch(
+          `${BACKEND_URL}/collections/progress`,
+          { headers: { Authorization: `Bearer ${token}` } }
         );
+        if (!res.ok) return;
+        const data = await res.json();
         if (!cancelled) {
-          setProgress(Object.fromEntries(results.filter(([, v]) => v !== null)));
+          setProgress(data);
         }
       } catch {
         // Progress is non-critical; fail silently

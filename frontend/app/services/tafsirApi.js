@@ -214,7 +214,11 @@ class TafsirAPI {
         throw new APIError('Failed to fetch profile', response.status, 'profile_error');
       }
 
-      return await response.json();
+      const data = await response.json();
+      if (data?.is_new_user) {
+        return null;
+      }
+      return data;
     } catch (error) {
       if (error instanceof APIError) {
         throw error;

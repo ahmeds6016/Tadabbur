@@ -82,8 +82,12 @@ export default function HomePage() {
       const response = await fetch(`${BACKEND_URL}/get_profile`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      if (!response.ok) throw new Error('No profile found');
+      if (!response.ok) throw new Error('Network error fetching profile');
       const data = await response.json();
+      if (data?.is_new_user) {
+        // New user — no profile yet, will proceed to onboarding
+        return;
+      }
       if (data?.level || data?.persona) {
         setUserProfile(data);
       }
@@ -2814,14 +2818,49 @@ function EnhancedResultsDisplay({
     scholarly_sources = [],
   } = data || {};
 
-  // Fetch annotations for all verses when component mounts
+  // Fetch annotations for all verses when component mounts (batch)
   useEffect(() => {
-    if (verses.length > 0 && user) {
+    if (verses.length === 0 || !user) return;
+
+    const surahNum = verses[0]?.surah;
+    const verseNums = verses.map(v => v.verse_number).filter(Boolean);
+    if (!surahNum || verseNums.length === 0) return;
+
+    const fromVerse = Math.min(...verseNums);
+    const toVerse = Math.max(...verseNums);
+
+    async function fetchBatchAnnotations() {
+      try {
+        const token = await user.getIdToken();
+        const res = await fetch(
+          `${BACKEND_URL}/annotations/verses?surah=${surahNum}&from_verse=${fromVerse}&to_verse=${toVerse}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (res.ok) {
+          const data = await res.json();
+          const batchResult = {};
+          for (const [verseKey, anns] of Object.entries(data.annotations || {})) {
+            batchResult[`${surahNum}:${verseKey}`] = anns;
+          }
+          setAnnotations(prev => ({ ...prev, ...batchResult }));
+        }
+      } catch {
+        // Batch annotation fetch failed — fall back to individual fetches
+        verses.forEach(verse => {
+          fetchVerseAnnotations(verse.surah, verse.verse_number);
+        });
+      }
+    }
+
+    // Use batch if range <= 20 verses, otherwise fall back to individual
+    if (toVerse - fromVerse <= 20) {
+      fetchBatchAnnotations();
+    } else {
       verses.forEach(verse => {
         fetchVerseAnnotations(verse.surah, verse.verse_number);
       });
     }
-  }, [verses, user, fetchVerseAnnotations]);
+  }, [verses, user, fetchVerseAnnotations, setAnnotations]);
 
   // ensureShareId now comes from MainApp as a prop - removed local duplicate
 
