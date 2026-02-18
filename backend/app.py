@@ -5247,14 +5247,6 @@ def get_cached_tafsir_response(query: str, user_profile: dict, approach: str = "
                 print(f"💾 Cache STALE (version {cached_version} != {SCHOLARLY_PIPELINE_VERSION}) for key {cache_key[:8]}... — regenerating")
                 return None
 
-            # Check if cache is still valid (7 days TTL for tafsir)
-            created_at = cache_data.get('created_at')
-            if created_at:
-                age_days = (datetime.now(timezone.utc) - created_at).total_seconds() / 86400
-                if age_days > 7:  # Cache expired after 7 days
-                    print(f"💾 Cache expired for key {cache_key[:8]}... (age: {age_days:.1f} days)")
-                    return None
-
             # Increment hit count
             cache_ref.update({
                 'hit_count': firestore.Increment(1),
@@ -5293,20 +5285,22 @@ def get_cached_tafsir_response(query: str, user_profile: dict, approach: str = "
 
                 if default_cache_doc.exists:
                     cache_data = default_cache_doc.to_dict()
-                    created_at = cache_data.get('created_at')
-                    if created_at:
-                        age_days = (datetime.now(timezone.utc) - created_at).total_seconds() / 86400
-                        if age_days <= 7:
-                            print(f"💾 Using DEFAULT cached response (age: {age_days:.1f} days)")
 
-                            # Decompress if needed
-                            response_data = cache_data.get('response')
-                            if cache_data.get('compressed', False) and response_data:
-                                import gzip
-                                import base64
-                                response_data = json.loads(gzip.decompress(base64.b64decode(response_data)))
+                    # Check pipeline version
+                    cached_version = cache_data.get('version', '1.0')
+                    if cached_version != SCHOLARLY_PIPELINE_VERSION:
+                        return None
 
-                            return response_data
+                    print(f"💾 Using DEFAULT cached response")
+
+                    # Decompress if needed
+                    response_data = cache_data.get('response')
+                    if cache_data.get('compressed', False) and response_data:
+                        import gzip
+                        import base64
+                        response_data = json.loads(gzip.decompress(base64.b64decode(response_data)))
+
+                    return response_data
 
     except Exception as e:
         import traceback
