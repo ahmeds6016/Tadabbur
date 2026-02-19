@@ -2391,50 +2391,10 @@ def filter_unavailable_sources(response_json):
             original_text = explanation.get('explanation', '')
             sanitized = sanitize_explanation_text(original_text)
 
-            # FIX: Add line breaks BEFORE and AFTER **Bold** subheadings
-            if '**' in sanitized:
-                import re as regex_module
-
-                original_for_debug = sanitized[:150].replace('\n', '\\n')
-
-                # STEP 0: Normalize heading format - remove spaces after ** and before **
-                # LLM sometimes generates "** Heading **" instead of "**Heading**"
-                sanitized = regex_module.sub(r'\*\*\s+', '**', sanitized)  # "** Text" -> "**Text"
-                sanitized = regex_module.sub(r'\s+\*\*', '**', sanitized)  # "Text **" -> "Text**"
-
-                # STEP 1: Add \n\n AFTER **heading** (before next text)
-                # Pattern: **any text** followed by optional whitespace then a letter
-                sanitized = regex_module.sub(
-                    r'(\*\*[^*]+\*\*)[ \t]*([A-Za-z])',
-                    r'\1\n\n\2',
-                    sanitized
-                )
-
-                # STEP 2: Add \n\n BEFORE **heading** (after punctuation)
-                # Pattern: punctuation + optional whitespace + **Capital
-                sanitized = regex_module.sub(
-                    r'([.?!:;,\)\]\'\"])[ \t]*(\*\*[A-Z])',
-                    r'\1\n\n\2',
-                    sanitized
-                )
-
-                # STEP 3: Also handle existing single \n before/after heading
-                sanitized = regex_module.sub(
-                    r'(\*\*[^*]+\*\*)\n([A-Za-z])',
-                    r'\1\n\n\2',
-                    sanitized
-                )
-                sanitized = regex_module.sub(
-                    r'([.?!:;,\)\]\'\"])\n(\*\*[A-Z])',
-                    r'\1\n\n\2',
-                    sanitized
-                )
-
-                # Cleanup: prevent triple+ newlines
-                while '\n\n\n' in sanitized:
-                    sanitized = sanitized.replace('\n\n\n', '\n\n')
-
-                modified_for_debug = sanitized[:150].replace('\n', '\\n')
+            # Fix bold heading line breaks using the standalone function
+            # (the previous inline version had a bug: Step 0's \s+ regex destroyed
+            # \n\n between stray ** and heading text, causing broken bold formatting)
+            sanitized = sanitize_heading_format(sanitized)
 
             explanation['explanation'] = sanitized
             filtered_explanations.append(explanation)
