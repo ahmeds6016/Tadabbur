@@ -49,6 +49,7 @@ from services.source_service import (
     format_scholarly_excerpts_for_prompt,
     plan_scholarly_retrieval_deterministic,
 )
+from data.reading_plans import READING_PLANS
 
 # --- App Initialization ---
 app = Flask(__name__)
@@ -144,7 +145,7 @@ TAFSIR_CHUNKS = {}
 CHUNK_SOURCE_MAP = {}  # Maps chunk_id to source name
 VERSE_METADATA = {}  # NEW: Stores structured metadata for direct queries
 RESPONSE_CACHE = {}  # In-memory cache
-SCHOLARLY_PIPELINE_VERSION = "8.0"  # Bump: dynamic verse range (30k budget, max 5 verses, per-verse output allocation)
+SCHOLARLY_PIPELINE_VERSION = "9.0"  # Bump: plans revamp (36 plans), ibn-kathir/al-qurtubi source_connections, input sanitization
 USER_RATE_LIMITS = defaultdict(list)  # Rate limiting
 ANALYTICS = defaultdict(int)  # Usage analytics
 
@@ -4094,6 +4095,19 @@ def perform_diversified_rag_search(query, expanded_query, embedding_model, index
 
     return final_chunks, context_by_source
 
+def sanitize_source_text_for_prompt(text):
+    """Replace double quotes with single quotes in source text before embedding in prompts.
+
+    This prevents Gemini from echoing unescaped double quotes into JSON string
+    values, which causes 'Expecting , delimiter' parse errors. The scholarly
+    source texts (Ibn Kathir, al-Qurtubi, Ihya, etc.) contain abundant double
+    quotes from scholar speech patterns like: Ibn Jarir said, "The Arabs..."
+    """
+    if not text:
+        return text
+    return text.replace('"', "'")
+
+
 def build_structured_context(context_by_source, arabic_text=None, cross_refs=None):
     """Build enhanced context blocks with Arabic text and cross-references"""
     context_sections = []
@@ -4107,11 +4121,11 @@ def build_structured_context(context_by_source, arabic_text=None, cross_refs=Non
         refs_text = ", ".join(cross_refs)
         context_sections.append(f"--- RELATED VERSES ---\n{refs_text}\n")
 
-    # Add source content
+    # Add source content (sanitize to prevent malformed JSON from Gemini)
     for source_name, chunks in context_by_source.items():
         if chunks:
             section = f"--- {source_name.upper()} ---\n"
-            section += "\n\n".join(chunks)
+            section += "\n\n".join(sanitize_source_text_for_prompt(c) for c in chunks)
             context_sections.append(section)
         else:
             section = f"--- {source_name.upper()} ---\n[No highly relevant passages found]"
@@ -6329,19 +6343,50 @@ def update_collection_progress(collection_id):
 # ============================================================================
 
 BADGE_DEFINITIONS = {
-    "streak_3": {"name": "Getting Started", "description": "Maintained a 3-day learning streak", "icon": "fire", "category": "streak", "threshold": 3},
-    "streak_7": {"name": "Week of Wisdom", "description": "7 consecutive days of engagement", "icon": "calendar", "category": "streak", "threshold": 7},
-    "streak_30": {"name": "Month of Devotion", "description": "30-day learning streak", "icon": "crown", "category": "streak", "threshold": 30},
-    "explore_10": {"name": "Curious Mind", "description": "Explored 10 unique verses", "icon": "search", "category": "exploration", "threshold": 10},
-    "explore_100": {"name": "Deep Diver", "description": "Explored 100 unique verses", "icon": "compass", "category": "exploration", "threshold": 100},
-    "explore_500": {"name": "Quranic Scholar", "description": "Explored 500 unique verses", "icon": "graduation", "category": "exploration", "threshold": 500},
-    "surahs_10": {"name": "Surah Explorer", "description": "Explored verses from 10 different surahs", "icon": "globe", "category": "exploration", "threshold": 10},
-    "surahs_50": {"name": "Quran Traveler", "description": "Explored verses from 50 different surahs", "icon": "rocket", "category": "exploration", "threshold": 50},
-    "reflect_1": {"name": "First Reflection", "description": "Wrote your first reflection", "icon": "pen", "category": "reflection", "threshold": 1},
-    "reflect_10": {"name": "Thoughtful Heart", "description": "Wrote 10 reflections", "icon": "heart", "category": "reflection", "threshold": 10},
-    "reflect_50": {"name": "Reflection Master", "description": "Wrote 50 reflections", "icon": "brain", "category": "reflection", "threshold": 50},
-    "collection_complete": {"name": "Collection Complete", "description": "Completed a themed verse collection", "icon": "book", "category": "special", "threshold": 1},
-    "plan_complete": {"name": "Journey Complete", "description": "Finished a reading plan", "icon": "star", "category": "special", "threshold": 1},
+    # ── Consistency (Streaks) ──
+    "streak_3": {"name": "Getting Started", "description": "Maintained a 3-day learning streak", "icon": "fire", "category": "consistency", "tier": "bronze", "threshold": 3},
+    "streak_7": {"name": "Week of Wisdom", "description": "7 consecutive days of engagement", "icon": "calendar", "category": "consistency", "tier": "silver", "threshold": 7},
+    "streak_14": {"name": "Fortnight of Focus", "description": "14 consecutive days of engagement", "icon": "calendar-check", "category": "consistency", "tier": "silver", "threshold": 14},
+    "streak_30": {"name": "Month of Devotion", "description": "30-day learning streak", "icon": "crown", "category": "consistency", "tier": "gold", "threshold": 30},
+    "streak_90": {"name": "Quarter of Commitment", "description": "90-day learning streak", "icon": "trophy", "category": "consistency", "tier": "gold", "threshold": 90},
+    "streak_180": {"name": "Half-Year Dedication", "description": "180-day learning streak", "icon": "gem", "category": "consistency", "tier": "platinum", "threshold": 180},
+    "streak_365": {"name": "Year of Transformation", "description": "365-day learning streak", "icon": "sun", "category": "consistency", "tier": "diamond", "threshold": 365},
+    "comeback_7": {"name": "The Return", "description": "Returned after 7+ days away and completed 3 consecutive days", "icon": "refresh", "category": "consistency", "tier": "silver", "threshold": 3},
+
+    # ── Exploration (Breadth) ──
+    "explore_10": {"name": "Curious Mind", "description": "Explored 10 unique verses", "icon": "search", "category": "exploration", "tier": "bronze", "threshold": 10},
+    "explore_50": {"name": "Seeker of Knowledge", "description": "Explored 50 unique verses", "icon": "book-open", "category": "exploration", "tier": "silver", "threshold": 50},
+    "explore_100": {"name": "Deep Diver", "description": "Explored 100 unique verses", "icon": "compass", "category": "exploration", "tier": "silver", "threshold": 100},
+    "explore_250": {"name": "Devoted Reader", "description": "Explored 250 unique verses", "icon": "library", "category": "exploration", "tier": "gold", "threshold": 250},
+    "explore_500": {"name": "Quranic Scholar", "description": "Explored 500 unique verses", "icon": "graduation", "category": "exploration", "tier": "gold", "threshold": 500},
+    "explore_1000": {"name": "Huffadh's Path", "description": "Explored 1,000 unique verses", "icon": "award", "category": "exploration", "tier": "platinum", "threshold": 1000},
+    "surahs_10": {"name": "Surah Explorer", "description": "Explored verses from 10 different surahs", "icon": "globe", "category": "exploration", "tier": "bronze", "threshold": 10},
+    "surahs_30": {"name": "Surah Voyager", "description": "Explored verses from 30 different surahs", "icon": "map", "category": "exploration", "tier": "silver", "threshold": 30},
+    "surahs_50": {"name": "Quran Traveler", "description": "Explored verses from 50 different surahs", "icon": "rocket", "category": "exploration", "tier": "gold", "threshold": 50},
+    "surahs_114": {"name": "Complete Journey", "description": "Explored verses from all 114 surahs", "icon": "flag", "category": "exploration", "tier": "diamond", "threshold": 114},
+
+    # ── Reflection (Depth) ──
+    "reflect_1": {"name": "First Reflection", "description": "Wrote your first reflection", "icon": "pen", "category": "reflection", "tier": "bronze", "threshold": 1},
+    "reflect_10": {"name": "Thoughtful Heart", "description": "Wrote 10 reflections", "icon": "heart", "category": "reflection", "tier": "silver", "threshold": 10},
+    "reflect_50": {"name": "Reflection Master", "description": "Wrote 50 reflections", "icon": "brain", "category": "reflection", "tier": "gold", "threshold": 50},
+    "reflect_100": {"name": "Contemplative Soul", "description": "Wrote 100 reflections", "icon": "feather", "category": "reflection", "tier": "gold", "threshold": 100},
+    "reflect_250": {"name": "Deep Thinker", "description": "Wrote 250 reflections", "icon": "lamp", "category": "reflection", "tier": "platinum", "threshold": 250},
+    "reflect_500": {"name": "Voice of Tadabbur", "description": "Wrote 500 reflections", "icon": "scroll", "category": "reflection", "tier": "platinum", "threshold": 500},
+    "reflect_1000": {"name": "Spiritual Journalist", "description": "Wrote 1,000 reflections", "icon": "book", "category": "reflection", "tier": "diamond", "threshold": 1000},
+
+    # ── Completion (Plans & Collections) ──
+    "plan_complete": {"name": "Journey Complete", "description": "Finished a reading plan", "icon": "star", "category": "completion", "tier": "bronze", "threshold": 1},
+    "plan_3": {"name": "Triple Journey", "description": "Completed 3 reading plans", "icon": "stars", "category": "completion", "tier": "silver", "threshold": 3},
+    "plan_7": {"name": "Seasoned Traveler", "description": "Completed 7 reading plans", "icon": "mountain", "category": "completion", "tier": "gold", "threshold": 7},
+    "plan_all": {"name": "Master of Plans", "description": "Completed all available reading plans", "icon": "crown", "category": "completion", "tier": "diamond", "threshold": -1},
+    "collection_complete": {"name": "Collection Complete", "description": "Completed a themed verse collection", "icon": "book", "category": "completion", "tier": "bronze", "threshold": 1},
+    "collection_3": {"name": "Collection Builder", "description": "Completed 3 themed collections", "icon": "archive", "category": "completion", "tier": "silver", "threshold": 3},
+    "collection_all": {"name": "Complete Scholar", "description": "Completed all 12 themed collections", "icon": "library", "category": "completion", "tier": "gold", "threshold": 12},
+
+    # ── Special & Seasonal ──
+    "ramadan_plan": {"name": "Ramadan Completer", "description": "Completed the Ramadan Essentials plan", "icon": "moon", "category": "special", "tier": "gold", "threshold": 1},
+    "daily_verse_7": {"name": "Daily Verse Devotee", "description": "Studied the daily verse 7 times", "icon": "sunrise", "category": "special", "tier": "silver", "threshold": 7},
+    "first_week": {"name": "Welcome", "description": "Active during your first 7 days", "icon": "hand-wave", "category": "special", "tier": "bronze", "threshold": 1},
 }
 
 
@@ -6358,9 +6403,10 @@ def _check_and_award_badges(uid):
         total_verses = stats.get("total_explored_verses", 0)
         total_surahs = stats.get("total_explored_surahs", 0)
 
-        # Count annotations
+        # Count annotations (raise limit for higher-tier badges)
         try:
-            ann_query = users_db.collection("users").document(uid).collection("annotations").limit(51)
+            ann_limit = 1001 if "reflect_500" not in earned else 51
+            ann_query = users_db.collection("users").document(uid).collection("annotations").limit(ann_limit)
             annotation_count = sum(1 for _ in ann_query.stream())
         except Exception:
             annotation_count = 0
@@ -6372,27 +6418,100 @@ def _check_and_award_badges(uid):
             if len(cp.get("explored", [])) >= len(next((c["verses"] for c in THEMED_COLLECTIONS if c["id"] == cid), []))
         )
 
-        # Count completed plans
-        active_plan = data.get("active_plan", {})
-        completed_plans = 1 if active_plan.get("completed_at") else 0
+        # Count completed plans (support both old single and new multi-plan format)
+        active_plans = data.get("active_plans", {})
+        old_plan = data.get("active_plan", {})
+        completed_plans = sum(1 for p in active_plans.values() if p.get("completed_at"))
+        if old_plan.get("completed_at") and old_plan.get("plan_id") not in active_plans:
+            completed_plans += 1
+
+        # Check for comeback streak (7+ day gap then 3 consecutive days)
+        streak_last_date = data.get("streak_last_date")
+        is_comeback = False
+        if streak_last_date and streak_current >= 3:
+            try:
+                from datetime import date as dt_date
+                if isinstance(streak_last_date, str):
+                    last = dt_date.fromisoformat(streak_last_date)
+                else:
+                    last = streak_last_date
+                # Check if there was a gap of 7+ days before current streak started
+                gap_start = datetime.now(timezone.utc).date() - timedelta(days=streak_current)
+                if hasattr(last, 'date'):
+                    last = last.date()
+                # This is approximate — comeback detected if user had a long gap
+                # We store a flag when we detect it
+                is_comeback = data.get("_comeback_detected", False)
+            except Exception:
+                pass
+
+        # Check for Ramadan plan completion
+        ramadan_completed = any(
+            p.get("plan_id") == "ramadan_30" and p.get("completed_at")
+            for p in list(active_plans.values()) + ([old_plan] if old_plan else [])
+        )
+
+        # Daily verse study count
+        daily_verse_count = data.get("daily_verse_count", 0)
+
+        # First week check
+        created_at = data.get("created_at")
+        first_week_active = False
+        if created_at:
+            try:
+                if isinstance(created_at, str):
+                    created_dt = datetime.fromisoformat(created_at)
+                else:
+                    created_dt = created_at
+                days_since_signup = (datetime.now(timezone.utc) - created_dt).days
+                first_week_active = days_since_signup <= 7 and streak_current >= 1
+            except Exception:
+                pass
 
         newly_earned = []
         best_streak = max(streak_current, streak_longest)
 
         checks = {
+            # Consistency
             "streak_3": best_streak >= 3,
             "streak_7": best_streak >= 7,
+            "streak_14": best_streak >= 14,
             "streak_30": best_streak >= 30,
+            "streak_90": best_streak >= 90,
+            "streak_180": best_streak >= 180,
+            "streak_365": best_streak >= 365,
+            "comeback_7": is_comeback,
+            # Exploration
             "explore_10": total_verses >= 10,
+            "explore_50": total_verses >= 50,
             "explore_100": total_verses >= 100,
+            "explore_250": total_verses >= 250,
             "explore_500": total_verses >= 500,
+            "explore_1000": total_verses >= 1000,
             "surahs_10": total_surahs >= 10,
+            "surahs_30": total_surahs >= 30,
             "surahs_50": total_surahs >= 50,
+            "surahs_114": total_surahs >= 114,
+            # Reflection
             "reflect_1": annotation_count >= 1,
             "reflect_10": annotation_count >= 10,
             "reflect_50": annotation_count >= 50,
+            "reflect_100": annotation_count >= 100,
+            "reflect_250": annotation_count >= 250,
+            "reflect_500": annotation_count >= 500,
+            "reflect_1000": annotation_count >= 1000,
+            # Completion
             "collection_complete": completed_collections >= 1,
+            "collection_3": completed_collections >= 3,
+            "collection_all": completed_collections >= len(THEMED_COLLECTIONS),
             "plan_complete": completed_plans >= 1,
+            "plan_3": completed_plans >= 3,
+            "plan_7": completed_plans >= 7,
+            "plan_all": completed_plans >= len(READING_PLANS),
+            # Special
+            "ramadan_plan": ramadan_completed,
+            "daily_verse_7": daily_verse_count >= 7,
+            "first_week": first_week_active,
         }
 
         for badge_id, condition in checks.items():
@@ -6515,419 +6634,10 @@ def _generate_recommendations(surah, verse, final_json, user_id=None):
 
 
 # ============================================================================
-# READING PLANS
+# READING PLANS (imported from data.reading_plans — 36 enhanced plans)
 # ============================================================================
+# READING_PLANS imported at top of file via: from data.reading_plans import READING_PLANS
 
-READING_PLANS = [
-    {
-        "id": "patience_7",
-        "title": "7-Day Patience Journey",
-        "description": "Explore how the Quran teaches patience through hardship, gratitude, and trust in Allah's plan",
-        "duration_days": 7,
-        "category": "Spiritual Growth",
-        "days": [
-            {"day": 1, "title": "The Promise of Patience", "verse": [2, 155], "prompt": "What trial in your life right now could be a hidden blessing?"},
-            {"day": 2, "title": "Hidden Wisdom", "verse": [2, 216], "prompt": "Think of a past difficulty that turned out to be good for you."},
-            {"day": 3, "title": "No Soul Overburdened", "verse": [2, 286], "prompt": "What burden feels heavy today? How does knowing Allah's promise change that?"},
-            {"day": 4, "title": "Persevere and Excel", "verse": [3, 200], "prompt": "Where in your life do you need more steadfastness?"},
-            {"day": 5, "title": "Patience in Action", "verse": [31, 17], "prompt": "How can you practice active patience — not just enduring, but growing?"},
-            {"day": 6, "title": "Reward Beyond Measure", "verse": [39, 10], "prompt": "What goodness are you investing in that you haven't seen the reward for yet?"},
-            {"day": 7, "title": "Ease After Hardship", "verse": [94, 5], "prompt": "Reflect on your journey this week. How has your understanding of patience deepened?"},
-        ],
-    },
-    {
-        "id": "spiritual_stations",
-        "title": "Spiritual Stations",
-        "description": "A 14-day journey through the stations of the soul, inspired by Ibn al-Qayyim's Madarij al-Salikin",
-        "duration_days": 14,
-        "category": "Spiritual Growth",
-        "days": [
-            {"day": 1, "title": "Awakening", "verse": [6, 122], "prompt": "What moment first awakened your spiritual curiosity?"},
-            {"day": 2, "title": "Insight", "verse": [24, 35], "prompt": "Where do you see Allah's light in your daily life?"},
-            {"day": 3, "title": "Purpose", "verse": [51, 56], "prompt": "How does the purpose of creation shape your priorities?"},
-            {"day": 4, "title": "Resolve", "verse": [29, 69], "prompt": "What spiritual goal requires more determination from you?"},
-            {"day": 5, "title": "Repentance", "verse": [39, 53], "prompt": "What would it feel like to truly let go of past mistakes?"},
-            {"day": 6, "title": "Remembrance", "verse": [13, 28], "prompt": "When during your day do you feel closest to Allah?"},
-            {"day": 7, "title": "Fear & Awe", "verse": [8, 2], "prompt": "What does healthy reverence for Allah look like in your life?"},
-            {"day": 8, "title": "Hope", "verse": [7, 56], "prompt": "What hope sustains you through difficult moments?"},
-            {"day": 9, "title": "Devotion", "verse": [6, 162], "prompt": "How can your daily routines become acts of devotion?"},
-            {"day": 10, "title": "Trust", "verse": [65, 3], "prompt": "What are you struggling to trust Allah with right now?"},
-            {"day": 11, "title": "Patience", "verse": [2, 155], "prompt": "How has this journey changed your relationship with difficulty?"},
-            {"day": 12, "title": "Gratitude", "verse": [14, 7], "prompt": "Name three blessings you usually overlook."},
-            {"day": 13, "title": "Submission", "verse": [3, 159], "prompt": "What does true surrender to Allah mean for you today?"},
-            {"day": 14, "title": "Contentment", "verse": [89, 27], "prompt": "Reflect on your 14-day journey. What station resonated most deeply?"},
-        ],
-    },
-    {
-        "id": "ramadan_30",
-        "title": "Ramadan Essentials",
-        "description": "30 days of verses covering fasting, charity, night prayer, and spiritual renewal",
-        "duration_days": 30,
-        "category": "Seasonal",
-        "days": [
-            {"day": 1, "title": "Fasting Prescribed", "verse": [2, 183], "prompt": "What intention are you setting for this month of fasting?"},
-            {"day": 2, "title": "Month of Quran", "verse": [2, 185], "prompt": "How will you deepen your relationship with the Quran this month?"},
-            {"day": 3, "title": "Dua is Heard", "verse": [2, 186], "prompt": "What is the one dua you want to focus on this Ramadan?"},
-            {"day": 4, "title": "Charity Multiplied", "verse": [2, 261], "prompt": "Who in your community could benefit from your generosity?"},
-            {"day": 5, "title": "Taqwa", "verse": [2, 197], "prompt": "How is fasting building your God-consciousness?"},
-            {"day": 6, "title": "Night Prayer", "verse": [73, 8], "prompt": "What would it mean to devote even a few minutes of the night to Allah?"},
-            {"day": 7, "title": "Gratitude", "verse": [14, 7], "prompt": "What blessing has fasting helped you appreciate?"},
-            {"day": 8, "title": "Patience", "verse": [2, 155], "prompt": "What is fasting teaching you about self-control?"},
-            {"day": 9, "title": "Remembrance", "verse": [33, 41], "prompt": "How can you increase your dhikr throughout the day?"},
-            {"day": 10, "title": "Forgiveness", "verse": [39, 53], "prompt": "Is there someone you need to forgive — including yourself?"},
-            {"day": 11, "title": "Brotherhood", "verse": [49, 10], "prompt": "How can you strengthen a bond with a fellow believer today?"},
-            {"day": 12, "title": "Honoring Parents", "verse": [17, 23], "prompt": "What can you do for your parents today?"},
-            {"day": 13, "title": "Purification", "verse": [87, 14], "prompt": "What habit or thought pattern do you want to purify this month?"},
-            {"day": 14, "title": "Justice", "verse": [5, 8], "prompt": "Where can you stand up for fairness in your daily life?"},
-            {"day": 15, "title": "Midpoint Reflection", "verse": [13, 28], "prompt": "Halfway through — how has your heart changed?"},
-            {"day": 16, "title": "Provision", "verse": [11, 6], "prompt": "How does trusting Allah's provision change your relationship with money?"},
-            {"day": 17, "title": "Laylat al-Qadr", "verse": [97, 1], "prompt": "What would you ask for in a night worth a thousand months?"},
-            {"day": 18, "title": "Sincerity", "verse": [112, 1], "prompt": "How can you make your worship more sincere?"},
-            {"day": 19, "title": "The Unseen", "verse": [2, 3], "prompt": "What does believing in the unseen mean practically?"},
-            {"day": 20, "title": "Success", "verse": [23, 1], "prompt": "What does true success look like beyond worldly measures?"},
-            {"day": 21, "title": "Allah's Names", "verse": [59, 22], "prompt": "Which name of Allah speaks to you most right now?"},
-            {"day": 22, "title": "Best Example", "verse": [33, 21], "prompt": "Which quality of the Prophet do you most want to embody?"},
-            {"day": 23, "title": "Inner Change", "verse": [13, 11], "prompt": "What one internal change would transform your life?"},
-            {"day": 24, "title": "Trust", "verse": [9, 51], "prompt": "What would full trust in Allah's decree look like?"},
-            {"day": 25, "title": "Knowledge", "verse": [20, 114], "prompt": "What have you learned this Ramadan that surprised you?"},
-            {"day": 26, "title": "Ease", "verse": [94, 5], "prompt": "Where has Allah brought you ease that you didn't expect?"},
-            {"day": 27, "title": "Light", "verse": [24, 35], "prompt": "How is your spiritual light growing this month?"},
-            {"day": 28, "title": "Return", "verse": [2, 156], "prompt": "How does remembering our return to Allah shape your priorities?"},
-            {"day": 29, "title": "Mercy", "verse": [7, 56], "prompt": "How can you be a vessel of Allah's mercy to others?"},
-            {"day": 30, "title": "Farewell", "verse": [3, 200], "prompt": "As Ramadan ends, what commitment will you carry forward?"},
-        ],
-    },
-    {
-        "id": "prophets_10",
-        "title": "Stories of the Prophets",
-        "description": "10 days exploring the lives and lessons of the prophets mentioned in the Quran",
-        "duration_days": 10,
-        "category": "Knowledge",
-        "days": [
-            {"day": 1, "title": "Adam — The First Human", "verse": [2, 30], "prompt": "What does being Allah's khalifah (steward) on earth mean for your daily choices?"},
-            {"day": 2, "title": "Nuh — Steadfastness", "verse": [11, 36], "prompt": "When have you held firm to truth despite others doubting you?"},
-            {"day": 3, "title": "Ibrahim — Surrender", "verse": [2, 131], "prompt": "What would it mean to submit to Allah as completely as Ibrahim?"},
-            {"day": 4, "title": "Yusuf — Beauty Through Trial", "verse": [12, 86], "prompt": "How do you maintain hope when life feels unjust?"},
-            {"day": 5, "title": "Musa — Courage", "verse": [20, 25], "prompt": "What daunting task are you being called to undertake?"},
-            {"day": 6, "title": "Dawud — Gratitude in Power", "verse": [34, 10], "prompt": "How do you use your strengths in gratitude to Allah?"},
-            {"day": 7, "title": "Sulayman — Wisdom", "verse": [27, 19], "prompt": "How does gratitude for blessings shape the way you lead and serve?"},
-            {"day": 8, "title": "Yunus — Repentance in Darkness", "verse": [21, 87], "prompt": "When have you called out to Allah from a dark place?"},
-            {"day": 9, "title": "Isa — The Word of God", "verse": [3, 45], "prompt": "What does the miraculous nature of Isa teach about Allah's power?"},
-            {"day": 10, "title": "Muhammad — Mercy to All", "verse": [33, 21], "prompt": "How can you embody the prophetic example in your relationships?"},
-        ],
-    },
-    {
-        "id": "foundations_7",
-        "title": "Foundations of Faith",
-        "description": "7 days exploring the core pillars of Islamic belief through the Quran",
-        "duration_days": 7,
-        "category": "Knowledge",
-        "days": [
-            {"day": 1, "title": "Tawhid — Oneness of Allah", "verse": [112, 1], "prompt": "How does believing in One God simplify your life?"},
-            {"day": 2, "title": "Angels — Unseen Servants", "verse": [2, 285], "prompt": "How does knowing angels surround you affect your behavior?"},
-            {"day": 3, "title": "Divine Books — Guidance Revealed", "verse": [2, 2], "prompt": "What role does the Quran play in your daily decisions?"},
-            {"day": 4, "title": "Messengers — Examples to Follow", "verse": [33, 21], "prompt": "Which prophetic quality do you most want to develop?"},
-            {"day": 5, "title": "The Last Day — Accountability", "verse": [3, 185], "prompt": "If today were your last, what would you change?"},
-            {"day": 6, "title": "Divine Decree — Trusting the Plan", "verse": [9, 51], "prompt": "What aspect of your life do you need to surrender to Allah's qadr?"},
-            {"day": 7, "title": "Ihsan — Excellence in Faith", "verse": [2, 112], "prompt": "What does it mean to worship Allah as though you see Him?"},
-        ],
-    },
-    {
-        "id": "gratitude_7",
-        "title": "7-Day Gratitude Reset",
-        "description": "Rewire your perspective through Quranic gratitude. Each day explores a different dimension of shukr — from recognizing hidden blessings to expressing thanks through action. Goal: develop a daily gratitude practice rooted in revelation.",
-        "duration_days": 7,
-        "category": "Spiritual Growth",
-        "days": [
-            {"day": 1, "title": "The Promise of Increase", "verse": [14, 7], "prompt": "What three blessings do you take for granted every day?"},
-            {"day": 2, "title": "Gratitude in the Body", "verse": [16, 78], "prompt": "How do your senses — sight, hearing, heart — serve you today?"},
-            {"day": 3, "title": "Gratitude Through Trial", "verse": [2, 152], "prompt": "Can you find something to be thankful for in a current difficulty?"},
-            {"day": 4, "title": "Creation as a Sign", "verse": [55, 13], "prompt": "Which of Allah's favors around you do you notice right now?"},
-            {"day": 5, "title": "The Grateful Few", "verse": [34, 13], "prompt": "What makes gratitude so rare? How can you be among the grateful?"},
-            {"day": 6, "title": "Gratitude in Worship", "verse": [76, 3], "prompt": "How can your daily prayers become expressions of genuine thanks?"},
-            {"day": 7, "title": "The Eternal Gratitude", "verse": [35, 34], "prompt": "Imagine standing before Allah grateful. What journey brought you there?"},
-        ],
-    },
-    {
-        "id": "tawakkul_5",
-        "title": "5-Day Trust in Allah",
-        "description": "A focused journey into tawakkul — the art of relying on Allah while taking action. Learn the balance between effort and surrender. Goal: release anxiety by anchoring your trust in divine wisdom.",
-        "duration_days": 5,
-        "category": "Spiritual Growth",
-        "days": [
-            {"day": 1, "title": "Allah is Sufficient", "verse": [3, 173], "prompt": "What worry are you carrying that you could hand over to Allah?"},
-            {"day": 2, "title": "Trust and Act", "verse": [3, 159], "prompt": "Where do you confuse tawakkul with passivity?"},
-            {"day": 3, "title": "Nothing Happens by Chance", "verse": [9, 51], "prompt": "Think of a 'setback' that turned out to be Allah's redirection."},
-            {"day": 4, "title": "Provision is Guaranteed", "verse": [65, 3], "prompt": "How would your decisions change if you truly trusted Allah's provision?"},
-            {"day": 5, "title": "The Birds of Tawakkul", "verse": [67, 19], "prompt": "What would it look like to start each day with the trust of a bird leaving its nest?"},
-        ],
-    },
-    {
-        "id": "dua_7",
-        "title": "7-Day Dua Deep Dive",
-        "description": "Explore the most powerful supplications in the Quran — from prophetic prayers to everyday asks. Understand the etiquette, timing, and heart of dua. Goal: transform your prayer life from routine to relationship.",
-        "duration_days": 7,
-        "category": "Worship",
-        "days": [
-            {"day": 1, "title": "I Am Near", "verse": [2, 186], "prompt": "When do you feel closest to Allah during dua?"},
-            {"day": 2, "title": "Adam's Repentance", "verse": [7, 23], "prompt": "What is your go-to dua when you've made a mistake?"},
-            {"day": 3, "title": "Ibrahim's Dua for Wisdom", "verse": [26, 83], "prompt": "What wisdom are you asking Allah for right now?"},
-            {"day": 4, "title": "Musa's Plea for Courage", "verse": [20, 25], "prompt": "What conversation or task do you need Allah's help for?"},
-            {"day": 5, "title": "Yunus in the Darkness", "verse": [21, 87], "prompt": "When have you called out to Allah from your lowest point?"},
-            {"day": 6, "title": "The Dua of the Righteous", "verse": [3, 8], "prompt": "Ask Allah to keep your heart firm after guidance."},
-            {"day": 7, "title": "Between Fear and Hope", "verse": [32, 16], "prompt": "How do you balance fear and hope in your relationship with Allah?"},
-        ],
-    },
-    {
-        "id": "anger_management_5",
-        "title": "5-Day Anger & Forgiveness",
-        "description": "The Quran's guide to mastering your temper and unlocking the freedom of forgiveness. Practical steps from revelation. Goal: respond to provocation with dignity and let go of grudges.",
-        "duration_days": 5,
-        "category": "Character",
-        "days": [
-            {"day": 1, "title": "The Ones Who Restrain", "verse": [3, 134], "prompt": "What triggers your anger most? How do you usually respond?"},
-            {"day": 2, "title": "Repel Evil with Good", "verse": [41, 34], "prompt": "Think of someone who wronged you. What would 'good' look like in response?"},
-            {"day": 3, "title": "The Power of Pardoning", "verse": [42, 43], "prompt": "What grudge is costing you more than the original offense?"},
-            {"day": 4, "title": "Speaking with Grace", "verse": [17, 53], "prompt": "How could gentler words change your most tense relationship?"},
-            {"day": 5, "title": "The Highest Forgiveness", "verse": [24, 22], "prompt": "Can you forgive someone today — not for them, but for your own peace?"},
-        ],
-    },
-    {
-        "id": "women_quran_7",
-        "title": "7-Day Women in the Quran",
-        "description": "Discover the remarkable women honored in the Quran — Maryam, Asiya, the Queen of Sheba, and more. Their courage, faith, and wisdom transcend time. Goal: draw strength and inspiration from their stories.",
-        "duration_days": 7,
-        "category": "Knowledge",
-        "days": [
-            {"day": 1, "title": "Maryam — Chosen Above All", "verse": [3, 42], "prompt": "What does it mean to be chosen by Allah for a difficult mission?"},
-            {"day": 2, "title": "Maryam's Trust in Solitude", "verse": [19, 26], "prompt": "When have you had to trust Allah alone, without anyone's understanding?"},
-            {"day": 3, "title": "Asiya — Courage Against Tyranny", "verse": [66, 11], "prompt": "What does standing for truth look like when it costs everything?"},
-            {"day": 4, "title": "The Mother of Musa", "verse": [28, 7], "prompt": "When have you had to let go and trust Allah with someone you love?"},
-            {"day": 5, "title": "Queen of Sheba — Wisdom and Power", "verse": [27, 44], "prompt": "How do you use wisdom and discernment in your decisions?"},
-            {"day": 6, "title": "Wife of Ibrahim — The Miracle of Hope", "verse": [11, 71], "prompt": "What blessing came to you when you least expected it?"},
-            {"day": 7, "title": "The Believing Women", "verse": [33, 35], "prompt": "Which quality of believing women do you most want to embody?"},
-        ],
-    },
-    {
-        "id": "family_7",
-        "title": "7-Day Family & Relationships",
-        "description": "Quranic wisdom for nurturing your most important relationships — parents, spouse, children, and community. Goal: heal one relationship and strengthen your family bonds through prophetic principles.",
-        "duration_days": 7,
-        "category": "Character",
-        "days": [
-            {"day": 1, "title": "Honoring Parents", "verse": [17, 23], "prompt": "What can you do for your parents today that you've been putting off?"},
-            {"day": 2, "title": "Love Between Spouses", "verse": [30, 21], "prompt": "How do you show mercy and tenderness in your closest relationship?"},
-            {"day": 3, "title": "Raising Righteous Children", "verse": [25, 74], "prompt": "What legacy of faith are you building for the next generation?"},
-            {"day": 4, "title": "Brotherhood and Unity", "verse": [49, 10], "prompt": "Is there a relationship with a fellow believer you need to repair?"},
-            {"day": 5, "title": "Resolving Conflict", "verse": [4, 128], "prompt": "What conflict could be resolved by choosing reconciliation over pride?"},
-            {"day": 6, "title": "Ibrahim's Prayer for Family", "verse": [14, 40], "prompt": "What dua do you make most often for your family?"},
-            {"day": 7, "title": "The Tranquil Home", "verse": [16, 80], "prompt": "What one change would make your home more peaceful?"},
-        ],
-    },
-    {
-        "id": "anxiety_relief_5",
-        "title": "5-Day Anxiety Relief",
-        "description": "When worry overwhelms, the Quran offers anchor points for the anxious heart. This plan walks through specific verses that address fear, overwhelm, and uncertainty. Goal: build a Quranic toolkit for anxious moments.",
-        "duration_days": 5,
-        "category": "Healing",
-        "days": [
-            {"day": 1, "title": "Hearts Find Rest", "verse": [13, 28], "prompt": "When you feel anxious, what thought pattern takes over?"},
-            {"day": 2, "title": "Do Not Grieve", "verse": [9, 40], "prompt": "What would Allah say to you right now about what you're worried about?"},
-            {"day": 3, "title": "No Fear Upon Them", "verse": [2, 277], "prompt": "What does a life without spiritual fear look like?"},
-            {"day": 4, "title": "Ease After Hardship", "verse": [94, 6], "prompt": "Name a past anxiety that resolved in ways you couldn't have planned."},
-            {"day": 5, "title": "The Morning Light", "verse": [93, 3], "prompt": "Allah has not forsaken you. How does this truth change today?"},
-        ],
-    },
-    {
-        "id": "wealth_ethics_7",
-        "title": "7-Day Wealth & Provision",
-        "description": "The Quran's framework for earning, spending, and giving. Not just halal income — but understanding rizq, contentment, and the spiritual dangers of materialism. Goal: align your financial life with Quranic values.",
-        "duration_days": 7,
-        "category": "Ethics",
-        "days": [
-            {"day": 1, "title": "Allah is the Provider", "verse": [11, 6], "prompt": "How does knowing Allah guarantees your provision change your anxiety about money?"},
-            {"day": 2, "title": "The Test of Wealth", "verse": [8, 28], "prompt": "Is wealth a blessing or a test in your life right now?"},
-            {"day": 3, "title": "Spending in Allah's Way", "verse": [2, 261], "prompt": "What would it look like to be more generous this week?"},
-            {"day": 4, "title": "The Danger of Hoarding", "verse": [9, 34], "prompt": "What are you holding onto too tightly?"},
-            {"day": 5, "title": "Contentment vs. Greed", "verse": [20, 131], "prompt": "When is 'enough' actually enough?"},
-            {"day": 6, "title": "Fair Dealings", "verse": [55, 9], "prompt": "How do you ensure justice and honesty in your financial dealings?"},
-            {"day": 7, "title": "The Real Investment", "verse": [35, 29], "prompt": "What investment in akhirah have you made recently?"},
-        ],
-    },
-    {
-        "id": "death_reflection_5",
-        "title": "5-Day Remembering the Akhirah",
-        "description": "Not morbid but motivating — the Quran uses death as the ultimate clarity tool. Reflect on mortality to sharpen your purpose and priorities. Goal: live each day with more intentionality by keeping the end in mind.",
-        "duration_days": 5,
-        "category": "Spiritual Growth",
-        "days": [
-            {"day": 1, "title": "Every Soul Shall Taste Death", "verse": [3, 185], "prompt": "If you had one year left, what would you change today?"},
-            {"day": 2, "title": "The Day of Account", "verse": [99, 7], "prompt": "What 'small' deed do you want to be consistent with?"},
-            {"day": 3, "title": "What Have You Prepared?", "verse": [59, 18], "prompt": "What have you sent ahead for your meeting with Allah?"},
-            {"day": 4, "title": "Distracted by Abundance", "verse": [102, 1], "prompt": "What worldly pursuit is distracting you from what truly matters?"},
-            {"day": 5, "title": "The Soul at Peace", "verse": [89, 27], "prompt": "What would it take for your soul to return to Allah content?"},
-        ],
-    },
-    {
-        "id": "quran_relationship_7",
-        "title": "7-Day Quran Connection",
-        "description": "For those who want to read the Quran but struggle with consistency. Each day focuses on WHY and HOW to build a daily Quran habit. Goal: establish a sustainable daily Quran routine that fits your life.",
-        "duration_days": 7,
-        "category": "Worship",
-        "days": [
-            {"day": 1, "title": "Guidance for the God-Conscious", "verse": [2, 2], "prompt": "What does the Quran mean to you — a book, a guide, a conversation?"},
-            {"day": 2, "title": "Recite and Rise", "verse": [73, 4], "prompt": "What time of day could you dedicate even 5 minutes to Quran?"},
-            {"day": 3, "title": "Healing for Hearts", "verse": [10, 57], "prompt": "Which emotion do you need the Quran to heal right now?"},
-            {"day": 4, "title": "Pondering the Verses", "verse": [38, 29], "prompt": "What verse have you read before but never truly reflected on?"},
-            {"day": 5, "title": "The Weight of Revelation", "verse": [59, 21], "prompt": "If a mountain trembles before the Quran, what should our hearts do?"},
-            {"day": 6, "title": "Remember and Be Reminded", "verse": [54, 17], "prompt": "Who could you share a verse with today?"},
-            {"day": 7, "title": "Spring of the Heart", "verse": [17, 82], "prompt": "What verse has become medicine for your soul this week?"},
-        ],
-    },
-    {
-        "id": "justice_social_7",
-        "title": "7-Day Justice & Social Responsibility",
-        "description": "The Quran as a manifesto for justice — standing for truth, protecting the vulnerable, and building equitable communities. Goal: identify one actionable way to pursue justice in your sphere of influence.",
-        "duration_days": 7,
-        "category": "Ethics",
-        "days": [
-            {"day": 1, "title": "Stand for Justice", "verse": [4, 135], "prompt": "Where do you see injustice that you've been silent about?"},
-            {"day": 2, "title": "Protect the Orphan", "verse": [4, 2], "prompt": "Who are the vulnerable in your community? How can you help?"},
-            {"day": 3, "title": "Speak Truth to Power", "verse": [5, 8], "prompt": "When is standing for justice hardest — when it costs you personally?"},
-            {"day": 4, "title": "Feed the Needy", "verse": [76, 8], "prompt": "What simple act of service could you do this week?"},
-            {"day": 5, "title": "No Superiority", "verse": [49, 13], "prompt": "What biases do you carry? How does the Quran challenge them?"},
-            {"day": 6, "title": "Forbid Wrong", "verse": [3, 110], "prompt": "How do you balance enjoining good while maintaining relationships?"},
-            {"day": 7, "title": "The Earth Inherited", "verse": [21, 105], "prompt": "What kind of world do you want to leave behind?"},
-        ],
-    },
-    {
-        "id": "new_muslim_14",
-        "title": "14-Day New Muslim Essentials",
-        "description": "A gentle, comprehensive introduction to Islam through its most foundational verses. No overwhelm — just one verse per day with context and reflection. Goal: build a solid foundation of understanding and connection with the Quran.",
-        "duration_days": 14,
-        "category": "Foundations",
-        "days": [
-            {"day": 1, "title": "The Opening Prayer", "verse": [1, 1], "prompt": "What drew you to explore Islam?"},
-            {"day": 2, "title": "One God", "verse": [112, 1], "prompt": "How does the concept of One God resonate with you?"},
-            {"day": 3, "title": "Guidance for All", "verse": [2, 2], "prompt": "What guidance are you seeking in your life right now?"},
-            {"day": 4, "title": "No Compulsion in Faith", "verse": [2, 256], "prompt": "How does knowing there's no compulsion in religion make you feel?"},
-            {"day": 5, "title": "Allah's Light", "verse": [24, 35], "prompt": "Where do you see divine light in the world around you?"},
-            {"day": 6, "title": "Be Good to Others", "verse": [4, 36], "prompt": "How can you extend kindness beyond your inner circle today?"},
-            {"day": 7, "title": "The Purpose of Life", "verse": [51, 56], "prompt": "What does worship mean beyond prayer — in your work, your words, your thoughts?"},
-            {"day": 8, "title": "Allah's Mercy", "verse": [39, 53], "prompt": "What past mistakes do you need to release to Allah's mercy?"},
-            {"day": 9, "title": "Patience in Difficulty", "verse": [2, 153], "prompt": "What are you going through that requires patience?"},
-            {"day": 10, "title": "Remembering Allah", "verse": [13, 28], "prompt": "When do you feel most at peace?"},
-            {"day": 11, "title": "Charity of the Heart", "verse": [2, 271], "prompt": "What can you give that costs no money?"},
-            {"day": 12, "title": "The Best of Creation", "verse": [95, 4], "prompt": "What does it mean that humans are created in the best form?"},
-            {"day": 13, "title": "Community", "verse": [3, 103], "prompt": "How are you building your Muslim community?"},
-            {"day": 14, "title": "Your Journey Continues", "verse": [29, 69], "prompt": "What is one commitment you're making for your ongoing journey?"},
-        ],
-    },
-    {
-        "id": "taqwa_7",
-        "title": "7-Day Taqwa Builder",
-        "description": "Taqwa is more than 'fear of God' — it's God-consciousness that shapes every decision. This plan develops your internal compass. Goal: cultivate a habit of checking in with Allah before every choice.",
-        "duration_days": 7,
-        "category": "Spiritual Growth",
-        "days": [
-            {"day": 1, "title": "The Garment of Taqwa", "verse": [7, 26], "prompt": "What does 'wearing' God-consciousness look like in daily life?"},
-            {"day": 2, "title": "Fasting Builds Taqwa", "verse": [2, 183], "prompt": "How has self-restraint strengthened your spiritual awareness?"},
-            {"day": 3, "title": "Prepare Provisions", "verse": [2, 197], "prompt": "What spiritual provision are you packing for your journey?"},
-            {"day": 4, "title": "The Heart That Guards", "verse": [22, 32], "prompt": "What is your heart guarding right now — faith or distraction?"},
-            {"day": 5, "title": "A Way Out", "verse": [65, 2], "prompt": "When has taqwa opened an unexpected door for you?"},
-            {"day": 6, "title": "Near to Allah", "verse": [49, 13], "prompt": "What makes someone truly honorable in Allah's sight?"},
-            {"day": 7, "title": "Gardens Beneath", "verse": [3, 133], "prompt": "What does the reward of taqwa mean for your daily motivation?"},
-        ],
-    },
-    {
-        "id": "morning_routine_5",
-        "title": "5-Day Morning Barakah",
-        "description": "Start each morning with a powerful verse and intention. Designed to be done right after Fajr. Goal: establish a spiritually productive morning routine anchored in the Quran.",
-        "duration_days": 5,
-        "category": "Worship",
-        "days": [
-            {"day": 1, "title": "Dawn Witness", "verse": [17, 78], "prompt": "What intention will you set for today right now?"},
-            {"day": 2, "title": "The Early Hours", "verse": [73, 6], "prompt": "What distraction can you eliminate from your morning?"},
-            {"day": 3, "title": "Begin with Bismillah", "verse": [96, 1], "prompt": "What if you started every single action today with 'In the name of Allah'?"},
-            {"day": 4, "title": "Gratitude at Dawn", "verse": [14, 7], "prompt": "Name five blessings before you check your phone."},
-            {"day": 5, "title": "By the Morning Light", "verse": [93, 1], "prompt": "What does the oath 'By the morning light' tell you about new beginnings?"},
-        ],
-    },
-    {
-        "id": "sincerity_5",
-        "title": "5-Day Ikhlas (Sincerity) Purifier",
-        "description": "The hidden battle of intention — doing things for Allah vs. for approval, ego, or habit. This plan strips away pretense. Goal: purify the intention behind one regular action you do on autopilot.",
-        "duration_days": 5,
-        "category": "Spiritual Growth",
-        "days": [
-            {"day": 1, "title": "For Allah Alone", "verse": [98, 5], "prompt": "Which act of worship feels most 'automatic'? Can you renew its intention?"},
-            {"day": 2, "title": "The Hidden Charity", "verse": [2, 271], "prompt": "When was the last time you did good with zero expectation of recognition?"},
-            {"day": 3, "title": "Showing Off Destroys", "verse": [2, 264], "prompt": "Where in your life might riyaa (showing off) be creeping in?"},
-            {"day": 4, "title": "Actions by Intentions", "verse": [6, 162], "prompt": "If only Allah saw your actions, would you still do them the same way?"},
-            {"day": 5, "title": "The Pure Heart", "verse": [26, 89], "prompt": "What does arriving before Allah with a sound heart mean to you?"},
-        ],
-    },
-    {
-        "id": "salah_revival_7",
-        "title": "7-Day Salah Revival",
-        "description": "You pray, but do you feel it? This plan takes you inside each element of prayer — from the opening takbir to the final salam. Goal: transform at least one daily prayer from routine to truly present.",
-        "duration_days": 7,
-        "category": "Worship",
-        "days": [
-            {"day": 1, "title": "The Call to Succeed", "verse": [23, 1], "prompt": "Rate your khushu (presence) in prayer today. What distracts you?"},
-            {"day": 2, "title": "Standing Before Allah", "verse": [2, 238], "prompt": "What if you treated each prayer as a private meeting with the King?"},
-            {"day": 3, "title": "The Weight of Al-Fatiha", "verse": [1, 5], "prompt": "'You alone we worship, You alone we ask for help.' Is this really true in your life?"},
-            {"day": 4, "title": "Bowing in Humility", "verse": [22, 77], "prompt": "When you bow, what are you surrendering?"},
-            {"day": 5, "title": "The Closest Point", "verse": [96, 19], "prompt": "In sujood, you're closest to Allah. What do you say?"},
-            {"day": 6, "title": "Prayer Through Difficulty", "verse": [2, 45], "prompt": "When has prayer been your refuge during a hard time?"},
-            {"day": 7, "title": "Prayer Prevents", "verse": [29, 45], "prompt": "How has consistent prayer changed your behavior outside of prayer?"},
-        ],
-    },
-    {
-        "id": "nature_signs_5",
-        "title": "5-Day Signs in Nature",
-        "description": "The Quran constantly points to nature as evidence of the Divine — mountains, oceans, bees, stars. This plan trains your eye to see Allah's signs everywhere. Goal: develop the habit of reflecting on creation daily.",
-        "duration_days": 5,
-        "category": "Knowledge",
-        "days": [
-            {"day": 1, "title": "The Heavens and Earth", "verse": [3, 190], "prompt": "Step outside. What in nature catches your attention as a sign?"},
-            {"day": 2, "title": "Water of Life", "verse": [21, 30], "prompt": "Every living thing is from water. How does this connect you to creation?"},
-            {"day": 3, "title": "The Mountains Stand", "verse": [78, 7], "prompt": "What in nature makes you feel small — in the most awe-inspiring way?"},
-            {"day": 4, "title": "The Bee's Inspiration", "verse": [16, 68], "prompt": "Allah inspired the bee. What has Allah inspired in you?"},
-            {"day": 5, "title": "Stars as Guides", "verse": [6, 97], "prompt": "The stars guide physically. What guides you spiritually?"},
-        ],
-    },
-    {
-        "id": "tongue_control_5",
-        "title": "5-Day Guarding the Tongue",
-        "description": "Gossip, lies, harsh words — the tongue is our most dangerous tool. This plan provides Quranic guardrails for speech. Goal: go one full day without saying anything you'd regret.",
-        "duration_days": 5,
-        "category": "Character",
-        "days": [
-            {"day": 1, "title": "Every Word Recorded", "verse": [50, 18], "prompt": "If every word you spoke today was played back, what would change?"},
-            {"day": 2, "title": "The Best Words", "verse": [17, 53], "prompt": "What's one conversation you can improve with gentler words?"},
-            {"day": 3, "title": "No Backbiting", "verse": [49, 12], "prompt": "When are you most tempted to speak about others? What triggers it?"},
-            {"day": 4, "title": "Truth Always", "verse": [33, 70], "prompt": "Where do 'small lies' or exaggerations creep into your speech?"},
-            {"day": 5, "title": "Silence is Golden", "verse": [23, 3], "prompt": "What unnecessary conversations could you drop this week?"},
-        ],
-    },
-    {
-        "id": "leadership_7",
-        "title": "7-Day Quranic Leadership",
-        "description": "Whether you lead a team, a family, or just yourself — the Quran's leadership principles are timeless. From Dhul-Qarnayn to Sulayman. Goal: identify and strengthen one leadership quality this week.",
-        "duration_days": 7,
-        "category": "Character",
-        "days": [
-            {"day": 1, "title": "The Khalifah Mandate", "verse": [2, 30], "prompt": "You are a steward on earth. What are you stewarding?"},
-            {"day": 2, "title": "Consult Others", "verse": [3, 159], "prompt": "When did consulting others lead to a better decision?"},
-            {"day": 3, "title": "Justice Even Against Yourself", "verse": [4, 135], "prompt": "Can you name a time you chose fairness over self-interest?"},
-            {"day": 4, "title": "Sulayman's Gratitude", "verse": [27, 19], "prompt": "How do you use your gifts in service to others?"},
-            {"day": 5, "title": "Dhul-Qarnayn's Humility", "verse": [18, 95], "prompt": "What's the difference between power and authority?"},
-            {"day": 6, "title": "Musa and Teamwork", "verse": [20, 29], "prompt": "Who is your 'Harun' — the person who strengthens your mission?"},
-            {"day": 7, "title": "Servant Leadership", "verse": [5, 2], "prompt": "How can you lead by serving others this week?"},
-        ],
-    },
-]
 
 
 @app.route("/reading-plans", methods=["GET"])
@@ -6941,6 +6651,8 @@ def list_reading_plans():
             "description": plan["description"],
             "duration_days": plan["duration_days"],
             "category": plan["category"],
+            "difficulty": plan.get("difficulty", "beginner"),
+            "tags": plan.get("tags", []),
         })
     return jsonify({"plans": result}), 200
 
@@ -6968,8 +6680,13 @@ def get_reading_plan(plan_id):
         "id": plan["id"],
         "title": plan["title"],
         "description": plan["description"],
+        "overview": plan.get("overview", ""),
+        "outcomes": plan.get("outcomes", []),
         "duration_days": plan["duration_days"],
         "category": plan["category"],
+        "difficulty": plan.get("difficulty", "beginner"),
+        "next_recommended": plan.get("next_recommended", ""),
+        "tags": plan.get("tags", []),
         "days": days,
     }), 200
 

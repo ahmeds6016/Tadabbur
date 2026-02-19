@@ -1231,7 +1231,10 @@ def format_scholarly_excerpts_for_prompt(resolved_data):
         parts.append(f"--- EXCERPT {i}: {excerpt['source']} ---")
         if excerpt.get("title"):
             parts.append(f"Section: {excerpt['title']}")
-        parts.append(excerpt["text"])
+        # Sanitize: replace double quotes with single quotes to prevent Gemini
+        # from echoing them unescaped into JSON string values
+        sanitized_text = excerpt["text"].replace('"', "'") if excerpt.get("text") else ""
+        parts.append(sanitized_text)
         parts.append("")
 
     return "\n".join(parts)
