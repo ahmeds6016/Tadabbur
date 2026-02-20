@@ -63,6 +63,13 @@ const getContextLabel = (annotation) => {
   return 'General Reflection';
 };
 
+const getVerseQuery = (annotation) => {
+  if (annotation.verseRef) return annotation.verseRef;
+  if (annotation.surah && annotation.verse) return `${annotation.surah}:${annotation.verse}`;
+  if (annotation.query_context) return annotation.query_context;
+  return null;
+};
+
 export default function ReflectionDetailPanel({ annotation, isOpen, onClose, onEdit, onDelete }) {
   const typeConfig = annotation ? getTypeConfig(annotation.type) : {};
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -210,11 +217,38 @@ export default function ReflectionDetailPanel({ annotation, isOpen, onClose, onE
              annotation.reflection_type === 'highlight' ? 'Highlighted Text' : 'Context'}
           </div>
           <div style={{
-            fontSize: '0.95rem',
-            color: 'var(--primary-teal, #0D9488)',
-            fontWeight: '600'
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '12px'
           }}>
-            {getContextLabel(annotation)}
+            <div style={{
+              fontSize: '0.95rem',
+              color: 'var(--primary-teal, #0D9488)',
+              fontWeight: '600'
+            }}>
+              {getContextLabel(annotation)}
+            </div>
+            {getVerseQuery(annotation) && (
+              <button
+                onClick={() => { window.location.href = `/?query=${encodeURIComponent(getVerseQuery(annotation))}`; }}
+                style={{
+                  flexShrink: 0,
+                  padding: '6px 14px',
+                  background: 'var(--primary-teal, #0D9488)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '0.78rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'opacity 0.15s',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                View Verse
+              </button>
+            )}
           </div>
         </div>
 
@@ -240,45 +274,53 @@ export default function ReflectionDetailPanel({ annotation, isOpen, onClose, onE
           </div>
         </div>
 
-        {/* Tags */}
-        {annotation.tags && annotation.tags.length > 0 && (
-          <div
-            style={{
-              padding: '16px 24px',
-              borderTop: '1px solid var(--border-light, #E5E7EB)',
-              background: 'white',
-              flexShrink: 0
-            }}
-          >
-            <div style={{
-              fontSize: '0.75rem',
-              color: 'var(--text-muted, #6B7280)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-              marginBottom: '8px'
-            }}>
-              Tags
-            </div>
+        {/* Tags — always visible */}
+        <div
+          style={{
+            padding: '16px 24px',
+            borderTop: '1px solid var(--border-light, #E5E7EB)',
+            background: 'white',
+            flexShrink: 0
+          }}
+        >
+          <div style={{
+            fontSize: '0.75rem',
+            color: 'var(--text-muted, #6B7280)',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+            marginBottom: '8px'
+          }}>
+            Tags
+          </div>
+          {annotation.tags && annotation.tags.length > 0 ? (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
               {annotation.tags.map((tag) => (
                 <span
                   key={tag}
                   style={{
-                    background: 'var(--cream, #FAF6F0)',
+                    background: 'rgba(13, 148, 136, 0.08)',
                     color: 'var(--primary-teal, #0D9488)',
                     padding: '6px 12px',
                     borderRadius: '16px',
                     fontSize: '0.8rem',
-                    fontWeight: '500',
-                    border: '1px solid var(--border-light, #E5E7EB)'
+                    fontWeight: '600',
+                    border: '1px solid rgba(13, 148, 136, 0.15)'
                   }}
                 >
                   #{tag}
                 </span>
               ))}
             </div>
-          </div>
-        )}
+          ) : (
+            <div style={{
+              fontSize: '0.8rem',
+              color: '#9ca3af',
+              fontStyle: 'italic'
+            }}>
+              No tags — edit this reflection to add tags
+            </div>
+          )}
+        </div>
 
         {/* Footer */}
         <div

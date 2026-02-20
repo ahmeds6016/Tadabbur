@@ -458,7 +458,7 @@ export default function SurahVersePicker({ onSelect, initialSurah = null, initia
               e.currentTarget.style.color = 'var(--primary-teal, #0d9488)';
             }}
           >
-            {item.label}
+            {item.label} [{item.query}]
           </button>
         ))}
       </div>

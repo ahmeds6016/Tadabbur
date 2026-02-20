@@ -260,10 +260,10 @@ export default function MyReflectionsPage() {
         ))}
       </div>
 
-      {/* Tag filter row */}
-      {allTags.length > 0 && (
-        <div className="tag-row">
-          {allTags.slice(0, 8).map(tag => (
+      {/* Tag filter row — always visible */}
+      <div className="tag-row">
+        {allTags.length > 0 ? (
+          allTags.map(tag => (
             <button
               key={tag}
               onClick={() => handleTagFilter(tag)}
@@ -271,9 +271,11 @@ export default function MyReflectionsPage() {
             >
               #{tag}
             </button>
-          ))}
-        </div>
-      )}
+          ))
+        ) : (
+          <span className="tag-hint">Add tags when reflecting to filter by them</span>
+        )}
+      </div>
 
       {/* Active filter indicator */}
       {hasActiveFilters && (
@@ -301,16 +303,21 @@ export default function MyReflectionsPage() {
             const typeConfig = getTypeConfig(annotation.type);
             const IconComp = typeConfig.iconComponent;
 
-            // Build context label
+            // Build context label and verse query for navigation
             let contextLabel = '';
+            let verseQuery = null;
             if (annotation.reflection_type === 'verse' && annotation.verseRef) {
               contextLabel = annotation.verseRef;
+              verseQuery = annotation.verseRef;
             } else if (annotation.reflection_type === 'section' && annotation.section_name) {
               contextLabel = annotation.section_name;
+              verseQuery = annotation.verseRef || annotation.query_context || null;
             } else if (annotation.reflection_type === 'general') {
               contextLabel = annotation.query_context || 'General';
+              verseQuery = annotation.query_context || null;
             } else if (annotation.reflection_type === 'highlight') {
               contextLabel = 'Highlight';
+              verseQuery = annotation.verseRef || annotation.query_context || null;
             }
 
             return (
@@ -328,9 +335,21 @@ export default function MyReflectionsPage() {
                   <span className="card-date">{formatDate(annotation.createdAt)}</span>
                 </div>
 
-                {/* Context */}
+                {/* Context — tappable to navigate to verse */}
                 {contextLabel && (
-                  <div className="card-context">{contextLabel}</div>
+                  <div className="card-context" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    {verseQuery ? (
+                      <a
+                        href={`/?query=${encodeURIComponent(verseQuery)}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="card-context-link"
+                      >
+                        {contextLabel}
+                      </a>
+                    ) : (
+                      <span>{contextLabel}</span>
+                    )}
+                  </div>
                 )}
 
                 {/* Content preview */}
@@ -496,6 +515,13 @@ export default function MyReflectionsPage() {
           color: white;
         }
 
+        .tag-hint {
+          font-size: 0.72rem;
+          color: #9ca3af;
+          font-style: italic;
+          padding: 4px 0;
+        }
+
         .clear-filters {
           display: block;
           background: none;
@@ -578,6 +604,17 @@ export default function MyReflectionsPage() {
           margin-bottom: 4px;
         }
 
+        .card-context-link {
+          color: var(--primary-teal, #0d9488);
+          text-decoration: none;
+          border-bottom: 1px dashed var(--primary-teal, #0d9488);
+          padding-bottom: 1px;
+        }
+
+        .card-context-link:active {
+          opacity: 0.7;
+        }
+
         .card-content {
           font-size: 0.88rem;
           color: #4b5563;
@@ -597,16 +634,18 @@ export default function MyReflectionsPage() {
         }
 
         .card-tag {
-          font-size: 0.68rem;
-          color: #6b7280;
-          background: #f3f4f6;
-          padding: 2px 8px;
-          border-radius: 8px;
+          font-size: 0.7rem;
+          color: var(--primary-teal, #0d9488);
+          background: rgba(13, 148, 136, 0.08);
+          padding: 3px 10px;
+          border-radius: 10px;
           cursor: pointer;
+          font-weight: 500;
+          border: 1px solid rgba(13, 148, 136, 0.15);
         }
 
         .card-tag:active {
-          background: #e5e7eb;
+          background: rgba(13, 148, 136, 0.18);
         }
 
         @media (min-width: 1024px) {

@@ -2,8 +2,6 @@
 import { useState, useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import Link from 'next/link';
-import ReactMarkdown from 'react-markdown';
-import remarkBreaks from 'remark-breaks';
 import { auth } from '../lib/firebase';
 import { BACKEND_URL } from '../lib/config';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -15,7 +13,6 @@ export default function SavedSearchesPage() {
   const [folders, setFolders] = useState([]);
   const [selectedFolder, setSelectedFolder] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [expandedId, setExpandedId] = useState(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -224,17 +221,11 @@ export default function SavedSearchesPage() {
             {saved.map((item) => (
               <div
                 key={item.id}
-                onClick={(e) => {
-                  // Don't expand if clicking the delete button
-                  if (e.target.closest('button')) return;
-                  setExpandedId(expandedId === item.id ? null : item.id);
-                }}
                 style={{
                   padding: '16px',
                   background: 'white',
                   borderRadius: '12px',
                   border: '1px solid var(--border-light)',
-                  cursor: 'pointer',
                   position: 'relative'
                 }}
                 className="saved-item"
@@ -270,114 +261,29 @@ export default function SavedSearchesPage() {
                   </button>
                 </div>
 
-                <div style={{ fontSize: '0.95rem', color: '#555', marginBottom: expandedId === item.id ? '12px' : '8px' }}>
+                <div style={{ fontSize: '0.95rem', color: '#555', marginBottom: '8px' }}>
                   {item.responseSnippet}...
                 </div>
 
-                {/* Visual indicator for expandable content */}
-                {expandedId !== item.id && (
-                  <div style={{
-                    textAlign: 'center',
-                    color: 'var(--primary-teal)',
-                    fontSize: '0.85rem',
-                    fontWeight: '600',
-                    marginTop: '8px'
-                  }}>
-                    Click to view full answer ▼
-                  </div>
-                )}
-
-                {expandedId === item.id ? (
-                  <div>
-                    <div style={{
-                      textAlign: 'center',
-                      color: '#999',
+                {/* Link to view the verse */}
+                {item.query && (
+                  <a
+                    href={`/?query=${encodeURIComponent(item.query)}`}
+                    onClick={(e) => e.stopPropagation()}
+                    style={{
+                      display: 'inline-block',
+                      marginTop: '8px',
+                      color: 'var(--primary-teal)',
                       fontSize: '0.85rem',
-                      marginBottom: '16px',
-                      borderTop: '1px solid #e5e7eb',
-                      paddingTop: '12px'
-                    }}>
-                      Click anywhere to collapse ▲
-                    </div>
-                    {/* Display full response if available */}
-                    {item.fullResponse ? (
-                      <div style={{ padding: '16px', background: 'var(--cream)', borderRadius: '12px' }}>
-                        <div className="markdown-content">
-                          {/* Verses */}
-                          {item.fullResponse.verses && item.fullResponse.verses.length > 0 && (
-                            <div style={{ marginBottom: '24px' }}>
-                              <h3 style={{ color: 'var(--primary-teal)', marginBottom: '12px' }}>Relevant Verses</h3>
-                              {item.fullResponse.verses.map((verse, idx) => (
-                                <div key={idx} style={{ marginBottom: '16px', padding: '12px', background: 'white', borderRadius: '8px' }}>
-                                  <p style={{ fontWeight: '700', color: 'var(--gold)' }}>
-                                    Surah {verse.surah}, Verse {verse.verse_number}
-                                  </p>
-                                  {verse.arabic_text && verse.arabic_text !== 'Not available' && (
-                                    <p style={{ fontSize: '1.3rem', margin: '8px 0', direction: 'rtl', fontFamily: 'Traditional Arabic, serif' }}>
-                                      {verse.arabic_text}
-                                    </p>
-                                  )}
-                                  <p style={{ fontStyle: 'italic', color: '#555' }}>
-                                    &ldquo;{verse.text_saheeh_international}&rdquo;
-                                  </p>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-
-                          {/* Tafsir Explanations */}
-                          {item.fullResponse.tafsir_explanations && item.fullResponse.tafsir_explanations.length > 0 && (
-                            <div style={{ marginBottom: '24px' }}>
-                              <h3 style={{ color: 'var(--primary-teal)', marginBottom: '12px' }}>Tafsir Explanations</h3>
-                              {item.fullResponse.tafsir_explanations.map((tafsir, idx) => (
-                                <div key={idx} style={{ marginBottom: '16px', padding: '12px', background: 'white', borderRadius: '8px' }}>
-                                  <h4 style={{ color: 'var(--gold)', marginBottom: '8px' }}>{tafsir.source}</h4>
-                                  <ReactMarkdown remarkPlugins={[remarkBreaks]}>{tafsir.explanation}</ReactMarkdown>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-
-                          {/* Cross References */}
-                          {item.fullResponse.cross_references && item.fullResponse.cross_references.length > 0 && (
-                            <div style={{ marginBottom: '24px' }}>
-                              <h3 style={{ color: 'var(--primary-teal)', marginBottom: '12px' }}>Related Verses</h3>
-                              {item.fullResponse.cross_references.map((ref, idx) => (
-                                <div key={idx} style={{ padding: '8px 12px', background: 'white', borderRadius: '8px', marginBottom: '8px' }}>
-                                  <strong>{ref.verse}</strong>: {ref.relevance}
-                                </div>
-                              ))}
-                            </div>
-                          )}
-
-                          {/* Lessons & Applications */}
-                          {item.fullResponse.lessons_practical_applications && item.fullResponse.lessons_practical_applications.length > 0 && (
-                            <div style={{ marginBottom: '24px' }}>
-                              <h3 style={{ color: 'var(--primary-teal)', marginBottom: '12px' }}>Lessons & Practical Applications</h3>
-                              <ul style={{ paddingLeft: '20px' }}>
-                                {item.fullResponse.lessons_practical_applications.map((lesson, idx) => (
-                                  <li key={idx} style={{ marginBottom: '8px', color: '#555' }}>{lesson.point}</li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-
-                          {/* Summary */}
-                          {item.fullResponse.summary && (
-                            <div style={{ padding: '12px', background: 'white', borderRadius: '8px' }}>
-                              <h3 style={{ color: 'var(--primary-teal)', marginBottom: '8px' }}>Summary</h3>
-                              <p>{item.fullResponse.summary}</p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ) : (
-                      <div style={{ padding: '16px', background: '#fff3cd', borderRadius: '12px', color: '#856404' }}>
-                        Full response data not available for this saved answer. Only the snippet was saved.
-                      </div>
-                    )}
-                  </div>
-                ) : null}
+                      fontWeight: '600',
+                      textDecoration: 'none',
+                      borderBottom: '1px dashed var(--primary-teal)',
+                      paddingBottom: '1px'
+                    }}
+                  >
+                    View {item.query.includes('-') ? 'ayat' : 'ayah'} [{item.query}]
+                  </a>
+                )}
               </div>
             ))}
           </div>

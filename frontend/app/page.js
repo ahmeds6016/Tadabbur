@@ -1628,7 +1628,7 @@ function MainApp({ user, userProfile, onResetProfile }) {
         try {
           await navigator.share({
             title: `Tadabbur — ${query}`,
-            text: 'A deeper understanding of this ayah.',
+            text: `A deeper understanding of ${query.includes('-') ? 'these ayat' : 'this ayah'} [${query}].`,
             url: shareUrl
           });
 

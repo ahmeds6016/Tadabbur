@@ -394,7 +394,7 @@ export default function SharedPage() {
             Shared from <strong>Tadabbur</strong>
           </p>
           <p style={{ margin: '8px 0 0 0', fontSize: '0.85rem', color: '#888' }}>
-            A deeper understanding of this ayah.
+            A deeper understanding of {query?.includes('-') ? 'these ayat' : 'this ayah'}{query ? ` [${query}]` : ''}.
           </p>
         </div>
       </div>
