@@ -34,10 +34,8 @@ from google.cloud import secretmanager
 from google.cloud import firestore as gcp_firestore
 from google.cloud.firestore import FieldFilter  # For new query syntax
 
-# Imports for RAG and Query Expansion
+# Imports for Vertex AI
 import vertexai
-from vertexai.language_models import TextEmbeddingModel
-from google.cloud import aiplatform
 from google.cloud import storage
 from utils.text_cleaning import sanitize_heading_format
 from services.source_service import (
@@ -70,40 +68,9 @@ GEMINI_MODEL_ID = os.environ.get("GEMINI_MODEL_ID", "gemini-2.5-flash")  # Upgra
 FIREBASE_SECRET_FULL_PATH = os.environ.get("FIREBASE_SECRET_FULL_PATH")
 REFLECTION_ENCRYPTION_SECRET = os.environ.get("REFLECTION_ENCRYPTION_SECRET", "")
 
-# UPDATED: New sliding window vector index configuration (1536 dimensions)
-INDEX_ENDPOINT_ID = os.environ.get("INDEX_ENDPOINT_ID", "3478417184655409152")
-DEPLOYED_INDEX_ID = os.environ.get("DEPLOYED_INDEX_ID", "deployed_tafsir_sliding_1760263278167")
-VECTOR_INDEX_ID = os.environ.get("VECTOR_INDEX_ID", "5746296256385253376")
-
 GCS_BUCKET_NAME = os.environ.get("GCS_BUCKET_NAME", "tafsir-simplified-sources")
 
-# UPDATED: Embedding configuration to match new index
-EMBEDDING_MODEL = "gemini-embedding-001"
-EMBEDDING_DIMENSION = 1536  # Changed from 1024 to 1536
-
-# --- RAG CONFIGURATION ---
-# Tuned for quality + latency without reranking
-RAG_OPTIMIZED_CONFIG = {
-    'tafsir': {
-        'num_neighbors': 8,           # Retrieve more for better coverage (was 15 for reranking)
-        'distance_threshold': 0.7,    # Filter out low-quality matches (cosine similarity)
-        'min_chunks': 3,              # Minimum chunks to return
-        'max_chunks': 6,              # Maximum chunks to avoid overwhelming
-        'deduplicate': True,          # Remove duplicate verse references
-    },
-    'semantic': {
-        'num_neighbors': 10,          # More for exploratory queries
-        'distance_threshold': 0.65,   # Slightly more permissive for exploration
-        'min_chunks': 3,
-        'max_chunks': 8,
-        'deduplicate': True,
-    }
-}
-
 # Verse limit per response — uniform across all personas.
-# The dynamic range map (verse_range_map.json) already handles per-verse
-# token budgeting.  Persona depth affects content DENSITY, not verse count,
-# so a separate persona-based limit is counterproductive.
 VERSE_LIMIT = 5
 
 # Source coverage information
@@ -111,8 +78,8 @@ VERSE_LIMIT = 5
 # Al-Qurtubi: Surahs 1-4 (up to Surah 4, Verse 22)
 
 # --- Startup Validation (Fail Fast) ---
-if not FIREBASE_SECRET_FULL_PATH or not INDEX_ENDPOINT_ID or not DEPLOYED_INDEX_ID or not GCS_BUCKET_NAME:
-    raise ValueError("CRITICAL STARTUP ERROR: Missing required RAG environment variables")
+if not FIREBASE_SECRET_FULL_PATH or not GCS_BUCKET_NAME:
+    raise ValueError("CRITICAL STARTUP ERROR: Missing required environment variables")
 
 # --- Helper Functions ---
 def safe_get_nested(data: Dict[str, Any], *keys: str, default: Any = None) -> Any:
@@ -141,11 +108,10 @@ def safe_get_nested(data: Dict[str, Any], *keys: str, default: Any = None) -> An
 # Global variables - UPDATED for dual database setup
 users_db = None      # Firebase Admin SDK -> (default) database for users/auth
 quran_db = None      # Google Cloud client -> tafsir-db database for Quran texts
-TAFSIR_CHUNKS = {}
-CHUNK_SOURCE_MAP = {}  # Maps chunk_id to source name
-VERSE_METADATA = {}  # NEW: Stores structured metadata for direct queries
+TAFSIR_CHUNKS = {}   # Flattened text for direct verse lookup
+VERSE_METADATA = {}  # Structured metadata for direct queries
 RESPONSE_CACHE = {}  # In-memory cache
-SCHOLARLY_PIPELINE_VERSION = "9.0"  # Bump: plans revamp (36 plans), ibn-kathir/al-qurtubi source_connections, input sanitization
+SCHOLARLY_PIPELINE_VERSION = "10.0"  # Bump: remove semantic/vector search dead code, fix heading format regex, clean debug endpoints
 USER_RATE_LIMITS = defaultdict(list)  # Rate limiting
 ANALYTICS = defaultdict(int)  # Usage analytics
 
@@ -932,58 +898,6 @@ NAMED_VERSES = {
     'verse of ant': (27, 18),
 }
 
-# Metadata type keywords - COMPREHENSIVE COVERAGE
-METADATA_KEYWORDS = {
-    'hadith': [
-        'hadith', 'narration', 'narrated', 'reported', 'transmitted',
-        'prophetic tradition', 'prophet said', 'tradition', 'sunnah',
-        'bukhari', 'muslim', 'abu dawud', 'tirmidhi', 'narrator'
-    ],
-    'scholar_citations': [
-        'scholar', 'scholars', 'citation', 'citations', 'cited', 'cite',
-        'quotes', 'quoted', 'quote', 'says', 'said', 'according to',
-        'opinion', 'opinions', 'view', 'views', 'mentioned', 'mentions',
-        'states', 'stated', 'explains', 'explained', 'commentator',
-        'commentators', 'interpreter', 'mufassir', 'ulama', 'imam'
-    ],
-    'phrase_analysis': [
-        'phrase', 'phrases', 'analysis', 'analyze', 'linguistic',
-        'word', 'words', 'breakdown', 'phrase-by-phrase', 'word-by-word',
-        'meaning', 'means', 'interpretation', 'translate', 'translation',
-        'explain phrase', 'what does', 'definition'
-    ],
-    'topics': [
-        'topic', 'topics', 'themes', 'theme', 'subject', 'subjects',
-        'discusses', 'discuss', 'covers', 'cover', 'about', 'concerning',
-        'regarding', 'main points', 'key points', 'summary'
-    ],
-    'cross_references': [
-        'related', 'related verses', 'cross reference', 'cross references',
-        'similar verses', 'similar', 'see also', 'connections', 'connected',
-        'other verses', 'parallel', 'compare', 'comparison', 'like this',
-        'elsewhere', 'same topic'
-    ],
-    'historical_context': [
-        'context', 'historical', 'history', 'background', 'when',
-        'why revealed', 'revelation', 'occasion', 'circumstances',
-        'situation', 'event', 'happened', 'story', 'narrative',
-        'time period', 'era', 'during', 'asbab al-nuzul', 'reason for revelation'
-    ],
-    'linguistic_analysis': [
-        'linguistic', 'language', 'grammar', 'grammatical', 'arabic',
-        'root', 'roots', 'etymology', 'meaning', 'derivation', 'derived',
-        'structure', 'syntax', 'morphology', 'conjugation', 'verb form',
-        'noun', 'particle', 'i\'rab', 'nahw', 'sarf'
-    ],
-    'legal_rulings': [
-        'ruling', 'rulings', 'legal', 'fiqh', 'law', 'laws',
-        'halal', 'haram', 'permissible', 'forbidden', 'allowed',
-        'prohibited', 'jurisprudence', 'judgment', 'decree', 'fatwa',
-        'mandatory', 'obligatory', 'recommended', 'disliked', 'makruh',
-        'mubah', 'wajib', 'sunnah', 'mustahabb'
-    ]
-}
-
 def normalize_query_text(query: str) -> str:
     """Normalize query for comprehensive pattern matching"""
     query = query.lower().strip()
@@ -1213,102 +1127,33 @@ def extract_verse_range(query: str) -> Optional[Tuple[int, int, int]]:
 
     return None
 
-def detect_metadata_type(query: str) -> Optional[str]:
-    """Detect which metadata type is requested"""
-    query_normalized = normalize_query_text(query)
-
-    for metadata_type, keywords in METADATA_KEYWORDS.items():
-        if any(keyword in query_normalized for keyword in keywords):
-            return metadata_type
-
-    return None
-
 def classify_query_enhanced(query: str) -> Dict[str, Any]:
     """
-    Enhanced query classification with confidence scoring.
+    Query classification — extracts verse reference from query.
 
     Returns dict with:
-    - query_type: 'metadata' | 'direct_verse' | 'semantic'
+    - query_type: 'direct_verse' (only route)
     - confidence: 0.0-1.0
     - verse_ref: (surah, verse) or None
-    - metadata_type: type of metadata or None
     """
     query_normalized = normalize_query_text(query)
     verse_ref = extract_verse_reference_enhanced(query)
 
-    # Check for metadata request
-    metadata_type = detect_metadata_type(query)
-
-    # Classification logic
-    if verse_ref and metadata_type:
-        # Explicit metadata query: "hadith in 2:255"
-        return {
-            'query_type': 'metadata',
-            'confidence': 0.9,
-            'verse_ref': verse_ref,
-            'metadata_type': metadata_type
-        }
-
-    elif verse_ref:
-        # Has verse reference, check if it's direct or semantic
-        word_count = len(query_normalized.split())
-
-        # CRITICAL FIX: Also check for verse ranges even if not pure numeric
-        # This catches "Surah Al-Kahf verse 1-10" type queries
+    if verse_ref:
         verse_range = extract_verse_range(query)
         if verse_range:
-            # Query has a verse range, classify as direct_verse
-            return {
-                'query_type': 'direct_verse',
-                'confidence': 0.95,
-                'verse_ref': verse_ref,
-                'metadata_type': None
-            }
+            return {'query_type': 'direct_verse', 'confidence': 0.95, 'verse_ref': verse_ref}
 
-        # Pure reference like "2:255" or verse range like "2:255-256"
         if re.fullmatch(r'\d{1,3}:\d{1,3}(?:-\d{1,3})?', query_normalized.strip()):
-            return {
-                'query_type': 'direct_verse',
-                'confidence': 0.95,
-                'verse_ref': verse_ref,
-                'metadata_type': None
-            }
+            return {'query_type': 'direct_verse', 'confidence': 0.95, 'verse_ref': verse_ref}
 
-        # Named verse like "ayat al kursi"
         if any(name in query_normalized for name in NAMED_VERSES.keys()):
-            return {
-                'query_type': 'direct_verse',
-                'confidence': 0.9,
-                'verse_ref': verse_ref,
-                'metadata_type': None
-            }
+            return {'query_type': 'direct_verse', 'confidence': 0.9, 'verse_ref': verse_ref}
 
-        # Short query with verse ref
-        if word_count < 10:
-            simple_verbs = ['show', 'read', 'give', 'tell', 'display', 'get']
-            if any(verb in query_normalized for verb in simple_verbs):
-                return {
-                    'query_type': 'direct_verse',
-                    'confidence': 0.8,
-                    'verse_ref': verse_ref,
-                    'metadata_type': None
-                }
+        return {'query_type': 'direct_verse', 'confidence': 0.7, 'verse_ref': verse_ref}
 
-        # Longer query with verse - likely semantic
-        return {
-            'query_type': 'semantic',
-            'confidence': 0.7,
-            'verse_ref': verse_ref,
-            'metadata_type': None
-        }
-
-    # No verse reference - semantic search
-    return {
-        'query_type': 'semantic',
-        'confidence': 1.0,
-        'verse_ref': None,
-        'metadata_type': None
-    }
+    # No verse reference — should not happen (frontend validates)
+    return {'query_type': 'direct_verse', 'confidence': 0.0, 'verse_ref': None}
 
 
 # --- Query Normalization Functions ---
@@ -1870,7 +1715,7 @@ def load_chunks_from_verse_files_enhanced():
     Enhanced loader: Store BOTH flattened text AND structured metadata.
     This replaces your existing load_chunks_from_verse_files function.
     """
-    global TAFSIR_CHUNKS, CHUNK_SOURCE_MAP, VERSE_METADATA
+    global TAFSIR_CHUNKS, VERSE_METADATA
 
     try:
         print(f"INFO: Initializing enhanced dual-storage system")
@@ -1881,6 +1726,7 @@ def load_chunks_from_verse_files_enhanced():
             ("processed/ibnkathir-Fatiha-Tawbah_fixed.json", "ibn-kathir"),
             ("processed/ibnkathir-Yunus-Ankabut_FINAL_fixed.json", "ibn-kathir"),
             ("processed/ibnkathir-Rum-Nas_FINAL_fixed.json", "ibn-kathir"),
+            ("processed/al-Qurtubi_Fatiha.json", "al-qurtubi"),
             ("processed/al-Qurtubi Vol. 1_FINAL_fixed.json", "al-qurtubi"),
             ("processed/al-Qurtubi Vol. 2_FINAL_fixed.json", "al-qurtubi"),
             ("processed/al-Qurtubi Vol. 3_fixed.json", "al-qurtubi"),
@@ -2006,11 +1852,10 @@ def load_chunks_from_verse_files_enhanced():
             chunk_id = f"{source}:{surah}:{verse_num}"
 
             if full_text.strip():
-                # STORAGE 1: Flattened text for vector search (EXISTING)
+                # STORAGE 1: Flattened text for direct chunk lookup
                 TAFSIR_CHUNKS[chunk_id] = full_text
-                CHUNK_SOURCE_MAP[chunk_id] = "Ibn Kathir" if source == "ibn-kathir" else "al-Qurtubi"
 
-                # STORAGE 2: Structured metadata for direct queries (NEW)
+                # STORAGE 2: Structured metadata for direct queries
                 # Extract metadata from BOTH structures (Al-Qurtubi flat + Ibn Kathir nested)
 
                 # Initialize aggregated metadata lists
@@ -2402,8 +2247,6 @@ def filter_unavailable_sources(response_json):
     # Update response with filtered explanations
     if filtered_explanations:
         response_json['tafsir_explanations'] = filtered_explanations
-        # DEBUG MARKER: This proves the new code is running
-        response_json['_debug_heading_fix'] = 'v6_newlines_preserved'
     else:
         # If no sources available, set to empty list
         response_json['tafsir_explanations'] = []
@@ -2416,14 +2259,9 @@ def filter_unavailable_sources(response_json):
         response_json['summary'] = sanitize_unavailability_text(sanitized_summary)
 
     if response_json.get('key_points'):
-        # Apply indentation and heading format sanitization
         response_json['key_points'] = [
-            sanitize_heading_format(sanitize_explanation_text(point)) if isinstance(point, str) else point
-            for point in response_json['key_points']
-        ]
-        # Remove unavailability messages from key points
-        response_json['key_points'] = [
-            sanitize_unavailability_text(point) if isinstance(point, str) else point
+            sanitize_unavailability_text(sanitize_heading_format(sanitize_explanation_text(point)))
+            if isinstance(point, str) else point
             for point in response_json['key_points']
         ]
 
@@ -2589,130 +2427,6 @@ def build_direct_verse_response(verse_data: Dict, verse_metadata_list: List[Dict
 # Analytics logging for missing tafsir
 MISSING_TAFSIR_LOG = []
 
-DB_SCHEMA_OVERVIEW = """
-PRECISE DATABASE STRUCTURE FOR TAFSIR SIMPLIFIED:
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-1. VERSE COLLECTION (Firestore: quran_db)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Primary key: (surah: int 1-114, verse_number: int)
-Fields:
-  - arabic_text: string (Arabic Quran text)
-  - text_saheeh_international: string (English translation)
-  - surah_name: string (e.g., "Al-Baqarah")
-  - verse_number: int
-
-Access: get_verse_from_firestore(surah, verse)
-
-Example: get_verse_from_firestore(2, 222) returns verse data
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-2. TAFSIR CHUNKS (In-memory: TAFSIR_CHUNKS dict)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Key format: "{source}:{surah}:{verse}"
-  - source: "ibn-kathir" or "al-qurtubi"
-  - Examples: "ibn-kathir:2:222", "al-qurtubi:2:187"
-
-Value: string (unstructured tafsir commentary text)
-  - Plain text tafsir commentary
-  - May mention hadith, scholars, legal rulings within text
-  - NOT structured as separate metadata fields
-
-CRITICAL CONSTRAINTS:
-- Ibn Kathir: ALL surahs (1-114), ALL verses - COMPLETE COVERAGE
-- Al-Qurtubi: ONLY Surahs 1-4, ONLY up to verse 4:22 - LIMITED COVERAGE
-  * For verse 4:23+: Al-Qurtubi DOES NOT EXIST
-  * For Surahs 5-114: Al-Qurtubi DOES NOT EXIST
-
-Access: TAFSIR_CHUNKS.get(f"ibn-kathir:{surah}:{verse}")
-
-IMPORTANT: Tafsir text is UNSTRUCTURED. Generation LLM extracts:
-- Legal rulings, hadith references, scholar citations from text
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-3. TOPICAL INDEX (Pre-built verse lists)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Topics mapped to verse references:
-- patience/sabr: (2,153), (2,155), (2,177), (3,200), (16,127), (39,10)
-- marriage: (2,187), (2,221), (2,232), (4,1), (4,19), (4,34), (30,21)
-- sexual_ethics: (2,222), (2,223), (4,19), (17,32), (24,30), (24,31)
-- prayer/salah: (2,238), (4,103), (20,14), (29,45)
-- charity/zakat: (2,43), (2,110), (2,177), (9,60), (24,56)
-- justice: (4,58), (4,135), (5,8), (16,90), (57,25)
-- fasting: (2,183), (2,184), (2,185), (2,187)
-- hajj: (2,196), (2,197), (3,97), (5,95), (22,27)
-- wealth: (2,188), (2,275), (4,29), (17,35)
-- family: (4,36), (17,23), (17,24), (31,14)
-- women_rights: (2,228), (4,19), (4,34), (33,35)
-- knowledge: (20,114), (35,28), (39,9), (58,11), (96,1)
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-RETRIEVAL LIMITS:
-- Maximum 5 verses total per response
-- Prioritize quality over quantity
-- Prefer verses with both Ibn Kathir AND Al-Qurtubi when possible
-"""
-
-PLANNING_FEW_SHOT_EXAMPLES = """
-EXAMPLE 1 - Specific Verse Query:
-Query: "Explain verse 2:255"
-{
-  "query_intent": "Detailed explanation of Ayat al-Kursi",
-  "primary_verses": [{"surah": 2, "verse": 255, "reason": "requested verse"}],
-  "contextual_verses": [],
-  "tafsir_sources": ["Ibn Kathir", "Al-Qurtubi"],
-  "include_cross_references": true
-}
-
-EXAMPLE 2 - Fiqh Query:
-Query: "what are the prohibitions within lawful marital intercourse"
-{
-  "query_intent": "Quranic prohibitions in halal intimacy",
-  "primary_verses": [
-    {"surah": 2, "verse": 222, "reason": "menstruation prohibition"},
-    {"surah": 2, "verse": 223, "reason": "lawful boundaries"}
-  ],
-  "contextual_verses": [
-    {"surah": 2, "verse": 187, "reason": "mutual respect"},
-    {"surah": 4, "verse": 19, "reason": "no harm principle"}
-  ],
-  "tafsir_sources": ["Ibn Kathir", "Al-Qurtubi"],
-  "include_cross_references": true
-}
-
-EXAMPLE 3 - Thematic Query:
-Query: "What does Quran say about patience?"
-{
-  "query_intent": "Quranic guidance on sabr",
-  "primary_verses": [
-    {"surah": 2, "verse": 153, "reason": "seek help via patience"},
-    {"surah": 2, "verse": 155, "reason": "testing believers"}
-  ],
-  "contextual_verses": [
-    {"surah": 3, "verse": 200, "reason": "persevere steadfastly"},
-    {"surah": 16, "verse": 127, "reason": "Allah with patient"}
-  ],
-  "tafsir_sources": ["Ibn Kathir"],
-  "include_cross_references": true
-}
-
-EXAMPLE 4 - Al-Qurtubi Constraint (CORRECT):
-Query: "Explain Surah Al-Maidah verse 1"
-{
-  "query_intent": "Explanation of Surah 5:1",
-  "primary_verses": [{"surah": 5, "verse": 1, "reason": "requested verse"}],
-  "contextual_verses": [],
-  "tafsir_sources": ["Ibn Kathir"],
-  "include_cross_references": true
-}
-NOTE: Only Ibn Kathir for Surah 5 (beyond Al-Qurtubi coverage)
-
-EXAMPLE 5 - Avoiding Hallucinations:
-Query: "Surah Al-Baqarah verse 500"
-WRONG: {"primary_verses": [{"surah": 2, "verse": 500}]}
-REASON: Al-Baqarah only has 286 verses - this is hallucination!
-"""
-
 def is_valid_verse_reference(surah, verse):
     """
     Validate verse reference exists in Quran using QURAN_METADATA
@@ -2837,438 +2551,6 @@ def get_tafsir_for_verse(surah, verse, sources=['Ibn Kathir']):
                 log_missing_tafsir(source, surah, verse)
 
     return chunks
-
-def get_verses_by_topic(topic, max_verses=5):
-    """
-    Get verses tagged with specific topic
-
-    Args:
-        topic: Topic name (e.g., "patience", "marriage")
-        max_verses: Maximum verses to return
-
-    Returns:
-        list: List of (surah, verse) tuples
-    """
-    TOPIC_INDEX = {
-        'patience': [(2, 153), (2, 155), (2, 177), (3, 200), (16, 127), (39, 10)],
-        'sabr': [(2, 153), (2, 155), (2, 177), (3, 200), (16, 127), (39, 10)],
-        'marriage': [(2, 187), (2, 221), (2, 232), (4, 1), (4, 19), (30, 21), (4, 34)],
-        'sexual_ethics': [(2, 222), (2, 223), (4, 19), (17, 32), (24, 30), (24, 31), (65, 4)],
-        'prayer': [(2, 238), (4, 103), (20, 14), (29, 45), (107, 4)],
-        'salah': [(2, 238), (4, 103), (20, 14), (29, 45), (107, 4)],
-        'charity': [(2, 43), (2, 110), (2, 177), (9, 60), (24, 56), (70, 24)],
-        'zakat': [(2, 43), (2, 110), (2, 177), (9, 60), (24, 56), (70, 24)],
-        'justice': [(4, 58), (4, 135), (5, 8), (16, 90), (57, 25)],
-        'fasting': [(2, 183), (2, 184), (2, 185), (2, 187), (5, 95)],
-        'hajj': [(2, 196), (2, 197), (2, 198), (3, 97), (5, 95), (22, 27)],
-        'wealth': [(2, 188), (2, 275), (2, 276), (4, 29), (17, 35)],
-        'family': [(4, 36), (17, 23), (17, 24), (31, 14), (31, 15)],
-        'women': [(2, 228), (4, 19), (4, 34), (33, 35), (49, 13)],
-        'women_rights': [(2, 228), (4, 19), (4, 34), (33, 35), (49, 13)],
-        'war': [(2, 190), (2, 191), (2, 193), (8, 60), (8, 61), (9, 5)],
-        'knowledge': [(20, 114), (35, 28), (39, 9), (58, 11), (96, 1)],
-    }
-
-    topic_lower = topic.lower().replace('_', ' ').replace('-', ' ')
-
-    # Try exact match
-    verses = TOPIC_INDEX.get(topic_lower, TOPIC_INDEX.get(topic.lower(), []))
-
-    return verses[:max_verses]
-
-def validate_and_sanitize_plan(plan):
-    """
-    Validate and sanitize LLM's retrieval plan
-
-    - Checks verse references exist
-    - Validates Al-Qurtubi constraints
-    - Enforces max verse limits
-    - Rejects hallucinated verses
-
-    Returns: validated plan dict or None if invalid
-    """
-    if not plan:
-        return None
-
-    validated_primary = []
-    for v in plan.get('primary_verses', []):
-        surah, verse = v.get('surah'), v.get('verse')
-        if not surah or not verse:
-            continue
-
-        is_valid, error_msg = is_valid_verse_reference(surah, verse)
-
-        if is_valid:
-            validated_primary.append(v)
-        else:
-            print(f"   ⚠️  Rejected hallucinated verse: {surah}:{verse} - {error_msg}")
-
-    validated_contextual = []
-    for v in plan.get('contextual_verses', []):
-        surah, verse = v.get('surah'), v.get('verse')
-        if not surah or not verse:
-            continue
-
-        is_valid, error_msg = is_valid_verse_reference(surah, verse)
-
-        if is_valid:
-            validated_contextual.append(v)
-        else:
-            print(f"   ⚠️  Rejected hallucinated verse: {surah}:{verse} - {error_msg}")
-
-    # If all verses rejected, return None
-    if not validated_primary and not validated_contextual:
-        print("   ❌ All verses rejected - LLM hallucinated non-existent references")
-        return None
-
-    # Enforce max 5 verses (matches ABSOLUTE_MAX_VERSES)
-    total_verses = len(validated_primary) + len(validated_contextual)
-    if total_verses > 5:
-        trim_amount = total_verses - 5
-        validated_contextual = validated_contextual[:-trim_amount] if trim_amount < len(validated_contextual) else []
-
-    # Keep both tafsir sources - per-verse filtering happens in get_tafsir_for_verse()
-    # Al-Qurtubi will be used for verses in Surahs 1-4:22, Ibn Kathir for all verses
-    tafsir_sources = plan.get('tafsir_sources', ['Ibn Kathir'])
-
-    # Always include both sources if Qurtubi was requested - filtering is per-verse
-    if 'Al-Qurtubi' in tafsir_sources:
-        all_verses = validated_primary + validated_contextual
-        qurtubi_eligible = sum(1 for v in all_verses if v['surah'] <= 4 and (v['surah'] < 4 or v['verse'] <= 22))
-        if qurtubi_eligible > 0:
-            print(f"   📚 Qurtubi available for {qurtubi_eligible}/{len(all_verses)} verses")
-        else:
-            print("   ℹ️  No verses in Qurtubi range (Surahs 1-4:22), using Ibn Kathir only")
-
-    return {
-        'query_intent': plan.get('query_intent', ''),
-        'primary_verses': validated_primary,
-        'contextual_verses': validated_contextual,
-        'tafsir_sources': tafsir_sources,
-        'include_cross_references': plan.get('include_cross_references', True)
-    }
-
-def llm_plan_direct_retrieval(user_query, approach='explore'):
-    """
-    Use Gemini 2.5 Flash to create precise retrieval plan
-    Ultra-low temperature (0.05) for deterministic, precise planning
-
-    Args:
-        user_query: User's natural language question
-        approach: 'tafsir' or 'explore'/'semantic'
-
-    Returns:
-        dict: Structured retrieval plan or None if failed
-    """
-
-    planning_prompt = f"""{DB_SCHEMA_OVERVIEW}
-
-USER QUERY: "{user_query}"
-APPROACH: {approach}
-
-TASK: Create MINIMAL, PRECISE retrieval plan.
-
-CRITICAL CONSTRAINTS:
-1. Maximum 6-8 verses total (primary + contextual)
-2. ONLY verses that DIRECTLY answer query
-3. Al-Qurtubi: ONLY if verse in Surahs 1-4 AND verse ≤ 22
-4. DO NOT hallucinate - only real verse references
-5. Quality > Quantity - fewer high-quality verses better
-6. DO NOT over-retrieve
-
-OUTPUT (strict JSON):
-{{
-  "query_intent": "<max 15 words>",
-  "primary_verses": [
-    {{"surah": <int>, "verse": <int>, "reason": "<max 10 words>"}}
-  ],
-  "contextual_verses": [
-    {{"surah": <int>, "verse": <int>, "reason": "<max 10 words>"}}
-  ],
-  "tafsir_sources": ["Ibn Kathir"],
-  "include_cross_references": <boolean>
-}}
-
-RULES:
-- primary_verses: 2-4 MAX directly answering query
-- contextual_verses: 2-4 MAX for principles/framework
-- Total: 4-8 verses MAX
-- Single verse query: ONLY retrieve that verse
-- DO NOT add Al-Qurtubi if ANY verse beyond 4:22
-
-{PLANNING_FEW_SHOT_EXAMPLES}
-
-Create plan for: "{user_query}"
-
-REMINDER: Be MINIMAL. Max 8 verses. Quality > Quantity.
-"""
-
-    try:
-        credentials, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
-        auth_req = GoogleRequest()
-        credentials.refresh(auth_req)
-        token = credentials.token
-
-        VERTEX_ENDPOINT = f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/{GCP_INFRASTRUCTURE_PROJECT}/locations/{LOCATION}/publishers/google/models/{GEMINI_MODEL_ID}:generateContent"
-
-        body = {
-            "contents": [{"role": "user", "parts": [{"text": planning_prompt}]}],
-            "generation_config": {
-                "response_mime_type": "application/json",
-                "temperature": 0.05,  # Ultra-low for deterministic planning
-                "top_k": 10,  # Limit vocabulary
-                "top_p": 0.8,  # Focus on probable tokens
-                "maxOutputTokens": 2048
-            }
-        }
-
-        response = requests.post(
-            VERTEX_ENDPOINT,
-            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
-            json=body,
-            timeout=30
-        )
-        response.raise_for_status()
-
-        raw_response = response.json()
-        generated_text = safe_get_nested(raw_response, "candidates", 0, "content", "parts", 0, "text")
-
-        if not generated_text:
-            print(f"   ⚠️  LLM planning returned empty response")
-            return None
-
-        plan = json.loads(generated_text)
-
-        print(f"📋 LLM RETRIEVAL PLAN:")
-        print(f"   Intent: {plan.get('query_intent', 'N/A')}")
-        print(f"   Primary: {len(plan.get('primary_verses', []))} verses")
-        print(f"   Contextual: {len(plan.get('contextual_verses', []))} verses")
-
-        return plan
-
-    except Exception as e:
-        print(f"   ⚠️  LLM planning failed: {type(e).__name__}: {str(e)}")
-        return None
-
-def create_heuristic_fallback_plan(user_query, approach):
-    """
-    Heuristic fallback when LLM planning fails
-    Uses pattern matching and topic detection
-    """
-    query_lower = user_query.lower()
-
-    # Check for explicit verse reference
-    verse_ref = extract_verse_reference_enhanced(user_query)
-    if verse_ref:
-        surah, verse = verse_ref
-        return {
-            'query_intent': f'Retrieve verse {surah}:{verse}',
-            'primary_verses': [{'surah': surah, 'verse': verse, 'reason': 'explicitly requested'}],
-            'contextual_verses': [],
-            'tafsir_sources': ['Ibn Kathir', 'Al-Qurtubi'] if surah <= 4 else ['Ibn Kathir'],
-            'include_cross_references': True
-        }
-
-    # Topic-based heuristic
-    topic_keywords = {
-        'patience': ['patience', 'sabr', 'persever', 'endur'],
-        'marriage': ['marriage', 'spouse', 'wife', 'wives', 'husband', 'marital'],
-        'prayer': ['prayer', 'salah', 'salat', 'pray'],
-        'charity': ['charity', 'zakat', 'sadaqah', 'give', 'spend'],
-    }
-
-    for topic, keywords in topic_keywords.items():
-        if any(kw in query_lower for kw in keywords):
-            verses = get_verses_by_topic(topic, max_verses=5)
-            if verses:
-                return {
-                    'query_intent': f'Topic query about {topic}',
-                    'primary_verses': [{'surah': s, 'verse': v, 'reason': f'{topic} topic'} for s, v in verses[:3]],
-                    'contextual_verses': [{'surah': s, 'verse': v, 'reason': f'{topic} related'} for s, v in verses[3:5]],
-                    'tafsir_sources': ['Ibn Kathir'],
-                    'include_cross_references': True
-                }
-
-    return None
-
-def llm_plan_direct_retrieval_with_validation(user_query, approach='explore', max_retries=2):
-    """
-    LLM planning with retry logic and validation
-    """
-    for attempt in range(max_retries):
-        try:
-            plan = llm_plan_direct_retrieval(user_query, approach)
-
-            if not plan:
-                continue
-
-            validated_plan = validate_and_sanitize_plan(plan)
-
-            if validated_plan and (validated_plan['primary_verses'] or validated_plan['contextual_verses']):
-                return validated_plan
-            else:
-                print(f"   ⚠️  Plan validation failed, retry {attempt + 1}/{max_retries}")
-
-        except json.JSONDecodeError as e:
-            print(f"   ❌ JSON parsing error, retry {attempt + 1}/{max_retries}")
-        except Exception as e:
-            print(f"   ❌ Planning error: {e}, retry {attempt + 1}/{max_retries}")
-
-    # Heuristic fallback
-    print("   🔄 LLM planning failed, using heuristic fallback")
-    return create_heuristic_fallback_plan(user_query, approach)
-
-def execute_direct_retrieval(plan):
-    """
-    Execute direct database lookups based on LLM's plan
-    NO vector search - just direct Firestore/dict queries
-
-    Args:
-        plan: Validated retrieval plan from LLM
-
-    Returns:
-        dict: Retrieved verses, tafsir chunks, metadata
-    """
-    if not plan:
-        return None
-
-    all_verse_data = []
-    all_tafsir_chunks = []
-    verse_seen = set()
-
-    # 1. Fetch primary verses
-    primary_verses = plan.get('primary_verses', [])
-    if primary_verses:
-        print(f"   🎯 Fetching {len(primary_verses)} primary verses...")
-    for v in primary_verses:
-        surah, verse = v['surah'], v['verse']
-        reason = v.get('reason', '')
-
-        if (surah, verse) in verse_seen:
-            continue
-        verse_seen.add((surah, verse))
-
-        verse_data = get_verse_from_firestore(surah, verse)
-        if verse_data:
-            verse_data['retrieval_reason'] = reason
-            verse_data['priority'] = 'primary'
-            all_verse_data.append(verse_data)
-
-        tafsir_chunks = get_tafsir_for_verse(surah, verse, plan.get('tafsir_sources', ['Ibn Kathir']))
-        all_tafsir_chunks.extend(tafsir_chunks)
-
-    # 2. Fetch contextual verses
-    contextual_verses = plan.get('contextual_verses', [])
-    if contextual_verses:
-        print(f"   📚 Fetching {len(contextual_verses)} contextual verses...")
-    for v in contextual_verses:
-        surah, verse = v['surah'], v['verse']
-        reason = v.get('reason', '')
-
-        if (surah, verse) in verse_seen:
-            continue
-        verse_seen.add((surah, verse))
-
-        verse_data = get_verse_from_firestore(surah, verse)
-        if verse_data:
-            verse_data['retrieval_reason'] = reason
-            verse_data['priority'] = 'contextual'
-            all_verse_data.append(verse_data)
-
-        tafsir_chunks = get_tafsir_for_verse(surah, verse, plan.get('tafsir_sources', ['Ibn Kathir']))
-        all_tafsir_chunks.extend(tafsir_chunks)
-
-    # 3. Get cross-references if requested
-    cross_refs = []
-    if plan.get('include_cross_references'):
-        for verse in all_verse_data[:5]:
-            refs = get_cross_references(f"{verse['surah_number']}:{verse['verse_number']}")
-            cross_refs.extend(refs)
-
-    # 4. Organize by source for context building
-    context_by_source = {}
-    for chunk in all_tafsir_chunks:
-        source = chunk.get('source', 'Unknown')
-        if source not in context_by_source:
-            context_by_source[source] = []
-        context_by_source[source].append(chunk['text'])
-
-    print(f"   ✅ Retrieved: {len(all_verse_data)} verses, {len(all_tafsir_chunks)} tafsir chunks (direct DB lookups)")
-    if context_by_source:
-        print(f"   📊 Sources: {', '.join(context_by_source.keys())}")
-
-    return {
-        'verses': all_verse_data,
-        'tafsir_chunks': all_tafsir_chunks,
-        'context_by_source': context_by_source,
-        'cross_references': cross_refs,
-        'retrieval_plan': plan
-    }
-
-# ============================================================================
-# END OF LLM-ORCHESTRATED DIRECT RETRIEVAL
-# ============================================================================
-
-
-def retrieve_chunks_from_neighbors(neighbors, distance_threshold=0.6):
-    """
-    Retrieve chunks from TAFSIR_CHUNKS based on neighbor IDs with relevance filtering.
-    Handles sliding window segment IDs (e.g., ibn-kathir:1:1_0 -> ibn-kathir:1:1)
-
-    Args:
-        neighbors: List of neighbor results from vector index
-        distance_threshold: Max distance to consider (0.0-1.0, lower = more similar)
-                          Default 0.6 = moderately relevant
-
-    Returns list of dicts with chunk info.
-    """
-    retrieved = []
-    filtered_count = 0
-
-    for neighbor in neighbors:
-        # CRITICAL FIX: Filter by semantic distance BEFORE adding to results
-        if neighbor.distance > distance_threshold:
-            filtered_count += 1
-            continue  # Skip irrelevant chunks
-
-        neighbor_id = str(neighbor.id)
-
-        # Remove segment suffix if present (e.g., ibn-kathir:1:1_0 -> ibn-kathir:1:1)
-        base_id = neighbor_id
-        if '_' in neighbor_id:
-            parts = neighbor_id.rsplit('_', 1)
-            if len(parts) == 2 and parts[1].isdigit():
-                base_id = parts[0]
-
-        # Lookup chunk
-        chunk_text = TAFSIR_CHUNKS.get(base_id, '')
-        source = CHUNK_SOURCE_MAP.get(base_id, 'Unknown')
-
-        if chunk_text:
-            retrieved.append({
-                'text': chunk_text,
-                'distance': neighbor.distance,
-                'chunk_id': base_id,
-                'source': source
-            })
-        else:
-            # CRITICAL DEBUG: Log what's not matching
-            print(f"WARNING: Chunk not found for ID: {neighbor_id} (base: {base_id})")
-            print(f"   First 5 TAFSIR_CHUNKS keys: {list(TAFSIR_CHUNKS.keys())[:5]}")
-            print(f"   Looking for: '{base_id}' in {len(TAFSIR_CHUNKS)} chunks")
-
-    # Log filtering stats for debugging
-    total = len(neighbors)
-    kept = len(retrieved)
-    if total > 0:
-        print(f"   Vector search: {total} neighbors → {kept} relevant (filtered {filtered_count}, threshold={distance_threshold})")
-        if kept == 0:
-            closest_dist = min(n.distance for n in neighbors) if neighbors else 1.0
-            print(f"   ⚠️  No chunks below threshold! Closest match: distance={closest_dist:.3f}")
-
-    return retrieved
-
-
 
 def initialize_firebase():
     """Initialize dual database connections"""
@@ -3593,8 +2875,6 @@ def extract_json_from_response(text: str) -> Optional[dict]:
         pass
 
     # Try 2: Extract from markdown code blocks
-    import re
-    # Pattern for ```json ... ``` or ``` ... ```
     json_pattern = r'```(?:json)?\s*(.*?)\s*```'
     matches = re.findall(json_pattern, text, re.DOTALL)
     for match in matches:
@@ -3741,320 +3021,6 @@ def truncate_context_if_needed(context: str, max_tokens: int = 50000) -> str:
     return context[:truncated_length] + "\n\n[Note: Context truncated due to length. Results may be incomplete.]"
 
 # --- Query Expansion ---
-def expand_query(query: str, token: str, approach: str = "tafsir") -> str:
-    """
-    Expand user query to better match tafsir content using LLM.
-    Now approach-aware: different expansions for tafsir/thematic/historical approaches.
-    """
-    try:
-        VERTEX_ENDPOINT = f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/{GCP_INFRASTRUCTURE_PROJECT}/locations/{LOCATION}/publishers/google/models/{GEMINI_MODEL_ID}:generateContent"
-
-        # Approach-specific expansion instructions
-        approach_guidance = {
-            'tafsir': """
-Focus on CLASSICAL COMMENTARY while keeping the core concept:
-- ALWAYS keep the main concept/term from the original query
-- Add related Arabic terms (e.g., "patience" → add "sabr", "sabirun")
-- Add relevant Quranic terminology that appears in verses
-- Keep expansion broad enough to find foundational verses
-- Avoid overly specific classical terms that might miss main verses
-Example: "patience" → "patience sabr steadfastness endurance trials perseverance"
-NOT: "patience grammatical analysis Ibn Kathir methodology" (too restrictive)
-""",
-            'thematic': """
-Focus on THEMATIC CONNECTIONS that help find verses across different surahs:
-- Broader Quranic themes and concepts
-- Related topics that appear in multiple surahs
-- Patterns and recurring principles
-- Multi-verse connections and comparisons
-- Holistic conceptual terms
-""",
-            'historical': """
-Focus on HISTORICAL CONTEXT that helps find revelation circumstances:
-- Asbab al-nuzul (circumstances of revelation)
-- Historical events, battles, and incidents
-- Chronological and sequential context
-- Names of people, places, and tribes
-- Pre-Islamic and early Islamic history
-"""
-        }
-
-        guidance = approach_guidance.get(approach, approach_guidance['tafsir'])
-
-        expansion_prompt = f"""You are a search query expander for an Islamic knowledge system that searches tafsir (Quranic commentary) from:
-- Tafsir Ibn Kathir (complete Quran)
-- Tafsir al-Qurtubi (Surahs 1-4)
-
-INPUT QUERY: "{query}"
-APPROACH: {approach.upper()}
-
-TASK: Add 5-15 relevant Islamic/Arabic search terms to help find tafsir content.
-
-APPROACH GUIDANCE:
-{guidance}
-
-CRITICAL RULES:
-1. Keep the ENTIRE original query intact - do not truncate or modify ANY words
-2. If query has verse references (e.g., "3:26-27", "Treaty of Hudaybiyyah"), preserve them EXACTLY
-3. Add supplementary terms AFTER the original query
-4. Total output must be under 200 tokens
-5. Return ONLY the expanded query - no explanations, no metadata
-
-OUTPUT FORMAT: [complete original query] + [5-15 supplementary Islamic/Arabic terms]
-
-EXAMPLE:
-Input: "patience"
-Output: "patience sabr steadfastness endurance trials perseverance sabirun quranic patience Islamic patience reward"
-
-Input: "Context of Treaty of Hudaybiyyah"
-Output: "Context of Treaty of Hudaybiyyah sulh hudaybiyah peace treaty Prophet Muhammad Quraysh Mecca pilgrimage umrah year 6 AH companions Umar Surah Al-Fath victory"
-
-Now expand: "{query}"
-"""
-
-        body = {
-            "contents": [{"role": "user", "parts": [{"text": expansion_prompt}]}],
-            "generation_config": {"temperature": 0.2, "maxOutputTokens": 300},
-        }
-
-        response = requests.post(
-            VERTEX_ENDPOINT,
-            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
-            json=body,
-            timeout=30
-        )
-
-        if response.status_code == 200:
-            result = response.json()
-
-            # Safely extract expanded query from nested response
-            expanded = safe_get_nested(result, "candidates", 0, "content", "parts", 0, "text")
-
-            if expanded:
-                expanded = expanded.strip()
-
-                # VALIDATION: Prevent truncated or malformed expansions
-                original_word_count = len(query.split())
-                expanded_word_count = len(expanded.split())
-
-                # Check 1: Expansion should NOT be shorter than original
-                if expanded_word_count < original_word_count:
-                    print(f"⚠️ REJECTED truncated expansion: '{expanded}'")
-                    print(f"   Original had {original_word_count} words, expansion has {expanded_word_count}")
-                    print(f"   Using original query: '{query}'")
-                    return query
-
-                # Check 2: Original query terms must be preserved
-                original_words = set(word.lower() for word in query.split())
-                expanded_words = set(word.lower() for word in expanded.split())
-
-                missing_words = original_words - expanded_words
-                if missing_words:
-                    print(f"⚠️ REJECTED expansion missing original terms: {missing_words}")
-                    print(f"   Expansion was: '{expanded}'")
-                    print(f"   Using original query: '{query}'")
-                    return query
-
-                # Validation passed
-                print(f"✅ Query expanded from '{query}' to '{expanded}'")
-                return expanded
-
-        print(f"WARNING: Query expansion failed, using original query")
-        return query
-
-    except Exception as e:
-        print(f"WARNING: Query expansion error: {e}")
-        return query
-
-# --- UPDATED: Enhanced Multi-Source RAG Functions with 1536 dimensions ---
-def perform_diversified_rag_search(query, expanded_query, embedding_model, index_endpoint, query_type="default", approach="tafsir"):
-    """
-    Optimized RAG Search with Vector Similarity
-
-    Three-Stage Process:
-    ====================
-    Stage 1 (Vector Search): Fast vector search with distance filtering
-      - Retrieve 8-10 neighbors using cosine similarity
-      - Filter by distance threshold (0.7 for tafsir, 0.65 for semantic)
-      - Latency: ~150-250ms
-
-    Stage 2 (Deduplication + Capping): Quality optimization
-      - Deduplicate by verse reference
-      - Cap to configured limits (3-8 chunks)
-      - Latency: ~10-20ms
-
-    Stage 3 (Source Weighting): Dynamic source diversification
-      - Compare Ibn Kathir vs al-Qurtubi quality scores
-      - Apply dynamic weights (50/50, 70/30, or 100/0)
-      - Latency: ~5-10ms
-
-    Benefits:
-    - Fast and efficient (~200-300ms total)
-    - High-quality results through distance-based filtering
-    - Balanced source coverage
-
-    Args:
-        query: User query text
-        expanded_query: Deprecated, kept for compatibility
-        embedding_model: Gemini embedding model
-        index_endpoint: Vertex AI vector index endpoint
-        query_type: Query classification type
-        approach: 'tafsir' or 'semantic'
-
-    Returns:
-        (selected_chunks, context_by_source) tuple
-    """
-
-    # ========================================================================
-    # STAGE 1: FAST RETRIEVER (High Recall)
-    # ========================================================================
-    perf_start = time.time()
-    print(f"\n🔍 STAGE 1: Vector Retrieval (High Recall)")
-
-    # Use ORIGINAL query for embedding (not expanded)
-    # Reasoning: CrossEncoder will handle semantic matching in Stage 2
-    embedding_start = time.time()
-    query_embedding = embedding_model.get_embeddings(
-        [query],  # CHANGED: Use original query, not expanded
-        output_dimensionality=EMBEDDING_DIMENSION
-    )[0].values
-    embedding_time = (time.time() - embedding_start) * 1000
-    print(f"   ⏱️  Query embedding: {embedding_time:.0f}ms")
-
-    # RAG-optimized configuration
-    config = RAG_OPTIMIZED_CONFIG.get(approach, RAG_OPTIMIZED_CONFIG['tafsir'])
-    num_neighbors = config['num_neighbors']
-    print(f"   Mode: OPTIMIZED RAG (neighbors: {num_neighbors}, threshold: {config['distance_threshold']})")
-
-    print(f"   Query: {query[:100]}..." if len(query) > 100 else f"   Query: {query}")
-    print(f"   Approach: {approach}")
-    print(f"   Embedding dimension: {len(query_embedding)}")
-
-    try:
-        vector_start = time.time()
-        neighbors_result = index_endpoint.find_neighbors(
-            deployed_index_id=DEPLOYED_INDEX_ID,
-            queries=[query_embedding],
-            num_neighbors=num_neighbors
-        )
-        vector_time = (time.time() - vector_start) * 1000
-        print(f"   ✅ Vector search returned: {len(neighbors_result[0]) if neighbors_result else 0} neighbors in {vector_time:.0f}ms")
-    except Exception as e:
-        print(f"   ❌ Vector search failed: {e}")
-        neighbors_result = [[]]
-
-    # Retrieve chunks with distance-based filtering
-    retrieval_start = time.time()
-    distance_threshold = config['distance_threshold']
-    retrieved_chunks = retrieve_chunks_from_neighbors(
-        neighbors_result[0],
-        distance_threshold=distance_threshold
-    )
-    print(f"   Retrieved: {len(retrieved_chunks)} chunks (filtered by distance >= {distance_threshold}) in {(time.time() - retrieval_start) * 1000:.0f}ms")
-
-    print(f"   ⏱️  STAGE 1 TOTAL: {(time.time() - perf_start) * 1000:.0f}ms")
-
-    # ========================================================================
-    # STAGE 2: RAG OPTIMIZATION (Deduplication + Capping)
-    # ========================================================================
-    stage2_start = time.time()
-    print(f"\n✨ STAGE 2: RAG Optimization (Deduplication + Capping)")
-
-    # Deduplicate by verse reference
-    if config.get('deduplicate', False):
-        seen_verses = set()
-        deduplicated = []
-        for chunk in retrieved_chunks:
-            verse_key = f"{chunk.get('surah', '')}:{chunk.get('verse', '')}"
-            if verse_key not in seen_verses:
-                seen_verses.add(verse_key)
-                deduplicated.append(chunk)
-        print(f"   Deduplicated: {len(retrieved_chunks)} → {len(deduplicated)} chunks")
-        retrieved_chunks = deduplicated
-
-    # Cap to max_chunks
-    max_chunks = config.get('max_chunks', 8)
-    min_chunks = config.get('min_chunks', 3)
-
-    if len(retrieved_chunks) > max_chunks:
-        final_chunks = retrieved_chunks[:max_chunks]
-        print(f"   Capped to max: {max_chunks} chunks")
-    elif len(retrieved_chunks) < min_chunks:
-        final_chunks = retrieved_chunks
-        print(f"   ⚠️  Only {len(retrieved_chunks)} chunks (min: {min_chunks})")
-    else:
-        final_chunks = retrieved_chunks
-        print(f"   Using all {len(retrieved_chunks)} chunks")
-
-    print(f"   ⏱️  STAGE 2 TOTAL: {(time.time() - stage2_start) * 1000:.0f}ms")
-
-    # ========================================================================
-    # STAGE 3: SOURCE DIVERSIFICATION (Distance-Based Weighting)
-    # ========================================================================
-    print(f"\n📊 STAGE 3: Dynamic Source Weighting")
-
-    # Categorize final chunks by source
-    source_chunks = {
-        'Ibn Kathir': [],
-        'al-Qurtubi': []
-    }
-
-    for chunk in final_chunks:
-        source = chunk['source']
-        if source in source_chunks:
-            source_chunks[source].append(chunk)
-
-    # Separate chunks by source for analysis
-    ibn_kathir_chunks = [c for c in final_chunks if c['source'] == 'Ibn Kathir']
-    qurtubi_chunks = [c for c in final_chunks if c['source'] == 'al-Qurtubi']
-
-    # Calculate dynamic weights based on distance scores
-    if len(qurtubi_chunks) == 0:
-        # al-Qurtubi has NO relevant chunks (content not in Surahs 1-4)
-        weights = {'Ibn Kathir': 1.0, 'al-Qurtubi': 0.0}
-        print(f"   ✅ Dynamic weights: al-Qurtubi has no chunks → Ibn Kathir 100%")
-
-    elif len(ibn_kathir_chunks) == 0:
-        # Ibn Kathir has NO relevant chunks (unlikely, but handle it)
-        weights = {'Ibn Kathir': 0.0, 'al-Qurtubi': 1.0}
-        print(f"   ✅ Dynamic weights: Ibn Kathir has no chunks → al-Qurtubi 100%")
-
-    else:
-        # BOTH sources have chunks - compare distance scores (higher is better)
-        avg_score_ik = sum(c.get('distance', 0) for c in ibn_kathir_chunks) / len(ibn_kathir_chunks)
-        avg_score_q = sum(c.get('distance', 0) for c in qurtubi_chunks) / len(qurtubi_chunks)
-        score_diff = abs(avg_score_ik - avg_score_q)
-        similarity_threshold = 0.05  # 5% difference in cosine similarity
-        metric_name = "distance"
-
-        if score_diff < similarity_threshold:
-            # Scores similar → Use 50/50 balanced mix
-            weights = {'Ibn Kathir': 0.5, 'al-Qurtubi': 0.5}
-            print(f"   ✅ Dynamic weights: Similar quality (IK:{avg_score_ik:.2f}, Q:{avg_score_q:.2f} {metric_name}) → 50%/50%")
-
-        elif avg_score_ik > avg_score_q:
-            # Ibn Kathir has better matches → Favor it 70/30
-            weights = {'Ibn Kathir': 0.7, 'al-Qurtubi': 0.3}
-            print(f"   ✅ Dynamic weights: IK better (IK:{avg_score_ik:.2f} > Q:{avg_score_q:.2f} {metric_name}) → 70%/30%")
-
-        else:
-            # al-Qurtubi has better matches → Favor it 30/70
-            weights = {'Ibn Kathir': 0.3, 'al-Qurtubi': 0.7}
-            print(f"   ✅ Dynamic weights: Q better (Q:{avg_score_q:.2f} > IK:{avg_score_ik:.2f} {metric_name}) → 30%/70%")
-
-    # Build final context by source
-    context_by_source = {}
-    for source_name, chunks in source_chunks.items():
-        if chunks:
-            # Extract text for context
-            context_by_source[source_name] = [chunk['text'] for chunk in chunks]
-        else:
-            context_by_source[source_name] = []
-
-    print(f"   Final distribution: IK={len(source_chunks['Ibn Kathir'])}, Q={len(source_chunks['al-Qurtubi'])}")
-
-    return final_chunks, context_by_source
-
 def sanitize_source_text_for_prompt(text):
     """Replace double quotes with single quotes in source text before embedding in prompts.
 
@@ -7751,14 +6717,9 @@ def tafsir_handler_enhanced():
         if len(query) > 500:
             return jsonify({'error': 'Query too long. Please keep your query under 500 characters.'}), 400
 
-        # Validate and normalize approach FIRST (before validation)
-        # MERGE: historical + thematic + explore → semantic (same underlying mechanism)
-        if approach in ['historical', 'thematic', 'explore']:
-            original_approach = data.get('approach')
-            approach = 'semantic'  # Internal routing uses 'semantic'
-            print(f"📍 Normalized approach: {original_approach} → semantic")
-        elif approach not in ['tafsir', 'semantic']:
-            approach = 'tafsir'  # Default fallback
+        # Normalize approach — all queries route through direct verse lookup
+        if approach != 'tafsir':
+            approach = 'tafsir'
 
         perf_metrics['approach'] = approach
 
@@ -7910,964 +6871,282 @@ def tafsir_handler_enhanced():
 
         print(f"[TAFSIR] query={query} approach={approach}")
 
-        # ENHANCED CLASSIFICATION
+        # CLASSIFICATION
         classification = classify_query_enhanced(query)
-        query_type = classification['query_type']
-        confidence = classification['confidence']
         verse_ref = classification['verse_ref']
-        metadata_type = classification['metadata_type']
+        confidence = classification['confidence']
 
-        print(f"🎯 Type: {query_type} (confidence: {confidence:.0%})")
         if verse_ref:
-            print(f"   Verse: {verse_ref[0]}:{verse_ref[1]}")
-        # Add logging for verse ranges
+            print(f"🎯 Verse: {verse_ref[0]}:{verse_ref[1]} (confidence: {confidence:.0%})")
         verse_range = extract_verse_range(query)
         if verse_range:
-            print(f"   📖 Verse Range Detected: {verse_range[0]}:{verse_range[1]}-{verse_range[2]}")
-        if metadata_type:
-            print(f"   Metadata: {metadata_type}")
+            print(f"   📖 Verse Range: {verse_range[0]}:{verse_range[1]}-{verse_range[2]}")
 
         # ===================================================================
-        # ROUTE 1: METADATA QUERY (Direct lookup → AI formatting)
+        # DIRECT VERSE QUERY (Direct lookup → AI formatting)
         # ===================================================================
-        if query_type == 'metadata' and verse_ref:
-            print("🚀 ROUTE 1: Direct Metadata Lookup → AI Formatting")
+        if not verse_ref:
+            return jsonify({"error": "No verse reference found in query"}), 400
 
+        # Check if query contains a verse range
+        verse_range = extract_verse_range(query)
+        if verse_range:
+            surah, start_verse, end_verse = verse_range
+            verse = start_verse
+        else:
             surah, verse = verse_ref
+            start_verse = verse
+            end_verse = verse
 
-            # Validate
-            is_valid, msg = validate_verse_reference(surah, verse)
-            if not is_valid:
-                return jsonify({'error': msg}), 400
+        # Validate verse range against surah limits
+        if surah in QURAN_METADATA:
+            max_verse = QURAN_METADATA[surah]["verses"]
+            if end_verse > max_verse:
+                print(f"⚠️  Verse range {surah}:{start_verse}-{end_verse} exceeds surah limit ({max_verse} verses)")
+                end_verse = max_verse
+            if start_verse > max_verse:
+                return jsonify({
+                    "error": f"Invalid verse reference: Surah {surah} only has {max_verse} verses"
+                }), 400
 
-            # Direct lookup
-            verse_metadata_list = get_verse_metadata_direct(surah, verse)
+        # Get verse text(s) from Firestore
+        if start_verse != end_verse:
+            verses_data_list = get_verses_range_from_firestore(surah, start_verse, end_verse)
+            verse_data = verses_data_list[0] if verses_data_list else None
+            verses_for_ai = verses_data_list
+        else:
+            verses_data_list = None
+            verse_data = get_verse_from_firestore(surah, start_verse)
+            verses_for_ai = verse_data
 
-            if not verse_metadata_list:
-                print(f"⚠️  No metadata found, falling back to semantic search")
-                query_type = 'semantic'  # Fallback
-            else:
-                # Get verse text from Firestore
-                verse_data = get_verse_from_firestore(surah, verse)
+        if not verse_data:
+            return jsonify({"error": f"Verse {surah}:{start_verse} not found"}), 404
 
-                # Build targeted context from direct lookup
-                context_by_source = {}
-                for item in verse_metadata_list:
-                    source_name = item['source']
-                    metadata = item['metadata']
+        print(f"✅ Firestore: {verse_data.get('surah_number')}:{verse_data.get('verse_number')} ({verse_data.get('surah_name')})")
 
-                    # Extract the specific metadata requested
-                    context_parts = []
+        # Get metadata via direct lookup (with range support)
+        verse_metadata_list = get_verse_metadata_direct(surah, start_verse, end_verse=end_verse if start_verse != end_verse else None)
 
-                    if metadata_type == 'hadith' or metadata_type == 'all':
-                        hadith_refs = metadata.get('hadith_references', [])
-                        if hadith_refs:
-                            context_parts.append(f"HADITH REFERENCES:\n" + "\n".join(str(h) for h in hadith_refs))
+        # Build context from direct lookup
+        context_by_source = {}
 
-                    if metadata_type == 'scholar_citations' or metadata_type == 'all':
-                        citations = metadata.get('scholar_citations', [])
-                        if citations:
-                            context_parts.append(f"SCHOLAR CITATIONS:\n" + "\n".join(str(c) for c in citations))
+        if not verse_metadata_list:
+            print(f"⚠️  No tafsir found for {surah}:{start_verse}" + (f"-{end_verse}" if start_verse != end_verse else ""))
 
-                    if metadata_type == 'phrase_analysis' or metadata_type == 'all':
-                        phrases = metadata.get('phrase_analysis', [])
-                        if phrases:
-                            phrase_text = []
-                            for p in phrases:
-                                if isinstance(p, dict):
-                                    phrase_text.append(f"{p.get('phrase', '')}: {p.get('analysis', '')}")
-                                else:
-                                    phrase_text.append(str(p))
-                            context_parts.append(f"PHRASE ANALYSIS:\n" + "\n".join(phrase_text))
+        if verse_metadata_list:
+            for item in verse_metadata_list:
+                source_name = item['source']
 
-                    if metadata_type == 'topics' or metadata_type == 'all':
-                        topics = metadata.get('topics', [])
-                        if topics:
-                            topic_text = []
-                            for t in topics:
-                                if isinstance(t, dict):
-                                    if t.get('topic_header'):
-                                        topic_text.append(f"**{t['topic_header']}**")
-                                    if t.get('commentary'):
-                                        topic_text.append(t['commentary'])
-                            context_parts.append(f"TOPICS:\n" + "\n".join(topic_text))
+                # Handle verse ranges (new structure) or single verse (backwards compatible)
+                verses_data = item.get('verses', [])
+                if not verses_data and item.get('metadata'):
+                    verses_data = [{'verse_number': start_verse, 'metadata': item['metadata']}]
 
-                    if metadata_type == 'cross_references' or metadata_type == 'all':
-                        cross_refs = metadata.get('cross_references', [])
-                        if cross_refs:
-                            context_parts.append(f"RELATED VERSES:\n" + ", ".join(cross_refs))
+                context_parts = []
 
-                    if metadata_type == 'historical_context' or metadata_type == 'all':
-                        historical = metadata.get('historical_context', [])
-                        if historical:
-                            historical_text = []
-                            for h in historical:
-                                if isinstance(h, dict):
-                                    historical_text.append(str(h))
-                                else:
-                                    historical_text.append(h)
-                            context_parts.append(f"HISTORICAL CONTEXT:\n" + "\n".join(historical_text))
+                for verse_info in verses_data:
+                    metadata = verse_info['metadata']
+                    verse_num = verse_info.get('verse_number', start_verse)
 
-                    if metadata_type == 'linguistic_analysis' or metadata_type == 'all':
-                        linguistic = metadata.get('linguistic_analysis', [])
-                        if linguistic:
-                            linguistic_text = []
-                            for l in linguistic:
-                                if isinstance(l, dict):
-                                    linguistic_text.append(str(l))
-                                else:
-                                    linguistic_text.append(l)
-                            context_parts.append(f"LINGUISTIC ANALYSIS:\n" + "\n".join(linguistic_text))
+                    if len(verses_data) > 1:
+                        context_parts.append(f"\n**Verse {verse_num}:**\n")
 
-                    if metadata_type == 'legal_rulings' or metadata_type == 'all':
-                        legal = metadata.get('legal_rulings', [])
-                        if legal:
-                            legal_text = []
-                            for lr in legal:
-                                if isinstance(lr, dict):
-                                    legal_text.append(str(lr))
-                                else:
-                                    legal_text.append(lr)
-                            context_parts.append(f"LEGAL RULINGS:\n" + "\n".join(legal_text))
+                    # Topics (Ibn Kathir style)
+                    if metadata.get('topics'):
+                        for topic in metadata['topics']:
+                            if isinstance(topic, dict):
+                                if topic.get('topic_header'):
+                                    context_parts.append(f"**{topic['topic_header']}**")
+                                if topic.get('commentary'):
+                                    context_parts.append(topic['commentary'])
 
-                    # Add commentary if no specific metadata found
-                    if not context_parts and metadata.get('commentary'):
+                                if topic.get('phrase_analysis'):
+                                    for phrase in topic['phrase_analysis']:
+                                        if isinstance(phrase, dict):
+                                            if phrase.get('phrase'):
+                                                context_parts.append(f"Phrase: {phrase['phrase']}")
+                                            if phrase.get('analysis'):
+                                                context_parts.append(f"Analysis: {phrase['analysis']}")
+
+                                if topic.get('hadith_references'):
+                                    context_parts.append(f"Hadith: {topic['hadith_references']}")
+
+                    # Commentary (al-Qurtubi style)
+                    elif metadata.get('commentary'):
                         context_parts.append(metadata['commentary'])
 
-                    context_by_source[source_name] = ["\n\n".join(context_parts)] if context_parts else []
-
-                # Get user profile for persona
-                user_profile = get_user_profile(user_id)
-
-                # Build prompt for AI formatting (skip RAG, use direct context)
-                arabic_text = get_arabic_text_from_verse_data(verse_data) if verse_data else None
-                scholarly_ctx, scholarly_badges, scholarly_pipeline = _get_scholarly_context_two_stage(query, verse_data, context_by_source)
-                prompt = build_enhanced_prompt(query, context_by_source, user_profile,
-                                             arabic_text, None, 'metadata', verse_data, approach, scholarly_ctx)
-
-                # Get auth token
-                credentials, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
-                auth_req = GoogleRequest()
-                credentials.refresh(auth_req)
-                token = credentials.token
-
-                # Generate AI-formatted response
-                VERTEX_ENDPOINT = f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/{GCP_INFRASTRUCTURE_PROJECT}/locations/{LOCATION}/publishers/google/models/{GEMINI_MODEL_ID}:generateContent"
-
-                body = {
-                    "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-                    "generation_config": {
-                        "response_mime_type": "application/json",
-                        "temperature": 0.2,
-                        "maxOutputTokens": 65536  # Increased from 8192 to prevent truncation of detailed responses
-                    },
-                }
-
-                # Add retry logic for Gemini API calls with exponential backoff for rate limits
-                max_retries = 4  # More retries for rate limiting
-                response = None
-
-                for attempt in range(max_retries):
-                    # Exponential backoff: 2s, 4s, 8s, 16s
-                    retry_delay = 2 ** (attempt + 1)
-                    try:
-                        response = requests.post(
-                            VERTEX_ENDPOINT,
-                            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
-                            json=body,
-                            timeout=120  # Increased from 30s to match Gemini's actual response times
-                        )
-                        response.raise_for_status()
-                        break  # Success, exit retry loop
-                    except requests.Timeout:
-                        if attempt == max_retries - 1:
-                            print(f"❌ Gemini API timeout after {max_retries} attempts")
-                            return jsonify({
-                                "error": "AI service timeout. Please try again or simplify your query.",
-                                "retry": True,
-                                "error_type": "timeout"
-                            }), 503
-                        print(f"⚠️ Gemini timeout on attempt {attempt + 1}, retrying in {retry_delay}s...")
-                        time.sleep(retry_delay)
-                    except requests.HTTPError as e:
-                        status_code = response.status_code if response else 500
-                        # Handle rate limiting (429) with exponential backoff
-                        if status_code == 429:
-                            if attempt == max_retries - 1:
-                                print(f"❌ Gemini API rate limited after {max_retries} attempts")
-                                return jsonify({
-                                    "error": "AI service is busy. Please wait a moment and try again.",
-                                    "retry": True,
-                                    "error_type": "rate_limit",
-                                    "retry_after": 30
-                                }), 429
-                            print(f"⚠️ Gemini rate limited (429), retrying in {retry_delay}s...")
-                            time.sleep(retry_delay)
-                            continue
-                        # Handle service unavailable (503)
-                        if status_code == 503:
-                            if attempt == max_retries - 1:
-                                raise
-                            print(f"⚠️ Gemini service unavailable, retrying in {retry_delay}s...")
-                            time.sleep(retry_delay)
-                            continue
-                        # For other errors, raise immediately
-                        raise
-
-                # Parse response
-                raw_response = response.json()
-
-                # Safely extract generated text from nested response
-                generated_text = safe_get_nested(raw_response, "candidates", 0, "content", "parts", 0, "text")
-
-                if generated_text:
-                    final_json = extract_json_from_response(generated_text)
-
-                    if not final_json:
-                        print(f"❌ Failed to extract JSON from Gemini response (Route 1)")
-                        print(f"Response preview: {generated_text[:500]}...")
-                        return jsonify({
-                            "error": "AI returned malformed response",
-                            "details": "The AI response could not be parsed as JSON. Try rephrasing your query or making it more specific.",
-                            "error_type": "json_parse_error"
-                        }), 500
-
-                    final_json["query_type"] = "direct_metadata"
-                    final_json["verse_reference"] = f"{surah}:{verse}"
-
-                    # Filter out unavailable sources before caching and returning
-                    final_json = filter_unavailable_sources(final_json)
-
-                    # Add scholarly source attribution metadata (from two-stage resolver)
-                    final_json["scholarly_sources"] = scholarly_badges
-                    final_json["_scholarly_pipeline"] = scholarly_pipeline
-
-                    # Keep only requested verse(s) in main list; move extras to cross references
-                    final_json = keep_requested_verses_primary(
-                        final_json,
-                        verse_data,
-                        requested_verses=[(surah, verse)]
-                    )
-
-                    persona_name = user_profile.get('persona', 'practicing_muslim')
-                    final_json, trimmed, original_count, final_count = enforce_persona_verse_limit(
-                        final_json,
-                        persona_name,
-                        requested_verses=[(surah, verse)]
-                    )
-                    if trimmed:
-                        print(f"   ℹ️  Trimmed verses to {final_count}/{original_count} for persona {persona_name}")
-
-                    # Log verse count for monitoring
-                    verse_count = len(final_json.get('verses', []))
-                    verse_limit = VERSE_LIMIT
-                    if verse_count > verse_limit:
-                        print(f"   ⚠️  VERSE LIMIT EXCEEDED: {verse_count} verses returned (limit: {verse_limit})")
-                    else:
-                        print(f"   ✅ Verse count: {verse_count}/{verse_limit}")
-
-                    # Cache the response (Route 1)
-                    with cache_lock:
-                        RESPONSE_CACHE[cache_key] = final_json
-                        if len(RESPONSE_CACHE) > 1000:
-                            # Prune oldest 20% of cache
-                            keys_to_remove = list(RESPONSE_CACHE.keys())[:200]
-                            for key in keys_to_remove:
-                                RESPONSE_CACHE.pop(key, None)
-
-                    # Store in Firestore cache for tafsir queries with verse references
-                    if approach == 'tafsir' and extract_verse_reference_enhanced(query):
-                        store_tafsir_cache(query, user_profile, final_json, approach)
-                        print(f"💾 Stored tafsir response in Firestore cache")
-
-                    # Track explored verse and generate recommendations
-                    if user_id:
-                        _track_explored_verse(user_id, surah, verse)
-                        _check_and_award_badges(user_id)
-                    final_json["recommendations"] = _generate_recommendations(surah, verse, final_json, user_id)
-
-                    print(f"✅ Metadata formatted by AI from {len(verse_metadata_list)} source(s)")
-                    return jsonify(final_json), 200
-                else:
-                    # Fallback to structured response
-                    print(f"⚠️  Gemini response structure unexpected, using fallback")
-                    response = format_metadata_response(verse_ref, metadata_type or 'all', verse_metadata_list)
-                    return jsonify(response), 200
-
-        # ===================================================================
-        # ROUTE 2: DIRECT VERSE QUERY (Direct lookup → AI formatting)
-        # ===================================================================
-        if query_type == 'direct_verse' and verse_ref:
-            print("🚀 ROUTE 2: Direct Verse Query → AI Formatting")
-
-            # Check if query contains a verse range
-            verse_range = extract_verse_range(query)
-            if verse_range:
-                surah, start_verse, end_verse = verse_range
-                verse = start_verse  # For verse_reference formatting
-                print(f"   Detected verse range: {surah}:{start_verse}-{end_verse}")
-            else:
-                surah, verse = verse_ref
-                start_verse = verse
-                end_verse = verse
-
-            # Validate verse range against surah limits
-            if surah in QURAN_METADATA:
-                max_verse = QURAN_METADATA[surah]["verses"]
-                if end_verse > max_verse:
-                    print(f"⚠️  Verse range {surah}:{start_verse}-{end_verse} exceeds surah limit ({max_verse} verses)")
-                    end_verse = max_verse
-                if start_verse > max_verse:
-                    return jsonify({
-                        "error": f"Invalid verse reference: Surah {surah} only has {max_verse} verses"
-                    }), 400
-
-            # Get verse text(s) from Firestore
-            if start_verse != end_verse:
-                # Fetch all verses in the range
-                verses_data_list = get_verses_range_from_firestore(surah, start_verse, end_verse)
-                # CRITICAL FIX: Use all verses, not just the first one
-                verse_data = verses_data_list[0] if verses_data_list else None  # Only for validation
-                verses_for_ai = verses_data_list  # Pass ALL verses to AI
-            else:
-                # Single verse - use existing function
-                verses_data_list = None
-                verse_data = get_verse_from_firestore(surah, start_verse)
-                verses_for_ai = verse_data  # Single verse
-
-            if not verse_data:
-                print(f"⚠️  Verse(s) not found in Firestore, trying semantic search")
-                query_type = 'semantic'  # Fallback
-            else:
-                # CRITICAL LOGGING: Verify we're getting the correct verse data
-                print(f"✅ Firestore returned: Surah {verse_data.get('surah_number')}, Verse {verse_data.get('verse_number')}, Name: {verse_data.get('surah_name')}")
-                print(f"   English preview: {verse_data.get('english', '')[:100]}...")
-                if verse_data.get('surah_number') != surah or verse_data.get('verse_number') != start_verse:
-                    print(f"❌❌❌ MISMATCH! Requested {surah}:{start_verse} but got {verse_data.get('surah_number')}:{verse_data.get('verse_number')}")
-
-                # Get metadata via direct lookup (with range support)
-                verse_metadata_list = get_verse_metadata_direct(surah, start_verse, end_verse=end_verse if start_verse != end_verse else None)
-
-                if not verse_metadata_list:
-                    print(f"⚠️  No tafsir found for {surah}:{start_verse}" + (f"-{end_verse}" if start_verse != end_verse else ""))
-                    print(f"⚠️  Trying semantic search as fallback")
-                    query_type = 'semantic'  # Fallback
-                else:
-                    # Build context from direct lookup (handles both single verses and ranges)
-                    context_by_source = {}
-
-                    for item in verse_metadata_list:
-                        source_name = item['source']
-
-                        # Handle verse ranges (new structure) or single verse (backwards compatible)
-                        verses_data = item.get('verses', [])
-                        if not verses_data and item.get('metadata'):
-                            # Backwards compatibility: single verse
-                            verses_data = [{'verse_number': start_verse, 'metadata': item['metadata']}]
-
-                        # Extract comprehensive tafsir from all verses in range
-                        context_parts = []
-
-                        for verse_info in verses_data:
-                            metadata = verse_info['metadata']
-                            verse_num = verse_info.get('verse_number', start_verse)
-
-                            # Add verse marker for ranges
-                            if len(verses_data) > 1:
-                                context_parts.append(f"\n**Verse {verse_num}:**\n")
-
-                            # Topics (Ibn Kathir style)
-                            if metadata.get('topics'):
-                                for topic in metadata['topics']:
-                                    if isinstance(topic, dict):
-                                        if topic.get('topic_header'):
-                                            context_parts.append(f"**{topic['topic_header']}**")
-                                        if topic.get('commentary'):
-                                            context_parts.append(topic['commentary'])
-
-                                        # Add phrase analysis from topics
-                                        if topic.get('phrase_analysis'):
-                                            for phrase in topic['phrase_analysis']:
-                                                if isinstance(phrase, dict):
-                                                    if phrase.get('phrase'):
-                                                        context_parts.append(f"Phrase: {phrase['phrase']}")
-                                                    if phrase.get('analysis'):
-                                                        context_parts.append(f"Analysis: {phrase['analysis']}")
-
-                                        # Add hadith from topics
-                                        if topic.get('hadith_references'):
-                                            context_parts.append(f"Hadith: {topic['hadith_references']}")
-
-                            # Commentary (al-Qurtubi style)
-                            elif metadata.get('commentary'):
-                                context_parts.append(metadata['commentary'])
-
-                                # Add phrase analysis
-                                if metadata.get('phrase_analysis'):
-                                    for phrase in metadata['phrase_analysis']:
-                                        if isinstance(phrase, str):
-                                            context_parts.append(phrase)
-
-                                # Add scholar citations
-                                if metadata.get('scholar_citations'):
-                                    for citation in metadata['scholar_citations']:
-                                        if isinstance(citation, str):
-                                            context_parts.append(citation)
-
-                        context_by_source[source_name] = ["\n\n".join(context_parts)] if context_parts else []
-
-                    # Get user profile for persona
-                    user_profile = get_user_profile(user_id)
-
-                    # Build prompt for AI formatting (skip RAG, use direct context)
-                    arabic_text = get_arabic_text_from_verse_data(verse_data)
-
-                    # Get cross refs from first verse's metadata
-                    cross_refs = []
-                    if verse_metadata_list:
-                        first_item = verse_metadata_list[0]
-                        if first_item.get('verses'):
-                            cross_refs = first_item['verses'][0]['metadata'].get('cross_references', [])
-                        elif first_item.get('metadata'):
-                            cross_refs = first_item['metadata'].get('cross_references', [])
-
-                    # CRITICAL FIX: Pass correct verse data to prompt
-                    scholarly_ctx, scholarly_badges, scholarly_pipeline = _get_scholarly_context_two_stage(query, verses_for_ai, context_by_source)
-                    prompt = build_enhanced_prompt(query, context_by_source, user_profile,
-                                                 arabic_text, cross_refs, 'direct_verse', verses_for_ai, approach, scholarly_ctx)
-
-                    # CRITICAL LOGGING: Verify verse_data being passed to Gemini
-                    if isinstance(verses_for_ai, list):
-                        print(f"🔍 About to call Gemini with {len(verses_for_ai)} verses: {verses_for_ai[0].get('surah_number')}:{verses_for_ai[0].get('verse_number')}-{verses_for_ai[-1].get('verse_number')} ({verses_for_ai[0].get('surah_name')})")
-                    else:
-                        print(f"🔍 About to call Gemini with single verse: {verses_for_ai.get('surah_number')}:{verses_for_ai.get('verse_number')} ({verses_for_ai.get('surah_name')})")
-
-                    # Get auth token
-                    credentials, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
-                    auth_req = GoogleRequest()
-                    credentials.refresh(auth_req)
-                    token = credentials.token
-
-                    # Generate AI-formatted response
-                    VERTEX_ENDPOINT = f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/{GCP_INFRASTRUCTURE_PROJECT}/locations/{LOCATION}/publishers/google/models/{GEMINI_MODEL_ID}:generateContent"
-
-                    body = {
-                        "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-                        "generation_config": {
-                            "response_mime_type": "application/json",
-                            "temperature": 0.2,
-                            "maxOutputTokens": 65536  # Increased from 8192 to prevent truncation of detailed tafsir responses
-                        },
-                    }
-
-                    # Add retry logic for Gemini API calls with exponential backoff for rate limits
-                    max_retries = 4  # More retries for rate limiting
-
-                    for attempt in range(max_retries):
-                        # Exponential backoff: 2s, 4s, 8s, 16s
-                        retry_delay = 2 ** (attempt + 1)
-                        try:
-                            response = requests.post(
-                                VERTEX_ENDPOINT,
-                                headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
-                                json=body,
-                                timeout=120  # Increased to match Gemini's actual response times
-                            )
-                            response.raise_for_status()
-                            break  # Success
-                        except requests.Timeout:
-                            if attempt == max_retries - 1:
-                                print(f"❌ Gemini timeout in Route 2 after {max_retries} attempts")
-                                return jsonify({
-                                    "error": "AI service timeout",
-                                    "retry": True,
-                                    "error_type": "timeout"
-                                }), 503
-                            print(f"⚠️ Retry {attempt + 1}/{max_retries} in {retry_delay}s...")
-                            time.sleep(retry_delay)
-                        except requests.HTTPError as e:
-                            status_code = response.status_code if response else 500
-                            # Handle rate limiting (429) with exponential backoff
-                            if status_code == 429:
-                                if attempt == max_retries - 1:
-                                    print(f"❌ Gemini API rate limited after {max_retries} attempts")
-                                    return jsonify({
-                                        "error": "AI service is busy. Please wait a moment and try again.",
-                                        "retry": True,
-                                        "error_type": "rate_limit",
-                                        "retry_after": 30
-                                    }), 429
-                                print(f"⚠️ Gemini rate limited (429), retrying in {retry_delay}s...")
-                                time.sleep(retry_delay)
-                                continue
-                            # Handle service unavailable (503)
-                            if status_code == 503:
-                                if attempt == max_retries - 1:
-                                    raise
-                                print(f"⚠️ Gemini service unavailable, retrying in {retry_delay}s...")
-                                time.sleep(retry_delay)
-                                continue
-                            # For other errors, raise immediately
-                            raise
-
-                    # Parse response
-                    raw_response = response.json()
-
-                    # Check finish reason to understand why generation stopped
-                    finish_reason = safe_get_nested(raw_response, "candidates", 0, "finishReason")
-                    if finish_reason and finish_reason not in ("STOP", "MAX_TOKENS"):
-                        print(f"⚠️ Gemini finishReason: {finish_reason} — response may be blocked or incomplete")
-                        if finish_reason == "SAFETY":
-                            return jsonify({
-                                "error": "The AI could not generate a response for this query. Please try rephrasing.",
-                                "error_type": "content_blocked"
-                            }), 400
-
-                    # Safely extract generated text from nested response
-                    generated_text = safe_get_nested(raw_response, "candidates", 0, "content", "parts", 0, "text")
-
-                    if generated_text:
-                        final_json = extract_json_from_response(generated_text)
-
-                        if not final_json:
-                            print(f"❌ Failed to extract JSON from Gemini response")
-                            print(f"Response preview: {generated_text[:500]}...")
-                            return jsonify({
-                                "error": "AI returned malformed response",
-                                "details": "The AI response could not be parsed as JSON. Try rephrasing your query or making it more specific.",
-                                "error_type": "json_parse_error"
-                            }), 500
-                        final_json["query_type"] = "direct_verse"
-                        final_json["verse_reference"] = f"{surah}:{verse}"
-
-                        # Filter out unavailable sources before caching and returning
-                        final_json = filter_unavailable_sources(final_json)
-
-                        # Add scholarly source attribution metadata (from two-stage resolver)
-                        final_json["scholarly_sources"] = scholarly_badges
-                        final_json["_scholarly_pipeline"] = scholarly_pipeline
-
-                        # Keep only requested verse(s) in main list; move extras to cross references
-                        final_json = keep_requested_verses_primary(
-                            final_json,
-                            verses_for_ai,
-                            requested_verses=[(surah, v) for v in range(start_verse, end_verse + 1)]
-                        )
-
-                        persona_name = user_profile.get('persona', 'practicing_muslim')
-                        requested_range = [(surah, v) for v in range(start_verse, end_verse + 1)]
-                        final_json, trimmed, original_count, final_count = enforce_persona_verse_limit(
-                            final_json,
-                            persona_name,
-                            requested_verses=requested_range
-                        )
-                        if trimmed:
-                            print(f"   ℹ️  Trimmed verses to {final_count}/{original_count} for persona {persona_name}")
-
-                        # Log verse count for monitoring
-                        verse_count = len(final_json.get('verses', []))
-                        verse_limit = VERSE_LIMIT
-                        if verse_count > verse_limit:
-                            print(f"   ⚠️  VERSE LIMIT EXCEEDED: {verse_count} verses returned (limit: {verse_limit})")
-                        else:
-                            print(f"   ✅ Verse count: {verse_count}/{verse_limit}")
-
-                        # Cache the response (Route 2)
-                        with cache_lock:
-                            RESPONSE_CACHE[cache_key] = final_json
-                            if len(RESPONSE_CACHE) > 1000:
-                                # Prune oldest 20% of cache
-                                keys_to_remove = list(RESPONSE_CACHE.keys())[:200]
-                                for key in keys_to_remove:
-                                    RESPONSE_CACHE.pop(key, None)
-
-                        # Store in Firestore cache for tafsir queries
-                        if approach == 'tafsir':
-                            store_tafsir_cache(query, user_profile, final_json, approach)
-                            print(f"💾 Stored direct verse response in Firestore cache")
-
-                        # Track explored verse and generate recommendations
-                        if user_id:
-                            _track_explored_verse(user_id, surah, start_verse, end_verse)
-                            _check_and_award_badges(user_id)
-                        final_json["recommendations"] = _generate_recommendations(surah, start_verse, final_json, user_id)
-
-                        print(f"✅ Direct verse formatted by AI from {len(verse_metadata_list)} source(s)")
-                        return jsonify(final_json), 200
-                    else:
-                        # Fallback to structured response
-                        print(f"⚠️  Gemini response structure unexpected, using fallback")
-                        response = build_direct_verse_response(verse_data, verse_metadata_list)
-                        return jsonify(response), 200
-
-        # ===================================================================
-        # ROUTE 3: LLM-ORCHESTRATED DIRECT RETRIEVAL (No Vector Search)
-        # ===================================================================
-        if query_type == 'semantic':
-            print("🚀 ROUTE 3: LLM-Orchestrated Direct Retrieval")
-
-            # NOTE: user_profile and cache_key already set at top of function
-            # No need to check cache again - already checked above
-
-            # Get auth token (needed for both LLM planning and generation)
-            credentials, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
-            auth_req = GoogleRequest()
-            credentials.refresh(auth_req)
-            token = credentials.token
-
-            # ================================================================
-            # STEP 1: LLM Planning - What to Retrieve
-            # ================================================================
-            stage_start = time.time()
-            retrieval_plan = llm_plan_direct_retrieval_with_validation(query, approach, max_retries=2)
-            perf_metrics['stages']['llm_planning'] = (time.time() - stage_start) * 1000
-
-            retrieved_data = None
-            context_by_source = {}
-            verse_data = None
-            arabic_text = None
-            cross_refs = []
-
-            if retrieval_plan:
-                # ================================================================
-                # STEP 2: Execute Direct DB Retrieval
-                # ================================================================
-                stage_start = time.time()
-                retrieved_data = execute_direct_retrieval(retrieval_plan)
-                perf_metrics['stages']['direct_retrieval'] = (time.time() - stage_start) * 1000
-
-                if retrieved_data and len(retrieved_data.get('verses', [])) > 0:
-                    # Success: Use LLM-planned retrieval
-                    context_by_source = retrieved_data['context_by_source']
-                    cross_refs = retrieved_data.get('cross_references', [])
-
-                    # Get verse data for ALL verses (not just first)
-                    if retrieved_data['verses']:
-                        # Pass all verses to prompt builder for complete Arabic text
-                        verse_data = retrieved_data['verses']
-                        # Keep first verse's arabic for backward compatibility
-                        arabic_text = retrieved_data['verses'][0].get('arabic')
-
-                    print(f"   ✅ LLM-orchestrated retrieval: {len(retrieved_data['verses'])} verses, {len(retrieved_data.get('tafsir_chunks', []))} chunks")
-                    print(f"   ⏱️  Planning: {perf_metrics['stages']['llm_planning']:.0f}ms, Retrieval: {perf_metrics['stages']['direct_retrieval']:.0f}ms")
-                else:
-                    # LLM plan retrieved nothing - fallback to vector search
-                    print("   ⚠️  LLM-orchestrated retrieval returned no results, falling back to vector search")
-                    retrieval_plan = None
-
-            if not retrieval_plan or not retrieved_data:
-                # ================================================================
-                # FALLBACK: Vector Search RAG (if LLM planning fails)
-                # ================================================================
-                print("   🔄 Fallback: Using vector search RAG")
-
-                # Prepare query
-                if verse_ref:
-                    surah_num, verse_num = verse_ref
-                    verse_data = get_verse_from_firestore(surah_num, verse_num)
-                    if verse_data:
-                        arabic_text = get_arabic_text_from_verse_data(verse_data)
-                else:
-                    verse_data = None
-                    arabic_text = None
-
-                rag_query = query
-                rag_query_type = "default"
-                cross_refs = get_cross_references(rag_query)
-
-                # Initialize vector search models
-                stage_start = time.time()
-                embedding_model = TextEmbeddingModel.from_pretrained(EMBEDDING_MODEL)
-                endpoint_resource_name = f"projects/{GCP_INFRASTRUCTURE_PROJECT}/locations/{LOCATION}/indexEndpoints/{INDEX_ENDPOINT_ID}"
-                index_endpoint = aiplatform.MatchingEngineIndexEndpoint(index_endpoint_name=endpoint_resource_name)
-                perf_metrics['stages']['model_init'] = (time.time() - stage_start) * 1000
-
-                # Vector search
-                stage_start = time.time()
-                selected_chunks, context_by_source = perform_diversified_rag_search(
-                    rag_query, rag_query, embedding_model, index_endpoint, rag_query_type, approach
+                        if metadata.get('phrase_analysis'):
+                            for phrase in metadata['phrase_analysis']:
+                                if isinstance(phrase, str):
+                                    context_parts.append(phrase)
+
+                        if metadata.get('scholar_citations'):
+                            for citation in metadata['scholar_citations']:
+                                if isinstance(citation, str):
+                                    context_parts.append(citation)
+
+                context_by_source[source_name] = ["\n\n".join(context_parts)] if context_parts else []
+
+        # Get user profile for persona
+        user_profile = get_user_profile(user_id)
+
+        # Build prompt for AI formatting
+        arabic_text = get_arabic_text_from_verse_data(verse_data)
+
+        cross_refs = []
+        if verse_metadata_list:
+            first_item = verse_metadata_list[0]
+            if first_item.get('verses'):
+                cross_refs = first_item['verses'][0]['metadata'].get('cross_references', [])
+            elif first_item.get('metadata'):
+                cross_refs = first_item['metadata'].get('cross_references', [])
+
+        scholarly_ctx, scholarly_badges, scholarly_pipeline = _get_scholarly_context_two_stage(query, verses_for_ai, context_by_source)
+        prompt = build_enhanced_prompt(query, context_by_source, user_profile,
+                                     arabic_text, cross_refs, 'direct_verse', verses_for_ai, approach, scholarly_ctx)
+
+        if isinstance(verses_for_ai, list):
+            print(f"🔍 Calling Gemini with {len(verses_for_ai)} verses: {verses_for_ai[0].get('surah_number')}:{verses_for_ai[0].get('verse_number')}-{verses_for_ai[-1].get('verse_number')}")
+        else:
+            print(f"🔍 Calling Gemini with single verse: {verses_for_ai.get('surah_number')}:{verses_for_ai.get('verse_number')}")
+
+        # Get auth token
+        credentials, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
+        auth_req = GoogleRequest()
+        credentials.refresh(auth_req)
+        token = credentials.token
+
+        VERTEX_ENDPOINT = f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/{GCP_INFRASTRUCTURE_PROJECT}/locations/{LOCATION}/publishers/google/models/{GEMINI_MODEL_ID}:generateContent"
+
+        body = {
+            "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+            "generation_config": {
+                "response_mime_type": "application/json",
+                "temperature": 0.2,
+                "maxOutputTokens": 65536
+            },
+        }
+
+        # Retry with exponential backoff
+        max_retries = 4
+
+        for attempt in range(max_retries):
+            retry_delay = 2 ** (attempt + 1)
+            try:
+                response = requests.post(
+                    VERTEX_ENDPOINT,
+                    headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+                    json=body,
+                    timeout=120
                 )
-                perf_metrics['stages']['rag_search'] = (time.time() - stage_start) * 1000
-                perf_metrics['chunks_retrieved'] = len(selected_chunks)
+                response.raise_for_status()
+                break
+            except requests.Timeout:
+                if attempt == max_retries - 1:
+                    return jsonify({
+                        "error": "AI service timeout",
+                        "retry": True,
+                        "error_type": "timeout"
+                    }), 503
+                print(f"⚠️ Retry {attempt + 1}/{max_retries} in {retry_delay}s...")
+                time.sleep(retry_delay)
+            except requests.HTTPError as e:
+                status_code = response.status_code if response else 500
+                if status_code == 429:
+                    if attempt == max_retries - 1:
+                        return jsonify({
+                            "error": "AI service is busy. Please wait a moment and try again.",
+                            "retry": True,
+                            "error_type": "rate_limit",
+                            "retry_after": 30
+                        }), 429
+                    print(f"⚠️ Rate limited (429), retrying in {retry_delay}s...")
+                    time.sleep(retry_delay)
+                    continue
+                if status_code == 503:
+                    if attempt == max_retries - 1:
+                        raise
+                    print(f"⚠️ Service unavailable, retrying in {retry_delay}s...")
+                    time.sleep(retry_delay)
+                    continue
+                raise
 
-                print(f"   Retrieved {len(selected_chunks)} chunks (fallback RAG) in {perf_metrics['stages']['rag_search']:.0f}ms")
+        # Parse response
+        raw_response = response.json()
 
-            # ================================================================
-            # STEP 3: Build Prompt and Generate Response
-            # ================================================================
-            # Build prompt (approach-aware)
-            stage_start = time.time()
-            rag_query_type = "default"
-            scholarly_ctx, scholarly_badges, scholarly_pipeline = _get_scholarly_context_two_stage(query, verse_data, context_by_source)
-            prompt = build_enhanced_prompt(query, context_by_source, user_profile,
-                                         arabic_text, cross_refs, rag_query_type, verse_data, approach, scholarly_ctx)
-            perf_metrics['stages']['prompt_building'] = (time.time() - stage_start) * 1000
+        finish_reason = safe_get_nested(raw_response, "candidates", 0, "finishReason")
+        if finish_reason and finish_reason not in ("STOP", "MAX_TOKENS"):
+            print(f"⚠️ Gemini finishReason: {finish_reason}")
+            if finish_reason == "SAFETY":
+                return jsonify({
+                    "error": "The AI could not generate a response for this query. Please try rephrasing.",
+                    "error_type": "content_blocked"
+                }), 400
 
-            # Truncate prompt if needed to fit token limits (50K max - typical: 6K-25K)
-            stage_start = time.time()
-            prompt = truncate_context_if_needed(prompt, max_tokens=50000)
-            perf_metrics['stages']['prompt_truncation'] = (time.time() - stage_start) * 1000
+        generated_text = safe_get_nested(raw_response, "candidates", 0, "content", "parts", 0, "text")
 
-            # Generate response with retry logic for malformed JSON
-            VERTEX_ENDPOINT = f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/{GCP_INFRASTRUCTURE_PROJECT}/locations/{LOCATION}/publishers/google/models/{GEMINI_MODEL_ID}:generateContent"
+        if generated_text:
+            final_json = extract_json_from_response(generated_text)
 
-            max_retries = 5  # INCREASED from 3 to 5 for better reliability
-            final_json = None
-            generated_text = None
-
-            llm_start = time.time()
-            for json_attempt in range(max_retries):
-                # Progressive temperature reduction on retries (0.3 → 0.1, never 0.0 to avoid robotic responses)
-                temperature = max(0.1, round(0.3 - (json_attempt * 0.05), 2))
-
-                body = {
-                    "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-                    "generation_config": {
-                        "response_mime_type": "application/json",
-                        "temperature": temperature,
-                        "maxOutputTokens": 65536  # Gemini 2.5 Flash supports up to 65K output tokens (vs 8K in 2.0)
-                    },
-                }
-
-                try:
-                    # Add retry logic for HTTP-level Gemini API calls with exponential backoff
-                    max_http_retries = 4  # More retries for rate limiting
-
-                    for http_attempt in range(max_http_retries):
-                        # Exponential backoff: 2s, 4s, 8s, 16s
-                        retry_delay = 2 ** (http_attempt + 1)
-                        try:
-                            response = requests.post(
-                                VERTEX_ENDPOINT,
-                                headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
-                                json=body,
-                                timeout=120  # Increased to match Gemini's actual response times
-                            )
-                            response.raise_for_status()
-                            break  # Success
-                        except requests.Timeout:
-                            if http_attempt == max_http_retries - 1:
-                                print(f"❌ Gemini HTTP timeout after {max_http_retries} attempts")
-                                return jsonify({
-                                    "error": "AI service timeout",
-                                    "retry": True,
-                                    "error_type": "timeout"
-                                }), 503
-                            print(f"⚠️ HTTP retry {http_attempt + 1}/{max_http_retries} in {retry_delay}s...")
-                            time.sleep(retry_delay)
-                        except requests.HTTPError as e:
-                            status_code = response.status_code if response else 500
-                            # Handle rate limiting (429) with exponential backoff
-                            if status_code == 429:
-                                if http_attempt == max_http_retries - 1:
-                                    print(f"❌ Gemini API rate limited after {max_http_retries} attempts")
-                                    return jsonify({
-                                        "error": "AI service is busy. Please wait a moment and try again.",
-                                        "retry": True,
-                                        "error_type": "rate_limit",
-                                        "retry_after": 30
-                                    }), 429
-                                print(f"⚠️ Gemini rate limited (429), retrying in {retry_delay}s...")
-                                time.sleep(retry_delay)
-                                continue
-                            # Handle service unavailable (503)
-                            if status_code == 503:
-                                if http_attempt == max_http_retries - 1:
-                                    raise
-                                print(f"⚠️ Gemini service unavailable, retrying in {retry_delay}s...")
-                                time.sleep(retry_delay)
-                                continue
-                            # For other errors, raise immediately
-                            raise
-
-                    # Parse response
-                    raw_response = response.json()
-
-                    # Check finish reason to understand why generation stopped
-                    finish_reason = safe_get_nested(raw_response, "candidates", 0, "finishReason")
-                    if finish_reason and finish_reason not in ("STOP", "MAX_TOKENS"):
-                        print(f"⚠️ Gemini finishReason: {finish_reason} — response may be blocked or incomplete")
-                        if finish_reason == "SAFETY":
-                            return jsonify({
-                                "error": "The AI could not generate a response for this query. Please try rephrasing.",
-                                "error_type": "content_blocked"
-                            }), 400
-
-                    # Safely extract generated text from nested response
-                    generated_text = safe_get_nested(raw_response, "candidates", 0, "content", "parts", 0, "text")
-
-                    if generated_text:
-                        final_json = extract_json_from_response(generated_text)
-
-                        if final_json:
-                            if json_attempt > 0:
-                                print(f"✅ JSON parsing succeeded on retry {json_attempt + 1}")
-                            break  # Success!
-                        else:
-                            print(f"⚠️  JSON attempt {json_attempt + 1}/{max_retries}: Failed to parse JSON")
-                            if json_attempt < max_retries - 1:
-                                print(f"   Retrying with lower temperature ({temperature})...")
-                                time.sleep(0.5)  # Brief pause before retry
-                    else:
-                        print(f"⚠️  JSON attempt {json_attempt + 1}/{max_retries}: Empty or malformed response from Gemini")
-                        if json_attempt < max_retries - 1:
-                            time.sleep(0.5)
-
-                except requests.exceptions.Timeout:
-                    print(f"⚠️  JSON attempt {json_attempt + 1}/{max_retries}: Timeout")
-                    if json_attempt < max_retries - 1:
-                        time.sleep(1)
-                except Exception as e:
-                    print(f"⚠️  JSON attempt {json_attempt + 1}/{max_retries}: Error - {e}")
-                    if json_attempt < max_retries - 1:
-                        time.sleep(0.5)
-
-            # Check if we got valid JSON after retries
             if not final_json:
-                print(f"❌ Failed to extract JSON after {max_retries} attempts (Route 3)")
-                if generated_text:
-                    print(f"Last response preview: {generated_text[:500]}...")
+                print(f"❌ Failed to extract JSON from Gemini response")
                 return jsonify({
                     "error": "AI returned malformed response",
-                    "details": f"The AI response could not be parsed as JSON after {max_retries} attempts. This may be due to query complexity or temporary service issues.",
-                    "suggestion": "Try rephrasing your query, making it more specific, or try again in a moment.",
                     "error_type": "json_parse_error"
                 }), 500
 
-            # Continue with valid JSON
-            try:
-                # Enhance with verse data
-                if verse_data:
-                    # verse_data can be a list (from LLM retrieval) or a single dict (from fallback)
-                    if isinstance(verse_data, list):
-                        # LLM-orchestrated retrieval: verse_data is already a list of verse dicts
-                        final_json["verses"] = [{
-                            "surah": v.get('surah_number') or v.get('surah'),
-                            "surah_name": v.get('surah_name', ''),
-                            "verse_number": str(v.get('verse_number') or v.get('verse', '')),
-                            "text_saheeh_international": v.get('english', ''),
-                            "arabic_text": v.get('arabic', '')
-                        } for v in verse_data]
-                    else:
-                        # Single verse dict (from fallback path)
-                        final_json["verses"] = [{
-                            "surah": verse_data['surah_number'],
-                            "surah_name": verse_data['surah_name'],
-                            "verse_number": str(verse_data['verse_number']),
-                            "text_saheeh_international": verse_data['english'],
-                            "arabic_text": verse_data['arabic']
-                        }]
-                    final_json["query_type"] = "semantic_with_verse"
-                else:
-                    final_json["query_type"] = "thematic"
+            final_json["query_type"] = "direct_verse"
+            final_json["verse_reference"] = f"{surah}:{verse}"
 
-                # Validate
-                is_valid, validation_msg = validate_response(final_json)
-                if not is_valid:
-                    print(f"⚠️  Validation failed: {validation_msg}")
-                    print(f"⚠️  Response keys: {list(final_json.keys())}")
-                    print(f"⚠️  Has tafsir_explanations: {'tafsir_explanations' in final_json}")
-                    if 'tafsir_explanations' in final_json:
-                        explanations = final_json.get('tafsir_explanations', [])
-                        print(f"⚠️  Number of explanations: {len(explanations)}")
-                        for i, exp in enumerate(explanations[:3]):  # Show first 3
-                            exp_text = exp.get('explanation', '')
-                            print(f"⚠️  Explanation {i+1} length: {len(exp_text)}, preview: {exp_text[:100]}")
-                    print(f"⚠️  Has metadata.extraction_error: {final_json.get('metadata', {}).get('extraction_error')}")
-                    return jsonify({"error": "Response quality not met"}), 500
+            final_json = filter_unavailable_sources(final_json)
 
-                # Add approach suggestion if user might benefit from different approach
-                intent = detect_query_intent(query)
-                if intent['suggested_approach'] and intent['suggested_approach'] != approach and intent['confidence'] == 'high':
-                    final_json['approach_suggestion'] = {
-                        'suggested': intent['suggested_approach'],
-                        'reason': intent['reason'],
-                        'current': approach
-                    }
-                    print(f"💡 Suggesting {intent['suggested_approach']} approach (current: {approach})")
+            final_json["scholarly_sources"] = scholarly_badges
+            final_json["_scholarly_pipeline"] = scholarly_pipeline
 
-                # Filter out unavailable sources before caching and returning
-                final_json = filter_unavailable_sources(final_json)
+            final_json = keep_requested_verses_primary(
+                final_json,
+                verses_for_ai,
+                requested_verses=[(surah, v) for v in range(start_verse, end_verse + 1)]
+            )
 
-                # Add scholarly source attribution metadata (from two-stage resolver)
-                final_json["scholarly_sources"] = scholarly_badges
-                final_json["_scholarly_pipeline"] = scholarly_pipeline
+            persona_name = user_profile.get('persona', 'practicing_muslim')
+            requested_range = [(surah, v) for v in range(start_verse, end_verse + 1)]
+            final_json, trimmed, original_count, final_count = enforce_persona_verse_limit(
+                final_json,
+                persona_name,
+                requested_verses=requested_range
+            )
+            if trimmed:
+                print(f"   ℹ️  Trimmed verses to {final_count}/{original_count} for persona {persona_name}")
 
-                # Keep only requested verse(s) in main list; move extras to cross references
-                final_json = keep_requested_verses_primary(
-                    final_json,
-                    verse_data,
-                    requested_verses=[(verse_ref[0], verse_ref[1])] if verse_ref else None
-                )
+            verse_count = len(final_json.get('verses', []))
+            verse_limit = VERSE_LIMIT
+            if verse_count > verse_limit:
+                print(f"   ⚠️  VERSE LIMIT EXCEEDED: {verse_count}/{verse_limit}")
+            else:
+                print(f"   ✅ Verse count: {verse_count}/{verse_limit}")
 
-                persona_name = user_profile.get('persona', 'practicing_muslim')
-                requested_list = [(verse_ref[0], verse_ref[1])] if verse_ref else None
-                final_json, trimmed, original_count, final_count = enforce_persona_verse_limit(
-                    final_json,
-                    persona_name,
-                    requested_verses=requested_list
-                )
-                if trimmed:
-                    print(f"   ℹ️  Trimmed verses to {final_count}/{original_count} for persona {persona_name}")
+            # Cache the response
+            with cache_lock:
+                RESPONSE_CACHE[cache_key] = final_json
+                if len(RESPONSE_CACHE) > 1000:
+                    keys_to_remove = list(RESPONSE_CACHE.keys())[:200]
+                    for key in keys_to_remove:
+                        RESPONSE_CACHE.pop(key, None)
 
-                # Log verse count for monitoring
-                verse_count = len(final_json.get('verses', []))
-                verse_limit = VERSE_LIMIT
-                if verse_count > verse_limit:
-                    print(f"   ⚠️  VERSE LIMIT EXCEEDED: {verse_count} verses returned (limit: {verse_limit})")
-                    perf_metrics['verse_limit_exceeded'] = True
-                else:
-                    print(f"   ✅ Verse count: {verse_count}/{verse_limit}")
-                perf_metrics['verse_count'] = verse_count
+            if approach == 'tafsir':
+                store_tafsir_cache(query, user_profile, final_json, approach)
 
-                # Cache with thread safety (in-memory)
-                with cache_lock:
-                    RESPONSE_CACHE[cache_key] = final_json
-                    if len(RESPONSE_CACHE) > 1000:
-                        keys_to_remove = list(RESPONSE_CACHE.keys())[:200]
-                        for key in keys_to_remove:
-                            RESPONSE_CACHE.pop(key, None)  # Use pop to avoid KeyError
+            if user_id:
+                _track_explored_verse(user_id, surah, start_verse, end_verse)
+                _check_and_award_badges(user_id)
+            final_json["recommendations"] = _generate_recommendations(surah, start_verse, final_json, user_id)
 
-                # Store semantic/explore response in Firestore for long-term caching
-                if approach == 'semantic':
-                    print(f"💾 Storing semantic/explore query to Firestore cache...")
-                    store_tafsir_cache(query, user_profile, final_json, approach)
-
-                # Performance summary
-                perf_metrics['stages']['llm_generation'] = (time.time() - llm_start) * 1000
-                perf_metrics['llm_calls'] = json_attempt + 1
-                total_time = (time.time() - perf_metrics['total_start']) * 1000
-
-                print(f"\n{'='*70}")
-                print(f"⏱️  PERFORMANCE SUMMARY - ROUTE 3 (Semantic Search)")
-                print(f"{'='*70}")
-                print(f"Total Request Time: {total_time:.0f}ms")
-                print(f"\nStage Breakdown:")
-                for stage, timing in perf_metrics['stages'].items():
-                    print(f"  • {stage}: {timing:.0f}ms ({timing/total_time*100:.1f}%)")
-                print(f"\nMetrics:")
-                print(f"  • Chunks retrieved: {perf_metrics['chunks_retrieved']}")
-                print(f"  • LLM calls: {perf_metrics['llm_calls']}")
-                print(f"  • Verses returned: {perf_metrics.get('verse_count', 0)}")
-                if perf_metrics.get('verse_limit_exceeded'):
-                    print(f"  • ⚠️  VERSE LIMIT EXCEEDED")
-                print(f"  • Route: Semantic Search (Full RAG)")
-                print(f"  • Approach: {perf_metrics['approach']}")
-                print(f"{'='*70}")
-
-                print(f"✅ Semantic response generated in {total_time:.0f}ms")
-                return jsonify(final_json), 200
-
-            except (KeyError, IndexError, json.JSONDecodeError) as e:
-                print(f"❌ Response structure error: {type(e).__name__} - {e}")
-                if 'generated_text' in locals():
-                    print(f"Response preview: {generated_text[:500]}...")
-                return jsonify({
-                    "error": "AI returned unexpected response format",
-                    "details": "The response structure didn't match our expected format. This may be due to query complexity.",
-                    "suggestion": "Try simplifying your query or breaking it into smaller parts.",
-                    "error_type": "structure_error"
-                }), 500
+            print(f"✅ Formatted by AI from {len(verse_metadata_list)} source(s)")
+            return jsonify(final_json), 200
+        else:
+            response = build_direct_verse_response(verse_data, verse_metadata_list)
+            return jsonify(response), 200
 
     except requests.exceptions.Timeout:
         return jsonify({"error": "AI service timed out"}), 504
@@ -8877,35 +7156,19 @@ def tafsir_handler_enhanced():
         return jsonify({"error": "Internal server error"}), 500
 
 
-# --- REPLACED: Health Check ---
 @app.route("/health", methods=["GET"])
 def health_check_enhanced():
-    """Enhanced health check with hybrid system status"""
+    """Health check with system status"""
     return jsonify({
         "status": "healthy",
         "timestamp": datetime.now().isoformat(),
-        "chunks_loaded": len(TAFSIR_CHUNKS),
         "metadata_entries": len(VERSE_METADATA),
         "cache_size": len(RESPONSE_CACHE),
-        "system_type": "RAG-optimized",
         "query_routes": {
-            "metadata": {
-                "description": "Direct lookup + AI formatting",
-                "example": "hadith in 2:255",
-                "avg_time": "1-2s",
-                "llm_calls": 1
-            },
             "direct_verse": {
                 "description": "Direct lookup + AI formatting",
                 "example": "2:255",
-                "avg_time": "1-2s",
                 "llm_calls": 1
-            },
-            "semantic": {
-                "description": "Full RAG pipeline",
-                "example": "explain charity",
-                "avg_time": "3-5s",
-                "llm_calls": 2
             }
         },
         "personas_available": list(PERSONAS.keys()),
@@ -8916,58 +7179,6 @@ def health_check_enhanced():
     }), 200
 
 
-
-# --- Debug Endpoint ---
-@app.route('/debug-index', methods=['GET'])
-def debug_index():
-    """Debug endpoint to verify index configuration"""
-    try:
-        # Count chunks by source using the mapping
-        ibn_kathir_count = sum(1 for source in CHUNK_SOURCE_MAP.values() if source == 'Ibn Kathir')
-        qurtubi_count = sum(1 for source in CHUNK_SOURCE_MAP.values() if source == 'al-Qurtubi')
-
-        # Sample IDs from each source
-        ibn_kathir_samples = [k for k, v in CHUNK_SOURCE_MAP.items() if v == 'Ibn Kathir'][:5]
-        qurtubi_samples = [k for k, v in CHUNK_SOURCE_MAP.items() if v == 'al-Qurtubi'][:5]
-
-        # Sample text previews
-        ibn_kathir_text = {k: TAFSIR_CHUNKS[k][:200] + '...' for k in ibn_kathir_samples if k in TAFSIR_CHUNKS}
-        qurtubi_text = {k: TAFSIR_CHUNKS[k][:200] + '...' for k in qurtubi_samples if k in TAFSIR_CHUNKS}
-
-        return jsonify({
-            "status": "success",
-            "configuration": {
-                "index_endpoint_id": INDEX_ENDPOINT_ID,
-                "deployed_index_id": DEPLOYED_INDEX_ID,
-                "vector_index_id": VECTOR_INDEX_ID,
-                "embedding_model": EMBEDDING_MODEL,
-                "embedding_dimension": EMBEDDING_DIMENSION
-            },
-            "chunks_loaded": {
-                "total": len(TAFSIR_CHUNKS),
-                "ibn_kathir": ibn_kathir_count,
-                "al_qurtubi": qurtubi_count
-            },
-            "personas_available": list(PERSONAS.keys()),
-            "source_coverage": {
-                "Ibn Kathir": "Complete Quran (all 114 Surahs)",
-                "al-Qurtubi": "Surahs 1-4 only (up to Surah 4:22)"
-            },
-            "sample_ids": {
-                "ibn_kathir": ibn_kathir_samples,
-                "al_qurtubi": qurtubi_samples
-            },
-            "sample_text_previews": {
-                "ibn_kathir": ibn_kathir_text,
-                "al_qurtubi": qurtubi_text
-            }
-        })
-    except Exception as e:
-        return jsonify({
-            "status": "error",
-            "error": str(e),
-            "traceback": traceback.format_exc()
-        }), 500
 
 @app.route("/debug/range-map", methods=["GET"])
 def debug_range_map():
@@ -9060,603 +7271,125 @@ def debug_query(query):
         # STEP 3: Query Classification
         step_start = time.time()
         classification = classify_query_enhanced(query)
-        query_type = classification['query_type']
-        confidence = classification['confidence']
         verse_ref = classification['verse_ref']
-        metadata_type = classification['metadata_type']
 
         log_step("3. Query Classification", {
-            "query_type": query_type,
-            "confidence": f"{confidence:.0%}",
             "verse_ref": f"{verse_ref[0]}:{verse_ref[1]}" if verse_ref else None,
-            "metadata_type": metadata_type
+            "confidence": f"{classification['confidence']:.0%}"
         })
         log_timing("3. Query Classification", time.time() - step_start)
 
-        # STEP 4: Verse Range Extraction
-        if verse_ref:
-            step_start = time.time()
-            verse_range = extract_verse_range(query)
-            log_step("4. Verse Range Extraction", {
-                "has_range": verse_range is not None,
-                "range": f"{verse_range[0]}:{verse_range[1]}-{verse_range[2]}" if verse_range else None,
-                "is_multi_verse": verse_range and verse_range[1] != verse_range[2] if verse_range else False
-            })
-            log_timing("4. Verse Range Extraction", time.time() - step_start)
+        if not verse_ref:
+            trace["error"] = "No verse reference found"
+            return jsonify(trace), 400
 
-        # STEP 5: Route Determination
-        if query_type == 'metadata' and verse_ref:
-            route = "ROUTE 1: Metadata Query (Direct lookup → AI formatting)"
-        elif query_type == 'direct_verse' and verse_ref:
-            route = "ROUTE 2: Direct Verse Query (Direct lookup → AI formatting)"
+        # DIRECT VERSE QUERY
+        surah, verse = verse_ref
+        verse_range = extract_verse_range(query)
+
+        step_start = time.time()
+        is_valid, msg = validate_verse_reference(surah, verse)
+        log_step("4. Verse Validation", {"surah": surah, "verse": verse, "is_valid": is_valid})
+        log_timing("4. Verse Validation", time.time() - step_start)
+
+        if not is_valid:
+            trace["error"] = msg
+            return jsonify(trace), 400
+
+        # Get tafsir
+        step_start = time.time()
+        if verse_range and verse_range[1] != verse_range[2]:
+            start_verse, end_verse = verse_range[1], verse_range[2]
+            verse_metadata_list = get_verse_metadata_direct(surah, start_verse, end_verse)
         else:
-            route = "ROUTE 3: Semantic Search (Full RAG pipeline)"
-
-        log_step("5. Route Determination", {
-            "route": route,
-            "will_use_vector_search": "ROUTE 3" in route
-        })
-
-        # ===================================================================
-        # ROUTE 1: METADATA QUERY
-        # ===================================================================
-        if query_type == 'metadata' and verse_ref:
-            log_step("ROUTE 1 EXECUTION START", {"route": "Metadata Query"})
-
-            surah, verse = verse_ref
-
-            # Validation
-            step_start = time.time()
-            is_valid, msg = validate_verse_reference(surah, verse)
-            log_step("6. Verse Validation", {
-                "surah": surah,
-                "verse": verse,
-                "is_valid": is_valid,
-                "message": msg if not is_valid else "Valid"
-            })
-            log_timing("6. Verse Validation", time.time() - step_start)
-
-            if not is_valid:
-                trace["error"] = msg
-                return jsonify(trace), 400
-
-            # Direct metadata lookup
-            step_start = time.time()
             verse_metadata_list = get_verse_metadata_direct(surah, verse)
-            log_step("7. Direct Metadata Lookup", {
-                "found_metadata": bool(verse_metadata_list),
-                "num_sources": len(verse_metadata_list) if verse_metadata_list else 0,
-                "sources": [item['source'] for item in verse_metadata_list] if verse_metadata_list else []
-            })
-            log_timing("7. Direct Metadata Lookup", time.time() - step_start)
-
-            if not verse_metadata_list:
-                log_step("FALLBACK TO ROUTE 3", {
-                    "reason": "No metadata found in direct lookup"
-                })
-                query_type = 'semantic'  # Will fall through to ROUTE 3
-            else:
-                # Get verse data
-                step_start = time.time()
-                verse_data = get_verse_from_firestore(surah, verse)
-                log_step("8. Fetch Verse from Firestore", {
-                    "has_verse_data": bool(verse_data),
-                    "arabic_text_length": len(verse_data.get('text', '')) if verse_data else 0
-                })
-                log_timing("8. Fetch Verse from Firestore", time.time() - step_start)
-
-                # Build context (simplified for debug)
-                step_start = time.time()
-                context_by_source = {}
-                for item in verse_metadata_list:
-                    source_name = item['source']
-                    metadata = item['metadata']
-                    context_parts = []
-
-                    # Extract metadata based on type
-                    if metadata_type in ['hadith', 'all']:
-                        hadith_refs = metadata.get('hadith_references', [])
-                        if hadith_refs:
-                            context_parts.append(f"HADITH: {len(hadith_refs)} references")
-
-                    if metadata.get('commentary'):
-                        context_parts.append(f"Commentary: {len(metadata['commentary'])} chars")
-
-                    context_by_source[source_name] = context_parts
-
-                log_step("9. Build Context from Metadata", {
-                    "sources_with_context": len(context_by_source),
-                    "context_summary": context_by_source
-                })
-                log_timing("9. Build Context", time.time() - step_start)
-
-                # Build prompt
-                step_start = time.time()
-                arabic_text = get_arabic_text_from_verse_data(verse_data) if verse_data else None
-                scholarly_ctx, scholarly_badges, scholarly_pipeline = _get_scholarly_context_two_stage(query, verse_data, context_by_source)
-                prompt = build_enhanced_prompt(query, context_by_source, user_profile,
-                                             arabic_text, None, 'metadata', verse_data, approach, scholarly_ctx)
-
-                # LOG COMPLETE PROMPT
-                print("🔵 === COMPLETE PROMPT TO GEMINI ===")
-                print(prompt)
-                print("🔵 === END COMPLETE PROMPT ===")
-
-                log_step("10. Build AI Prompt", {
-                    "prompt_length": len(prompt),
-                    "has_arabic": bool(arabic_text),
-                    "persona": user_profile.get('persona')
-                })
-                log_timing("10. Build AI Prompt", time.time() - step_start)
-
-                # Call Gemini
-                step_start = time.time()
-                log_step("11. Calling Gemini API", {
-                    "model": "{GEMINI_MODEL_ID}",
-                    "temperature": 0.3,
-                    "timeout": 120
-                })
-
-                credentials, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
-                credentials.refresh(google.auth.transport.requests.Request())
-
-                gemini_url = f"https://us-central1-aiplatform.googleapis.com/v1/projects/{GCP_INFRASTRUCTURE_PROJECT}/locations/us-central1/publishers/google/models/{GEMINI_MODEL_ID}:generateContent"
-
-                body = {
-                    "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-                    "generation_config": {"temperature": 0.3, "maxOutputTokens": 65536},
-                }
-
-                response = requests.post(
-                    gemini_url,
-                    headers={
-                        "Authorization": f"Bearer {credentials.token}",
-                        "Content-Type": "application/json",
-                    },
-                    json=body,
-                    timeout=120
-                )
-
-                gemini_duration = time.time() - step_start
-
-                log_step("12. Gemini Response", {
-                    "status_code": response.status_code,
-                    "duration": f"{gemini_duration:.3f}s",
-                    "response_length": len(response.text) if response.ok else 0
-                })
-                log_timing("11. Gemini API Call", gemini_duration)
-
-                if response.ok:
-                    result = response.json()
-                    generated_text = result['candidates'][0]['content']['parts'][0]['text']
-
-                    # LOG COMPLETE GEMINI RESPONSE
-                    print("🟢 === COMPLETE GEMINI RESPONSE ===")
-                    print(generated_text)
-                    print("🟢 === END COMPLETE RESPONSE ===")
-
-                    # CRITICAL FIX: Parse JSON from Gemini response
-                    final_json = extract_json_from_response(generated_text)
-
-                    if not final_json or final_json.get('metadata', {}).get('extraction_error'):
-                        log_step("ERROR: JSON Extraction Failed", {
-                            "has_extraction_error": bool(final_json and final_json.get('metadata', {}).get('extraction_error')),
-                            "response_preview": generated_text[:500]
-                        })
-                        trace["error"] = "Failed to parse AI response"
-                        return jsonify(trace), 500
-
-                    # Add route and sources to response
-                    final_json["route"] = "ROUTE 1"
-                    if "sources" not in final_json:
-                        final_json["sources"] = list(context_by_source.keys())
-                    final_json["scholarly_sources"] = scholarly_badges
-                    final_json["_scholarly_pipeline"] = scholarly_pipeline
-
-                    # Cache it
-                    with cache_lock:
-                        RESPONSE_CACHE[cache_key] = final_json
-
-                    trace["response"] = final_json
-                    trace["timings"] = step_timings
-                    trace["timings"]["total"] = f"{time.time() - overall_start:.3f}s"
-
-                    log_step("ROUTE 1 COMPLETE", {
-                        "has_verses": bool(final_json.get("verses")),
-                        "has_tafsir": bool(final_json.get("tafsir_explanations")),
-                        "cached": True
-                    })
-
-                    return jsonify(trace), 200
-                else:
-                    log_step("ERROR: Gemini API Failed", {
-                        "status": response.status_code,
-                        "error": response.text[:500]
-                    })
-                    trace["error"] = f"Gemini API error: {response.status_code}"
-                    return jsonify(trace), 500
-
-        # ===================================================================
-        # ROUTE 2: DIRECT VERSE QUERY
-        # ===================================================================
-        if query_type == 'direct_verse' and verse_ref:
-            log_step("ROUTE 2 EXECUTION START", {"route": "Direct Verse Query"})
-
-            surah, verse = verse_ref
-            verse_range = extract_verse_range(query)
-
-            # Validation
-            step_start = time.time()
-            is_valid, msg = validate_verse_reference(surah, verse)
-            log_step("6. Verse Validation", {
-                "surah": surah,
-                "verse": verse,
-                "is_valid": is_valid
-            })
-            log_timing("6. Verse Validation", time.time() - step_start)
-
-            if not is_valid:
-                trace["error"] = msg
-                return jsonify(trace), 400
-
-            # Get tafsir for verse/range
-            step_start = time.time()
-            if verse_range and verse_range[1] != verse_range[2]:
-                start_verse = verse_range[1]
-                end_verse = verse_range[2]
-                verse_metadata_list = get_verse_metadata_direct(surah, start_verse, end_verse)
-                log_step("7. Fetch Verse Range Tafsir", {
-                    "range": f"{surah}:{start_verse}-{end_verse}",
-                    "num_verses": end_verse - start_verse + 1,
-                    "num_sources": len(verse_metadata_list) if verse_metadata_list else 0
-                })
-            else:
-                verse_metadata_list = get_verse_metadata_direct(surah, verse)
-                log_step("7. Fetch Single Verse Tafsir", {
-                    "verse": f"{surah}:{verse}",
-                    "num_sources": len(verse_metadata_list) if verse_metadata_list else 0
-                })
-
-            log_timing("7. Fetch Tafsir", time.time() - step_start)
-
-            if not verse_metadata_list:
-                log_step("FALLBACK TO ROUTE 3", {
-                    "reason": "No tafsir found in direct lookup"
-                })
-                query_type = 'semantic'  # Fall through to ROUTE 3
-            else:
-                # Build context from tafsir
-                step_start = time.time()
-                context_by_source = {}
-                for item in verse_metadata_list:
-                    source_name = item['source']
-                    metadata = item['metadata']
-                    if metadata.get('commentary'):
-                        context_by_source[source_name] = [metadata['commentary']]
-
-                log_step("8. Build Context from Tafsir", {
-                    "num_sources": len(context_by_source),
-                    "sources": list(context_by_source.keys()),
-                    "total_commentary_chars": sum(len(c[0]) for c in context_by_source.values())
-                })
-                log_timing("8. Build Context", time.time() - step_start)
-
-                # Get verse data from Firestore
-                step_start = time.time()
-                if verse_range and verse_range[1] != verse_range[2]:
-                    # For range, get all verses
-                    verse_data = get_verse_from_firestore(surah, verse_range[1])
-                    log_step("9. Fetch Verse from Firestore", {
-                        "verse_range": f"{surah}:{verse_range[1]}-{verse_range[2]}",
-                        "has_verse_data": bool(verse_data)
-                    })
-                else:
-                    verse_data = get_verse_from_firestore(surah, verse)
-                    log_step("9. Fetch Verse from Firestore", {
-                        "verse": f"{surah}:{verse}",
-                        "has_verse_data": bool(verse_data),
-                        "arabic_text_length": len(verse_data.get('text', '')) if verse_data else 0
-                    })
-                log_timing("9. Fetch Verse from Firestore", time.time() - step_start)
-
-                # Build prompt
-                step_start = time.time()
-                arabic_text = get_arabic_text_from_verse_data(verse_data) if verse_data else None
-                scholarly_ctx, scholarly_badges, scholarly_pipeline = _get_scholarly_context_two_stage(query, verse_data, context_by_source)
-                prompt = build_enhanced_prompt(query, context_by_source, user_profile,
-                                             arabic_text, None, 'direct_verse', verse_data, approach, scholarly_ctx)
-
-                # LOG COMPLETE PROMPT
-                print("🔵 === COMPLETE PROMPT TO GEMINI ===")
-                print(prompt)
-                print("🔵 === END COMPLETE PROMPT ===")
-
-                log_step("10. Build AI Prompt", {
-                    "prompt_length": len(prompt),
-                    "has_arabic": bool(arabic_text),
-                    "persona": user_profile.get('persona'),
-                    "num_sources": len(context_by_source)
-                })
-                log_timing("10. Build AI Prompt", time.time() - step_start)
-
-                # Call Gemini
-                step_start = time.time()
-                log_step("11. Calling Gemini API", {
-                    "model": "{GEMINI_MODEL_ID}",
-                    "temperature": 0.3,
-                    "timeout": 120
-                })
-
-                credentials, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
-                credentials.refresh(google.auth.transport.requests.Request())
-
-                gemini_url = f"https://us-central1-aiplatform.googleapis.com/v1/projects/{GCP_INFRASTRUCTURE_PROJECT}/locations/us-central1/publishers/google/models/{GEMINI_MODEL_ID}:generateContent"
-
-                body = {
-                    "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-                    "generation_config": {"temperature": 0.3, "maxOutputTokens": 65536},
-                }
-
-                response = requests.post(
-                    gemini_url,
-                    headers={
-                        "Authorization": f"Bearer {credentials.token}",
-                        "Content-Type": "application/json",
-                    },
-                    json=body,
-                    timeout=120
-                )
-
-                gemini_duration = time.time() - step_start
-
-                log_step("12. Gemini Response", {
-                    "status_code": response.status_code,
-                    "duration": f"{gemini_duration:.3f}s",
-                    "response_length": len(response.text) if response.ok else 0
-                })
-                log_timing("11. Gemini API Call", gemini_duration)
-
-                if response.ok:
-                    result = response.json()
-                    generated_text = result['candidates'][0]['content']['parts'][0]['text']
-
-                    # LOG COMPLETE GEMINI RESPONSE
-                    print("🟢 === COMPLETE GEMINI RESPONSE ===")
-                    print(generated_text)
-                    print("🟢 === END COMPLETE RESPONSE ===")
-
-                    # CRITICAL FIX: Parse JSON from Gemini response
-                    final_json = extract_json_from_response(generated_text)
-
-                    if not final_json or final_json.get('metadata', {}).get('extraction_error'):
-                        log_step("ERROR: JSON Extraction Failed", {
-                            "has_extraction_error": bool(final_json and final_json.get('metadata', {}).get('extraction_error')),
-                            "response_preview": generated_text[:500]
-                        })
-                        trace["error"] = "Failed to parse AI response"
-                        return jsonify(trace), 500
-
-                    # Add route and sources to response
-                    final_json["route"] = "ROUTE 2"
-                    if "sources" not in final_json:
-                        final_json["sources"] = list(context_by_source.keys())
-                    final_json["scholarly_sources"] = scholarly_badges
-                    final_json["_scholarly_pipeline"] = scholarly_pipeline
-
-                    # Cache it
-                    with cache_lock:
-                        RESPONSE_CACHE[cache_key] = final_json
-
-                    trace["response"] = final_json
-                    trace["timings"] = step_timings
-                    trace["timings"]["total"] = f"{time.time() - overall_start:.3f}s"
-
-                    log_step("ROUTE 2 COMPLETE", {
-                        "has_verses": bool(final_json.get("verses")),
-                        "has_tafsir": bool(final_json.get("tafsir_explanations")),
-                        "cached": True
-                    })
-
-                    return jsonify(trace), 200
-                else:
-                    log_step("ERROR: Gemini API Failed", {
-                        "status": response.status_code,
-                        "error": response.text[:500]
-                    })
-                    trace["error"] = f"Gemini API error: {response.status_code}"
-                    return jsonify(trace), 500
-
-        # ===================================================================
-        # ROUTE 3: SEMANTIC SEARCH
-        # ===================================================================
-        if query_type == 'semantic':
-            log_step("ROUTE 3 EXECUTION START", {"route": "Semantic Search (Full RAG)"})
-
-            # Get auth token for query expansion
-            step_start = time.time()
-            credentials, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
-            credentials.refresh(google.auth.transport.requests.Request())
-            token = credentials.token
-
-            # Query Expansion
-            log_step("6. Query Expansion", {
-                "original_query": query,
-                "status": "calling Gemini for expansion..."
-            })
-
-            expanded_query = expand_query(query, token, approach)
-
-            log_step("6b. Query Expansion Result", {
-                "original": query,
-                "expanded": expanded_query,
-                "expansion_added": len(expanded_query) - len(query)
-            })
-            log_timing("6. Query Expansion", time.time() - step_start)
-
-            # Generate Embedding
-            step_start = time.time()
-            log_step("7. Generate Embedding", {
-                "query": expanded_query,
-                "model": EMBEDDING_MODEL,
-                "dimension": EMBEDDING_DIMENSION
-            })
-
-            from vertexai.language_models import TextEmbeddingModel
-            model = TextEmbeddingModel.from_pretrained(EMBEDDING_MODEL)
-            embeddings = model.get_embeddings([expanded_query], output_dimensionality=EMBEDDING_DIMENSION)
-            query_embedding = embeddings[0].values
-
-            log_step("7b. Embedding Generated", {
-                "dimension": len(query_embedding),
-                "first_5_values": query_embedding[:5]
-            })
-            log_timing("7. Generate Embedding", time.time() - step_start)
-
-            # Vector Search
-            step_start = time.time()
-            log_step("8. Vector Search", {
-                "index_endpoint": INDEX_ENDPOINT_ID,
-                "deployed_index": DEPLOYED_INDEX_ID,
-                "num_neighbors": 20
-            })
-
-            endpoint_name = f"projects/{GCP_INFRASTRUCTURE_PROJECT}/locations/{LOCATION}/indexEndpoints/{INDEX_ENDPOINT_ID}"
-            index_endpoint = aiplatform.MatchingEngineIndexEndpoint(index_endpoint_name=endpoint_name)
-
-            vector_response = index_endpoint.find_neighbors(
-                deployed_index_id=DEPLOYED_INDEX_ID,
-                queries=[query_embedding],
-                num_neighbors=20
-            )
-
-            neighbors = vector_response[0] if vector_response else []
-
-            log_step("8b. Vector Search Results", {
-                "num_results": len(neighbors),
-                "top_5_ids": [n.id for n in neighbors[:5]],
-                "top_5_distances": [f"{n.distance:.4f}" for n in neighbors[:5]]
-            })
-            log_timing("8. Vector Search", time.time() - step_start)
-
-            # Fetch chunks from Firestore
-            step_start = time.time()
-            log_step("9. Fetch Chunks from Firestore", {
-                "chunk_ids": [n.id for n in neighbors[:5]]
-            })
-
-            chunks_by_source = {}
-            for neighbor in neighbors:
-                chunk_doc = quran_db.collection('tafsir_chunks').document(neighbor.id).get()
-                if chunk_doc.exists:
-                    chunk_data = chunk_doc.to_dict()
-                    source = chunk_data.get('source', 'Unknown')
-                    if source not in chunks_by_source:
-                        chunks_by_source[source] = []
-                    chunks_by_source[source].append(chunk_data.get('text', ''))
-
-            log_step("9b. Chunks Retrieved", {
-                "num_sources": len(chunks_by_source),
-                "sources": list(chunks_by_source.keys()),
-                "total_chunks": sum(len(chunks) for chunks in chunks_by_source.values())
-            })
-            log_timing("9. Fetch Chunks", time.time() - step_start)
-
-            # Build prompt and call Gemini
-            step_start = time.time()
-            scholarly_ctx, scholarly_badges, scholarly_pipeline = _get_scholarly_context_two_stage(query, None, chunks_by_source)
-            prompt = build_enhanced_prompt(query, chunks_by_source, user_profile,
-                                         None, None, 'semantic', None, approach, scholarly_ctx)
-
-            log_step("10. Build AI Prompt", {
-                "prompt_length": len(prompt),
-                "num_sources": len(chunks_by_source)
-            })
-            log_timing("10. Build Prompt", time.time() - step_start)
-
-            # Gemini call
-            step_start = time.time()
-            log_step("11. Calling Gemini API", {
-                "model": "{GEMINI_MODEL_ID}"
-            })
-
-            credentials, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
-            credentials.refresh(google.auth.transport.requests.Request())
-
-            gemini_url = f"https://us-central1-aiplatform.googleapis.com/v1/projects/{GCP_INFRASTRUCTURE_PROJECT}/locations/us-central1/publishers/google/models/{GEMINI_MODEL_ID}:generateContent"
-
-            body = {
-                "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-                "generation_config": {"temperature": 0.3, "maxOutputTokens": 65536},
-            }
-
-            response = requests.post(
-                gemini_url,
-                headers={
-                    "Authorization": f"Bearer {credentials.token}",
-                    "Content-Type": "application/json",
-                },
-                json=body,
-                timeout=120
-            )
-
-            gemini_duration = time.time() - step_start
-
-            log_step("12. Gemini Response", {
-                "status_code": response.status_code,
-                "duration": f"{gemini_duration:.3f}s"
-            })
-            log_timing("11. Gemini API", gemini_duration)
-
-            if response.ok:
-                result = response.json()
-                answer = result['candidates'][0]['content']['parts'][0]['text']
-
-                final_response = {
-                    "answer": answer,
-                    "sources": list(chunks_by_source.keys()),
-                    "route": "ROUTE 3",
-                    "num_chunks": sum(len(chunks) for chunks in chunks_by_source.values()),
-                    "scholarly_sources": scholarly_badges,
-                    "_scholarly_pipeline": scholarly_pipeline,
-                }
-
-                # Track exploration + badges for Route 3 (if verse ref available)
-                if user_id:
-                    try:
-                        vr = extract_verse_range(query) or extract_verse_reference_enhanced(query)
-                        if vr and len(vr) >= 2:
-                            s, sv = int(vr[0]), int(vr[1])
-                            ev = int(vr[2]) if len(vr) >= 3 else sv
-                            _track_explored_verse(user_id, s, sv, ev)
-                            _check_and_award_badges(user_id)
-                    except Exception as track_err:
-                        print(f"[TRACKING] Route 3 tracking error: {track_err}")
-
-                # Cache it
-                with cache_lock:
-                    RESPONSE_CACHE[cache_key] = final_response
-
-                trace["response"] = final_response
-                trace["timings"] = step_timings
-                trace["timings"]["total"] = f"{time.time() - overall_start:.3f}s"
-
-                log_step("ROUTE 3 COMPLETE", {
-                    "answer_length": len(answer),
-                    "cached": True
-                })
-
-                return jsonify(trace), 200
-            else:
-                log_step("ERROR: Gemini API Failed", {
-                    "status": response.status_code,
-                    "error": response.text[:500]
-                })
-                trace["error"] = f"Gemini API error: {response.status_code}"
+        log_timing("5. Fetch Tafsir", time.time() - step_start)
+
+        if not verse_metadata_list:
+            trace["error"] = f"No tafsir found for {surah}:{verse}"
+            trace["timings"] = step_timings
+            return jsonify(trace), 404
+
+        # Build context
+        step_start = time.time()
+        context_by_source = {}
+        for item in verse_metadata_list:
+            source_name = item['source']
+            metadata = item['metadata']
+            if metadata.get('commentary'):
+                context_by_source[source_name] = [metadata['commentary']]
+        log_timing("6. Build Context", time.time() - step_start)
+
+        # Fetch verse from Firestore
+        step_start = time.time()
+        verse_data = get_verse_from_firestore(surah, verse)
+        log_timing("7. Fetch Verse", time.time() - step_start)
+
+        # Build prompt
+        step_start = time.time()
+        arabic_text = get_arabic_text_from_verse_data(verse_data) if verse_data else None
+        scholarly_ctx, scholarly_badges, scholarly_pipeline = _get_scholarly_context_two_stage(query, verse_data, context_by_source)
+        prompt = build_enhanced_prompt(query, context_by_source, user_profile,
+                                     arabic_text, None, 'direct_verse', verse_data, approach, scholarly_ctx)
+
+        print("🔵 === COMPLETE PROMPT TO GEMINI ===")
+        print(prompt)
+        print("🔵 === END COMPLETE PROMPT ===")
+
+        log_step("8. Build AI Prompt", {"prompt_length": len(prompt), "num_sources": len(context_by_source)})
+        log_timing("8. Build Prompt", time.time() - step_start)
+
+        # Call Gemini
+        step_start = time.time()
+        credentials, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
+        credentials.refresh(google.auth.transport.requests.Request())
+
+        gemini_url = f"https://us-central1-aiplatform.googleapis.com/v1/projects/{GCP_INFRASTRUCTURE_PROJECT}/locations/us-central1/publishers/google/models/{GEMINI_MODEL_ID}:generateContent"
+
+        body = {
+            "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+            "generation_config": {"temperature": 0.3, "maxOutputTokens": 65536},
+        }
+
+        response = requests.post(
+            gemini_url,
+            headers={"Authorization": f"Bearer {credentials.token}", "Content-Type": "application/json"},
+            json=body,
+            timeout=120
+        )
+
+        gemini_duration = time.time() - step_start
+        log_step("9. Gemini Response", {"status_code": response.status_code, "duration": f"{gemini_duration:.3f}s"})
+        log_timing("9. Gemini API Call", gemini_duration)
+
+        if response.ok:
+            result = response.json()
+            generated_text = result['candidates'][0]['content']['parts'][0]['text']
+
+            print("🟢 === COMPLETE GEMINI RESPONSE ===")
+            print(generated_text)
+            print("🟢 === END COMPLETE RESPONSE ===")
+
+            final_json = extract_json_from_response(generated_text)
+
+            if not final_json or final_json.get('metadata', {}).get('extraction_error'):
+                trace["error"] = "Failed to parse AI response"
                 return jsonify(trace), 500
 
-        # Should not reach here
-        trace["error"] = "No route matched"
-        return jsonify(trace), 500
+            final_json["sources"] = list(context_by_source.keys())
+            final_json["scholarly_sources"] = scholarly_badges
+            final_json["_scholarly_pipeline"] = scholarly_pipeline
+
+            with cache_lock:
+                RESPONSE_CACHE[cache_key] = final_json
+
+            trace["response"] = final_json
+            trace["timings"] = step_timings
+            trace["timings"]["total"] = f"{time.time() - overall_start:.3f}s"
+            return jsonify(trace), 200
+        else:
+            trace["error"] = f"Gemini API error: {response.status_code}"
+            return jsonify(trace), 500
 
     except Exception as e:
         log_step("CRITICAL ERROR", {
@@ -9667,171 +7400,6 @@ def debug_query(query):
         trace["error"] = str(e)
         trace["timings"] = step_timings
         return jsonify(trace), 500
-
-@app.route("/debug/vector-test", methods=["GET"])
-def test_vector_search():
-    """Test vector search directly without auth"""
-    try:
-        from vertexai.language_models import TextEmbeddingModel
-
-        # Initialize
-        model = TextEmbeddingModel.from_pretrained(EMBEDDING_MODEL)
-        endpoint_name = f"projects/{GCP_INFRASTRUCTURE_PROJECT}/locations/{LOCATION}/indexEndpoints/{INDEX_ENDPOINT_ID}"
-        index_endpoint = aiplatform.MatchingEngineIndexEndpoint(index_endpoint_name=endpoint_name)
-
-        # Generate embedding for test query
-        test_query = "Allah mercy compassion"
-        embeddings = model.get_embeddings([test_query], output_dimensionality=EMBEDDING_DIMENSION)
-        query_embedding = embeddings[0].values
-
-        # Perform vector search
-        result = index_endpoint.find_neighbors(
-            deployed_index_id=DEPLOYED_INDEX_ID,
-            queries=[query_embedding],
-            num_neighbors=5
-        )
-
-        # Process results
-        neighbors = result[0] if result else []
-
-        response = {
-            "test_query": test_query,
-            "embedding_dim": len(query_embedding),
-            "neighbors_found": len(neighbors),
-            "neighbors": []
-        }
-
-        # Check each neighbor
-        for i, neighbor in enumerate(neighbors[:5]):
-            neighbor_id = str(neighbor.id)
-            base_id = neighbor_id
-            if '_' in neighbor_id:
-                parts = neighbor_id.rsplit('_', 1)
-                if len(parts) == 2 and parts[1].isdigit():
-                    base_id = parts[0]
-
-            chunk_exists = base_id in TAFSIR_CHUNKS
-
-            response["neighbors"].append({
-                "index": i,
-                "vector_id": neighbor_id,
-                "base_id": base_id,
-                "distance": neighbor.distance,
-                "chunk_exists": chunk_exists,
-                "chunk_preview": TAFSIR_CHUNKS.get(base_id, "NOT FOUND")[:100] if chunk_exists else None
-            })
-
-        # Show sample of actual chunk keys
-        response["sample_chunk_keys"] = list(TAFSIR_CHUNKS.keys())[:10]
-        response["chunk_key_pattern"] = "Format of keys in TAFSIR_CHUNKS"
-
-        return jsonify(response), 200
-
-    except Exception as e:
-        return jsonify({"error": str(e), "type": type(e).__name__}), 500
-
-@app.route("/debug/vector-diagnosis", methods=["GET"])
-def diagnose_vector_index():
-    """Emergency diagnostic endpoint to check why vector search is failing"""
-    try:
-        diagnosis = {
-            "timestamp": datetime.now().isoformat(),
-            "config": {
-                "INDEX_ENDPOINT_ID": INDEX_ENDPOINT_ID,
-                "DEPLOYED_INDEX_ID": DEPLOYED_INDEX_ID,
-                "EMBEDDING_DIMENSION": EMBEDDING_DIMENSION,
-                "EMBEDDING_MODEL": EMBEDDING_MODEL,
-                "GCP_PROJECT": GCP_INFRASTRUCTURE_PROJECT
-            },
-            "tests": {}
-        }
-
-        # Test 1: Check embedding generation
-        try:
-            from vertexai.language_models import TextEmbeddingModel
-            model = TextEmbeddingModel.from_pretrained(EMBEDDING_MODEL)
-            test_emb = model.get_embeddings(["test"], output_dimensionality=EMBEDDING_DIMENSION)
-            actual_dim = len(test_emb[0].values)
-
-            diagnosis["tests"]["embedding"] = {
-                "success": True,
-                "expected_dim": EMBEDDING_DIMENSION,
-                "actual_dim": actual_dim,
-                "match": actual_dim == EMBEDDING_DIMENSION
-            }
-        except Exception as e:
-            diagnosis["tests"]["embedding"] = {
-                "success": False,
-                "error": str(e)
-            }
-
-        # Test 2: Check index connectivity and search
-        try:
-            endpoint_name = f"projects/{GCP_INFRASTRUCTURE_PROJECT}/locations/{LOCATION}/indexEndpoints/{INDEX_ENDPOINT_ID}"
-            index_endpoint = aiplatform.MatchingEngineIndexEndpoint(index_endpoint_name=endpoint_name)
-
-            # Test 3: Perform test search
-            test_embedding = model.get_embeddings(["Allah"], output_dimensionality=EMBEDDING_DIMENSION)[0].values
-            result = index_endpoint.find_neighbors(
-                deployed_index_id=DEPLOYED_INDEX_ID,
-                queries=[test_embedding],
-                num_neighbors=5
-            )
-
-            num_found = len(result[0]) if result and result[0] else 0
-
-            diagnosis["tests"]["vector_search"] = {
-                "success": True,
-                "neighbors_found": num_found,
-                "index_populated": num_found > 0,
-                "endpoint_name": endpoint_name
-            }
-
-            if num_found == 0:
-                diagnosis["critical_issue"] = "INDEX_EMPTY_OR_MISCONFIGURED"
-
-        except Exception as e:
-            diagnosis["tests"]["vector_search"] = {
-                "success": False,
-                "error": str(e)[:500]  # Truncate long errors
-            }
-            diagnosis["critical_issue"] = "INDEX_CONNECTION_FAILED"
-
-        # Test 4: Check local chunks
-        diagnosis["tests"]["local_chunks"] = {
-            "total_loaded": len(TAFSIR_CHUNKS),
-            "sources": {
-                "Ibn Kathir": sum(1 for v in CHUNK_SOURCE_MAP.values() if v == "Ibn Kathir"),
-                "al-Qurtubi": sum(1 for v in CHUNK_SOURCE_MAP.values() if v == "al-Qurtubi")
-            },
-            "metadata_loaded": len(VERSE_METADATA)
-        }
-
-        # Determine root cause
-        if diagnosis["tests"].get("embedding", {}).get("match") == False:
-            diagnosis["root_cause"] = "EMBEDDING_DIMENSION_MISMATCH"
-            diagnosis["fix"] = "Index expects different embedding dimension than model produces"
-            diagnosis["action_required"] = "Rebuild index with correct embedding dimension or use matching model"
-        elif diagnosis.get("critical_issue") == "INDEX_EMPTY_OR_MISCONFIGURED":
-            diagnosis["root_cause"] = "INDEX_NOT_POPULATED"
-            diagnosis["fix"] = "Vector index has no data or wrong IDs configured"
-            diagnosis["action_required"] = "Check if index is populated or verify INDEX_ENDPOINT_ID and DEPLOYED_INDEX_ID"
-        elif diagnosis.get("critical_issue") == "INDEX_CONNECTION_FAILED":
-            diagnosis["root_cause"] = "WRONG_INDEX_IDS"
-            diagnosis["fix"] = "Cannot connect to index endpoint"
-            diagnosis["action_required"] = "Verify INDEX_ENDPOINT_ID exists in project"
-        else:
-            diagnosis["root_cause"] = "SYSTEM_OPERATIONAL"
-            diagnosis["fix"] = "No issues detected"
-
-        return jsonify(diagnosis), 200
-
-    except Exception as e:
-        return jsonify({
-            "error": str(e),
-            "type": type(e).__name__,
-            "critical": True
-        }), 500
 
 @app.route("/debug/verse-metadata/<surah>/<verse>", methods=["GET"])
 def check_verse_metadata(surah, verse):
