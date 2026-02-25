@@ -121,7 +121,7 @@ const SURAHS = [
 ];
 
 // Max verses per query (matches backend ABSOLUTE_MAX_VERSES)
-const MAX_VERSE_RANGE = 5;
+const MAX_VERSE_RANGE = 10;
 
 // 120+ commonly referenced Quranic verses — randomized on each visit
 const ALL_QUICK_SELECTS = [

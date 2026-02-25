@@ -35,23 +35,28 @@ SCHOLARLY_RESERVE_TOKENS = 4_000     # MAX_TOTAL_SCHOLARLY_CHARS (14 000) / ~3.5
 # ---------------------------------------------------------------------------
 # Per-verse output allocation
 # ---------------------------------------------------------------------------
-# Each verse in the response requires Gemini to produce a structured JSON
-# response including tafsir explanations, cross-references, hadith, and
-# lessons.  This allocation ensures we don't overload Gemini with too many
-# verses — keeping input small enough that output stays within 65K limit.
-OUTPUT_TOKENS_PER_VERSE = 2_000
+# The PER-VERSE output cost covers only what scales with verse count:
+# tafsir explanation per source (~500-1000 tokens) + verse JSON (~100 tokens).
+# Shared sections (summary, lessons, hadith, reflection) are covered by
+# FIXED_OUTPUT_RESERVE below.
+OUTPUT_TOKENS_PER_VERSE = 1_000
+
+# ---------------------------------------------------------------------------
+# Fixed output reserve (shared sections that don't scale with verse count)
+# ---------------------------------------------------------------------------
+# Summary (~300), 3 lessons (~1500), hadith (~300), cross-refs (~200),
+# reflection (~100) = ~2400 tokens.  Rounded up for safety.
+FIXED_OUTPUT_RESERVE = 2_500
 
 # ---------------------------------------------------------------------------
 # Derived budget for verses + tafsir context
 # ---------------------------------------------------------------------------
-# Output is allocated PER-VERSE (not as a global flat reserve), so we only
-# subtract fixed per-query costs here.  Per-verse output allocation is added
-# to each verse's cost in precompute_verse_budgets().
 VERSE_AND_TAFSIR_BUDGET = (
     PRACTICAL_INPUT_BUDGET
     - PROMPT_OVERHEAD_TOKENS
     - SCHOLARLY_RESERVE_TOKENS
-)  # = 22 000 tokens
+    - FIXED_OUTPUT_RESERVE
+)  # = 19 500 tokens
 
 # ---------------------------------------------------------------------------
 # Fixed per-verse allowance for verse text (Arabic + English + transliteration)
@@ -66,5 +71,5 @@ SAFETY_FACTOR = 0.90    # 10% safety margin
 # ---------------------------------------------------------------------------
 # Hard limits
 # ---------------------------------------------------------------------------
-ABSOLUTE_MAX_VERSES = 5              # Matches real-world output capacity
+ABSOLUTE_MAX_VERSES = 10             # Upper bound; real limit is token budget
 ABSOLUTE_MIN_VERSES = 1              # Always allow at least 1 verse

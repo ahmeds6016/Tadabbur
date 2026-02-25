@@ -37,7 +37,7 @@ from google.cloud.firestore import FieldFilter  # For new query syntax
 # Imports for Vertex AI
 import vertexai
 from google.cloud import storage
-from utils.text_cleaning import sanitize_heading_format
+from utils.text_cleaning import sanitize_heading_format, normalize_html_to_markdown
 from services.source_service import (
     get_relevant_scholarly_context,
     extract_topic_keywords_from_query,
@@ -71,7 +71,9 @@ REFLECTION_ENCRYPTION_SECRET = os.environ.get("REFLECTION_ENCRYPTION_SECRET", ""
 GCS_BUCKET_NAME = os.environ.get("GCS_BUCKET_NAME", "tafsir-simplified-sources")
 
 # Verse limit per response — uniform across all personas.
-VERSE_LIMIT = 5
+# Dynamic: computed per-request by compute_max_end_verse(). This default
+# is only used when precomputation hasn't run or as a prompt fallback.
+VERSE_LIMIT_DEFAULT = 10
 
 # Source coverage information
 # Ibn Kathir: Complete Quran (114 Surahs)
@@ -111,7 +113,7 @@ quran_db = None      # Google Cloud client -> tafsir-db database for Quran texts
 TAFSIR_CHUNKS = {}   # Flattened text for direct verse lookup
 VERSE_METADATA = {}  # Structured metadata for direct queries
 RESPONSE_CACHE = {}  # In-memory cache
-SCHOLARLY_PIPELINE_VERSION = "10.0"  # Bump: remove semantic/vector search dead code, fix heading format regex, clean debug endpoints
+SCHOLARLY_PIPELINE_VERSION = "11.0"  # Bump: deep-clean source JSONs, HTML→markdown normalization, dynamic verse limits, rehype-raw frontend
 USER_RATE_LIMITS = defaultdict(list)  # Rate limiting
 ANALYTICS = defaultdict(int)  # Usage analytics
 
@@ -1972,9 +1974,10 @@ def sanitize_explanation_text(text):
 
     return '\n'.join(cleaned_lines)
 
-def enforce_persona_verse_limit(response_json: Dict, persona_name: str, requested_verses: Optional[List[Tuple[int, int]]] = None) -> Tuple[Dict, bool, int, int]:
+def enforce_persona_verse_limit(response_json: Dict, persona_name: str, requested_verses: Optional[List[Tuple[int, int]]] = None, dynamic_limit: Optional[int] = None) -> Tuple[Dict, bool, int, int]:
     """
-    Enforce persona-specific verse limits while prioritizing explicitly requested verses.
+    Enforce verse limits while prioritizing explicitly requested verses.
+    Uses dynamic_limit (from token budget) when provided, else VERSE_LIMIT_DEFAULT.
 
     Returns a tuple of:
         (response_json, trimmed_flag, original_count, final_count)
@@ -1987,7 +1990,7 @@ def enforce_persona_verse_limit(response_json: Dict, persona_name: str, requeste
         return response_json, False, 0, 0
 
     original_count = len(verses)
-    verse_limit = VERSE_LIMIT
+    verse_limit = dynamic_limit if dynamic_limit else VERSE_LIMIT_DEFAULT
 
     requested_set = set()
     if requested_verses:
@@ -2232,13 +2235,10 @@ def filter_unavailable_sources(response_json):
         # 2. Content is actually available (not "not available" message)
         # 3. Explanation has actual content
         if is_approved_source and not is_unavailable and explanation_text.strip():
-            # Sanitize the explanation text to fix excessive indentation and heading format
+            # Sanitize the explanation text: HTML→markdown, fix indentation, fix heading format
             original_text = explanation.get('explanation', '')
-            sanitized = sanitize_explanation_text(original_text)
-
-            # Fix bold heading line breaks using the standalone function
-            # (the previous inline version had a bug: Step 0's \s+ regex destroyed
-            # \n\n between stray ** and heading text, causing broken bold formatting)
+            sanitized = normalize_html_to_markdown(original_text)
+            sanitized = sanitize_explanation_text(sanitized)
             sanitized = sanitize_heading_format(sanitized)
 
             explanation['explanation'] = sanitized
@@ -2253,14 +2253,15 @@ def filter_unavailable_sources(response_json):
 
     # Also sanitize other text fields that might have indentation and heading format issues
     if response_json.get('summary'):
-        sanitized_summary = sanitize_explanation_text(response_json['summary'])
+        sanitized_summary = normalize_html_to_markdown(response_json['summary'])
+        sanitized_summary = sanitize_explanation_text(sanitized_summary)
         sanitized_summary = sanitize_heading_format(sanitized_summary)
         # Remove any unavailability messages from summary
         response_json['summary'] = sanitize_unavailability_text(sanitized_summary)
 
     if response_json.get('key_points'):
         response_json['key_points'] = [
-            sanitize_unavailability_text(sanitize_heading_format(sanitize_explanation_text(point)))
+            sanitize_unavailability_text(sanitize_heading_format(sanitize_explanation_text(normalize_html_to_markdown(point))))
             if isinstance(point, str) else point
             for point in response_json['key_points']
         ]
@@ -3360,7 +3361,7 @@ def _get_scholarly_context_two_stage(query, verse_data, context_by_source):
 # UPDATED: PERSONA-ADAPTIVE CLARITY-ENHANCED PROMPT WITH NEW PROFILE DATA
 # ============================================================================
 
-def build_enhanced_prompt(query, context_by_source, user_profile, arabic_text=None, cross_refs=None, query_type="default", verse_data=None, approach="tafsir", scholarly_context=""):
+def build_enhanced_prompt(query, context_by_source, user_profile, arabic_text=None, cross_refs=None, query_type="default", verse_data=None, approach="tafsir", scholarly_context="", verse_limit=None):
     """
     ENHANCED VERSION: Gemini as Scholarly Editor with Persona-Adaptive Formatting
     UPDATED: Now includes learning_goal, knowledge_level, and refined formatting rules
@@ -3374,6 +3375,9 @@ def build_enhanced_prompt(query, context_by_source, user_profile, arabic_text=No
     5. Emphasize different aspects based on approach (tafsir/thematic/historical)
     """
     structured_context = build_structured_context(context_by_source, arabic_text, cross_refs)
+
+    # Dynamic verse limit — computed from token budget, falls back to default
+    VERSE_LIMIT = verse_limit if verse_limit else VERSE_LIMIT_DEFAULT
 
     # Get persona configuration
     persona_name = user_profile.get('persona', 'practicing_muslim')
@@ -6789,20 +6793,21 @@ def tafsir_handler_enhanced():
             surah, start_verse, end_verse = verse_range
             verse_count = end_verse - start_verse + 1
 
-            # Hard cap: maximum 5 verses per query (matches ABSOLUTE_MAX_VERSES)
-            if verse_count > 5:
-                return jsonify({
-                    'error': 'verse_range_too_large',
-                    'message': f'Please narrow your range to 5 verses or less.\n\nYou requested {verse_count} verses ({surah}:{start_verse}-{end_verse}).\n\nTry smaller ranges like:\n- {surah}:{start_verse}-{start_verse+4}',
-                    'requested_verses': verse_count,
-                    'max_verses': 5,
-                    'suggestions': [
-                        f'{surah}:{start_verse}-{min(start_verse+4, end_verse)}'
-                    ]
-                }), 400
-
             # Dynamic budget enforcement — prevent oversized prompts
             from services.token_budget_service import compute_max_end_verse
+            from config.token_budget import ABSOLUTE_MAX_VERSES
+
+            # Hard cap from budget config (safety net)
+            if verse_count > ABSOLUTE_MAX_VERSES:
+                return jsonify({
+                    'error': 'verse_range_too_large',
+                    'message': f'Please narrow your range to {ABSOLUTE_MAX_VERSES} verses or less.\n\nYou requested {verse_count} verses ({surah}:{start_verse}-{end_verse}).',
+                    'requested_verses': verse_count,
+                    'max_verses': ABSOLUTE_MAX_VERSES,
+                    'suggestions': [
+                        f'{surah}:{start_verse}-{min(start_verse + ABSOLUTE_MAX_VERSES - 1, end_verse)}'
+                    ]
+                }), 400
             surah_max = QURAN_METADATA.get(surah, {}).get("verses", 0)
             if surah_max:
                 budget_max_end, _meta = compute_max_end_verse(surah, start_verse, surah_max)
@@ -7002,8 +7007,17 @@ def tafsir_handler_enhanced():
                 cross_refs = first_item['metadata'].get('cross_references', [])
 
         scholarly_ctx, scholarly_badges, scholarly_pipeline = _get_scholarly_context_two_stage(query, verses_for_ai, context_by_source)
+
+        # Compute dynamic verse limit from token budget
+        from services.token_budget_service import compute_max_end_verse as _compute_max_end
+        surah_max_v = QURAN_METADATA.get(surah, {}).get("verses", 286)
+        dynamic_max_end, _ = _compute_max_end(surah, start_verse, surah_max_v)
+        dynamic_verse_limit = dynamic_max_end - start_verse + 1
+        print(f"   📊 Dynamic verse limit for {surah}:{start_verse}: {dynamic_verse_limit} verses")
+
         prompt = build_enhanced_prompt(query, context_by_source, user_profile,
-                                     arabic_text, cross_refs, 'direct_verse', verses_for_ai, approach, scholarly_ctx)
+                                     arabic_text, cross_refs, 'direct_verse', verses_for_ai, approach, scholarly_ctx,
+                                     verse_limit=dynamic_verse_limit)
 
         if isinstance(verses_for_ai, list):
             print(f"🔍 Calling Gemini with {len(verses_for_ai)} verses: {verses_for_ai[0].get('surah_number')}:{verses_for_ai[0].get('verse_number')}-{verses_for_ai[-1].get('verse_number')}")
@@ -7114,17 +7128,17 @@ def tafsir_handler_enhanced():
             final_json, trimmed, original_count, final_count = enforce_persona_verse_limit(
                 final_json,
                 persona_name,
-                requested_verses=requested_range
+                requested_verses=requested_range,
+                dynamic_limit=dynamic_verse_limit
             )
             if trimmed:
                 print(f"   ℹ️  Trimmed verses to {final_count}/{original_count} for persona {persona_name}")
 
             verse_count = len(final_json.get('verses', []))
-            verse_limit = VERSE_LIMIT
-            if verse_count > verse_limit:
-                print(f"   ⚠️  VERSE LIMIT EXCEEDED: {verse_count}/{verse_limit}")
+            if verse_count > dynamic_verse_limit:
+                print(f"   ⚠️  VERSE LIMIT EXCEEDED: {verse_count}/{dynamic_verse_limit}")
             else:
-                print(f"   ✅ Verse count: {verse_count}/{verse_limit}")
+                print(f"   ✅ Verse count: {verse_count}/{dynamic_verse_limit}")
 
             # Cache the response
             with cache_lock:

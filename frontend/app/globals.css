@@ -1037,12 +1037,14 @@ button:hover:not(:disabled) {
   padding-left: 8px;
 }
 
-.markdown-content strong {
+.markdown-content strong,
+.markdown-content b {
   font-weight: 700;
   color: var(--primary-teal);
 }
 
-.markdown-content em {
+.markdown-content em,
+.markdown-content i {
   font-style: italic;
   color: var(--deep-blue);
 }

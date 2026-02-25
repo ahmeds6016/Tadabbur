@@ -2,6 +2,35 @@ from typing import Any, Dict, List, Optional, Tuple
 import re
 
 
+def normalize_html_to_markdown(text: str) -> str:
+    """
+    Convert HTML tags in LLM output to their markdown equivalents.
+
+    Gemini sometimes outputs <b>, <strong>, <i>, <em> etc. despite being
+    told to use **markdown bold**. This normalizes everything to markdown
+    so the frontend ReactMarkdown renderer handles it consistently.
+    """
+    if not text:
+        return text
+
+    # Bold: <b>text</b> or <strong>text</strong> → **text**
+    text = re.sub(r'<(?:b|strong)>(.*?)</(?:b|strong)>', r'**\1**', text, flags=re.DOTALL)
+
+    # Italic: <i>text</i> or <em>text</em> → *text*
+    text = re.sub(r'<(?:i|em)>(.*?)</(?:i|em)>', r'*\1*', text, flags=re.DOTALL)
+
+    # Line breaks: <br>, <br/>, <br /> → newline
+    text = re.sub(r'<br\s*/?\s*>', '\n', text, flags=re.IGNORECASE)
+
+    # Headings: <h3>text</h3> → **text**
+    text = re.sub(r'<h[1-6]>(.*?)</h[1-6]>', r'**\1**', text, flags=re.DOTALL)
+
+    # Strip any remaining HTML tags (span, div, p, font, etc.)
+    text = re.sub(r'</?(?:span|div|p|font|center|u|s|mark|small|big|sub|sup|blockquote|ul|ol|li|table|tr|td|th)(?:\s[^>]*)?>', '', text, flags=re.IGNORECASE)
+
+    return text
+
+
 def sanitize_heading_format(text: str) -> str:
     """
     Insert line breaks BEFORE and AFTER bold subheadings.
