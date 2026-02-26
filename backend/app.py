@@ -113,7 +113,7 @@ quran_db = None      # Google Cloud client -> tafsir-db database for Quran texts
 TAFSIR_CHUNKS = {}   # Flattened text for direct verse lookup
 VERSE_METADATA = {}  # Structured metadata for direct queries
 RESPONSE_CACHE = {}  # In-memory cache
-SCHOLARLY_PIPELINE_VERSION = "11.0"  # Bump: deep-clean source JSONs, HTML→markdown normalization, dynamic verse limits, rehype-raw frontend
+SCHOLARLY_PIPELINE_VERSION = "12.0"  # Bump: pre-computed scholarly plans (eliminates runtime Gemini planning call)
 USER_RATE_LIMITS = defaultdict(list)  # Rate limiting
 ANALYTICS = defaultdict(int)  # Usage analytics
 
@@ -3244,22 +3244,21 @@ def plan_scholarly_retrieval(planning_prompt):
 
 def _get_scholarly_context_two_stage(query, verse_data, context_by_source):
     """
-    Two-stage scholarly retrieval: deterministic baseline + Gemini enrichment.
+    Scholarly retrieval: pre-computed plans + deterministic keyword matching.
 
-    1. Deterministic keyword matcher runs instantly (guaranteed baseline)
-    2. Gemini planning call runs with retries (catches nuanced connections)
-    3. Results are MERGED: union of pointers, deduplicated, capped at 7
+    Uses pre-computed Gemini plans (generated offline with full tafsir context)
+    merged with keyword routing and verse-map discovery. No runtime API calls.
 
     Returns (scholarly_ctx_string, badges_list, pipeline_info).
     """
     start = time.time()
-    print(f"\n  [SCHOLARLY-2STAGE] === Starting two-stage scholarly retrieval ===")
+    print(f"\n  [SCHOLARLY] === Starting scholarly retrieval ===")
 
     def _fallback(reason):
-        print(f"  [SCHOLARLY-2STAGE] FALLBACK: {reason}")
+        print(f"  [SCHOLARLY] FALLBACK: {reason}")
         ctx = _get_scholarly_context_for_prompt(query, verse_data)
         badges = _get_scholarly_sources_metadata(query, verse_data)
-        return ctx, badges, f"single_stage_fallback: {reason}"
+        return ctx, badges, f"fallback: {reason}"
 
     try:
         # Extract verse info
@@ -3294,65 +3293,35 @@ def _get_scholarly_context_two_stage(query, verse_data, context_by_source):
                         ibn_kathir_summary = texts[:500]
                     break
 
-        # --- Stage 1: Deterministic baseline (instant, guaranteed) ---
-        det_plan = plan_scholarly_retrieval_deterministic(
+        # --- Single call: deterministic planner (now includes pre-computed plans) ---
+        plan = plan_scholarly_retrieval_deterministic(
             surah_number, verse_start, verse_end,
             verse_text[:300], ibn_kathir_summary
         )
-        det_pointers = det_plan["pointers"]
-        print(f"  [SCHOLARLY-2STAGE] Deterministic: {len(det_pointers)} pointers — {det_plan['reasoning']}")
+        pointers = plan["pointers"]
+        print(f"  [SCHOLARLY] Plan: {len(pointers)} pointers — {plan['reasoning']}")
 
-        # --- Stage 2: Gemini enrichment (API call with retries) ---
-        gemini_pointers = []
-        gemini_status = "skipped"
-        try:
-            planning_prompt = build_scholarly_planning_prompt(
-                surah_number, verse_start, verse_end,
-                verse_text[:300], ibn_kathir_summary, query
-            )
-            gemini_plan = plan_scholarly_retrieval(planning_prompt)
-            if gemini_plan and gemini_plan.get("pointers"):
-                gemini_pointers = gemini_plan["pointers"]
-                gemini_status = f"ok: {len(gemini_pointers)} pointers"
-                print(f"  [SCHOLARLY-2STAGE] Gemini: {len(gemini_pointers)} pointers — {gemini_plan.get('reasoning', '')}")
-            else:
-                gemini_status = "empty_response"
-                print(f"  [SCHOLARLY-2STAGE] Gemini: returned no pointers")
-        except Exception as ge:
-            gemini_status = f"error: {type(ge).__name__}"
-            print(f"  [SCHOLARLY-2STAGE] Gemini error: {type(ge).__name__}: {str(ge)[:200]}")
+        for p in pointers:
+            print(f"    -> {p}")
 
-        # --- Merge: union of pointers, deduplicated, capped at 10 ---
-        seen = set()
-        merged_pointers = []
-        for p in det_pointers + gemini_pointers:
-            if p not in seen and len(merged_pointers) < 10:
-                seen.add(p)
-                merged_pointers.append(p)
-
-        print(f"  [SCHOLARLY-2STAGE] Merged: {len(merged_pointers)} pointers (det={len(det_pointers)}, gemini={len(gemini_pointers)}, unique={len(seen)})")
-        for p in merged_pointers:
-            src = "both" if p in det_pointers and p in gemini_pointers else ("det" if p in det_pointers else "gemini")
-            print(f"    -> [{src}] {p}")
-
-        # --- Resolve merged pointers ---
-        resolved = resolve_scholarly_pointers(merged_pointers)
+        # --- Resolve pointers ---
+        resolved = resolve_scholarly_pointers(pointers)
 
         if not resolved["excerpts"]:
-            return _fallback(f"All {len(merged_pointers)} merged pointers resolved to empty")
+            return _fallback(f"All {len(pointers)} pointers resolved to empty")
 
         # Format for generation prompt
         scholarly_ctx = format_scholarly_excerpts_for_prompt(resolved)
         badges = resolved["sources_used"]
 
         duration = (time.time() - start) * 1000
-        pipeline_info = f"two_stage: {len(resolved['excerpts'])} excerpts, {len(badges)} badges in {duration:.0f}ms (gemini={gemini_status})"
-        print(f"  [SCHOLARLY-2STAGE] SUCCESS: {pipeline_info}")
-        print(f"  [SCHOLARLY-2STAGE] Badges: {[b['key'] for b in badges]}")
+        pipeline_info = f"precomputed: {len(resolved['excerpts'])} excerpts, {len(badges)} badges in {duration:.0f}ms"
+        print(f"  [SCHOLARLY] SUCCESS: {pipeline_info}")
+        print(f"  [SCHOLARLY] Badges: {[b['key'] for b in badges]}")
         return scholarly_ctx, badges, pipeline_info
 
     except Exception as e:
-        print(f"  [SCHOLARLY-2STAGE] EXCEPTION: {type(e).__name__}: {str(e)[:300]}")
+        print(f"  [SCHOLARLY] EXCEPTION: {type(e).__name__}: {str(e)[:300]}")
         traceback.print_exc()
         return _fallback(f"Exception: {type(e).__name__}: {str(e)[:200]}")
 

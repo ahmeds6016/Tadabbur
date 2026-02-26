@@ -41,6 +41,34 @@ def _load_unified_verse_map():
 
 
 @lru_cache(maxsize=1)
+def _load_precomputed_scholarly_plans():
+    """Load pre-computed scholarly plans (cached in memory)."""
+    path = _INDEX_DIR / "_precomputed_scholarly_plans.json"
+    if path.exists():
+        with open(path) as f:
+            data = json.load(f)
+        # Strip metadata key
+        count = sum(1 for k in data if k != "_metadata")
+        print(f"INFO: Loaded {count} pre-computed scholarly plans")
+        return data
+    print("WARNING: No pre-computed scholarly plans found at", path)
+    return {}
+
+
+def get_precomputed_plan(surah_number, verse_number):
+    """Look up a pre-computed scholarly plan for a specific verse.
+
+    Returns dict with 'pointers' and 'reasoning', or None if not found.
+    """
+    plans = _load_precomputed_scholarly_plans()
+    key = f"{surah_number}:{verse_number}"
+    plan = plans.get(key)
+    if plan and isinstance(plan, dict) and plan.get("pointers"):
+        return plan
+    return None
+
+
+@lru_cache(maxsize=1)
 def _load_topic_map():
     """Load the topic map (cached in memory)."""
     path = _INDEX_DIR / "_topic_map.json"
@@ -1525,14 +1553,66 @@ def _get_verse_map_pointers(surah_number, verse_start):
 def plan_scholarly_retrieval_deterministic(surah_number, verse_start, verse_end,
                                             verse_text, ibn_kathir_summary):
     """
-    Deterministic scholarly retrieval planner — replaces Gemini planning call.
+    Scholarly retrieval planner — uses pre-computed plans + keyword fallback.
 
-    Scans verse text and Ibn Kathir summary for routing keywords, then emits
-    exact pointers matching the routing tables. Zero API calls, zero latency,
-    zero failure modes.
+    Priority order:
+    1. Pre-computed plans (generated offline with full Gemini + raw JSON context)
+    2. Keyword matching against routing tables (instant, guaranteed)
+    3. Verse-map discovery (pre-indexed cross-references)
+
+    All three are merged: pre-computed pointers first, then unique keyword/verse-map
+    additions, deduplicated, capped at MAX_POINTERS.
 
     Returns dict: {"pointers": [...], "reasoning": "..."}
     """
+    # --- Stage 0: Pre-computed plan lookup (highest quality, ~1ms) ---
+    precomputed = get_precomputed_plan(surah_number, verse_start)
+    if precomputed:
+        # Start with pre-computed pointers as primary
+        pointers = list(precomputed["pointers"])
+        existing = set(pointers)
+        reasoning = f"precomputed: {precomputed.get('reasoning', '')}"
+
+        # Ensure asbab + thematic are always present
+        asbab_ptr = f"asbab:surah={surah_number}:verse={verse_start}"
+        thematic_ptr = f"thematic:surah={surah_number}:section=0"
+        for must_have in [asbab_ptr, thematic_ptr]:
+            if must_have not in existing and len(pointers) < MAX_POINTERS:
+                pointers.insert(0, must_have)
+                existing.add(must_have)
+
+        # --- Fallback merge: add unique keyword matches not in pre-computed ---
+        search_text = f"{verse_text} {ibn_kathir_summary}".lower()
+        kw_additions = 0
+
+        for routing_table in [_IHYA_ROUTING, _MADARIJ_ROUTING, _RIYAD_ROUTING]:
+            for keywords, pointer in routing_table:
+                if len(pointers) >= MAX_POINTERS:
+                    break
+                if pointer in existing:
+                    continue
+                for kw in keywords:
+                    if kw in search_text:
+                        pointers.append(pointer)
+                        existing.add(pointer)
+                        kw_additions += 1
+                        break
+
+        # Also merge verse-map refs
+        verse_map_ptrs = _get_verse_map_pointers(surah_number, verse_start)
+        vm_added = 0
+        for vp in verse_map_ptrs:
+            if vp not in existing and len(pointers) < MAX_POINTERS:
+                pointers.append(vp)
+                existing.add(vp)
+                vm_added += 1
+
+        if kw_additions or vm_added:
+            reasoning += f" + {kw_additions} keyword, {vm_added} verse-map additions"
+
+        return {"pointers": pointers[:MAX_POINTERS], "reasoning": reasoning}
+
+    # --- Stage 1: Keyword matching (no pre-computed plan available) ---
     # Always include asbab + thematic
     pointers = [
         f"asbab:surah={surah_number}:verse={verse_start}",

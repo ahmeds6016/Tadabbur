@@ -13,3 +13,7 @@ __pycache__/
 scripts/run_ocr.py
 scripts/run_ocr_vision.py
 scripts/extract_sources.py
+scripts/precompute_scholarly_plans.py
+
+# Debug files (human-readable duplicates)
+data/indexes/_precomputed_scholarly_plans.debug.json
