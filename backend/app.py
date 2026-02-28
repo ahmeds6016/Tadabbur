@@ -48,6 +48,25 @@ from services.source_service import (
     plan_scholarly_retrieval_deterministic,
 )
 from data.reading_plans import READING_PLANS
+from data.iman_behaviors import (
+    IMAN_CATEGORIES,
+    IMAN_BEHAVIORS,
+    BEHAVIOR_MAP,
+    ALL_BEHAVIOR_IDS,
+    HEART_NOTE_TYPES,
+    HEART_STATES,
+)
+from services.iman_service import (
+    validate_behavior_value,
+    validate_heart_note,
+    validate_heart_state,
+    build_default_config,
+    get_tracked_behavior_ids,
+    aggregate_category_scores,
+    compute_baselines,
+    recompute_trajectory,
+    ENGINE_VERSION,
+)
 
 # --- App Initialization ---
 app = Flask(__name__)
@@ -7772,6 +7791,374 @@ def get_muslim_names():
         "total_female": len(MUSLIM_NAMES["female"]),
         "origins": sorted(all_origins),
     }), 200
+
+
+# ============================================================================
+# IMAN INDEX — Behavioral Logging & Spiritual Companion
+# ============================================================================
+
+@app.route("/iman/setup", methods=["POST"])
+@firebase_auth_required
+def iman_setup():
+    """Initialize Iman Index config for a new user (one-time setup)."""
+    uid = request.user["uid"]
+    try:
+        data = request.get_json(silent=True) or {}
+        behavior_ids = data.get("behavior_ids")  # Optional: custom selection
+
+        # Check if already set up
+        config_ref = users_db.collection("users").document(uid).collection("iman_config").document("settings")
+        existing = config_ref.get()
+        if existing.exists:
+            return jsonify({"message": "Already configured", "config": existing.to_dict()}), 200
+
+        config = build_default_config(behavior_ids)
+        config_ref.set(config)
+
+        print(f"[IMAN] Setup complete for user {uid[:8]}... — {len(config['tracked_behaviors'])} behaviors")
+        return jsonify({"message": "Iman Index configured", "config": config}), 201
+
+    except ValueError as ve:
+        return jsonify({"error": str(ve)}), 400
+    except Exception as e:
+        print(f"ERROR in POST /iman/setup: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/iman/config", methods=["GET"])
+@firebase_auth_required
+def iman_get_config():
+    """Get user's Iman Index configuration (tracked behaviors, categories)."""
+    uid = request.user["uid"]
+    try:
+        config_ref = users_db.collection("users").document(uid).collection("iman_config").document("settings")
+        doc = config_ref.get()
+        if not doc.exists:
+            return jsonify({"error": "Iman Index not set up. Call POST /iman/setup first."}), 404
+
+        config = doc.to_dict()
+        # Enrich with category metadata
+        categories = []
+        for cat_id, cat_meta in IMAN_CATEGORIES.items():
+            categories.append({
+                "id": cat_id,
+                "label": cat_meta["label"],
+                "icon": cat_meta["icon"],
+                "color": cat_meta["color"],
+                "base_weight": cat_meta["base_weight"],
+            })
+
+        return jsonify({
+            "config": config,
+            "categories": categories,
+            "all_behaviors": IMAN_BEHAVIORS,
+        }), 200
+
+    except Exception as e:
+        print(f"ERROR in GET /iman/config: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/iman/config", methods=["PUT"])
+@firebase_auth_required
+def iman_update_config():
+    """Update tracked behaviors (add/remove/reorder)."""
+    uid = request.user["uid"]
+    try:
+        data = request.get_json(silent=True) or {}
+        behavior_ids = data.get("behavior_ids")
+        if not behavior_ids or not isinstance(behavior_ids, list):
+            return jsonify({"error": "behavior_ids list required"}), 400
+
+        # Validate all IDs
+        invalid = [bid for bid in behavior_ids if bid not in BEHAVIOR_MAP]
+        if invalid:
+            return jsonify({"error": f"Unknown behavior IDs: {invalid}"}), 400
+
+        config_ref = users_db.collection("users").document(uid).collection("iman_config").document("settings")
+        doc = config_ref.get()
+        if not doc.exists:
+            return jsonify({"error": "Iman Index not set up"}), 404
+
+        now = datetime.now(timezone.utc).isoformat()
+        tracked = []
+        for bid in behavior_ids:
+            b = BEHAVIOR_MAP[bid]
+            tracked.append({
+                "id": b["id"],
+                "category": b["category"],
+                "label": b["label"],
+                "input_type": b["input_type"],
+                "weight_override": None,
+                "active": True,
+                "added_at": now,
+            })
+
+        config_ref.update({"tracked_behaviors": tracked})
+
+        print(f"[IMAN] Config updated for {uid[:8]}... — {len(tracked)} behaviors")
+        return jsonify({"message": "Config updated", "tracked_count": len(tracked)}), 200
+
+    except Exception as e:
+        print(f"ERROR in PUT /iman/config: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/iman/log", methods=["POST"])
+@firebase_auth_required
+def iman_submit_log():
+    """Submit a daily journal log. Triggers trajectory recomputation.
+
+    Body: {
+        date: "YYYY-MM-DD",
+        behaviors: {behavior_id: value, ...},
+        heart_state: "grateful" (optional),
+        heart_notes: [{type: "gratitude", text: "..."}] (optional)
+    }
+    """
+    uid = request.user["uid"]
+    try:
+        data = request.get_json(silent=True) or {}
+        date_str = data.get("date")
+        behaviors_raw = data.get("behaviors", {})
+        heart_state = data.get("heart_state")
+        heart_notes_raw = data.get("heart_notes", [])
+
+        if not date_str:
+            return jsonify({"error": "date is required (YYYY-MM-DD)"}), 400
+
+        # Validate date format
+        try:
+            datetime.strptime(date_str, "%Y-%m-%d")
+        except ValueError:
+            return jsonify({"error": "Invalid date format. Use YYYY-MM-DD"}), 400
+
+        # Get config
+        config_ref = users_db.collection("users").document(uid).collection("iman_config").document("settings")
+        config_doc = config_ref.get()
+        if not config_doc.exists:
+            return jsonify({"error": "Iman Index not set up"}), 404
+        config = config_doc.to_dict()
+        tracked_ids = get_tracked_behavior_ids(config)
+
+        # Validate behaviors
+        now = datetime.now(timezone.utc).isoformat()
+        validated_behaviors = {}
+        errors = []
+        for bid, val in behaviors_raw.items():
+            if bid not in ALL_BEHAVIOR_IDS:
+                errors.append(f"Unknown behavior: {bid}")
+                continue
+            ok, err, coerced = validate_behavior_value(bid, val)
+            if not ok:
+                errors.append(err)
+            else:
+                validated_behaviors[bid] = {"value": coerced, "logged_at": now}
+
+        if errors:
+            return jsonify({"error": "Validation failed", "details": errors}), 400
+
+        # Validate heart state
+        if heart_state:
+            ok, err = validate_heart_state(heart_state)
+            if not ok:
+                return jsonify({"error": err}), 400
+
+        # Validate & encrypt heart notes
+        encrypted_notes = []
+        for note in heart_notes_raw:
+            ok, err = validate_heart_note(note.get("type", ""), note.get("text", ""))
+            if not ok:
+                return jsonify({"error": err}), 400
+            encrypted_notes.append({
+                "type": note["type"],
+                "text": _encrypt_text(note["text"].strip(), uid),
+                "created_at": now,
+            })
+
+        # Build daily log document
+        log_doc = {
+            "date": date_str,
+            "behaviors": validated_behaviors,
+            "heart_state": heart_state,
+            "heart_notes": encrypted_notes,
+            "updated_at": now,
+        }
+
+        # Save to Firestore
+        log_ref = users_db.collection("users").document(uid).collection("iman_daily_logs").document(date_str)
+        log_ref.set(log_doc, merge=True)
+
+        # Fetch all logs for trajectory computation (last 90 days)
+        logs_query = (
+            users_db.collection("users").document(uid)
+            .collection("iman_daily_logs")
+            .order_by("date")
+            .limit(90)
+        )
+        all_logs = [doc.to_dict() for doc in logs_query.stream()]
+
+        # Get current baselines
+        baselines_ref = users_db.collection("users").document(uid).collection("iman_baselines").document("current")
+        baselines_doc = baselines_ref.get()
+        current_baselines = baselines_doc.to_dict() if baselines_doc.exists else None
+
+        # Recompute trajectory
+        trajectory, new_baselines = recompute_trajectory(all_logs, config, current_baselines)
+
+        # Save trajectory
+        traj_ref = users_db.collection("users").document(uid).collection("iman_trajectory").document("current")
+        traj_ref.set(trajectory)
+
+        # Save new baselines if computed
+        if new_baselines:
+            baselines_ref.set(new_baselines)
+            # Mark config as baseline established
+            if not config.get("baseline_established"):
+                config_ref.update({"baseline_established": True})
+
+        print(f"[IMAN] Log saved for {uid[:8]}... date={date_str} — state={trajectory.get('current_state')}")
+        return jsonify({
+            "message": "Log saved",
+            "date": date_str,
+            "trajectory": trajectory,
+        }), 200
+
+    except Exception as e:
+        print(f"ERROR in POST /iman/log: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/iman/log/<date_str>", methods=["GET"])
+@firebase_auth_required
+def iman_get_log(date_str):
+    """Get a specific day's log (with decrypted heart notes)."""
+    uid = request.user["uid"]
+    try:
+        log_ref = users_db.collection("users").document(uid).collection("iman_daily_logs").document(date_str)
+        doc = log_ref.get()
+        if not doc.exists:
+            return jsonify({"log": None, "date": date_str}), 200
+
+        log = doc.to_dict()
+
+        # Decrypt heart notes for display
+        if log.get("heart_notes"):
+            for note in log["heart_notes"]:
+                note["text"] = _decrypt_text(note.get("text", ""), uid)
+
+        return jsonify({"log": log, "date": date_str}), 200
+
+    except Exception as e:
+        print(f"ERROR in GET /iman/log/{date_str}: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/iman/logs", methods=["GET"])
+@firebase_auth_required
+def iman_get_logs():
+    """Get logs for a date range. Query params: from, to (YYYY-MM-DD)."""
+    uid = request.user["uid"]
+    try:
+        date_from = request.args.get("from")
+        date_to = request.args.get("to")
+
+        query = (
+            users_db.collection("users").document(uid)
+            .collection("iman_daily_logs")
+            .order_by("date")
+        )
+
+        if date_from:
+            query = query.where(filter=FieldFilter("date", ">=", date_from))
+        if date_to:
+            query = query.where(filter=FieldFilter("date", "<=", date_to))
+
+        query = query.limit(90)
+        logs = []
+        for doc in query.stream():
+            log = doc.to_dict()
+            # Don't decrypt heart notes in bulk listing (privacy + performance)
+            if log.get("heart_notes"):
+                for note in log["heart_notes"]:
+                    note["text"] = "[encrypted]"
+            logs.append(log)
+
+        return jsonify({"logs": logs, "count": len(logs)}), 200
+
+    except Exception as e:
+        print(f"ERROR in GET /iman/logs: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/iman/trajectory", methods=["GET"])
+@firebase_auth_required
+def iman_get_trajectory():
+    """Get current trajectory state."""
+    uid = request.user["uid"]
+    try:
+        traj_ref = users_db.collection("users").document(uid).collection("iman_trajectory").document("current")
+        doc = traj_ref.get()
+        if not doc.exists:
+            return jsonify({"trajectory": None, "message": "No trajectory data yet. Start logging!"}), 200
+
+        return jsonify({"trajectory": doc.to_dict()}), 200
+
+    except Exception as e:
+        print(f"ERROR in GET /iman/trajectory: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/iman/heart-note", methods=["POST"])
+@firebase_auth_required
+def iman_add_heart_note():
+    """Quick-capture: append a heart note to today's log.
+
+    Body: {type: "gratitude", text: "Alhamdulillah for..."}
+    """
+    uid = request.user["uid"]
+    try:
+        data = request.get_json(silent=True) or {}
+        note_type = data.get("type", "")
+        note_text = data.get("text", "")
+
+        ok, err = validate_heart_note(note_type, note_text)
+        if not ok:
+            return jsonify({"error": err}), 400
+
+        now = datetime.now(timezone.utc).isoformat()
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+        encrypted_note = {
+            "type": note_type,
+            "text": _encrypt_text(note_text.strip(), uid),
+            "created_at": now,
+        }
+
+        # Get or create today's log
+        log_ref = users_db.collection("users").document(uid).collection("iman_daily_logs").document(today)
+        doc = log_ref.get()
+
+        if doc.exists:
+            log = doc.to_dict()
+            notes = log.get("heart_notes", [])
+            notes.append(encrypted_note)
+            log_ref.update({"heart_notes": notes, "updated_at": now})
+        else:
+            log_ref.set({
+                "date": today,
+                "behaviors": {},
+                "heart_state": None,
+                "heart_notes": [encrypted_note],
+                "updated_at": now,
+            })
+
+        print(f"[IMAN] Heart note ({note_type}) added for {uid[:8]}... date={today}")
+        return jsonify({"message": "Heart note saved", "date": today}), 200
+
+    except Exception as e:
+        print(f"ERROR in POST /iman/heart-note: {e}")
+        return jsonify({"error": str(e)}), 500
 
 
 # --- Main ---
