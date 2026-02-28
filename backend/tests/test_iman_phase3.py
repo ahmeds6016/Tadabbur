@@ -54,7 +54,7 @@ class TestCatalogData:
         assert set(IMAN_CATEGORIES.keys()) == expected
 
     def test_behavior_count(self):
-        assert len(IMAN_BEHAVIORS) == 27
+        assert len(IMAN_BEHAVIORS) == 39
 
     def test_behavior_required_fields(self):
         for b in IMAN_BEHAVIORS:

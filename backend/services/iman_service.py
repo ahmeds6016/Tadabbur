@@ -36,6 +36,27 @@ PILLAR_BETA = 0.45             # Consistency weight (highest — Atomic Habits p
 PILLAR_GAMMA = 0.30            # Trajectory weight
 ENGINE_VERSION = "1.0"
 
+# Strain/Recovery constants
+STRAIN_DIFFICULTY = {
+    "binary": 1.0,
+    "scale_5": 1.2,
+    "minutes": 1.0,
+    "hours": 1.0,
+    "count": 0.8,
+    "count_inv": 1.3,
+}
+SR_RESTORATIVE_UPPER = 0.8
+SR_BALANCED_UPPER = 1.3
+SR_HIGH_STRAIN_UPPER = 2.0
+SR_BURNOUT_CONSECUTIVE_DAYS = 7
+
+# Safeguard thresholds
+SCRUPULOSITY_TAWBAH_STREAK_DAYS = 7
+EMERGENCY_CONSECUTIVE_DAYS = 7
+HUMILITY_RESET_FRACTION = 30   # Deterministic: hash(uid+date) % 30 == 0
+REDUCED_JOURNAL_RECAL_DAYS = 14
+REDUCED_JOURNAL_BEHAVIORS = ["fajr_prayer", "quran_minutes", "dhikr_minutes"]
+
 
 # ---------------------------------------------------------------------------
 # Validation
@@ -1023,6 +1044,351 @@ def get_welcome_back_message(days_absent: int) -> Optional[str]:
     if days_absent <= 30:
         return "The door is always open. Welcome back."
     return "Alhamdulillah, you are here. That is what matters."
+
+
+# ---------------------------------------------------------------------------
+# Strain/Recovery Engine
+# ---------------------------------------------------------------------------
+
+_QURAN_BEHAVIOR_IDS = {"quran_minutes", "tadabbur_session", "quran_memorization"}
+
+
+def compute_daily_strain(
+    behaviors: Dict[str, Any],
+    tracked_ids: List[str],
+) -> float:
+    """Compute daily strain from attempted behaviors.
+
+    Each behavior contributes strain proportional to its attempt weight
+    and difficulty factor. Normalized to [0, 1].
+    """
+    if not behaviors or not tracked_ids:
+        return 0.0
+
+    strain = 0.0
+    max_possible = 0.0
+
+    for bid in tracked_ids:
+        bdef = BEHAVIOR_MAP.get(bid)
+        if not bdef:
+            continue
+        input_type = bdef.get("input_type", "binary")
+        difficulty = STRAIN_DIFFICULTY.get(input_type, 1.0)
+        max_possible += difficulty
+
+        raw = behaviors.get(bid)
+        if raw is None:
+            continue
+
+        val = raw.get("value", raw) if isinstance(raw, dict) else raw
+
+        # Compute attempt weight based on input type
+        if input_type == "binary":
+            attempt_weight = 1.0 if val else 0.0
+        elif input_type == "scale_5":
+            attempt_weight = min(float(val) / 5.0, 1.0) if val else 0.0
+        elif input_type in ("minutes", "hours", "count", "count_inv"):
+            attempt_weight = min(float(val) / max(1.0, float(val) + 1.0), 1.0) if val else 0.0
+        else:
+            attempt_weight = 1.0 if val else 0.0
+
+        strain += attempt_weight * difficulty
+
+    if max_possible <= 0:
+        return 0.0
+    return min(strain / max_possible, 1.0)
+
+
+def compute_daily_recovery(log: dict) -> float:
+    """Compute daily recovery score from restorative practices.
+
+    Components: heart_notes (0.25), quran (0.25), dhikr (0.20),
+    sleep quality (0.15), reflection notes (0.15). Returns [0, 1].
+    """
+    recovery = 0.0
+    behaviors = log.get("behaviors", {})
+    heart_notes = log.get("heart_notes", [])
+
+    # Heart notes presence (0.25)
+    if len(heart_notes) > 0:
+        recovery += 0.25
+
+    # Quran engagement (0.25)
+    for qid in _QURAN_BEHAVIOR_IDS:
+        raw = behaviors.get(qid)
+        if raw is not None:
+            val = raw.get("value", raw) if isinstance(raw, dict) else raw
+            if val and float(val) > 0:
+                recovery += 0.25
+                break
+
+    # Dhikr (0.20)
+    dhikr_raw = behaviors.get("dhikr_minutes")
+    if dhikr_raw is not None:
+        val = dhikr_raw.get("value", dhikr_raw) if isinstance(dhikr_raw, dict) else dhikr_raw
+        if val and float(val) > 0:
+            recovery += 0.20
+
+    # Sleep quality — Gaussian centered at 7.5h (0.15)
+    sleep_raw = behaviors.get("sleep_hours")
+    if sleep_raw is not None:
+        val = sleep_raw.get("value", sleep_raw) if isinstance(sleep_raw, dict) else sleep_raw
+        if val is not None:
+            hours = float(val)
+            # Gaussian: peak at 7.5, sigma=1.5
+            sleep_quality = math.exp(-0.5 * ((hours - 7.5) / 1.5) ** 2)
+            recovery += 0.15 * sleep_quality
+
+    # Reflection notes (0.15)
+    for note in heart_notes:
+        ntype = note.get("type", "") if isinstance(note, dict) else ""
+        if ntype in ("reflection", "quran_insight"):
+            recovery += 0.15
+            break
+
+    return min(recovery, 1.0)
+
+
+_SR_STATUS_MESSAGES = {
+    "restorative": "A season of restoration. Your spirit is being nourished.",
+    "balanced": "Effort and rest in harmony. This is the Prophetic balance.",
+    "high_strain": (
+        "You are striving hard. Consider: the Prophet \u2e0e said, "
+        "'Take on only what you can do.'"
+    ),
+    "burnout_risk": (
+        "Your body has a right over you. "
+        "Consider easing one practice this week."
+    ),
+}
+
+
+def compute_strain_recovery(
+    daily_logs: List[dict],
+    tracked_ids: List[str],
+    window_days: int = 7,
+) -> dict:
+    """Compute strain/recovery ratio over a sliding window.
+
+    Returns display-ready dict with ratio, status, percentages, and message.
+    """
+    recent = daily_logs[-window_days:] if len(daily_logs) > window_days else daily_logs
+
+    if not recent:
+        return {
+            "mean_strain": 0.0,
+            "mean_recovery": 0.0,
+            "sr_ratio": 0.0,
+            "sr_status": "balanced",
+            "strain_pct": 0,
+            "recovery_pct": 0,
+            "status_message": _SR_STATUS_MESSAGES["balanced"],
+        }
+
+    strains = [compute_daily_strain(log.get("behaviors", {}), tracked_ids) for log in recent]
+    recoveries = [compute_daily_recovery(log) for log in recent]
+
+    mean_strain = sum(strains) / len(strains)
+    mean_recovery = sum(recoveries) / len(recoveries)
+    sr_ratio = mean_strain / max(mean_recovery, 0.1)
+
+    if sr_ratio < SR_RESTORATIVE_UPPER:
+        sr_status = "restorative"
+    elif sr_ratio <= SR_BALANCED_UPPER:
+        sr_status = "balanced"
+    elif sr_ratio <= SR_HIGH_STRAIN_UPPER:
+        sr_status = "high_strain"
+    else:
+        sr_status = "burnout_risk"
+
+    return {
+        "mean_strain": round(mean_strain, 3),
+        "mean_recovery": round(mean_recovery, 3),
+        "sr_ratio": round(sr_ratio, 3),
+        "sr_status": sr_status,
+        "strain_pct": round(mean_strain * 100),
+        "recovery_pct": round(mean_recovery * 100),
+        "status_message": _SR_STATUS_MESSAGES[sr_status],
+    }
+
+
+# ---------------------------------------------------------------------------
+# Advanced Safeguards
+# ---------------------------------------------------------------------------
+
+def detect_scrupulosity_signals(daily_logs: List[dict]) -> dict:
+    """Detect scrupulosity (waswasah) signals from recent logging patterns.
+
+    Signals: (a) all heart notes are tawbah for 7+ days,
+    (b) avoided_sins always 1/5 for 7+ days.
+    Active if 2+ signals present.
+    """
+    recent = daily_logs[-SCRUPULOSITY_TAWBAH_STREAK_DAYS:]
+    if len(recent) < SCRUPULOSITY_TAWBAH_STREAK_DAYS:
+        return {"active": False, "signals": [], "message": None}
+
+    signals = []
+
+    # Signal 1: All heart notes are tawbah
+    all_tawbah = True
+    any_notes = False
+    for log in recent:
+        notes = log.get("heart_notes", [])
+        for note in notes:
+            any_notes = True
+            ntype = note.get("type", "") if isinstance(note, dict) else ""
+            if ntype != "tawbah":
+                all_tawbah = False
+                break
+        if not all_tawbah:
+            break
+    if all_tawbah and any_notes:
+        signals.append("all_tawbah_notes")
+
+    # Signal 2: avoided_sins always 1 (lowest) for all recent days
+    all_low_sins = True
+    any_sins_data = False
+    for log in recent:
+        behaviors = log.get("behaviors", {})
+        raw = behaviors.get("avoided_sins")
+        if raw is not None:
+            any_sins_data = True
+            val = raw.get("value", raw) if isinstance(raw, dict) else raw
+            if val is not None and float(val) > 1:
+                all_low_sins = False
+                break
+    if all_low_sins and any_sins_data:
+        signals.append("always_low_self_assessment")
+
+    active = len(signals) >= 2
+    message = (
+        "Gentleness is itself worship. The Prophet \u2e0e said: "
+        "'Allah is gentle and loves gentleness in all things.' "
+        "You are doing enough."
+    ) if active else None
+
+    return {"active": active, "signals": signals, "message": message}
+
+
+def detect_burnout_state(sr_data: dict) -> dict:
+    """Detect burnout state from strain/recovery data.
+
+    Triggers when SR status is burnout_risk.
+    """
+    if sr_data.get("sr_status") == "burnout_risk":
+        return {
+            "active": True,
+            "message": (
+                "Your body has a right over you, your eyes have a right over you. "
+                "Consider removing one tracked behavior this week."
+            ),
+            "suggest_remove_behavior": True,
+        }
+    return {"active": False, "message": None, "suggest_remove_behavior": False}
+
+
+def should_show_humility_reset(uid: str, trajectory_state: str) -> dict:
+    """Deterministic monthly humility reset.
+
+    Uses hash(uid + date) for consistency within a day. Only triggers
+    on ascending/gently_rising states to avoid piling on during hard times.
+    """
+    if trajectory_state not in ("ascending", "gently_rising"):
+        return {"active": False}
+
+    date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    h = hash(uid + date_str + "humility")
+    if h % HUMILITY_RESET_FRACTION != 0:
+        return {"active": False}
+
+    return {
+        "active": True,
+        "message": "Allah Knows Best",
+        "hadith": (
+            "None of you will enter Paradise by their deeds alone. "
+            "\u2014 Prophet Muhammad \u2e0e (Bukhari)"
+        ),
+        "instruction": "The trajectory is paused today. Just be with Allah.",
+    }
+
+
+def detect_emergency_override(daily_logs: List[dict]) -> dict:
+    """Detect emergency state: 7+ consecutive days of grieving/spiritually_dry.
+
+    When active, suggests disabling Iman Index and shows hope verse.
+    """
+    recent = daily_logs[-EMERGENCY_CONSECUTIVE_DAYS:]
+    if len(recent) < EMERGENCY_CONSECUTIVE_DAYS:
+        return {"active": False}
+
+    distress_states = {"grieving", "spiritually_dry"}
+    all_distressed = all(
+        log.get("heart_state") in distress_states
+        for log in recent
+    )
+
+    if not all_distressed:
+        return {"active": False}
+
+    return {
+        "active": True,
+        "consecutive_days": len(recent),
+        "verse": {
+            "surah": 93,
+            "verse": 3,
+            "text": "Your Lord has not forsaken you, nor has He become displeased.",
+        },
+        "message": (
+            "Would you like to pause tracking and just be? "
+            "This tool should serve you, not burden you."
+        ),
+    }
+
+
+def get_reduced_journal_config(days_recalibrating: int) -> Optional[dict]:
+    """Offer simplified 3-behavior journal after 14+ days recalibrating."""
+    if days_recalibrating < REDUCED_JOURNAL_RECAL_DAYS:
+        return None
+    return {
+        "active": True,
+        "suggested_behaviors": REDUCED_JOURNAL_BEHAVIORS,
+        "message": (
+            "Let's simplify. When the heart is heavy, "
+            "do the minimum with maximum presence."
+        ),
+    }
+
+
+def compute_safeguard_status(
+    daily_logs: List[dict],
+    trajectory: dict,
+    sr_data: dict,
+    uid: str,
+    days_recalibrating: int = 0,
+) -> dict:
+    """Orchestrate all safeguard checks. Returns unified status dict."""
+    scrupulosity = detect_scrupulosity_signals(daily_logs)
+    burnout = detect_burnout_state(sr_data)
+    humility = should_show_humility_reset(uid, trajectory.get("current_state", "calibrating"))
+    emergency = detect_emergency_override(daily_logs)
+    reduced = get_reduced_journal_config(days_recalibrating)
+
+    any_active = (
+        scrupulosity["active"]
+        or burnout["active"]
+        or humility.get("active", False)
+        or emergency["active"]
+        or (reduced is not None and reduced.get("active", False))
+    )
+
+    return {
+        "scrupulosity": scrupulosity,
+        "burnout": burnout,
+        "humility_reset": humility,
+        "emergency_override": emergency,
+        "reduced_journal": reduced,
+        "any_active": any_active,
+    }
 
 
 # ---------------------------------------------------------------------------

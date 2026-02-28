@@ -35,6 +35,8 @@ export default function JournalPage() {
   const [activeStruggles, setActiveStruggles] = useState([]);
   const [showStruggleGrid, setShowStruggleGrid] = useState(false);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
+  const [correlationInsight, setCorrelationInsight] = useState(null);
+  const [safeguards, setSafeguards] = useState(null);
 
   // Auth
   useEffect(() => {
@@ -44,6 +46,7 @@ export default function JournalPage() {
         await Promise.all([
           fetchTrajectory(currentUser),
           fetchStruggles(currentUser),
+          fetchCorrelations(currentUser),
         ]);
       }
       setIsLoading(false);
@@ -67,7 +70,7 @@ export default function JournalPage() {
         return;
       }
       const configData = await configRes.json();
-      if (!configData.onboarding_complete) {
+      if (!configData.config?.onboarding_complete) {
         setNeedsOnboarding(true);
         return;
       }
@@ -75,7 +78,12 @@ export default function JournalPage() {
 
       if (trajRes.ok) {
         const trajData = await trajRes.json();
-        if (trajData.trajectory) setTrajectory(trajData.trajectory);
+        if (trajData.trajectory) {
+          setTrajectory(trajData.trajectory);
+          if (trajData.trajectory.safeguards) {
+            setSafeguards(trajData.trajectory.safeguards);
+          }
+        }
       }
     } catch (err) {
       console.error('Failed to fetch trajectory:', err);
@@ -97,6 +105,23 @@ export default function JournalPage() {
     }
   };
 
+  const fetchCorrelations = async (currentUser) => {
+    try {
+      const token = await currentUser.getIdToken();
+      const res = await fetch(`${BACKEND_URL}/iman/correlations`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.weekly_insight) {
+          setCorrelationInsight(data.weekly_insight);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch correlations:', err);
+    }
+  };
+
   const handleStruggleDeclared = (result) => {
     setShowStruggleGrid(false);
     fetchStruggles(user);
@@ -112,12 +137,14 @@ export default function JournalPage() {
       await Promise.all([
         fetchTrajectory(user),
         fetchStruggles(user),
+        fetchCorrelations(user),
       ]);
     }
   };
 
-  const handleTrajectoryUpdate = (newTrajectory) => {
+  const handleTrajectoryUpdate = (newTrajectory, responseSafeguards) => {
     setTrajectory(newTrajectory);
+    if (responseSafeguards) setSafeguards(responseSafeguards);
   };
 
   // Generate date navigation (today + past 6 days)
@@ -154,7 +181,12 @@ export default function JournalPage() {
   }
 
   if (needsOnboarding) {
-    return <ImanOnboarding user={user} onComplete={handleOnboardingComplete} />;
+    return (
+      <div className="journal-page">
+        <ImanOnboarding user={user} onComplete={handleOnboardingComplete} />
+        <BottomNav user={user} />
+      </div>
+    );
   }
 
   return (
@@ -184,6 +216,13 @@ export default function JournalPage() {
           </div>
         </div>
 
+        {/* Scrupulosity gentleness banner */}
+        {safeguards?.scrupulosity?.active && (
+          <div className="gentleness-banner">
+            <p>{safeguards.scrupulosity.message}</p>
+          </div>
+        )}
+
         {/* Trajectory display */}
         <TrajectoryDisplay trajectory={trajectory} categories={categories} />
 
@@ -192,6 +231,15 @@ export default function JournalPage() {
 
         {/* Heart note patterns */}
         <HeartPatterns user={user} />
+
+        {/* Correlation insight */}
+        {correlationInsight && (
+          <div className="correlation-card">
+            <h3 className="section-label">Pattern Observed</h3>
+            <p className="correlation-text">{correlationInsight.insight_text}</p>
+            <span className="correlation-caveat">This is a pattern, not a rule.</span>
+          </div>
+        )}
 
         {/* Active struggles */}
         {activeStruggles.length > 0 && (
@@ -344,6 +392,40 @@ export default function JournalPage() {
           background: var(--primary-teal, #0d9488);
           color: white;
           border-color: var(--primary-teal, #0d9488);
+        }
+
+        /* Gentleness banner (scrupulosity safeguard) */
+        .gentleness-banner {
+          background: #fefce8;
+          border: 1px solid #fde68a;
+          border-radius: 10px;
+          padding: 12px 16px;
+        }
+        .gentleness-banner p {
+          font-size: 0.85rem;
+          color: #92400e;
+          margin: 0;
+          line-height: 1.5;
+          text-align: center;
+        }
+
+        /* Correlation insight card */
+        .correlation-card {
+          background: white;
+          border-radius: 14px;
+          border: 1px solid var(--border-light, #e5e7eb);
+          padding: 16px;
+        }
+        .correlation-text {
+          font-size: 0.85rem;
+          color: #374151;
+          margin: 0 0 8px 0;
+          line-height: 1.5;
+        }
+        .correlation-caveat {
+          font-size: 0.75rem;
+          color: #9ca3af;
+          font-style: italic;
         }
 
         .struggles-section {

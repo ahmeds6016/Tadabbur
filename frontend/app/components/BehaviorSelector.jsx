@@ -20,6 +20,25 @@ const INPUT_TYPE_LABELS = {
   count_inv: 'Count',
 };
 
+/**
+ * Group an array of behaviors by practice_group, preserving catalog order.
+ */
+function groupByPractice(behaviors) {
+  const groups = [];
+  const seen = new Set();
+  for (const b of behaviors) {
+    const gid = b.practice_group || b.id;
+    if (!seen.has(gid)) {
+      seen.add(gid);
+      groups.push({
+        id: gid,
+        behaviors: behaviors.filter((x) => (x.practice_group || x.id) === gid),
+      });
+    }
+  }
+  return groups;
+}
+
 export default function BehaviorSelector({
   categories = [],
   behaviors = [],
@@ -49,10 +68,14 @@ export default function BehaviorSelector({
     }
   };
 
-  // Group behaviors by category
-  const behaviorsByCategory = {};
+  // Group behaviors by category, then by practice_group within each
+  const groupedByCategory = {};
   for (const cat of categories) {
-    behaviorsByCategory[cat.id] = behaviors.filter((b) => b.category === cat.id);
+    const catBehaviors = behaviors.filter((b) => b.category === cat.id);
+    groupedByCategory[cat.id] = {
+      behaviors: catBehaviors,
+      practiceGroups: groupByPractice(catBehaviors),
+    };
   }
 
   const count = selectedIds.length;
@@ -61,7 +84,7 @@ export default function BehaviorSelector({
   return (
     <div className="behavior-selector">
       {categories.map((cat) => {
-        const catBehaviors = behaviorsByCategory[cat.id] || [];
+        const { behaviors: catBehaviors, practiceGroups } = groupedByCategory[cat.id] || { behaviors: [], practiceGroups: [] };
         if (catBehaviors.length === 0) return null;
         const catSelected = catBehaviors.filter((b) => selectedSet.has(b.id)).length;
         const Icon = CATEGORY_ICONS[cat.id] || Star;
@@ -89,26 +112,37 @@ export default function BehaviorSelector({
 
             {expanded && (
               <div className="bs-cat-body">
-                {catBehaviors.map((b) => {
-                  const checked = selectedSet.has(b.id);
-                  const disabled = !checked && atMax;
-                  return (
-                    <label
-                      key={b.id}
-                      className={`bs-behavior ${checked ? 'checked' : ''} ${disabled ? 'disabled' : ''}`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        disabled={disabled}
-                        onChange={() => toggleBehavior(b.id)}
-                        className="bs-checkbox"
-                      />
-                      <span className="bs-b-label">{b.label}</span>
-                      <span className="bs-b-type">{INPUT_TYPE_LABELS[b.input_type] || b.input_type}</span>
-                    </label>
-                  );
-                })}
+                {practiceGroups.map((group) => (
+                  <div key={group.id} className="bs-practice-group">
+                    {group.behaviors.length > 1 && (
+                      <div className="bs-pg-header">
+                        <span className="bs-pg-label">
+                          {group.id.replace(/_/g, ' ')}
+                        </span>
+                      </div>
+                    )}
+                    {group.behaviors.map((b) => {
+                      const checked = selectedSet.has(b.id);
+                      const disabled = !checked && atMax;
+                      return (
+                        <label
+                          key={b.id}
+                          className={`bs-behavior ${checked ? 'checked' : ''} ${disabled ? 'disabled' : ''}`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            disabled={disabled}
+                            onChange={() => toggleBehavior(b.id)}
+                            className="bs-checkbox"
+                          />
+                          <span className="bs-b-label">{b.label}</span>
+                          <span className="bs-b-type">{INPUT_TYPE_LABELS[b.input_type] || b.input_type}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -177,6 +211,22 @@ export default function BehaviorSelector({
         .bs-cat-body {
           padding: 4px 0;
         }
+
+        /* Practice group sub-headings */
+        .bs-practice-group {
+          margin-bottom: 2px;
+        }
+        .bs-pg-header {
+          padding: 8px 14px 2px 38px;
+        }
+        .bs-pg-label {
+          font-size: 0.65rem;
+          font-weight: 600;
+          color: #9ca3af;
+          text-transform: uppercase;
+          letter-spacing: 0.4px;
+        }
+
         .bs-behavior {
           display: flex;
           align-items: center;

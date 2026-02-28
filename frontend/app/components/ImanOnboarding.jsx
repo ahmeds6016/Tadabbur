@@ -288,7 +288,7 @@ export default function ImanOnboarding({ user, onComplete }) {
 
       <style jsx>{`
         .iman-onboarding {
-          min-height: 100vh;
+          min-height: calc(100vh - 80px);
           background: var(--cream, #faf6f0);
           display: flex;
           justify-content: center;
@@ -342,8 +342,8 @@ export default function ImanOnboarding({ user, onComplete }) {
           text-align: center;
         }
         .ob-medallion {
-          width: 64px;
-          height: 64px;
+          width: 80px;
+          height: 80px;
           border-radius: 50%;
           background: linear-gradient(135deg, #f0fdf4, #ecfdf5);
           display: flex;
@@ -351,10 +351,12 @@ export default function ImanOnboarding({ user, onComplete }) {
           justify-content: center;
           margin-bottom: 20px;
           border: 2px solid var(--primary-teal, #0d9488);
+          overflow: hidden;
         }
         .ob-medallion-icon {
-          font-size: 1.5rem;
+          font-size: 1.8rem;
           color: var(--primary-teal, #0d9488);
+          max-width: 100%;
         }
         .ob-title {
           font-size: 1.4rem;
@@ -520,7 +522,7 @@ export default function ImanOnboarding({ user, onComplete }) {
           line-height: 1.4;
         }
         .ob-tip::before {
-          content: '\\2022';
+          content: '\u2022';
           position: absolute;
           left: 6px;
           color: var(--primary-teal, #0d9488);

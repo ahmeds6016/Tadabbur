@@ -26,17 +26,23 @@ function BinaryInput({ value, onChange, label }) {
   );
 }
 
-function Scale5Input({ value, onChange }) {
+function Scale5Input({ value, onChange, scaleLabels }) {
   return (
-    <div className="scale5-dots">
-      {[1, 2, 3, 4, 5].map((n) => (
-        <button
-          key={n}
-          className={`scale-dot ${(value || 0) >= n ? 'filled' : ''}`}
-          onClick={() => onChange(value === n ? 0 : n)}
-          aria-label={`${n} of 5`}
-        />
-      ))}
+    <div className="scale5-wrapper">
+      <div className="scale5-dots">
+        {[1, 2, 3, 4, 5].map((n) => (
+          <button
+            key={n}
+            className={`scale-dot ${(value || 0) >= n ? 'filled' : ''} ${value === n ? 'current' : ''}`}
+            onClick={() => onChange(value === n ? 0 : n)}
+            aria-label={scaleLabels?.[String(n)] || `${n} of 5`}
+          />
+        ))}
+      </div>
+      <div className="scale5-labels">
+        <span>{scaleLabels?.['1'] || 'Low'}</span>
+        <span>{scaleLabels?.['5'] || 'High'}</span>
+      </div>
     </div>
   );
 }
@@ -98,7 +104,7 @@ function BehaviorRow({ behavior, value, onChange }) {
       case 'binary':
         return <BinaryInput value={value || 0} onChange={onChange} label={behavior.label} />;
       case 'scale_5':
-        return <Scale5Input value={value || 0} onChange={onChange} />;
+        return <Scale5Input value={value || 0} onChange={onChange} scaleLabels={behavior.scale_labels} />;
       case 'minutes':
         return <MinutesInput value={value || 0} onChange={onChange} />;
       case 'hours':
@@ -237,7 +243,13 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate }) {
       const data = await res.json();
       setSaved(true);
       if (data.trajectory && onTrajectoryUpdate) {
-        onTrajectoryUpdate(data.trajectory);
+        // Merge SR + safeguards into trajectory for TrajectoryDisplay
+        const enrichedTrajectory = {
+          ...data.trajectory,
+          ...(data.strain_recovery ? { strain_recovery: data.strain_recovery } : {}),
+          ...(data.safeguards ? { safeguards: data.safeguards } : {}),
+        };
+        onTrajectoryUpdate(enrichedTrajectory, data.safeguards);
       }
       if (data.welcome_back) setWelcomeBack(data.welcome_back);
       if (data.anti_riya_reminder) setRiyaReminder(true);
@@ -299,17 +311,30 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate }) {
     return <div className="journal-error">{error}</div>;
   }
 
-  // Group tracked behaviors by category
+  // Group tracked behaviors by category, then by practice_group within each category
   const trackedIds = new Set(
     (config?.tracked_behaviors || [])
       .filter((b) => b.active !== false)
       .map((b) => b.id)
   );
-  const behaviorsByCategory = {};
+
+  // Build practice groups per category for visual sub-grouping
+  const groupedByCategory = {};
   for (const cat of categories) {
-    behaviorsByCategory[cat.id] = allBehaviors.filter(
+    const catBehaviors = allBehaviors.filter(
       (b) => b.category === cat.id && trackedIds.has(b.id)
     );
+    // Group by practice_group preserving catalog order
+    const groups = [];
+    const seen = new Set();
+    for (const b of catBehaviors) {
+      const gid = b.practice_group || b.id;
+      if (!seen.has(gid)) {
+        seen.add(gid);
+        groups.push({ id: gid, behaviors: catBehaviors.filter((x) => (x.practice_group || x.id) === gid) });
+      }
+    }
+    groupedByCategory[cat.id] = groups;
   }
 
   return (
@@ -326,26 +351,34 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate }) {
         </div>
       )}
 
-      {/* Behavior sections grouped by category */}
+      {/* Behavior sections grouped by category, sub-grouped by practice */}
       {categories.map((cat) => {
-        const catBehaviors = behaviorsByCategory[cat.id] || [];
-        if (catBehaviors.length === 0) return null;
+        const groups = groupedByCategory[cat.id] || [];
+        const totalBehaviors = groups.reduce((n, g) => n + g.behaviors.length, 0);
+        if (totalBehaviors === 0) return null;
         return (
           <CollapsibleSection
             key={cat.id}
             title={cat.label}
-            count={catBehaviors.length}
+            count={totalBehaviors}
             defaultExpanded={cat.id === 'fard'}
             sectionKey={`journal-${cat.id}`}
           >
             <div className="behavior-list">
-              {catBehaviors.map((b) => (
-                <BehaviorRow
-                  key={b.id}
-                  behavior={b}
-                  value={values[b.id]}
-                  onChange={(v) => handleValueChange(b.id, v)}
-                />
+              {groups.map((group) => (
+                <div key={group.id} className="practice-group">
+                  {group.behaviors.length > 1 && (
+                    <span className="pg-label">{group.id.replace(/_/g, ' ')}</span>
+                  )}
+                  {group.behaviors.map((b) => (
+                    <BehaviorRow
+                      key={b.id}
+                      behavior={b}
+                      value={values[b.id]}
+                      onChange={(v) => handleValueChange(b.id, v)}
+                    />
+                  ))}
+                </div>
               ))}
             </div>
           </CollapsibleSection>
@@ -450,6 +483,26 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate }) {
           cursor: pointer;
         }
 
+        /* Practice group sub-headings */
+        .behavior-list :global(.practice-group) {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+        .behavior-list :global(.practice-group + .practice-group) {
+          margin-top: 8px;
+          padding-top: 8px;
+          border-top: 1px solid rgba(0, 0, 0, 0.04);
+        }
+        .behavior-list :global(.pg-label) {
+          font-size: 0.65rem;
+          font-weight: 600;
+          color: #9ca3af;
+          text-transform: uppercase;
+          letter-spacing: 0.4px;
+          margin-bottom: -4px;
+        }
+
         /* Behavior rows */
         .behavior-list {
           display: flex;
@@ -494,13 +547,28 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate }) {
         }
 
         /* Scale 5 dots */
+        .behavior-row :global(.scale5-wrapper) {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+          align-items: flex-end;
+        }
         .behavior-row :global(.scale5-dots) {
           display: flex;
           gap: 6px;
         }
+        .behavior-row :global(.scale5-labels) {
+          display: flex;
+          justify-content: space-between;
+          width: 100%;
+        }
+        .behavior-row :global(.scale5-labels span) {
+          font-size: 0.6rem;
+          color: #9ca3af;
+        }
         .behavior-row :global(.scale-dot) {
-          width: 20px;
-          height: 20px;
+          width: 24px;
+          height: 24px;
           border-radius: 50%;
           border: 2px solid var(--border-light, #e5e7eb);
           background: white;
@@ -511,6 +579,10 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate }) {
         .behavior-row :global(.scale-dot.filled) {
           background: var(--primary-teal, #0d9488);
           border-color: var(--primary-teal, #0d9488);
+        }
+        .behavior-row :global(.scale-dot.current) {
+          transform: scale(1.15);
+          box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.3);
         }
 
         /* Minutes / Hours slider */

@@ -597,8 +597,8 @@ class TestRecomputeTrajectory:
 # ─── Data Integrity ──────────────────────────────────────────────────────
 
 class TestDataIntegrity:
-    def test_27_behaviors(self):
-        assert len(IMAN_BEHAVIORS) == 27
+    def test_39_behaviors(self):
+        assert len(IMAN_BEHAVIORS) == 39
 
     def test_14_defaults(self):
         assert len(DEFAULT_BEHAVIORS) == 14

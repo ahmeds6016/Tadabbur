@@ -76,6 +76,10 @@ from services.iman_service import (
     prepare_digest_context,
     build_digest_prompt,
     compute_heart_note_patterns,
+    compute_behavior_correlations,
+    select_weekly_insight,
+    compute_strain_recovery,
+    compute_safeguard_status,
     MAX_TRACKED_BEHAVIORS,
     ENGINE_VERSION,
 )
@@ -8203,11 +8207,18 @@ def iman_submit_log():
                 except ValueError:
                     pass
 
+        # Strain/Recovery + Safeguards
+        tracked_ids = get_tracked_behavior_ids(config)
+        sr_data = compute_strain_recovery(all_logs, tracked_ids)
+        safeguards = compute_safeguard_status(all_logs, trajectory, sr_data, uid)
+
         print(f"[IMAN] Log saved for {uid[:8]}... date={date_str} — state={trajectory.get('current_state')}")
         return jsonify({
             "message": "Log saved",
             "date": date_str,
             "trajectory": trajectory,
+            "strain_recovery": sr_data,
+            "safeguards": safeguards,
             "anti_riya_reminder": should_show_anti_riya_reminder(),
             "welcome_back": welcome_back,
         }), 200
@@ -8293,10 +8304,9 @@ def iman_get_trajectory():
         traj = doc.to_dict()
 
         # Safeguard: comfort mode for extended recalibrating
+        recal_days = 0
         if traj.get("current_state") == "recalibrating":
             daily_scores = traj.get("daily_scores", [])
-            # Count recent recalibrating days (simplified: use length of scores as proxy)
-            recal_days = 0
             for score in reversed(daily_scores):
                 if score.get("composite", 0.5) < 0.3:
                     recal_days += 1
@@ -8305,6 +8315,23 @@ def iman_get_trajectory():
             comfort = get_recalibrating_comfort(recal_days)
             if comfort:
                 traj["comfort"] = comfort
+
+        # Compute strain/recovery + safeguards from recent logs
+        config_ref = users_db.collection("users").document(uid).collection("iman_config").document("settings")
+        config_doc = config_ref.get()
+        config = config_doc.to_dict() if config_doc.exists else {}
+        tracked_ids = get_tracked_behavior_ids(config)
+
+        logs_ref = users_db.collection("users").document(uid).collection("iman_daily_logs")
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=30)).strftime("%Y-%m-%d")
+        recent_docs = logs_ref.where("date", ">=", cutoff).order_by("date").stream()
+        recent_logs = [d.to_dict() for d in recent_docs]
+
+        sr_data = compute_strain_recovery(recent_logs, tracked_ids)
+        safeguards = compute_safeguard_status(recent_logs, traj, sr_data, uid, recal_days)
+
+        traj["strain_recovery"] = sr_data
+        traj["safeguards"] = safeguards
 
         return jsonify({"trajectory": traj}), 200
 
@@ -8444,6 +8471,79 @@ def iman_heart_patterns():
 
     except Exception as e:
         print(f"ERROR in GET /iman/heart-patterns: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+# ---------------------------------------------------------------------------
+# Iman — Correlations & Safeguards Endpoints
+# ---------------------------------------------------------------------------
+
+@app.route("/iman/correlations", methods=["GET"])
+@firebase_auth_required
+def iman_get_correlations():
+    """Get behavior correlations and weekly insight for display."""
+    uid = request.user["uid"]
+    try:
+        config_ref = users_db.collection("users").document(uid).collection("iman_config").document("settings")
+        config_doc = config_ref.get()
+        if not config_doc.exists:
+            return jsonify({"error": "Iman Index not set up"}), 404
+        config = config_doc.to_dict()
+        tracked_ids = get_tracked_behavior_ids(config)
+
+        # Fetch 90 days of logs for correlation window
+        logs_ref = users_db.collection("users").document(uid).collection("iman_daily_logs")
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=90)).strftime("%Y-%m-%d")
+        docs = logs_ref.where("date", ">=", cutoff).order_by("date").stream()
+        daily_logs = [d.to_dict() for d in docs]
+
+        correlations = compute_behavior_correlations(daily_logs, tracked_ids, window_days=90)
+
+        # Select weekly insight (avoid repeats)
+        previously_shown = config.get("shown_correlations", [])
+        weekly_insight = select_weekly_insight(correlations, previously_shown)
+
+        print(f"[IMAN] Correlations for {uid[:8]}...: {len(correlations)} found")
+        return jsonify({
+            "correlations": correlations[:5],
+            "weekly_insight": weekly_insight,
+        }), 200
+
+    except Exception as e:
+        print(f"ERROR in GET /iman/correlations: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/iman/safeguards/status", methods=["GET"])
+@firebase_auth_required
+def iman_get_safeguard_status():
+    """Get current safeguard status for the user."""
+    uid = request.user["uid"]
+    try:
+        # Read trajectory
+        traj_ref = users_db.collection("users").document(uid).collection("iman_trajectory").document("current")
+        traj_doc = traj_ref.get()
+        traj = traj_doc.to_dict() if traj_doc.exists else {"current_state": "calibrating"}
+
+        # Read config for tracked behaviors
+        config_ref = users_db.collection("users").document(uid).collection("iman_config").document("settings")
+        config_doc = config_ref.get()
+        config = config_doc.to_dict() if config_doc.exists else {}
+        tracked_ids = get_tracked_behavior_ids(config)
+
+        # Fetch recent logs
+        logs_ref = users_db.collection("users").document(uid).collection("iman_daily_logs")
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=30)).strftime("%Y-%m-%d")
+        docs = logs_ref.where("date", ">=", cutoff).order_by("date").stream()
+        recent_logs = [d.to_dict() for d in docs]
+
+        sr_data = compute_strain_recovery(recent_logs, tracked_ids)
+        safeguards = compute_safeguard_status(recent_logs, traj, sr_data, uid)
+
+        return jsonify({"safeguards": safeguards}), 200
+
+    except Exception as e:
+        print(f"ERROR in GET /iman/safeguards/status: {e}")
         return jsonify({"error": str(e)}), 500
 
 

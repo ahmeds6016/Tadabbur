@@ -1,18 +1,22 @@
 'use client';
 import { useState } from 'react';
 import { BACKEND_URL } from '../lib/config';
+import {
+  Clock, Flame, EyeOff, BookX, CloudOff,
+  MessageCircleOff, Gem, Crown, Pause, RefreshCw,
+} from 'lucide-react';
 
 const STRUGGLE_CATALOG = [
-  { id: 'prayer_consistency', label: 'Prayer Consistency', description: 'Maintaining the five daily prayers on time', icon: '🕐', color: '#0d9488' },
-  { id: 'anger_management', label: 'Anger Management', description: 'Controlling anger and choosing gentleness', icon: '🔥', color: '#dc2626' },
-  { id: 'lowering_gaze', label: 'Lowering the Gaze', description: 'Guarding the eyes in a digital world', icon: '👁', color: '#7c3aed' },
-  { id: 'quran_disconnection', label: 'Quranic Disconnection', description: 'Feeling distant from the Quran', icon: '📖', color: '#2563eb' },
-  { id: 'spiritual_dryness', label: 'Spiritual Dryness', description: 'Worship feels mechanical, the heart feels numb', icon: '☁️', color: '#64748b' },
-  { id: 'tongue_control', label: 'Tongue Control', description: 'Guarding speech from gossip and harshness', icon: '🤐', color: '#ea580c' },
-  { id: 'worldly_attachment', label: 'Worldly Attachment', description: 'The heart clinging to dunya over akhira', icon: '💎', color: '#ca8a04' },
-  { id: 'pride_arrogance', label: 'Pride & Arrogance', description: 'Subtle or overt feelings of superiority', icon: '👑', color: '#9333ea' },
-  { id: 'laziness_procrastination', label: 'Laziness', description: 'Delaying good deeds and spiritual lethargy', icon: '⏸', color: '#0284c7' },
-  { id: 'repentance_cycle', label: 'The Repentance Cycle', description: 'Falling, repenting, falling again', icon: '🔄', color: '#059669' },
+  { id: 'prayer_consistency', label: 'Prayer Consistency', description: 'Maintaining the five daily prayers on time', icon: Clock, color: '#0d9488' },
+  { id: 'anger_management', label: 'Anger Management', description: 'Controlling anger and choosing gentleness', icon: Flame, color: '#dc2626' },
+  { id: 'lowering_gaze', label: 'Lowering the Gaze', description: 'Guarding the eyes in a digital world', icon: EyeOff, color: '#7c3aed' },
+  { id: 'quran_disconnection', label: 'Quranic Disconnection', description: 'Feeling distant from the Quran', icon: BookX, color: '#2563eb' },
+  { id: 'spiritual_dryness', label: 'Spiritual Dryness', description: 'Worship feels mechanical, the heart feels numb', icon: CloudOff, color: '#64748b' },
+  { id: 'tongue_control', label: 'Tongue Control', description: 'Guarding speech from gossip and harshness', icon: MessageCircleOff, color: '#ea580c' },
+  { id: 'worldly_attachment', label: 'Worldly Attachment', description: 'The heart clinging to dunya over akhira', icon: Gem, color: '#ca8a04' },
+  { id: 'pride_arrogance', label: 'Pride & Arrogance', description: 'Subtle or overt feelings of superiority', icon: Crown, color: '#9333ea' },
+  { id: 'laziness_procrastination', label: 'Laziness', description: 'Delaying good deeds and spiritual lethargy', icon: Pause, color: '#0284c7' },
+  { id: 'repentance_cycle', label: 'The Repentance Cycle', description: 'Falling, repenting, falling again', icon: RefreshCw, color: '#059669' },
 ];
 
 export default function StruggleDeclaration({ user, activeStruggleIds = [], onDeclared }) {
@@ -64,20 +68,25 @@ export default function StruggleDeclaration({ user, activeStruggleIds = [], onDe
       </p>
 
       <div className="sd-grid">
-        {available.map((s) => (
-          <button
-            key={s.id}
-            className="sd-card"
-            onClick={() => handleDeclare(s)}
-            disabled={declaring === s.id}
-            style={{ borderColor: s.color }}
-          >
-            <span className="sd-icon">{s.icon}</span>
-            <span className="sd-label" style={{ color: s.color }}>{s.label}</span>
-            <span className="sd-desc">{s.description}</span>
-            {declaring === s.id && <span className="sd-loading">Resolving guidance...</span>}
-          </button>
-        ))}
+        {available.map((s) => {
+          const IconComponent = s.icon;
+          return (
+            <button
+              key={s.id}
+              className="sd-card"
+              onClick={() => handleDeclare(s)}
+              disabled={declaring === s.id}
+              style={{ borderColor: s.color }}
+            >
+              <span className="sd-icon">
+                <IconComponent size={22} strokeWidth={1.5} style={{ color: s.color }} />
+              </span>
+              <span className="sd-label" style={{ color: s.color }}>{s.label}</span>
+              <span className="sd-desc">{s.description}</span>
+              {declaring === s.id && <span className="sd-loading">Resolving guidance...</span>}
+            </button>
+          );
+        })}
       </div>
 
       {error && <p className="sd-error">{error}</p>}
@@ -154,7 +163,11 @@ export default function StruggleDeclaration({ user, activeStruggleIds = [], onDe
           cursor: wait;
         }
         .sd-icon {
-          font-size: 1.5rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 36px;
+          height: 36px;
         }
         .sd-label {
           font-size: 0.8rem;
