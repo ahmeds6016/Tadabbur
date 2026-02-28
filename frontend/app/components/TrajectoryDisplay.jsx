@@ -27,9 +27,11 @@ export default function TrajectoryDisplay({ trajectory, categories = [] }) {
     calibration_days_remaining = 0,
     category_scores = {},
     growth_edges = [],
+    comfort = null,
   } = trajectory;
 
   const stateConf = STATE_CONFIG[current_state] || STATE_CONFIG.calibrating;
+  const showComfort = comfort?.hide_trajectory;
 
   // Build category bar data
   const categoryBars = categories.map((cat) => {
@@ -63,8 +65,22 @@ export default function TrajectoryDisplay({ trajectory, categories = [] }) {
               : `Day ${days_logged} of 14 — Building your baseline`
             }
           </span>
+          <span className="mirror-note">A mirror, not a measure</span>
         </div>
       </div>
+
+      {/* Comfort mode: verse replaces bars when recalibrating 14+ days */}
+      {showComfort && (
+        <div className="comfort-section">
+          <p className="comfort-verse">
+            "{comfort.comfort_verse?.text}"
+            <span className="comfort-ref">
+              — Surah {comfort.comfort_verse?.surah}:{comfort.comfort_verse?.verse}
+            </span>
+          </p>
+          <p className="comfort-message">{comfort.message}</p>
+        </div>
+      )}
 
       {/* Calibration progress bar */}
       {!baseline_established && (
@@ -76,8 +92,8 @@ export default function TrajectoryDisplay({ trajectory, categories = [] }) {
         </div>
       )}
 
-      {/* Category bars (only after baseline) */}
-      {baseline_established && categoryBars.length > 0 && (
+      {/* Category bars (only after baseline, hidden in comfort mode) */}
+      {baseline_established && !showComfort && categoryBars.length > 0 && (
         <div className="category-bars">
           {categoryBars.map((bar) => {
             // Scale composite from [-1, 1] to visual width [0, 100]
@@ -124,6 +140,38 @@ export default function TrajectoryDisplay({ trajectory, categories = [] }) {
         .state-sub {
           font-size: 0.8rem;
           color: #6b7280;
+        }
+        .mirror-note {
+          font-size: 0.7rem;
+          color: #9ca3af;
+          font-style: italic;
+          margin-top: 2px;
+        }
+        .comfort-section {
+          margin-top: 14px;
+          padding: 12px;
+          background: rgba(255, 255, 255, 0.6);
+          border-radius: 8px;
+          text-align: center;
+        }
+        .comfort-verse {
+          font-size: 0.95rem;
+          font-style: italic;
+          color: var(--deep-blue, #1e293b);
+          margin: 0 0 8px 0;
+          line-height: 1.5;
+        }
+        .comfort-ref {
+          display: block;
+          font-size: 0.75rem;
+          color: #6b7280;
+          font-style: normal;
+          margin-top: 4px;
+        }
+        .comfort-message {
+          font-size: 0.8rem;
+          color: #6b7280;
+          margin: 0;
         }
         .calibration-bar {
           margin-top: 12px;

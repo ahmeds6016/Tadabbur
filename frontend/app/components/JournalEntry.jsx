@@ -129,6 +129,8 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate }) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState(null);
+  const [welcomeBack, setWelcomeBack] = useState(null);
+  const [riyaReminder, setRiyaReminder] = useState(false);
 
   // Fetch config and existing log
   useEffect(() => {
@@ -235,6 +237,8 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate }) {
       if (data.trajectory && onTrajectoryUpdate) {
         onTrajectoryUpdate(data.trajectory);
       }
+      if (data.welcome_back) setWelcomeBack(data.welcome_back);
+      if (data.anti_riya_reminder) setRiyaReminder(true);
     } catch (err) {
       console.error('Save error:', err);
       setError(err.message);
@@ -283,6 +287,18 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate }) {
 
   return (
     <div className="journal-entry">
+      {/* Welcome-back banner */}
+      {welcomeBack && (
+        <div className="welcome-back-banner">{welcomeBack}</div>
+      )}
+
+      {/* Anti-riya reminder toast */}
+      {riyaReminder && (
+        <div className="riya-reminder" onClick={() => setRiyaReminder(false)}>
+          This is a mirror, not a measure. Your journey is known only to Allah.
+        </div>
+      )}
+
       {/* Behavior sections grouped by category */}
       {categories.map((cat) => {
         const catBehaviors = behaviorsByCategory[cat.id] || [];
@@ -354,6 +370,27 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate }) {
         }
         .journal-error {
           color: #ef4444;
+        }
+        .welcome-back-banner {
+          padding: 12px 16px;
+          background: linear-gradient(135deg, #ecfdf5, #f0fdf4);
+          border-radius: 10px;
+          border: 1px solid #a7f3d0;
+          color: #065f46;
+          font-size: 0.9rem;
+          text-align: center;
+          font-weight: 500;
+        }
+        .riya-reminder {
+          padding: 12px 16px;
+          background: linear-gradient(135deg, #faf6f0, #fef3c7);
+          border-radius: 10px;
+          border: 1px solid #fde68a;
+          color: #92400e;
+          font-size: 0.85rem;
+          text-align: center;
+          font-style: italic;
+          cursor: pointer;
         }
 
         /* Behavior rows */

@@ -382,6 +382,96 @@ def _pearson_r(x: List[float], y: List[float]) -> float:
     return cov / denom
 
 
+# ---------------------------------------------------------------------------
+# Cross-Behavior Correlation Detection
+# ---------------------------------------------------------------------------
+
+MIN_CORRELATION_DATA_POINTS = 14
+MIN_CORRELATION_THRESHOLD = 0.40
+
+
+def compute_behavior_correlations(
+    daily_logs: List[dict],
+    tracked_ids: List[str],
+    window_days: int = 30,
+) -> List[dict]:
+    """Compute Pearson correlations across all behavior pairs.
+
+    Uses last `window_days` of logs. Filters for |r| > 0.40, min 14 points.
+    Returns list sorted by |r| descending.
+    """
+    recent = daily_logs[-window_days:] if len(daily_logs) > window_days else daily_logs
+
+    # Build per-behavior time series
+    behavior_series: Dict[str, List[Tuple[int, float]]] = defaultdict(list)
+    for i, log in enumerate(recent):
+        behaviors = log.get("behaviors", {})
+        for bid in tracked_ids:
+            raw = behaviors.get(bid)
+            if raw is not None:
+                val = raw.get("value", raw) if isinstance(raw, dict) else raw
+                normalized = normalize_behavior_value(bid, val)
+                behavior_series[bid].append((i, normalized))
+
+    # Filter to behaviors with enough data
+    eligible = [bid for bid in tracked_ids if len(behavior_series.get(bid, [])) >= MIN_CORRELATION_DATA_POINTS]
+
+    correlations = []
+    for i, bid_a in enumerate(eligible):
+        for bid_b in eligible[i + 1:]:
+            series_a = behavior_series[bid_a]
+            series_b = behavior_series[bid_b]
+
+            # Align by day index
+            dates_a = {d: v for d, v in series_a}
+            dates_b = {d: v for d, v in series_b}
+            common = sorted(set(dates_a) & set(dates_b))
+
+            if len(common) < MIN_CORRELATION_DATA_POINTS:
+                continue
+
+            x = [dates_a[d] for d in common]
+            y = [dates_b[d] for d in common]
+            r = _pearson_r(x, y)
+
+            if abs(r) >= MIN_CORRELATION_THRESHOLD:
+                label_a = BEHAVIOR_MAP.get(bid_a, {}).get("label", bid_a)
+                label_b = BEHAVIOR_MAP.get(bid_b, {}).get("label", bid_b)
+
+                if r > 0:
+                    insight = f"When you {label_a.lower()}, your {label_b.lower()} tends to improve too."
+                else:
+                    insight = f"Your {label_a.lower()} and {label_b.lower()} tend to move in opposite directions."
+
+                correlations.append({
+                    "behavior_a": bid_a,
+                    "behavior_b": bid_b,
+                    "r": round(r, 3),
+                    "direction": "positive" if r > 0 else "negative",
+                    "data_points": len(common),
+                    "insight_text": insight,
+                })
+
+    correlations.sort(key=lambda c: abs(c["r"]), reverse=True)
+    return correlations
+
+
+def select_weekly_insight(
+    correlations: List[dict],
+    previously_shown: List[str],
+) -> Optional[dict]:
+    """Pick at most 1 new correlation insight for this week's digest.
+
+    `previously_shown` is a list of "bidA|bidB" keys.
+    """
+    for corr in correlations:
+        key = f"{corr['behavior_a']}|{corr['behavior_b']}"
+        key_rev = f"{corr['behavior_b']}|{corr['behavior_a']}"
+        if key not in previously_shown and key_rev not in previously_shown:
+            return corr
+    return None
+
+
 def compute_category_pillars(
     scores_7d: List[float],
     scores_14d: List[float],
@@ -684,3 +774,384 @@ def recompute_trajectory(
     }
 
     return trajectory_doc, new_baselines
+
+
+# ---------------------------------------------------------------------------
+# Safeguards
+# ---------------------------------------------------------------------------
+
+MAX_TRACKED_BEHAVIORS = 15
+
+
+def check_behavior_cap(tracked_ids: List[str]) -> Tuple[bool, str]:
+    """Reject if user tries to track more than 15 behaviors."""
+    if len(tracked_ids) > MAX_TRACKED_BEHAVIORS:
+        return False, f"Maximum {MAX_TRACKED_BEHAVIORS} tracked behaviors allowed. You have {len(tracked_ids)}."
+    return True, ""
+
+
+def should_show_anti_riya_reminder() -> bool:
+    """Probabilistic: show 'a mirror, not a measure' reminder ~10% of sessions."""
+    import random
+    return random.random() < 0.10
+
+
+_COMFORT_VERSES = [
+    {"surah": 94, "verse": 5, "text": "Indeed, with hardship comes ease."},
+    {"surah": 39, "verse": 53, "text": "Do not despair of the mercy of Allah."},
+    {"surah": 2, "verse": 286, "text": "Allah does not burden a soul beyond that it can bear."},
+    {"surah": 65, "verse": 7, "text": "Allah will bring about, after hardship, ease."},
+]
+
+
+def get_recalibrating_comfort(days_recalibrating: int) -> Optional[dict]:
+    """If recalibrating for 14+ days, return comfort verse + hide trajectory flag."""
+    if days_recalibrating < 14:
+        return None
+    import random
+    verse = random.choice(_COMFORT_VERSES)
+    return {
+        "hide_trajectory": True,
+        "comfort_verse": verse,
+        "message": "Your journey is between you and Allah. Every return is honored.",
+    }
+
+
+def get_welcome_back_message(days_absent: int) -> Optional[str]:
+    """Warm welcome-back message for users returning after a gap. No guilt."""
+    if days_absent < 2:
+        return None
+    if days_absent <= 7:
+        return "Welcome back. Every day is a new beginning."
+    if days_absent <= 30:
+        return "The door is always open. Welcome back."
+    return "Alhamdulillah, you are here. That is what matters."
+
+
+# ---------------------------------------------------------------------------
+# Struggle Progress
+# ---------------------------------------------------------------------------
+
+STRUGGLE_PHASE_WEEKS = 4  # Each struggle has 4 phases, one per week
+
+
+def compute_struggle_progress(
+    struggle_id: str,
+    declared_at: str,
+    daily_logs: List[dict],
+    struggle_config: dict,
+) -> dict:
+    """
+    Compute progress for an active struggle.
+
+    Args:
+        struggle_id: ID from STRUGGLE_CATALOG
+        declared_at: ISO timestamp when the struggle was declared
+        daily_logs: Recent daily logs (last 30 days)
+        struggle_config: The struggle dict from STRUGGLE_CATALOG
+
+    Returns:
+        Dict with current_phase, phase_title, weeks_active,
+        linked_behavior_trends, phase_progress_pct
+    """
+    from datetime import datetime
+
+    now = datetime.utcnow()
+    try:
+        start = datetime.fromisoformat(declared_at.replace("Z", "+00:00")).replace(tzinfo=None)
+    except (ValueError, AttributeError):
+        start = now
+
+    days_active = max(0, (now - start).days)
+    weeks_active = days_active // 7
+
+    # Map to phase 0-3 (cap at 3)
+    current_phase = min(weeks_active, STRUGGLE_PHASE_WEEKS - 1)
+    phases = struggle_config.get("phases", [])
+    phase_title = phases[current_phase] if current_phase < len(phases) else ""
+
+    # Progress within current phase (0-100%)
+    days_in_phase = days_active - (current_phase * 7)
+    phase_progress_pct = min(100, round((days_in_phase / 7) * 100))
+
+    # Linked behavior trends: compute 14-day slope for each linked behavior
+    linked_ids = struggle_config.get("linked_behaviors", [])
+    linked_behavior_trends = {}
+
+    if daily_logs and linked_ids:
+        # Build time series per linked behavior from last 14 days
+        recent = daily_logs[-14:] if len(daily_logs) > 14 else daily_logs
+        for bid in linked_ids:
+            values = []
+            for log in recent:
+                behaviors = log.get("behaviors", {})
+                if bid in behaviors:
+                    val = behaviors[bid]
+                    if isinstance(val, (int, float)):
+                        values.append(float(val))
+                    elif isinstance(val, bool):
+                        values.append(1.0 if val else 0.0)
+
+            if len(values) >= 3:
+                xs = list(range(len(values)))
+                r = _pearson_r(xs, values)
+                if r > 0.2:
+                    linked_behavior_trends[bid] = "improving"
+                elif r < -0.2:
+                    linked_behavior_trends[bid] = "declining"
+                else:
+                    linked_behavior_trends[bid] = "stable"
+            else:
+                linked_behavior_trends[bid] = "insufficient_data"
+
+    return {
+        "current_phase": current_phase,
+        "phase_title": phase_title,
+        "weeks_active": weeks_active,
+        "days_active": days_active,
+        "phase_progress_pct": phase_progress_pct,
+        "linked_behavior_trends": linked_behavior_trends,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Weekly Digest — Context & Prompt Builder
+# ---------------------------------------------------------------------------
+
+def prepare_digest_context(
+    daily_logs: List[dict],
+    trajectory: dict,
+    config: dict,
+    heart_notes: List[dict],
+    active_struggles: List[dict],
+    week_start: str,
+    week_end: str,
+) -> dict:
+    """
+    Prepare all context needed for the Gemini weekly digest prompt.
+
+    Args:
+        daily_logs: All daily logs (ideally 90 days, for correlation window)
+        trajectory: Current trajectory doc
+        config: User's iman config
+        heart_notes: Decrypted heart notes from the week
+        active_struggles: Active struggle dicts with progress
+        week_start: ISO date string (YYYY-MM-DD) for week start
+        week_end: ISO date string (YYYY-MM-DD) for week end
+
+    Returns:
+        Context dict with all fields for prompt building.
+    """
+    from collections import Counter
+
+    # Filter logs to the target week
+    week_logs = [
+        log for log in daily_logs
+        if week_start <= log.get("date", "") <= week_end
+    ]
+    days_logged_this_week = len(week_logs)
+
+    # Aggregate category scores for the week
+    tracked_ids = get_tracked_behavior_ids(config)
+    weekly_category_totals = {}
+    weekly_behavior_summary = {}
+
+    for log in week_logs:
+        behaviors = log.get("behaviors", {})
+        for bid, val in behaviors.items():
+            if bid not in weekly_behavior_summary:
+                weekly_behavior_summary[bid] = {"values": [], "days_logged": 0}
+            weekly_behavior_summary[bid]["values"].append(val)
+            weekly_behavior_summary[bid]["days_logged"] += 1
+
+    # Compute average and trend per behavior
+    for bid, info in weekly_behavior_summary.items():
+        vals = info["values"]
+        numeric = [float(v) for v in vals if isinstance(v, (int, float))]
+        if numeric:
+            info["average"] = round(sum(numeric) / len(numeric), 2)
+        else:
+            bool_vals = [1.0 if v else 0.0 for v in vals if isinstance(v, bool)]
+            info["average"] = round(sum(bool_vals) / len(bool_vals), 2) if bool_vals else 0
+
+        # Simple trend: compare first half vs second half
+        if len(numeric) >= 4:
+            mid = len(numeric) // 2
+            first_half = sum(numeric[:mid]) / mid
+            second_half = sum(numeric[mid:]) / (len(numeric) - mid)
+            if second_half > first_half * 1.1:
+                info["trend"] = "improving"
+            elif second_half < first_half * 0.9:
+                info["trend"] = "declining"
+            else:
+                info["trend"] = "stable"
+        else:
+            info["trend"] = "insufficient_data"
+
+    # Heart state summary
+    heart_state_counts = Counter()
+    for log in week_logs:
+        hs = log.get("heart_state")
+        if hs:
+            heart_state_counts[hs] += 1
+
+    # Heart note type counts
+    heart_note_types = Counter()
+    for note in heart_notes:
+        heart_note_types[note.get("type", "other")] += 1
+
+    # Run correlations on full 90-day window
+    correlations = compute_behavior_correlations(daily_logs, tracked_ids, window_days=90)
+
+    # Struggle summaries
+    struggle_summaries = []
+    for s in active_struggles:
+        progress = s.get("progress", {})
+        struggle_summaries.append({
+            "label": s.get("label", ""),
+            "weeks_active": progress.get("weeks_active", 0),
+            "phase_title": progress.get("phase_title", ""),
+            "linked_trends": progress.get("linked_behavior_trends", {}),
+        })
+
+    return {
+        "week_start": week_start,
+        "week_end": week_end,
+        "days_logged_this_week": days_logged_this_week,
+        "trajectory_state": trajectory.get("current_state", "calibrating"),
+        "trajectory_display": trajectory.get("composite_display", ""),
+        "volatility": trajectory.get("volatility_state", ""),
+        "days_total": trajectory.get("days_logged", 0),
+        "behavior_summary": {
+            bid: {
+                "label": BEHAVIOR_MAP.get(bid, {}).get("label", bid),
+                "average": info["average"],
+                "days_logged": info["days_logged"],
+                "trend": info["trend"],
+            }
+            for bid, info in weekly_behavior_summary.items()
+        },
+        "heart_states": dict(heart_state_counts),
+        "heart_note_count": len(heart_notes),
+        "heart_note_types": dict(heart_note_types),
+        "correlations": [
+            {
+                "pair": f"{c['behavior_a']}|{c['behavior_b']}",
+                "r": c["r"],
+                "insight": c["insight_text"],
+            }
+            for c in correlations[:5]
+        ],
+        "struggles": struggle_summaries,
+        "growth_edges": trajectory.get("growth_edges", []),
+    }
+
+
+# Persona tone mapping for digest prompts
+_PERSONA_TONE = {
+    "new_revert": "Speak gently and simply, as to someone new to the path. Avoid jargon.",
+    "curious_explorer": "Be warm and inviting, like a thoughtful companion on a journey of discovery.",
+    "practicing_muslim": "Be balanced and respectful, speaking as peer to peer.",
+    "student": "Be precise and educational, connecting observations to scholarly tradition.",
+    "advanced_learner": "Be deep and nuanced, drawing from the subtleties of the spiritual sciences.",
+}
+
+
+def build_digest_prompt(context: dict, persona_name: str = "practicing_muslim") -> str:
+    """
+    Build the Gemini prompt for a weekly spiritual digest.
+
+    Args:
+        context: Output of prepare_digest_context()
+        persona_name: Key from PERSONAS dict
+
+    Returns:
+        Prompt string for Gemini.
+    """
+    tone = _PERSONA_TONE.get(persona_name, _PERSONA_TONE["practicing_muslim"])
+
+    # Format behavior summary
+    behavior_lines = []
+    for bid, info in context.get("behavior_summary", {}).items():
+        behavior_lines.append(
+            f"  - {info['label']}: avg={info['average']}, "
+            f"logged {info['days_logged']}/{context['days_logged_this_week']} days, "
+            f"trend={info['trend']}"
+        )
+    behavior_text = "\n".join(behavior_lines) if behavior_lines else "  No behaviors logged this week."
+
+    # Format heart states
+    heart_lines = []
+    for state, count in context.get("heart_states", {}).items():
+        heart_lines.append(f"  - {state}: {count} day(s)")
+    heart_text = "\n".join(heart_lines) if heart_lines else "  No heart states recorded."
+
+    # Format correlations
+    corr_lines = []
+    for c in context.get("correlations", []):
+        corr_lines.append(f"  - {c['insight']} (r={c['r']:.2f})")
+    corr_text = "\n".join(corr_lines) if corr_lines else "  Not enough data for correlations yet."
+
+    # Format struggles
+    struggle_lines = []
+    for s in context.get("struggles", []):
+        trends_str = ", ".join(
+            f"{k}: {v}" for k, v in s.get("linked_trends", {}).items()
+        )
+        struggle_lines.append(
+            f"  - {s['label']} (week {s['weeks_active'] + 1}): {s['phase_title']}"
+            + (f" | Trends: {trends_str}" if trends_str else "")
+        )
+    struggle_text = "\n".join(struggle_lines) if struggle_lines else "  No active struggles."
+
+    prompt = f"""You are a gentle spiritual companion reflecting on a Muslim's week of spiritual practice.
+
+TONE: {tone}
+
+CRITICAL RULES:
+- NEVER show raw numbers, scores, percentages, or indices to the user.
+- NEVER say "you should", "you must", or "you need to". Use "you might consider", "perhaps", "one beautiful practice is..."
+- NEVER compare the user to others or to an ideal.
+- Stay under 300 words total across all sections.
+- End with a note of humility — you are a mirror, not a judge.
+- Write in second person ("you"), with warmth and mercy.
+
+CONTEXT FOR THIS WEEK ({context['week_start']} to {context['week_end']}):
+
+Overall trajectory: {context['trajectory_state']} ({context['trajectory_display']})
+Days logged this week: {context['days_logged_this_week']}
+Total days on journey: {context['days_total']}
+
+Behaviors this week:
+{behavior_text}
+
+Heart states this week:
+{heart_text}
+Heart notes written: {context['heart_note_count']} ({', '.join(f'{k}: {v}' for k, v in context.get('heart_note_types', {}).items()) or 'none'})
+
+Behavioral correlations observed:
+{corr_text}
+
+Active spiritual struggles:
+{struggle_text}
+
+Growth edges (areas with lowest consistency):
+  {', '.join(context.get('growth_edges', [])) or 'None identified yet'}
+
+Respond in VALID JSON with exactly these 7 keys:
+{{
+  "opening": "A 1-2 sentence warm opening acknowledging their week.",
+  "weekly_story": "A 2-3 sentence narrative of what their week looked like spiritually — weave behaviors and heart states into a story, not a report.",
+  "strength_noticed": "One specific strength you noticed this week. Be concrete.",
+  "correlation_insight": "If correlations exist, share one insight naturally (e.g., 'It seems that on days you...'). If no correlations, share an encouraging observation.",
+  "gentle_attention": "One area that might benefit from gentle attention. Frame with mercy, not criticism.",
+  "verse_to_carry": {{
+    "surah": 0,
+    "verse": 0,
+    "text": "The verse text in English",
+    "why": "A sentence explaining why this verse feels relevant to their week."
+  }},
+  "closing": "A 1-sentence closing with humility. Remind them this is a mirror, not a measure."
+}}"""
+
+    return prompt

@@ -1,0 +1,338 @@
+'use client';
+import { useState } from 'react';
+import { BACKEND_URL } from '../lib/config';
+
+const BEHAVIOR_LABELS = {
+  fajr_prayer: 'Fajr', dhuhr_prayer: 'Dhuhr', asr_prayer: 'Asr',
+  maghrib_prayer: 'Maghrib', isha_prayer: 'Isha', masjid_attendance: 'Masjid',
+  fasting: 'Fasting', avoided_sins: 'Avoided Sins', tawbah_moment: 'Tawbah',
+  lowering_gaze: 'Gaze', device_discipline: 'Device', quran_minutes: 'Quran',
+  tadabbur_session: 'Tadabbur', quran_memorization: 'Memorization',
+  sunnah_prayers: 'Sunnah', tahajjud: 'Tahajjud', dhikr_minutes: 'Dhikr',
+  dua_moments: 'Dua', charity: 'Charity', gratitude_entry: 'Gratitude',
+  kindness_act: 'Kindness', forgiveness: 'Forgiveness', family_rights: 'Family',
+  tongue_control: 'Tongue', sleep_hours: 'Sleep', exercise: 'Exercise',
+  healthy_eating: 'Eating',
+};
+
+const TREND_ARROWS = {
+  improving: { symbol: '↑', color: '#059669' },
+  stable: { symbol: '→', color: '#6b7280' },
+  declining: { symbol: '↓', color: '#dc2626' },
+  insufficient_data: { symbol: '·', color: '#d1d5db' },
+};
+
+export default function StruggleCard({ struggle, user, onResolved }) {
+  const [showGuidance, setShowGuidance] = useState(false);
+  const [guidance, setGuidance] = useState(null);
+  const [loadingGuidance, setLoadingGuidance] = useState(false);
+  const [resolving, setResolving] = useState(false);
+
+  const progress = struggle.progress || {};
+  const phases = ['Acknowledge', 'Anchor', 'Expand', 'Sustain'];
+  const currentPhase = progress.current_phase || 0;
+  const trends = progress.linked_behavior_trends || {};
+
+  const handleReadGuidance = async () => {
+    if (guidance) {
+      setShowGuidance(!showGuidance);
+      return;
+    }
+    setLoadingGuidance(true);
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch(
+        `${BACKEND_URL}/iman/struggle/${struggle.struggle_id}/guidance`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const data = await res.json();
+      if (res.ok) {
+        setGuidance(data);
+        setShowGuidance(true);
+      }
+    } catch (err) {
+      console.error('Failed to load guidance:', err);
+    } finally {
+      setLoadingGuidance(false);
+    }
+  };
+
+  const handleResolve = async () => {
+    if (resolving) return;
+    setResolving(true);
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch(
+        `${BACKEND_URL}/iman/struggle/${struggle.struggle_id}`,
+        {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ action: 'resolve' }),
+        }
+      );
+      if (res.ok && onResolved) {
+        onResolved(struggle.struggle_id);
+      }
+    } catch (err) {
+      console.error('Failed to resolve struggle:', err);
+    } finally {
+      setResolving(false);
+    }
+  };
+
+  return (
+    <div className="struggle-card" style={{ borderLeftColor: struggle.color }}>
+      {/* Header */}
+      <div className="sc-header">
+        <span className="sc-label" style={{ color: struggle.color }}>
+          {struggle.label}
+        </span>
+        <span className="sc-weeks">
+          {progress.weeks_active != null
+            ? `Week ${progress.weeks_active + 1}`
+            : ''}
+        </span>
+      </div>
+
+      {/* Phase progress bar */}
+      <div className="sc-phases">
+        {[0, 1, 2, 3].map((i) => (
+          <div
+            key={i}
+            className={`sc-phase-dot ${i < currentPhase ? 'done' : ''} ${i === currentPhase ? 'active' : ''}`}
+            style={{
+              backgroundColor:
+                i <= currentPhase ? struggle.color : '#e5e7eb',
+            }}
+          />
+        ))}
+        <div className="sc-phase-bar">
+          <div
+            className="sc-phase-fill"
+            style={{
+              width: `${((currentPhase * 100) + (progress.phase_progress_pct || 0)) / 4}%`,
+              backgroundColor: struggle.color,
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Current phase description */}
+      {progress.phase_title && (
+        <p className="sc-phase-text">{progress.phase_title}</p>
+      )}
+
+      {/* Linked behavior trends */}
+      {Object.keys(trends).length > 0 && (
+        <div className="sc-trends">
+          {struggle.linked_behaviors?.map((bid) => {
+            const trend = trends[bid];
+            if (!trend) return null;
+            const t = TREND_ARROWS[trend] || TREND_ARROWS.insufficient_data;
+            return (
+              <span key={bid} className="sc-trend-pill" style={{ color: t.color }}>
+                {BEHAVIOR_LABELS[bid] || bid} {t.symbol}
+              </span>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Comfort verse */}
+      {struggle.comfort_verse && (
+        <p className="sc-comfort">
+          "{struggle.comfort_verse.text}"
+          <span className="sc-comfort-ref">
+            — {struggle.comfort_verse.surah}:{struggle.comfort_verse.verse}
+          </span>
+        </p>
+      )}
+
+      {/* Actions */}
+      <div className="sc-actions">
+        <button
+          className="sc-btn guidance"
+          onClick={handleReadGuidance}
+          disabled={loadingGuidance}
+        >
+          {loadingGuidance ? 'Loading...' : showGuidance ? 'Hide Guidance' : 'Read Guidance'}
+        </button>
+        <button
+          className="sc-btn resolve"
+          onClick={handleResolve}
+          disabled={resolving}
+        >
+          {resolving ? '...' : 'Mark Resolved'}
+        </button>
+      </div>
+
+      {/* Expanded guidance */}
+      {showGuidance && guidance && (
+        <div className="sc-guidance">
+          {guidance.guidance_excerpts?.map((g, i) => (
+            <div key={i} className="sc-excerpt">
+              <span className="sc-source">{g.source}: {g.title}</span>
+              <p className="sc-text">{g.text?.slice(0, 500)}{g.text?.length > 500 ? '...' : ''}</p>
+            </div>
+          ))}
+          {guidance.comfort_verses?.length > 1 && (
+            <div className="sc-more-verses">
+              {guidance.comfort_verses.slice(1).map((v, i) => (
+                <p key={i} className="sc-verse-item">
+                  "{v.text}" — {v.surah}:{v.verse}
+                </p>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      <style jsx>{`
+        .struggle-card {
+          padding: 14px;
+          background: white;
+          border-radius: 12px;
+          border: 1px solid var(--border-light, #e5e7eb);
+          border-left: 3px solid;
+          margin-bottom: 12px;
+        }
+        .sc-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 10px;
+        }
+        .sc-label {
+          font-size: 0.95rem;
+          font-weight: 600;
+        }
+        .sc-weeks {
+          font-size: 0.75rem;
+          color: #6b7280;
+        }
+        .sc-phases {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          margin-bottom: 8px;
+          position: relative;
+        }
+        .sc-phase-dot {
+          width: 10px;
+          height: 10px;
+          border-radius: 50%;
+          z-index: 1;
+          flex-shrink: 0;
+        }
+        .sc-phase-bar {
+          position: absolute;
+          left: 5px;
+          right: 5px;
+          height: 3px;
+          background: #e5e7eb;
+          border-radius: 2px;
+          z-index: 0;
+        }
+        .sc-phase-fill {
+          height: 100%;
+          border-radius: 2px;
+          transition: width 0.4s ease;
+        }
+        .sc-phase-text {
+          font-size: 0.78rem;
+          color: #374151;
+          margin: 0 0 10px 0;
+          line-height: 1.4;
+          font-style: italic;
+        }
+        .sc-trends {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+          margin-bottom: 10px;
+        }
+        .sc-trend-pill {
+          font-size: 0.7rem;
+          font-weight: 500;
+          padding: 2px 8px;
+          background: #f3f4f6;
+          border-radius: 12px;
+        }
+        .sc-comfort {
+          font-size: 0.78rem;
+          font-style: italic;
+          color: var(--deep-blue, #1e293b);
+          margin: 0 0 10px 0;
+          line-height: 1.5;
+        }
+        .sc-comfort-ref {
+          font-size: 0.65rem;
+          color: #9ca3af;
+          font-style: normal;
+        }
+        .sc-actions {
+          display: flex;
+          gap: 8px;
+        }
+        .sc-btn {
+          flex: 1;
+          padding: 8px 12px;
+          border-radius: 8px;
+          font-size: 0.78rem;
+          font-weight: 500;
+          border: none;
+          cursor: pointer;
+          transition: opacity 0.15s;
+        }
+        .sc-btn:disabled {
+          opacity: 0.5;
+          cursor: wait;
+        }
+        .sc-btn.guidance {
+          background: #f0f9ff;
+          color: #0284c7;
+        }
+        .sc-btn.resolve {
+          background: #f0fdf4;
+          color: #059669;
+        }
+        .sc-guidance {
+          margin-top: 12px;
+          padding-top: 12px;
+          border-top: 1px solid #e5e7eb;
+        }
+        .sc-excerpt {
+          margin-bottom: 10px;
+          padding: 10px;
+          background: #f8fafc;
+          border-radius: 8px;
+        }
+        .sc-source {
+          font-size: 0.68rem;
+          font-weight: 600;
+          color: #9ca3af;
+          text-transform: uppercase;
+        }
+        .sc-text {
+          font-size: 0.8rem;
+          color: #374151;
+          margin: 4px 0 0 0;
+          line-height: 1.5;
+        }
+        .sc-more-verses {
+          margin-top: 8px;
+        }
+        .sc-verse-item {
+          font-size: 0.78rem;
+          font-style: italic;
+          color: #4b5563;
+          margin: 4px 0;
+          line-height: 1.4;
+        }
+      `}</style>
+    </div>
+  );
+}

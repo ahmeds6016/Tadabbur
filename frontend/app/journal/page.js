@@ -7,6 +7,9 @@ import Link from 'next/link';
 
 import JournalEntry from '../components/JournalEntry';
 import TrajectoryDisplay from '../components/TrajectoryDisplay';
+import DigestViewer from '../components/DigestViewer';
+import StruggleDeclaration from '../components/StruggleDeclaration';
+import StruggleCard from '../components/StruggleCard';
 import BottomNav from '../components/BottomNav';
 
 function formatDate(dateStr) {
@@ -26,13 +29,18 @@ export default function JournalPage() {
   const [selectedDate, setSelectedDate] = useState(getDateStr(0));
   const [trajectory, setTrajectory] = useState(null);
   const [categories, setCategories] = useState([]);
+  const [activeStruggles, setActiveStruggles] = useState([]);
+  const [showStruggleGrid, setShowStruggleGrid] = useState(false);
 
   // Auth
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
-        await fetchTrajectory(currentUser);
+        await Promise.all([
+          fetchTrajectory(currentUser),
+          fetchStruggles(currentUser),
+        ]);
       }
       setIsLoading(false);
     });
@@ -60,6 +68,30 @@ export default function JournalPage() {
     } catch (err) {
       console.error('Failed to fetch trajectory:', err);
     }
+  };
+
+  const fetchStruggles = async (currentUser) => {
+    try {
+      const token = await currentUser.getIdToken();
+      const res = await fetch(`${BACKEND_URL}/iman/struggles`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setActiveStruggles(data.active || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch struggles:', err);
+    }
+  };
+
+  const handleStruggleDeclared = (result) => {
+    setShowStruggleGrid(false);
+    fetchStruggles(user);
+  };
+
+  const handleStruggleResolved = (struggleId) => {
+    setActiveStruggles((prev) => prev.filter((s) => s.struggle_id !== struggleId));
   };
 
   const handleTrajectoryUpdate = (newTrajectory) => {
@@ -125,6 +157,40 @@ export default function JournalPage() {
 
         {/* Trajectory display */}
         <TrajectoryDisplay trajectory={trajectory} categories={categories} />
+
+        {/* Weekly digest */}
+        <DigestViewer user={user} />
+
+        {/* Active struggles */}
+        {activeStruggles.length > 0 && (
+          <div className="struggles-section">
+            <h3 className="section-label">Active Struggles</h3>
+            {activeStruggles.map((s) => (
+              <StruggleCard
+                key={s.struggle_id}
+                struggle={s}
+                user={user}
+                onResolved={handleStruggleResolved}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Struggle declaration toggle */}
+        {!showStruggleGrid ? (
+          <button
+            className="add-struggle-btn"
+            onClick={() => setShowStruggleGrid(true)}
+          >
+            + Declare a Struggle
+          </button>
+        ) : (
+          <StruggleDeclaration
+            user={user}
+            activeStruggleIds={activeStruggles.map((s) => s.struggle_id)}
+            onDeclared={handleStruggleDeclared}
+          />
+        )}
 
         {/* Journal entry form */}
         <JournalEntry
@@ -235,6 +301,34 @@ export default function JournalPage() {
           background: var(--primary-teal, #0d9488);
           color: white;
           border-color: var(--primary-teal, #0d9488);
+        }
+
+        .struggles-section {
+          display: flex;
+          flex-direction: column;
+          gap: 0;
+        }
+        .section-label {
+          font-size: 0.8rem;
+          font-weight: 600;
+          color: #6b7280;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          margin: 0 0 10px 0;
+        }
+        .add-struggle-btn {
+          padding: 10px 16px;
+          border-radius: 10px;
+          border: 1.5px dashed #d1d5db;
+          background: transparent;
+          color: #6b7280;
+          font-size: 0.85rem;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+        .add-struggle-btn:hover {
+          border-color: var(--primary-teal, #0d9488);
+          color: var(--primary-teal, #0d9488);
         }
 
         @media (min-width: 1024px) {

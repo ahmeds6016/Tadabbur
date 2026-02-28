@@ -56,6 +56,7 @@ from data.iman_behaviors import (
     HEART_NOTE_TYPES,
     HEART_STATES,
 )
+from data.iman_struggles import STRUGGLE_CATALOG, STRUGGLE_MAP, ALL_STRUGGLE_IDS
 from services.iman_service import (
     validate_behavior_value,
     validate_heart_note,
@@ -65,6 +66,13 @@ from services.iman_service import (
     aggregate_category_scores,
     compute_baselines,
     recompute_trajectory,
+    check_behavior_cap,
+    should_show_anti_riya_reminder,
+    get_recalibrating_comfort,
+    get_welcome_back_message,
+    compute_struggle_progress,
+    prepare_digest_context,
+    build_digest_prompt,
     ENGINE_VERSION,
 )
 
@@ -7875,6 +7883,11 @@ def iman_update_config():
         if invalid:
             return jsonify({"error": f"Unknown behavior IDs: {invalid}"}), 400
 
+        # Safeguard: enforce behavior cap
+        ok, cap_err = check_behavior_cap(behavior_ids)
+        if not ok:
+            return jsonify({"error": cap_err}), 400
+
         config_ref = users_db.collection("users").document(uid).collection("iman_config").document("settings")
         doc = config_ref.get()
         if not doc.exists:
@@ -8017,11 +8030,24 @@ def iman_submit_log():
             if not config.get("baseline_established"):
                 config_ref.update({"baseline_established": True})
 
+        # Safeguards: welcome-back + anti-riya
+        welcome_back = None
+        if len(all_logs) >= 2:
+            prev_date = all_logs[-2].get("date", "")
+            if prev_date:
+                try:
+                    days_gap = (datetime.strptime(date_str, "%Y-%m-%d") - datetime.strptime(prev_date, "%Y-%m-%d")).days
+                    welcome_back = get_welcome_back_message(days_gap)
+                except ValueError:
+                    pass
+
         print(f"[IMAN] Log saved for {uid[:8]}... date={date_str} — state={trajectory.get('current_state')}")
         return jsonify({
             "message": "Log saved",
             "date": date_str,
             "trajectory": trajectory,
+            "anti_riya_reminder": should_show_anti_riya_reminder(),
+            "welcome_back": welcome_back,
         }), 200
 
     except Exception as e:
@@ -8102,7 +8128,23 @@ def iman_get_trajectory():
         if not doc.exists:
             return jsonify({"trajectory": None, "message": "No trajectory data yet. Start logging!"}), 200
 
-        return jsonify({"trajectory": doc.to_dict()}), 200
+        traj = doc.to_dict()
+
+        # Safeguard: comfort mode for extended recalibrating
+        if traj.get("current_state") == "recalibrating":
+            daily_scores = traj.get("daily_scores", [])
+            # Count recent recalibrating days (simplified: use length of scores as proxy)
+            recal_days = 0
+            for score in reversed(daily_scores):
+                if score.get("composite", 0.5) < 0.3:
+                    recal_days += 1
+                else:
+                    break
+            comfort = get_recalibrating_comfort(recal_days)
+            if comfort:
+                traj["comfort"] = comfort
+
+        return jsonify({"trajectory": traj}), 200
 
     except Exception as e:
         print(f"ERROR in GET /iman/trajectory: {e}")
@@ -8159,6 +8201,549 @@ def iman_add_heart_note():
     except Exception as e:
         print(f"ERROR in POST /iman/heart-note: {e}")
         return jsonify({"error": str(e)}), 500
+
+
+# ---------------------------------------------------------------------------
+# Iman — Struggle Endpoints
+# ---------------------------------------------------------------------------
+
+@app.route("/iman/struggle", methods=["POST"])
+@firebase_auth_required
+def iman_declare_struggle():
+    """Declare a new struggle. Resolves scholarly pointers for initial guidance.
+
+    Body: {struggle_id: "prayer_consistency"}
+    """
+    uid = request.user["uid"]
+    try:
+        data = request.get_json(silent=True) or {}
+        struggle_id = data.get("struggle_id", "")
+
+        if struggle_id not in STRUGGLE_MAP:
+            return jsonify({"error": f"Unknown struggle: {struggle_id}"}), 400
+
+        struggle_config = STRUGGLE_MAP[struggle_id]
+
+        # Check if already active
+        struggle_ref = (
+            users_db.collection("users").document(uid)
+            .collection("iman_struggles").document(struggle_id)
+        )
+        existing = struggle_ref.get()
+        if existing.exists:
+            ex_data = existing.to_dict()
+            if not ex_data.get("resolved_at"):
+                return jsonify({"error": "This struggle is already active."}), 409
+
+        # Resolve scholarly pointers for initial guidance
+        pointers = struggle_config.get("scholarly_pointers", [])
+        guidance_excerpts = []
+        try:
+            resolved = resolve_scholarly_pointers(pointers)
+            for r in resolved:
+                if r.get("text"):
+                    guidance_excerpts.append({
+                        "source": r.get("source", ""),
+                        "title": r.get("title", ""),
+                        "text": _encrypt_text(r["text"][:2000], uid),
+                    })
+        except Exception as re_err:
+            print(f"[IMAN] Warning: Could not resolve pointers for {struggle_id}: {re_err}")
+
+        now = datetime.now(timezone.utc).isoformat()
+        doc_data = {
+            "struggle_id": struggle_id,
+            "declared_at": now,
+            "resolved_at": None,
+            "guidance_excerpts": guidance_excerpts,
+            "comfort_verse": struggle_config.get("comfort_verses", [{}])[0] if struggle_config.get("comfort_verses") else None,
+            "updated_at": now,
+        }
+        struggle_ref.set(doc_data)
+
+        # Return decrypted guidance for immediate display
+        decrypted_excerpts = []
+        for g in guidance_excerpts:
+            decrypted_excerpts.append({
+                "source": g["source"],
+                "title": g["title"],
+                "text": _decrypt_text(g["text"], uid),
+            })
+
+        print(f"[IMAN] Struggle declared: {struggle_id} for {uid[:8]}...")
+        return jsonify({
+            "message": "Struggle declared",
+            "struggle_id": struggle_id,
+            "label": struggle_config["label"],
+            "phases": struggle_config["phases"],
+            "comfort_verse": doc_data["comfort_verse"],
+            "guidance_excerpts": decrypted_excerpts,
+            "declared_at": now,
+        }), 201
+
+    except Exception as e:
+        print(f"ERROR in POST /iman/struggle: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/iman/struggles", methods=["GET"])
+@firebase_auth_required
+def iman_list_struggles():
+    """List active struggles with computed progress."""
+    uid = request.user["uid"]
+    try:
+        struggles_ref = (
+            users_db.collection("users").document(uid)
+            .collection("iman_struggles")
+        )
+        docs = struggles_ref.stream()
+
+        # Fetch recent daily logs for progress computation
+        logs_ref = (
+            users_db.collection("users").document(uid)
+            .collection("iman_daily_logs")
+            .order_by("date", direction=firestore.Query.DESCENDING)
+            .limit(30)
+        )
+        daily_logs = [d.to_dict() for d in logs_ref.stream()]
+        daily_logs.reverse()  # Oldest first
+
+        active_struggles = []
+        resolved_struggles = []
+
+        for doc in docs:
+            s = doc.to_dict()
+            sid = s.get("struggle_id", doc.id)
+
+            if sid not in STRUGGLE_MAP:
+                continue
+
+            config = STRUGGLE_MAP[sid]
+
+            if s.get("resolved_at"):
+                resolved_struggles.append({
+                    "struggle_id": sid,
+                    "label": config["label"],
+                    "icon": config["icon"],
+                    "color": config["color"],
+                    "declared_at": s.get("declared_at"),
+                    "resolved_at": s["resolved_at"],
+                })
+                continue
+
+            # Compute progress for active struggles
+            progress = compute_struggle_progress(
+                sid,
+                s.get("declared_at", ""),
+                daily_logs,
+                config,
+            )
+
+            # Pick a comfort verse
+            verses = config.get("comfort_verses", [])
+            comfort = verses[0] if verses else None
+
+            active_struggles.append({
+                "struggle_id": sid,
+                "label": config["label"],
+                "description": config["description"],
+                "icon": config["icon"],
+                "color": config["color"],
+                "declared_at": s.get("declared_at"),
+                "progress": progress,
+                "comfort_verse": comfort,
+                "linked_behaviors": config.get("linked_behaviors", []),
+            })
+
+        return jsonify({
+            "active": active_struggles,
+            "resolved": resolved_struggles,
+        }), 200
+
+    except Exception as e:
+        print(f"ERROR in GET /iman/struggles: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/iman/struggle/<struggle_id>", methods=["PUT"])
+@firebase_auth_required
+def iman_update_struggle(struggle_id):
+    """Deactivate (resolve/pause) a struggle.
+
+    Body: {action: "resolve"} or {action: "pause"}
+    """
+    uid = request.user["uid"]
+    try:
+        if struggle_id not in STRUGGLE_MAP:
+            return jsonify({"error": f"Unknown struggle: {struggle_id}"}), 400
+
+        data = request.get_json(silent=True) or {}
+        action = data.get("action", "resolve")
+
+        struggle_ref = (
+            users_db.collection("users").document(uid)
+            .collection("iman_struggles").document(struggle_id)
+        )
+        doc = struggle_ref.get()
+        if not doc.exists:
+            return jsonify({"error": "Struggle not found."}), 404
+
+        now = datetime.now(timezone.utc).isoformat()
+        struggle_ref.update({
+            "resolved_at": now,
+            "resolution_type": action,
+            "updated_at": now,
+        })
+
+        print(f"[IMAN] Struggle {action}: {struggle_id} for {uid[:8]}...")
+        return jsonify({"message": f"Struggle {action}d", "struggle_id": struggle_id}), 200
+
+    except Exception as e:
+        print(f"ERROR in PUT /iman/struggle/{struggle_id}: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/iman/struggle/<struggle_id>/guidance", methods=["GET"])
+@firebase_auth_required
+def iman_struggle_guidance(struggle_id):
+    """Re-resolve scholarly pointers for fresh guidance text."""
+    uid = request.user["uid"]
+    try:
+        if struggle_id not in STRUGGLE_MAP:
+            return jsonify({"error": f"Unknown struggle: {struggle_id}"}), 400
+
+        config = STRUGGLE_MAP[struggle_id]
+
+        # Check that the user has declared this struggle
+        struggle_ref = (
+            users_db.collection("users").document(uid)
+            .collection("iman_struggles").document(struggle_id)
+        )
+        doc = struggle_ref.get()
+        if not doc.exists:
+            return jsonify({"error": "Struggle not declared."}), 404
+
+        # Resolve scholarly pointers
+        pointers = config.get("scholarly_pointers", [])
+        guidance_excerpts = []
+        try:
+            resolved = resolve_scholarly_pointers(pointers)
+            for r in resolved:
+                if r.get("text"):
+                    guidance_excerpts.append({
+                        "source": r.get("source", ""),
+                        "title": r.get("title", ""),
+                        "text": r["text"][:2000],
+                    })
+        except Exception as re_err:
+            print(f"[IMAN] Warning: Could not resolve pointers for {struggle_id}: {re_err}")
+
+        return jsonify({
+            "struggle_id": struggle_id,
+            "label": config["label"],
+            "phases": config["phases"],
+            "comfort_verses": config.get("comfort_verses", []),
+            "guidance_excerpts": guidance_excerpts,
+        }), 200
+
+    except Exception as e:
+        print(f"ERROR in GET /iman/struggle/{struggle_id}/guidance: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+# ---------------------------------------------------------------------------
+# Iman — Weekly Digest Endpoints
+# ---------------------------------------------------------------------------
+
+@app.route("/iman/digest/generate", methods=["POST"])
+@firebase_auth_required
+def iman_generate_digest():
+    """Generate (or return cached) weekly spiritual digest via Gemini.
+
+    Body: {week_start: "2026-02-23", week_end: "2026-03-01"} (optional, defaults to current week)
+    """
+    uid = request.user["uid"]
+    try:
+        data = request.get_json(silent=True) or {}
+
+        # Determine week boundaries
+        now = datetime.now(timezone.utc)
+        if data.get("week_start") and data.get("week_end"):
+            week_start = data["week_start"]
+            week_end = data["week_end"]
+        else:
+            # Default: Monday-Sunday of current week
+            monday = now - timedelta(days=now.weekday())
+            sunday = monday + timedelta(days=6)
+            week_start = monday.strftime("%Y-%m-%d")
+            week_end = sunday.strftime("%Y-%m-%d")
+
+        week_id = f"{week_start[:4]}-W{datetime.strptime(week_start, '%Y-%m-%d').isocalendar()[1]:02d}"
+
+        # Check if digest already exists for this week
+        digest_ref = (
+            users_db.collection("users").document(uid)
+            .collection("iman_weekly_digests").document(week_id)
+        )
+        existing = digest_ref.get()
+        if existing.exists:
+            digest = existing.to_dict()
+            # Decrypt stored fields
+            decrypted = _decrypt_digest(digest, uid)
+            return jsonify({"digest": decrypted, "week_id": week_id, "cached": True}), 200
+
+        # Fetch all needed data
+        # 1. Config
+        config_ref = users_db.collection("users").document(uid).collection("iman_config").document("current")
+        config_doc = config_ref.get()
+        config = config_doc.to_dict() if config_doc.exists else build_default_config()
+
+        # 2. Daily logs (90 days for correlations)
+        logs_ref = (
+            users_db.collection("users").document(uid)
+            .collection("iman_daily_logs")
+            .order_by("date", direction=firestore.Query.DESCENDING)
+            .limit(90)
+        )
+        daily_logs = [d.to_dict() for d in logs_ref.stream()]
+        daily_logs.reverse()
+
+        if not daily_logs:
+            return jsonify({"error": "No daily logs yet. Start logging to generate a digest."}), 400
+
+        # 3. Trajectory
+        traj_ref = users_db.collection("users").document(uid).collection("iman_trajectory").document("current")
+        traj_doc = traj_ref.get()
+        trajectory = traj_doc.to_dict() if traj_doc.exists else {}
+
+        # 4. Heart notes from this week (decrypt them)
+        heart_notes = []
+        for log in daily_logs:
+            if week_start <= log.get("date", "") <= week_end:
+                for note in log.get("heart_notes", []):
+                    try:
+                        heart_notes.append({
+                            "type": note.get("type", ""),
+                            "text": _decrypt_text(note.get("text", ""), uid),
+                        })
+                    except Exception:
+                        heart_notes.append({"type": note.get("type", ""), "text": ""})
+
+        # 5. Active struggles with progress
+        struggles_ref = users_db.collection("users").document(uid).collection("iman_struggles")
+        active_struggles = []
+        for doc in struggles_ref.stream():
+            s = doc.to_dict()
+            sid = s.get("struggle_id", doc.id)
+            if s.get("resolved_at") or sid not in STRUGGLE_MAP:
+                continue
+            s_config = STRUGGLE_MAP[sid]
+            progress = compute_struggle_progress(sid, s.get("declared_at", ""), daily_logs, s_config)
+            active_struggles.append({
+                "label": s_config["label"],
+                "progress": progress,
+            })
+
+        # 6. User persona
+        user_doc = users_db.collection("users").document(uid).get()
+        persona_name = "practicing_muslim"
+        if user_doc.exists:
+            persona_name = user_doc.to_dict().get("persona", "practicing_muslim")
+
+        # Build context and prompt
+        context = prepare_digest_context(
+            daily_logs, trajectory, config, heart_notes,
+            active_struggles, week_start, week_end,
+        )
+        prompt = build_digest_prompt(context, persona_name)
+
+        # Call Gemini
+        import google.auth
+        from google.auth.transport.requests import Request as GoogleRequest
+
+        credentials, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
+        auth_req = GoogleRequest()
+        credentials.refresh(auth_req)
+        gemini_token = credentials.token
+
+        vertex_endpoint = (
+            f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/"
+            f"{GCP_INFRASTRUCTURE_PROJECT}/locations/{LOCATION}/"
+            f"publishers/google/models/{GEMINI_MODEL_ID}:generateContent"
+        )
+
+        body = {
+            "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+            "generation_config": {
+                "response_mime_type": "application/json",
+                "temperature": 0.7,
+                "maxOutputTokens": 4096,
+            },
+        }
+
+        max_retries = 3
+        response = None
+        for attempt in range(max_retries):
+            retry_delay = 2 ** (attempt + 1)
+            try:
+                response = requests.post(
+                    vertex_endpoint,
+                    headers={"Authorization": f"Bearer {gemini_token}", "Content-Type": "application/json"},
+                    json=body,
+                    timeout=60,
+                )
+                response.raise_for_status()
+                break
+            except requests.Timeout:
+                if attempt == max_retries - 1:
+                    return jsonify({"error": "AI service timeout", "retry": True}), 503
+                time.sleep(retry_delay)
+            except requests.HTTPError:
+                status_code = response.status_code if response else 500
+                if status_code in (429, 503) and attempt < max_retries - 1:
+                    time.sleep(retry_delay)
+                    continue
+                return jsonify({"error": "AI service error"}), 502
+
+        raw_response = response.json()
+        generated_text = safe_get_nested(raw_response, "candidates", 0, "content", "parts", 0, "text")
+
+        if not generated_text:
+            return jsonify({"error": "Empty response from AI service"}), 502
+
+        digest_data = extract_json_from_response(generated_text)
+        if not digest_data:
+            return jsonify({"error": "Could not parse digest response"}), 502
+
+        # Encrypt sensitive text fields before storing
+        encrypted_digest = {}
+        text_fields = ["opening", "weekly_story", "strength_noticed", "correlation_insight", "gentle_attention", "closing"]
+        for field in text_fields:
+            val = digest_data.get(field, "")
+            encrypted_digest[field] = _encrypt_text(str(val), uid) if val else ""
+
+        # Handle verse_to_carry separately
+        verse = digest_data.get("verse_to_carry", {})
+        encrypted_digest["verse_to_carry"] = {
+            "surah": verse.get("surah", 0),
+            "verse": verse.get("verse", 0),
+            "text": _encrypt_text(str(verse.get("text", "")), uid),
+            "why": _encrypt_text(str(verse.get("why", "")), uid),
+        }
+
+        # Store
+        store_doc = {
+            **encrypted_digest,
+            "week_id": week_id,
+            "week_start": week_start,
+            "week_end": week_end,
+            "generated_at": now.isoformat(),
+            "persona": persona_name,
+            "context_summary": {
+                "days_logged": context["days_logged_this_week"],
+                "trajectory_state": context["trajectory_state"],
+                "struggles_count": len(active_struggles),
+            },
+        }
+        digest_ref.set(store_doc)
+
+        print(f"[IMAN] Digest generated for {uid[:8]}... week={week_id}")
+        return jsonify({"digest": digest_data, "week_id": week_id, "cached": False}), 200
+
+    except Exception as e:
+        print(f"ERROR in POST /iman/digest/generate: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/iman/digest/latest", methods=["GET"])
+@firebase_auth_required
+def iman_digest_latest():
+    """Fetch the most recent weekly digest."""
+    uid = request.user["uid"]
+    try:
+        digests_ref = (
+            users_db.collection("users").document(uid)
+            .collection("iman_weekly_digests")
+            .order_by("generated_at", direction=firestore.Query.DESCENDING)
+            .limit(1)
+        )
+        docs = list(digests_ref.stream())
+        if not docs:
+            return jsonify({"digest": None}), 200
+
+        digest = docs[0].to_dict()
+        decrypted = _decrypt_digest(digest, uid)
+        return jsonify({"digest": decrypted, "week_id": digest.get("week_id", "")}), 200
+
+    except Exception as e:
+        print(f"ERROR in GET /iman/digest/latest: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/iman/digest/<week_id>", methods=["GET"])
+@firebase_auth_required
+def iman_digest_by_week(week_id):
+    """Fetch a specific week's digest."""
+    uid = request.user["uid"]
+    try:
+        digest_ref = (
+            users_db.collection("users").document(uid)
+            .collection("iman_weekly_digests").document(week_id)
+        )
+        doc = digest_ref.get()
+        if not doc.exists:
+            return jsonify({"error": "No digest found for this week."}), 404
+
+        digest = doc.to_dict()
+        decrypted = _decrypt_digest(digest, uid)
+        return jsonify({"digest": decrypted, "week_id": week_id}), 200
+
+    except Exception as e:
+        print(f"ERROR in GET /iman/digest/{week_id}: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+def _decrypt_digest(digest: dict, uid: str) -> dict:
+    """Decrypt all encrypted text fields in a stored digest."""
+    text_fields = ["opening", "weekly_story", "strength_noticed", "correlation_insight", "gentle_attention", "closing"]
+    result = {}
+    for field in text_fields:
+        val = digest.get(field, "")
+        try:
+            result[field] = _decrypt_text(val, uid) if val else ""
+        except Exception:
+            result[field] = val
+
+    # Decrypt verse_to_carry
+    verse = digest.get("verse_to_carry", {})
+    if isinstance(verse, dict):
+        result["verse_to_carry"] = {
+            "surah": verse.get("surah", 0),
+            "verse": verse.get("verse", 0),
+            "text": "",
+            "why": "",
+        }
+        try:
+            result["verse_to_carry"]["text"] = _decrypt_text(verse.get("text", ""), uid)
+        except Exception:
+            result["verse_to_carry"]["text"] = verse.get("text", "")
+        try:
+            result["verse_to_carry"]["why"] = _decrypt_text(verse.get("why", ""), uid)
+        except Exception:
+            result["verse_to_carry"]["why"] = verse.get("why", "")
+    else:
+        result["verse_to_carry"] = {}
+
+    # Copy non-encrypted metadata
+    result["week_id"] = digest.get("week_id", "")
+    result["week_start"] = digest.get("week_start", "")
+    result["week_end"] = digest.get("week_end", "")
+    result["generated_at"] = digest.get("generated_at", "")
+    result["context_summary"] = digest.get("context_summary", {})
+
+    return result
 
 
 # --- Main ---
