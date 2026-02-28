@@ -58,6 +58,7 @@ from data.iman_behaviors import (
     HEART_STATES,
 )
 from data.iman_struggles import STRUGGLE_CATALOG, STRUGGLE_MAP, ALL_STRUGGLE_IDS
+from data.iman_heart_states import HEART_STATE_MAP, ALL_HEART_STATE_IDS
 from services.iman_service import (
     validate_behavior_value,
     validate_heart_note,
@@ -74,6 +75,7 @@ from services.iman_service import (
     compute_struggle_progress,
     prepare_digest_context,
     build_digest_prompt,
+    compute_heart_note_patterns,
     MAX_TRACKED_BEHAVIORS,
     ENGINE_VERSION,
 )
@@ -7863,7 +7865,7 @@ def iman_setup():
             try:
                 pointers = s_config.get("scholarly_pointers", [])
                 resolved = resolve_scholarly_pointers(pointers)
-                for r in resolved:
+                for r in resolved.get("excerpts", []):
                     if r.get("text"):
                         guidance_excerpts.append({
                             "source": r.get("source", ""),
@@ -8364,6 +8366,88 @@ def iman_add_heart_note():
 
 
 # ---------------------------------------------------------------------------
+# Iman — Heart State Responses + Patterns
+# ---------------------------------------------------------------------------
+
+@app.route("/iman/heart-state/<state_id>/response", methods=["GET"])
+@firebase_auth_required
+def iman_heart_state_response(state_id):
+    """Get tailored scholarly response for a heart state.
+
+    Returns verse, insight, action, and resolved scholarly excerpts.
+    """
+    uid = request.user["uid"]
+    try:
+        if state_id not in HEART_STATE_MAP:
+            return jsonify({"error": f"Unknown heart state: {state_id}"}), 400
+
+        config = HEART_STATE_MAP[state_id]
+
+        # Resolve scholarly pointers (live, like struggle guidance)
+        pointers = config.get("scholarly_pointers", [])
+        guidance_excerpts = []
+        try:
+            resolved = resolve_scholarly_pointers(pointers)
+            for r in resolved.get("excerpts", []):
+                if r.get("text"):
+                    guidance_excerpts.append({
+                        "source": r.get("source", ""),
+                        "title": r.get("title", ""),
+                        "text": r["text"][:2000],
+                    })
+        except Exception as re_err:
+            print(f"[IMAN] Warning: Could not resolve pointers for heart state {state_id}: {re_err}")
+
+        print(f"[IMAN] Heart state response: {state_id} for {uid[:8]}... ({len(guidance_excerpts)} excerpts)")
+        return jsonify({
+            "state_id": state_id,
+            "label": config["label"],
+            "arabic": config["arabic"],
+            "verse": config["verse"],
+            "insight": config["insight"],
+            "action": config["action"],
+            "guidance_excerpts": guidance_excerpts,
+        }), 200
+
+    except Exception as e:
+        print(f"ERROR in GET /iman/heart-state/{state_id}/response: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/iman/heart-patterns", methods=["GET"])
+@firebase_auth_required
+def iman_heart_patterns():
+    """Get detected heart note patterns (temporal, emotional arcs, score correlation)."""
+    uid = request.user["uid"]
+    try:
+        config_ref = users_db.collection("users").document(uid).collection("iman_config").document("settings")
+        config_doc = config_ref.get()
+        if not config_doc.exists:
+            return jsonify({"error": "Iman Index not set up"}), 404
+        config = config_doc.to_dict()
+        tracked_ids = get_tracked_behavior_ids(config)
+
+        # Fetch daily logs (last 30 days)
+        logs_ref = (
+            users_db.collection("users").document(uid)
+            .collection("iman_daily_logs")
+            .order_by("date", direction=firestore.Query.DESCENDING)
+            .limit(30)
+        )
+        daily_logs = [d.to_dict() for d in logs_ref.stream()]
+        daily_logs.reverse()
+
+        patterns = compute_heart_note_patterns(daily_logs, tracked_ids, window_days=30)
+
+        print(f"[IMAN] Heart patterns for {uid[:8]}...: {patterns['has_patterns']}")
+        return jsonify({"patterns": patterns}), 200
+
+    except Exception as e:
+        print(f"ERROR in GET /iman/heart-patterns: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+# ---------------------------------------------------------------------------
 # Iman — Struggle Endpoints
 # ---------------------------------------------------------------------------
 
@@ -8400,7 +8484,7 @@ def iman_declare_struggle():
         guidance_excerpts = []
         try:
             resolved = resolve_scholarly_pointers(pointers)
-            for r in resolved:
+            for r in resolved.get("excerpts", []):
                 if r.get("text"):
                     guidance_excerpts.append({
                         "source": r.get("source", ""),
@@ -8588,7 +8672,7 @@ def iman_struggle_guidance(struggle_id):
         guidance_excerpts = []
         try:
             resolved = resolve_scholarly_pointers(pointers)
-            for r in resolved:
+            for r in resolved.get("excerpts", []):
                 if r.get("text"):
                     guidance_excerpts.append({
                         "source": r.get("source", ""),

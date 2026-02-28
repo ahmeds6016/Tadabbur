@@ -105,8 +105,8 @@ HEART_NOTE_TYPES = [
     "gratitude", "dua", "tawbah", "connection", "reflection", "quran_insight",
 ]
 
-# Heart state options (opt-in daily mood)
+# Heart state options (opt-in daily mood) — aligned with scholarly catalog
 HEART_STATES = [
-    "grateful", "peaceful", "anxious", "struggling",
-    "hopeful", "spiritually_dry", "content",
+    "grateful", "anxious", "grieving", "spiritually_dry",
+    "joyful", "seeking_guidance", "remorseful",
 ]

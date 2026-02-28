@@ -5,13 +5,13 @@ import HeartNoteComposer from './HeartNoteComposer';
 import { BACKEND_URL } from '../lib/config';
 
 const HEART_STATES = [
-  { id: 'grateful', label: 'Grateful' },
-  { id: 'peaceful', label: 'Peaceful' },
-  { id: 'anxious', label: 'Anxious' },
-  { id: 'struggling', label: 'Struggling' },
-  { id: 'hopeful', label: 'Hopeful' },
-  { id: 'spiritually_dry', label: 'Spiritually Dry' },
-  { id: 'content', label: 'Content' },
+  { id: 'grateful', label: 'Grateful', arabic: 'Shukr', color: '#059669' },
+  { id: 'anxious', label: 'Anxious', arabic: 'Qalaq', color: '#d97706' },
+  { id: 'grieving', label: 'Grieving', arabic: 'Huzn', color: '#64748b' },
+  { id: 'spiritually_dry', label: 'Spiritually Dry', arabic: 'Qasawah', color: '#94a3b8' },
+  { id: 'joyful', label: 'Joyful', arabic: 'Farah', color: '#0d9488' },
+  { id: 'seeking_guidance', label: 'Seeking Guidance', arabic: 'Istikhara', color: '#2563eb' },
+  { id: 'remorseful', label: 'Remorseful', arabic: 'Nadam', color: '#8b5cf6' },
 ];
 
 function BinaryInput({ value, onChange, label }) {
@@ -125,6 +125,8 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate }) {
   const [allBehaviors, setAllBehaviors] = useState([]);
   const [values, setValues] = useState({});
   const [heartState, setHeartState] = useState(null);
+  const [heartResponse, setHeartResponse] = useState(null);
+  const [loadingResponse, setLoadingResponse] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -247,6 +249,31 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate }) {
     }
   };
 
+  const handleHeartStateSelect = async (stateId) => {
+    const newState = heartState === stateId ? null : stateId;
+    setHeartState(newState);
+    setSaved(false);
+    setHeartResponse(null);
+
+    if (newState && user) {
+      setLoadingResponse(true);
+      try {
+        const token = await user.getIdToken();
+        const res = await fetch(
+          `${BACKEND_URL}/iman/heart-state/${newState}/response`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (res.ok) {
+          setHeartResponse(await res.json());
+        }
+      } catch (err) {
+        console.error('Failed to load heart state response:', err);
+      } finally {
+        setLoadingResponse(false);
+      }
+    }
+  };
+
   const handleHeartNote = async (note) => {
     if (!user) return;
     const token = await user.getIdToken();
@@ -333,12 +360,42 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate }) {
             <button
               key={hs.id}
               className={`heart-pill ${heartState === hs.id ? 'active' : ''}`}
-              onClick={() => setHeartState(heartState === hs.id ? null : hs.id)}
+              onClick={() => handleHeartStateSelect(hs.id)}
+              style={heartState === hs.id ? { background: hs.color, borderColor: hs.color } : undefined}
             >
-              {hs.label}
+              <span className="hp-label">{hs.label}</span>
+              <span className="hp-arabic">{hs.arabic}</span>
             </button>
           ))}
         </div>
+
+        {/* Tailored response card */}
+        {heartState && heartResponse && (
+          <div className="heart-response-card" style={{ borderLeftColor: HEART_STATES.find(s => s.id === heartState)?.color }}>
+            <p className="hr-verse">
+              &ldquo;{heartResponse.verse?.text}&rdquo;
+              <span className="hr-ref">
+                &mdash; Surah {heartResponse.verse?.surah}:{heartResponse.verse?.verse}
+              </span>
+            </p>
+            <p className="hr-insight">{heartResponse.insight}</p>
+            <p className="hr-action"><strong>Try this:</strong> {heartResponse.action}</p>
+            {heartResponse.guidance_excerpts?.length > 0 && (
+              <details className="hr-excerpts">
+                <summary className="hr-excerpts-label">From the scholars</summary>
+                {heartResponse.guidance_excerpts.slice(0, 2).map((g, i) => (
+                  <div key={i} className="hr-excerpt">
+                    <span className="hr-source">{g.source}: {g.title}</span>
+                    <p className="hr-text">{g.text?.slice(0, 400)}{g.text?.length > 400 ? '...' : ''}</p>
+                  </div>
+                ))}
+              </details>
+            )}
+          </div>
+        )}
+        {heartState && loadingResponse && (
+          <p className="hr-loading">Loading spiritual guidance...</p>
+        )}
       </div>
 
       {/* Heart Note Composer */}
@@ -547,14 +604,90 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate }) {
           cursor: pointer;
           transition: all 0.15s ease;
           color: #374151;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 1px;
         }
         .heart-pill:hover {
-          border-color: #8B5CF6;
+          border-color: #9ca3af;
         }
         .heart-pill.active {
-          background: #8B5CF6;
           color: white;
-          border-color: #8B5CF6;
+        }
+        .hp-label {
+          font-weight: 500;
+        }
+        .hp-arabic {
+          font-size: 0.6rem;
+          opacity: 0.7;
+        }
+        .heart-response-card {
+          margin-top: 12px;
+          padding: 14px;
+          background: white;
+          border-radius: 10px;
+          border-left: 3px solid #0d9488;
+        }
+        .hr-verse {
+          font-size: 0.88rem;
+          font-style: italic;
+          color: var(--deep-blue, #1e293b);
+          margin: 0 0 10px 0;
+          line-height: 1.5;
+        }
+        .hr-ref {
+          display: block;
+          font-size: 0.7rem;
+          color: #6b7280;
+          font-style: normal;
+          margin-top: 4px;
+        }
+        .hr-insight {
+          font-size: 0.82rem;
+          color: #374151;
+          margin: 0 0 8px 0;
+          line-height: 1.5;
+        }
+        .hr-action {
+          font-size: 0.82rem;
+          color: #374151;
+          margin: 0 0 10px 0;
+          line-height: 1.5;
+        }
+        .hr-excerpts {
+          margin-top: 8px;
+        }
+        .hr-excerpts-label {
+          font-size: 0.75rem;
+          font-weight: 600;
+          color: #6b7280;
+          cursor: pointer;
+        }
+        .hr-excerpt {
+          margin-top: 8px;
+          padding: 10px;
+          background: #f8fafc;
+          border-radius: 6px;
+        }
+        .hr-source {
+          font-size: 0.7rem;
+          font-weight: 600;
+          color: #9ca3af;
+          display: block;
+          margin-bottom: 4px;
+        }
+        .hr-text {
+          font-size: 0.78rem;
+          color: #4b5563;
+          margin: 0;
+          line-height: 1.5;
+        }
+        .hr-loading {
+          font-size: 0.8rem;
+          color: #9ca3af;
+          font-style: italic;
+          margin: 8px 0 0 0;
         }
 
         /* Save area */

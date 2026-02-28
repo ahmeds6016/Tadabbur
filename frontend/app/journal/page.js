@@ -9,6 +9,7 @@ import { Settings } from 'lucide-react';
 import JournalEntry from '../components/JournalEntry';
 import TrajectoryDisplay from '../components/TrajectoryDisplay';
 import DigestViewer from '../components/DigestViewer';
+import HeartPatterns from '../components/HeartPatterns';
 import StruggleDeclaration from '../components/StruggleDeclaration';
 import StruggleCard from '../components/StruggleCard';
 import ImanOnboarding from '../components/ImanOnboarding';
@@ -188,6 +189,9 @@ export default function JournalPage() {
 
         {/* Weekly digest */}
         <DigestViewer user={user} />
+
+        {/* Heart note patterns */}
+        <HeartPatterns user={user} />
 
         {/* Active struggles */}
         {activeStruggles.length > 0 && (

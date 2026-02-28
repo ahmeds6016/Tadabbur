@@ -21,6 +21,7 @@ from data.iman_behaviors import (
     IMAN_BEHAVIORS,
     IMAN_CATEGORIES,
 )
+from data.iman_heart_states import HEART_STATE_MAP, ALL_HEART_STATE_IDS
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -470,6 +471,202 @@ def select_weekly_insight(
         if key not in previously_shown and key_rev not in previously_shown:
             return corr
     return None
+
+
+# ---------------------------------------------------------------------------
+# Heart Note Pattern Detection
+# ---------------------------------------------------------------------------
+
+MIN_PATTERN_DATA_DAYS = 14
+
+_DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
+
+def detect_heart_note_temporal_patterns(
+    daily_logs: List[dict],
+    window_days: int = 30,
+) -> List[dict]:
+    """Detect temporal patterns in heart note frequency by day-of-week.
+
+    E.g. "Your gratitude notes peak on Fridays."
+    Requires 14+ days of data.
+    """
+    recent = daily_logs[-window_days:] if len(daily_logs) > window_days else daily_logs
+    if len(recent) < MIN_PATTERN_DATA_DAYS:
+        return []
+
+    day_type_counts: Dict[int, Dict[str, int]] = defaultdict(lambda: defaultdict(int))
+    for log in recent:
+        date_str = log.get("date", "")
+        notes = log.get("heart_notes", [])
+        if not date_str or not notes:
+            continue
+        try:
+            dow = datetime.strptime(date_str, "%Y-%m-%d").weekday()
+        except ValueError:
+            continue
+        for note in notes:
+            ntype = note.get("type", "")
+            if ntype:
+                day_type_counts[dow][ntype] += 1
+
+    # Aggregate per-type totals
+    type_totals: Dict[str, int] = defaultdict(int)
+    for dow_counts in day_type_counts.values():
+        for ntype, count in dow_counts.items():
+            type_totals[ntype] += count
+
+    # Detect peaks: type on a specific day is 2x+ the average for that type
+    patterns = []
+    for ntype, total in type_totals.items():
+        avg_per_day = total / 7.0
+        if avg_per_day < 0.5:
+            continue
+        for dow in range(7):
+            count = day_type_counts[dow].get(ntype, 0)
+            if count >= 2 * avg_per_day and count >= 2:
+                patterns.append({
+                    "type": "temporal_peak",
+                    "note_type": ntype,
+                    "day_of_week": dow,
+                    "day_name": _DAY_NAMES[dow],
+                    "count": count,
+                    "average": round(avg_per_day, 1),
+                    "insight_text": f"Your {ntype} notes peak on {_DAY_NAMES[dow]}s.",
+                })
+
+    return patterns
+
+
+def detect_heart_note_emotional_arcs(
+    daily_logs: List[dict],
+    window_days: int = 28,
+) -> List[dict]:
+    """Detect week-over-week shifts in heart note type distribution.
+
+    Compares this week's type distribution to previous week's.
+    Returns shifts of 15%+ as notable arcs.
+    """
+    recent = daily_logs[-window_days:] if len(daily_logs) > window_days else daily_logs
+    if len(recent) < MIN_PATTERN_DATA_DAYS:
+        return []
+
+    recent_half = recent[-7:]
+    prior_half = recent[-14:-7]
+
+    def count_types(logs):
+        counts: Dict[str, int] = defaultdict(int)
+        total = 0
+        for log in logs:
+            for note in log.get("heart_notes", []):
+                ntype = note.get("type", "")
+                if ntype:
+                    counts[ntype] += 1
+                    total += 1
+        return counts, total
+
+    recent_counts, recent_total = count_types(recent_half)
+    prior_counts, prior_total = count_types(prior_half)
+
+    if recent_total < 3 or prior_total < 3:
+        return []
+
+    arcs = []
+    all_types = set(recent_counts) | set(prior_counts)
+    for ntype in all_types:
+        r_pct = recent_counts.get(ntype, 0) / recent_total
+        p_pct = prior_counts.get(ntype, 0) / prior_total
+        shift = r_pct - p_pct
+        if abs(shift) >= 0.15:
+            direction = "increasing" if shift > 0 else "decreasing"
+            arcs.append({
+                "type": "emotional_arc",
+                "note_type": ntype,
+                "direction": direction,
+                "shift_pct": round(shift * 100, 1),
+                "insight_text": f"Your {ntype} notes have been {direction} this week compared to last.",
+            })
+
+    return arcs
+
+
+def detect_heart_note_score_correlation(
+    daily_logs: List[dict],
+    tracked_ids: List[str],
+    window_days: int = 30,
+) -> Optional[dict]:
+    """Detect if days with heart notes correlate with higher behavioral scores.
+
+    Returns insight like "Days with heart notes show 25% higher scores."
+    """
+    recent = daily_logs[-window_days:] if len(daily_logs) > window_days else daily_logs
+    if len(recent) < MIN_PATTERN_DATA_DAYS:
+        return None
+
+    note_day_scores = []
+    no_note_day_scores = []
+
+    for log in recent:
+        behaviors = log.get("behaviors", {})
+        if not behaviors:
+            continue
+        cat_scores = aggregate_category_scores(behaviors, tracked_ids)
+        daily_composite = sum(
+            BASE_WEIGHTS.get(cat, 0) * cat_scores.get(cat, 0)
+            for cat in IMAN_CATEGORIES
+        )
+
+        notes = log.get("heart_notes", [])
+        if notes and len(notes) > 0:
+            note_day_scores.append(daily_composite)
+        else:
+            no_note_day_scores.append(daily_composite)
+
+    if len(note_day_scores) < 3 or len(no_note_day_scores) < 3:
+        return None
+
+    avg_with = sum(note_day_scores) / len(note_day_scores)
+    avg_without = sum(no_note_day_scores) / len(no_note_day_scores)
+
+    if avg_without < 0.01:
+        return None
+
+    pct_diff = ((avg_with - avg_without) / avg_without) * 100
+
+    if abs(pct_diff) < 10:
+        return None
+
+    if pct_diff > 0:
+        insight = f"Days when you write heart notes show {round(pct_diff)}% higher behavioral scores."
+    else:
+        insight = "Your heart notes tend to come on quieter days — that is its own form of worship."
+
+    return {
+        "type": "score_correlation",
+        "pct_difference": round(pct_diff, 1),
+        "note_days_count": len(note_day_scores),
+        "no_note_days_count": len(no_note_day_scores),
+        "insight_text": insight,
+    }
+
+
+def compute_heart_note_patterns(
+    daily_logs: List[dict],
+    tracked_ids: List[str],
+    window_days: int = 30,
+) -> dict:
+    """Compute all heart note patterns. Returns dict with temporal, arcs, correlation."""
+    temporal = detect_heart_note_temporal_patterns(daily_logs, window_days)
+    arcs = detect_heart_note_emotional_arcs(daily_logs, window_days)
+    correlation = detect_heart_note_score_correlation(daily_logs, tracked_ids, window_days)
+
+    return {
+        "temporal_patterns": temporal,
+        "emotional_arcs": arcs,
+        "score_correlation": correlation,
+        "has_patterns": bool(temporal or arcs or correlation),
+        "min_days_needed": MIN_PATTERN_DATA_DAYS,
+    }
 
 
 def compute_category_pillars(
@@ -1044,6 +1241,7 @@ def prepare_digest_context(
         ],
         "struggles": struggle_summaries,
         "growth_edges": trajectory.get("growth_edges", []),
+        "heart_note_patterns": compute_heart_note_patterns(daily_logs, tracked_ids, window_days=90),
     }
 
 
@@ -1092,6 +1290,18 @@ def build_digest_prompt(context: dict, persona_name: str = "practicing_muslim") 
         corr_lines.append(f"  - {c['insight']} (r={c['r']:.2f})")
     corr_text = "\n".join(corr_lines) if corr_lines else "  Not enough data for correlations yet."
 
+    # Format heart note patterns
+    pattern_lines = []
+    patterns = context.get("heart_note_patterns", {})
+    for tp in patterns.get("temporal_patterns", []):
+        pattern_lines.append(f"  - {tp['insight_text']}")
+    for arc in patterns.get("emotional_arcs", []):
+        pattern_lines.append(f"  - {arc['insight_text']}")
+    corr_p = patterns.get("score_correlation")
+    if corr_p:
+        pattern_lines.append(f"  - {corr_p['insight_text']}")
+    pattern_text = "\n".join(pattern_lines) if pattern_lines else "  Not enough data for patterns yet."
+
     # Format struggles
     struggle_lines = []
     for s in context.get("struggles", []):
@@ -1131,6 +1341,9 @@ Heart notes written: {context['heart_note_count']} ({', '.join(f'{k}: {v}' for k
 
 Behavioral correlations observed:
 {corr_text}
+
+Heart note patterns detected:
+{pattern_text}
 
 Active spiritual struggles:
 {struggle_text}
