@@ -52,6 +52,7 @@ from data.iman_behaviors import (
     IMAN_CATEGORIES,
     IMAN_BEHAVIORS,
     BEHAVIOR_MAP,
+    DEFAULT_BEHAVIORS,
     ALL_BEHAVIOR_IDS,
     HEART_NOTE_TYPES,
     HEART_STATES,
@@ -73,6 +74,7 @@ from services.iman_service import (
     compute_struggle_progress,
     prepare_digest_context,
     build_digest_prompt,
+    MAX_TRACKED_BEHAVIORS,
     ENGINE_VERSION,
 )
 
@@ -7808,11 +7810,20 @@ def get_muslim_names():
 @app.route("/iman/setup", methods=["POST"])
 @firebase_auth_required
 def iman_setup():
-    """Initialize Iman Index config for a new user (one-time setup)."""
+    """Initialize Iman Index config for a new user.
+
+    Body: {
+        behavior_ids: ["fajr_prayer", ...],  # Optional, defaults to DEFAULT_BEHAVIORS
+        struggle_ids: ["prayer_consistency"],  # Optional, auto-declares these
+        onboarding_complete: true  # Optional, defaults to true
+    }
+    """
     uid = request.user["uid"]
     try:
         data = request.get_json(silent=True) or {}
-        behavior_ids = data.get("behavior_ids")  # Optional: custom selection
+        behavior_ids = data.get("behavior_ids")
+        struggle_ids = data.get("struggle_ids", [])
+        onboarding_done = data.get("onboarding_complete", True)
 
         # Check if already set up
         config_ref = users_db.collection("users").document(uid).collection("iman_config").document("settings")
@@ -7820,11 +7831,65 @@ def iman_setup():
         if existing.exists:
             return jsonify({"message": "Already configured", "config": existing.to_dict()}), 200
 
+        # Validate behavior_ids if provided
+        if behavior_ids:
+            ok, cap_err = check_behavior_cap(behavior_ids)
+            if not ok:
+                return jsonify({"error": cap_err}), 400
+            if len(behavior_ids) < 3:
+                return jsonify({"error": "Please select at least 3 behaviors to track."}), 400
+
         config = build_default_config(behavior_ids)
+        config["onboarding_complete"] = onboarding_done
         config_ref.set(config)
 
-        print(f"[IMAN] Setup complete for user {uid[:8]}... — {len(config['tracked_behaviors'])} behaviors")
-        return jsonify({"message": "Iman Index configured", "config": config}), 201
+        # Auto-declare struggles if provided
+        declared_struggles = []
+        for sid in struggle_ids:
+            if sid not in STRUGGLE_MAP:
+                continue
+            struggle_ref = (
+                users_db.collection("users").document(uid)
+                .collection("iman_struggles").document(sid)
+            )
+            ex = struggle_ref.get()
+            if ex.exists and not ex.to_dict().get("resolved_at"):
+                continue
+
+            now_str = datetime.now(timezone.utc).isoformat()
+            s_config = STRUGGLE_MAP[sid]
+
+            guidance_excerpts = []
+            try:
+                pointers = s_config.get("scholarly_pointers", [])
+                resolved = resolve_scholarly_pointers(pointers)
+                for r in resolved:
+                    if r.get("text"):
+                        guidance_excerpts.append({
+                            "source": r.get("source", ""),
+                            "title": r.get("title", ""),
+                            "text": _encrypt_text(r["text"][:2000], uid),
+                        })
+            except Exception:
+                pass
+
+            doc_data = {
+                "struggle_id": sid,
+                "declared_at": now_str,
+                "resolved_at": None,
+                "guidance_excerpts": guidance_excerpts,
+                "comfort_verse": s_config.get("comfort_verses", [{}])[0] if s_config.get("comfort_verses") else None,
+                "updated_at": now_str,
+            }
+            struggle_ref.set(doc_data)
+            declared_struggles.append(sid)
+
+        print(f"[IMAN] Setup complete for user {uid[:8]}... — {len(config['tracked_behaviors'])} behaviors, {len(declared_struggles)} struggles")
+        return jsonify({
+            "message": "Iman Index configured",
+            "config": config,
+            "declared_struggles": declared_struggles,
+        }), 201
 
     except ValueError as ve:
         return jsonify({"error": str(ve)}), 400
@@ -7914,6 +7979,101 @@ def iman_update_config():
 
     except Exception as e:
         print(f"ERROR in PUT /iman/config: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/iman/catalog", methods=["GET"])
+@firebase_auth_required
+def iman_get_catalog():
+    """Return full behavior + struggle catalog for onboarding/settings.
+
+    Does NOT require setup. Used to render selectors before config exists.
+    """
+    try:
+        categories = []
+        for cat_id, cat_meta in IMAN_CATEGORIES.items():
+            categories.append({
+                "id": cat_id,
+                "label": cat_meta["label"],
+                "icon": cat_meta["icon"],
+                "color": cat_meta["color"],
+                "base_weight": cat_meta["base_weight"],
+            })
+
+        behaviors = []
+        for b in IMAN_BEHAVIORS:
+            behaviors.append({
+                "id": b["id"],
+                "category": b["category"],
+                "label": b["label"],
+                "input_type": b["input_type"],
+                "default_on": b["default_on"],
+            })
+
+        struggles = []
+        for s in STRUGGLE_CATALOG:
+            struggles.append({
+                "id": s["id"],
+                "label": s["label"],
+                "description": s["description"],
+                "icon": s["icon"],
+                "color": s["color"],
+            })
+
+        return jsonify({
+            "categories": categories,
+            "behaviors": behaviors,
+            "struggles": struggles,
+            "defaults": {
+                "max_tracked": MAX_TRACKED_BEHAVIORS,
+                "default_behavior_ids": [b["id"] for b in DEFAULT_BEHAVIORS],
+                "recommended_range": {"min": 3, "max": 10},
+            },
+        }), 200
+
+    except Exception as e:
+        print(f"ERROR in GET /iman/catalog: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/iman/data", methods=["DELETE"])
+@firebase_auth_required
+def iman_delete_all_data():
+    """Permanently delete all Iman Index data for the authenticated user.
+
+    Body: {confirm: "DELETE_ALL_IMAN_DATA"}
+    """
+    uid = request.user["uid"]
+    try:
+        data = request.get_json(silent=True) or {}
+        if data.get("confirm") != "DELETE_ALL_IMAN_DATA":
+            return jsonify({"error": "Confirmation required. Send {confirm: 'DELETE_ALL_IMAN_DATA'}"}), 400
+
+        user_ref = users_db.collection("users").document(uid)
+        subcollections = [
+            "iman_config", "iman_daily_logs", "iman_baselines",
+            "iman_trajectory", "iman_struggles", "iman_weekly_digests",
+        ]
+
+        deleted_counts = {}
+        for sub in subcollections:
+            count = 0
+            docs = user_ref.collection(sub).stream()
+            for doc in docs:
+                doc.reference.delete()
+                count += 1
+            deleted_counts[sub] = count
+
+        total = sum(deleted_counts.values())
+        print(f"[IMAN] Data deleted for {uid[:8]}... — {total} documents across {len(subcollections)} subcollections")
+        return jsonify({
+            "message": "All Iman Index data deleted",
+            "deleted": deleted_counts,
+            "total_documents": total,
+        }), 200
+
+    except Exception as e:
+        print(f"ERROR in DELETE /iman/data: {e}")
         return jsonify({"error": str(e)}), 500
 
 

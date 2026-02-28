@@ -5,11 +5,13 @@ import { auth } from '../lib/firebase';
 import { BACKEND_URL } from '../lib/config';
 import Link from 'next/link';
 
+import { Settings } from 'lucide-react';
 import JournalEntry from '../components/JournalEntry';
 import TrajectoryDisplay from '../components/TrajectoryDisplay';
 import DigestViewer from '../components/DigestViewer';
 import StruggleDeclaration from '../components/StruggleDeclaration';
 import StruggleCard from '../components/StruggleCard';
+import ImanOnboarding from '../components/ImanOnboarding';
 import BottomNav from '../components/BottomNav';
 
 function formatDate(dateStr) {
@@ -31,6 +33,7 @@ export default function JournalPage() {
   const [categories, setCategories] = useState([]);
   const [activeStruggles, setActiveStruggles] = useState([]);
   const [showStruggleGrid, setShowStruggleGrid] = useState(false);
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
 
   // Auth
   useEffect(() => {
@@ -57,13 +60,21 @@ export default function JournalPage() {
         fetch(`${BACKEND_URL}/iman/config`, { headers }),
       ]);
 
+      if (!configRes.ok) {
+        // No config → needs onboarding
+        setNeedsOnboarding(true);
+        return;
+      }
+      const configData = await configRes.json();
+      if (!configData.onboarding_complete) {
+        setNeedsOnboarding(true);
+        return;
+      }
+      if (configData.categories) setCategories(configData.categories);
+
       if (trajRes.ok) {
         const trajData = await trajRes.json();
         if (trajData.trajectory) setTrajectory(trajData.trajectory);
-      }
-      if (configRes.ok) {
-        const configData = await configRes.json();
-        if (configData.categories) setCategories(configData.categories);
       }
     } catch (err) {
       console.error('Failed to fetch trajectory:', err);
@@ -92,6 +103,16 @@ export default function JournalPage() {
 
   const handleStruggleResolved = (struggleId) => {
     setActiveStruggles((prev) => prev.filter((s) => s.struggle_id !== struggleId));
+  };
+
+  const handleOnboardingComplete = async () => {
+    setNeedsOnboarding(false);
+    if (user) {
+      await Promise.all([
+        fetchTrajectory(user),
+        fetchStruggles(user),
+      ]);
+    }
   };
 
   const handleTrajectoryUpdate = (newTrajectory) => {
@@ -131,6 +152,10 @@ export default function JournalPage() {
     );
   }
 
+  if (needsOnboarding) {
+    return <ImanOnboarding user={user} onComplete={handleOnboardingComplete} />;
+  }
+
   return (
     <div className="journal-page">
       <div className="journal-container">
@@ -138,6 +163,9 @@ export default function JournalPage() {
         <header className="journal-header">
           <h1>Journal</h1>
           <p className="header-sub">Daily spiritual reflection</p>
+          <Link href="/settings" className="settings-link">
+            <Settings size={20} />
+          </Link>
         </header>
 
         {/* Date navigation */}
@@ -254,6 +282,7 @@ export default function JournalPage() {
         .journal-header {
           text-align: center;
           padding: 8px 0;
+          position: relative;
         }
         .journal-header h1 {
           margin: 0;
@@ -264,6 +293,16 @@ export default function JournalPage() {
         .header-sub {
           margin: 4px 0 0;
           font-size: 0.85rem;
+          color: #6b7280;
+        }
+        .settings-link {
+          position: absolute;
+          top: 10px;
+          right: 0;
+          color: #9ca3af;
+          transition: color 0.15s ease;
+        }
+        .settings-link:hover {
           color: #6b7280;
         }
 
