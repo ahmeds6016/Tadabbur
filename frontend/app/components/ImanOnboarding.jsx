@@ -263,9 +263,9 @@ export default function ImanOnboarding({ user, onComplete }) {
             <p className="ob-cal-label">Day 1 of 14 — Calibrating</p>
 
             <div className="ob-tips">
-              <p className="ob-tip">Log daily, even if briefly — consistency matters more than perfection</p>
-              <p className="ob-tip">Missed a day? That is okay. The journal does not judge gaps</p>
-              <p className="ob-tip">Your data is private and encrypted</p>
+              <p className="ob-tip"><span className="ob-bullet">&#x2022;</span> Log daily, even if briefly — consistency matters more than perfection</p>
+              <p className="ob-tip"><span className="ob-bullet">&#x2022;</span> Missed a day? That is okay. The journal does not judge gaps</p>
+              <p className="ob-tip"><span className="ob-bullet">&#x2022;</span> Your data is private and encrypted</p>
             </div>
 
             {error && <p className="ob-error">{error}</p>}
@@ -517,15 +517,12 @@ export default function ImanOnboarding({ user, onComplete }) {
           font-size: 0.82rem;
           color: #4b5563;
           margin: 0;
-          padding-left: 20px;
-          position: relative;
           line-height: 1.4;
         }
-        .ob-tip::before {
-          content: '\u2022';
-          position: absolute;
-          left: 6px;
+        .ob-tip :global(.ob-bullet) {
           color: var(--primary-teal, #0d9488);
+          font-weight: 700;
+          margin-right: 4px;
         }
         .ob-error {
           color: #dc2626;

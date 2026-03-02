@@ -20,28 +20,46 @@ function BinaryInput({ value, onChange, label }) {
       className={`binary-toggle ${value ? 'on' : 'off'}`}
       onClick={() => onChange(value ? 0 : 1)}
       aria-label={`${label}: ${value ? 'Done' : 'Not done'}`}
+      style={{
+        width: 36, height: 36, minWidth: 36, borderRadius: '50%',
+        border: `2px solid ${value ? 'var(--primary-teal, #0d9488)' : 'var(--border-light, #e5e7eb)'}`,
+        background: value ? 'var(--primary-teal, #0d9488)' : 'white',
+        color: value ? 'white' : '#9ca3af',
+        padding: 0, fontSize: '1.1rem', cursor: 'pointer',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        boxSizing: 'border-box', transition: 'all 0.15s ease',
+      }}
     >
-      {value ? '✓' : '○'}
+      {value ? '\u2713' : '\u25CB'}
     </button>
   );
 }
 
 function Scale5Input({ value, onChange, scaleLabels }) {
+  const filled = value || 0;
   return (
-    <div className="scale5-wrapper">
-      <div className="scale5-dots">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+      <div style={{ display: 'flex', gap: 5 }}>
         {[1, 2, 3, 4, 5].map((n) => (
           <button
             key={n}
-            className={`scale-dot ${(value || 0) >= n ? 'filled' : ''} ${value === n ? 'current' : ''}`}
             onClick={() => onChange(value === n ? 0 : n)}
             aria-label={scaleLabels?.[String(n)] || `${n} of 5`}
+            style={{
+              width: 22, height: 22, minWidth: 22, borderRadius: '50%',
+              border: `2px solid ${filled >= n ? 'var(--primary-teal, #0d9488)' : 'var(--border-light, #e5e7eb)'}`,
+              background: filled >= n ? 'var(--primary-teal, #0d9488)' : 'white',
+              cursor: 'pointer', padding: 0, boxSizing: 'border-box',
+              transition: 'all 0.12s ease',
+              transform: value === n ? 'scale(1.15)' : 'none',
+              boxShadow: value === n ? '0 0 0 2px rgba(13,148,136,0.3)' : 'none',
+            }}
           />
         ))}
       </div>
-      <div className="scale5-labels">
-        <span>{scaleLabels?.['1'] || 'Low'}</span>
-        <span>{scaleLabels?.['5'] || 'High'}</span>
+      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+        <span style={{ fontSize: '0.6rem', color: '#9ca3af' }}>{scaleLabels?.['1'] || 'Low'}</span>
+        <span style={{ fontSize: '0.6rem', color: '#9ca3af' }}>{scaleLabels?.['5'] || 'High'}</span>
       </div>
     </div>
   );
@@ -81,17 +99,27 @@ function HoursInput({ value, onChange }) {
   );
 }
 
+const stepperBtnStyle = {
+  width: 30, height: 30, minWidth: 30, borderRadius: 8,
+  border: '1px solid var(--border-light, #e5e7eb)', background: 'white',
+  fontSize: '1rem', cursor: 'pointer', padding: 0,
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  color: 'var(--deep-blue, #1e293b)', boxSizing: 'border-box',
+};
+
 function CountInput({ value, onChange }) {
   return (
-    <div className="count-stepper">
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
       <button
-        className="stepper-btn"
+        style={{ ...stepperBtnStyle, opacity: !value ? 0.3 : 1 }}
         onClick={() => onChange(Math.max(0, (value || 0) - 1))}
         disabled={!value}
-      >−</button>
-      <span className="count-value">{value || 0}</span>
+      >{'\u2212'}</button>
+      <span style={{ fontSize: '0.95rem', fontWeight: 600, minWidth: 20, textAlign: 'center', color: 'var(--deep-blue, #1e293b)' }}>
+        {value || 0}
+      </span>
       <button
-        className="stepper-btn"
+        style={stepperBtnStyle}
         onClick={() => onChange(Math.min(100, (value || 0) + 1))}
       >+</button>
     </div>
@@ -525,66 +553,6 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate }) {
           margin-left: 12px;
         }
 
-        /* Binary toggle */
-        .behavior-row :global(.binary-toggle) {
-          width: 36px;
-          height: 36px;
-          border-radius: 50%;
-          border: 2px solid var(--border-light, #e5e7eb);
-          background: white;
-          font-size: 1.1rem;
-          cursor: pointer;
-          transition: all 0.15s ease;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: #9ca3af;
-        }
-        .behavior-row :global(.binary-toggle.on) {
-          background: var(--primary-teal, #0d9488);
-          border-color: var(--primary-teal, #0d9488);
-          color: white;
-        }
-
-        /* Scale 5 dots */
-        .behavior-row :global(.scale5-wrapper) {
-          display: flex;
-          flex-direction: column;
-          gap: 2px;
-          align-items: flex-end;
-        }
-        .behavior-row :global(.scale5-dots) {
-          display: flex;
-          gap: 6px;
-        }
-        .behavior-row :global(.scale5-labels) {
-          display: flex;
-          justify-content: space-between;
-          width: 100%;
-        }
-        .behavior-row :global(.scale5-labels span) {
-          font-size: 0.6rem;
-          color: #9ca3af;
-        }
-        .behavior-row :global(.scale-dot) {
-          width: 24px;
-          height: 24px;
-          border-radius: 50%;
-          border: 2px solid var(--border-light, #e5e7eb);
-          background: white;
-          cursor: pointer;
-          transition: all 0.12s ease;
-          padding: 0;
-        }
-        .behavior-row :global(.scale-dot.filled) {
-          background: var(--primary-teal, #0d9488);
-          border-color: var(--primary-teal, #0d9488);
-        }
-        .behavior-row :global(.scale-dot.current) {
-          transform: scale(1.15);
-          box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.3);
-        }
-
         /* Minutes / Hours slider */
         .behavior-row :global(.minutes-input),
         .behavior-row :global(.hours-input) {
@@ -616,37 +584,6 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate }) {
           color: #6b7280;
           width: 32px;
           text-align: right;
-        }
-
-        /* Count stepper */
-        .behavior-row :global(.count-stepper) {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-        .behavior-row :global(.stepper-btn) {
-          width: 28px;
-          height: 28px;
-          border-radius: 6px;
-          border: 1px solid var(--border-light, #e5e7eb);
-          background: white;
-          font-size: 1rem;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: var(--deep-blue, #1e293b);
-        }
-        .behavior-row :global(.stepper-btn:disabled) {
-          opacity: 0.3;
-          cursor: not-allowed;
-        }
-        .behavior-row :global(.count-value) {
-          font-size: 0.95rem;
-          font-weight: 600;
-          min-width: 20px;
-          text-align: center;
-          color: var(--deep-blue, #1e293b);
         }
 
         /* Heart state */
