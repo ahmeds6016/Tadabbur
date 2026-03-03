@@ -116,14 +116,25 @@ def validate_behavior_value(behavior_id: str, value) -> Tuple[bool, str, Any]:
         return False, f"{behavior_id}: invalid value {value!r}", None
 
 
+HEART_NOTE_LIMITS = {
+    "gratitude": 280,
+    "dua": 280,
+    "tawbah": 280,
+    "connection": 280,
+    "reflection": 500,
+    "quran_insight": 500,
+}
+
+
 def validate_heart_note(note_type: str, text: str) -> Tuple[bool, str]:
-    """Validate heart note type and text (max 280 chars)."""
+    """Validate heart note type and text (type-dependent char limit)."""
     if note_type not in HEART_NOTE_TYPES:
         return False, f"Invalid heart note type: {note_type}. Must be one of: {HEART_NOTE_TYPES}"
     if not text or not text.strip():
         return False, "Heart note text cannot be empty"
-    if len(text) > 280:
-        return False, f"Heart note too long: {len(text)} chars (max 280)"
+    max_len = HEART_NOTE_LIMITS.get(note_type, 280)
+    if len(text) > max_len:
+        return False, f"Heart note too long: {len(text)} chars (max {max_len})"
     return True, ""
 
 
@@ -1212,6 +1223,36 @@ def compute_strain_recovery(
     }
 
 
+def compute_strain_trend(
+    daily_logs: List[dict],
+    tracked_ids: List[str],
+) -> dict:
+    """3-day strain trend extrapolation for burnout prediction."""
+    if len(daily_logs) < 3:
+        return {"trend": "insufficient_data", "direction": None, "message": None}
+
+    recent_3 = daily_logs[-3:]
+    strains = [compute_daily_strain(log.get("behaviors", {}), tracked_ids) for log in recent_3]
+
+    xs = [0, 1, 2]
+    r = _pearson_r(xs, strains)
+    slope = (strains[-1] - strains[0]) / 2
+
+    if r > 0.5 and slope > 0.15:
+        return {
+            "trend": "rising",
+            "direction": "up",
+            "message": "Your effort has been increasing steadily. Remember: the body has a right over you.",
+        }
+    elif r < -0.5 and slope < -0.15:
+        return {
+            "trend": "easing",
+            "direction": "down",
+            "message": None,
+        }
+    return {"trend": "stable", "direction": None, "message": None}
+
+
 # ---------------------------------------------------------------------------
 # Advanced Safeguards
 # ---------------------------------------------------------------------------
@@ -1467,6 +1508,16 @@ def compute_struggle_progress(
             else:
                 linked_behavior_trends[bid] = "insufficient_data"
 
+    # Milestone detection: phase transition
+    milestone = None
+    if current_phase > 0 and days_in_phase <= 1:
+        milestone = {
+            "just_transitioned": True,
+            "phase_completed": current_phase,
+            "phase_label": phases[current_phase] if current_phase < len(phases) else "",
+            "previous_phase_label": phases[current_phase - 1] if (current_phase - 1) < len(phases) else "",
+        }
+
     return {
         "current_phase": current_phase,
         "phase_title": phase_title,
@@ -1474,7 +1525,96 @@ def compute_struggle_progress(
         "days_active": days_active,
         "phase_progress_pct": phase_progress_pct,
         "linked_behavior_trends": linked_behavior_trends,
+        "milestone": milestone,
     }
+
+
+# ---------------------------------------------------------------------------
+# Daily Insight — Context & Prompt Builder
+# ---------------------------------------------------------------------------
+
+def prepare_daily_insight_context(
+    today_log: dict,
+    recent_logs: List[dict],
+    trajectory: dict,
+    config: dict,
+    active_struggles: List[dict],
+) -> dict:
+    """Prepare context for the Gemini daily insight prompt."""
+    tracked_ids = get_tracked_behavior_ids(config)
+
+    # Today's behavior summary
+    behaviors = today_log.get("behaviors", {})
+    behavior_summary_parts = []
+    for bid in tracked_ids:
+        raw = behaviors.get(bid)
+        if raw is not None:
+            val = raw.get("value", raw) if isinstance(raw, dict) else raw
+            label = BEHAVIOR_MAP.get(bid, {}).get("label", bid)
+            behavior_summary_parts.append(f"{label}: {val}")
+    behavior_summary = ", ".join(behavior_summary_parts) if behavior_summary_parts else "No behaviors logged"
+
+    # Consistency summary from recent logs
+    days_with_logs = len(recent_logs)
+    consistency_summary = f"{days_with_logs}/7 days logged in the past week"
+
+    # Strain status
+    sr = compute_strain_recovery(recent_logs, tracked_ids)
+    strain_status = sr.get("sr_status", "balanced")
+
+    # Struggle summary
+    struggle_parts = []
+    for s in active_struggles:
+        progress = s.get("progress", {})
+        struggle_parts.append(f"{s.get('label', '')} (week {progress.get('weeks_active', 0) + 1})")
+    struggle_summary = ", ".join(struggle_parts) if struggle_parts else "None"
+
+    return {
+        "date": today_log.get("date", ""),
+        "behavior_summary": behavior_summary,
+        "heart_state": today_log.get("heart_state"),
+        "heart_note_count": len(today_log.get("heart_notes", [])),
+        "days_total": trajectory.get("days_logged", 0),
+        "consistency_summary": consistency_summary,
+        "strain_status": strain_status,
+        "struggle_summary": struggle_summary,
+    }
+
+
+def build_daily_insight_prompt(context: dict, persona_name: str = "practicing_muslim") -> str:
+    """Build the Gemini prompt for a daily spiritual insight."""
+    tone = _PERSONA_TONE.get(persona_name, _PERSONA_TONE["practicing_muslim"])
+
+    prompt = f"""You are a gentle spiritual companion reflecting on a Muslim's day of practice.
+
+TONE: {tone}
+
+CRITICAL RULES:
+- NEVER show raw numbers, scores, percentages, or indices.
+- NEVER say "you should" or "you must". Use "you might consider", "perhaps", "one beautiful practice is..."
+- Stay under 120 words total across all fields.
+- Write with warmth and mercy.
+- Be SPECIFIC to their actual data — reference actual behaviors, not generic advice.
+
+TODAY'S LOG ({context['date']}):
+Behaviors logged: {context['behavior_summary']}
+Heart state: {context['heart_state'] or 'Not recorded'}
+Heart notes: {context['heart_note_count']} written
+Streak: Day {context['days_total']} on their journey
+
+RECENT CONTEXT (last 7 days):
+Consistency: {context['consistency_summary']}
+Strain level: {context['strain_status']}
+Active struggles: {context['struggle_summary']}
+
+Respond in VALID JSON with exactly these 4 keys:
+{{
+  "observation": "A 1-sentence specific observation about today's log. Be concrete.",
+  "correlation": "If you notice a pattern with recent days, share it naturally. Otherwise null.",
+  "encouragement": "A 1-sentence genuine encouragement rooted in what they actually did.",
+  "strain_note": "If strain is high or rising, a gentle 1-sentence reminder. Otherwise null."
+}}"""
+    return prompt
 
 
 # ---------------------------------------------------------------------------

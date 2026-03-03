@@ -50,16 +50,27 @@ function BinaryInput({ value, onChange, label }) {
 
 function Scale5Input({ value, onChange, scaleLabels }) {
   const filled = value || 0;
+  const [showLabel, setShowLabel] = useState(null);
+
+  const handleTap = (n) => {
+    const newVal = value === n ? 0 : n;
+    onChange(newVal);
+    if (newVal > 0 && scaleLabels?.[String(newVal)]) {
+      setShowLabel(scaleLabels[String(newVal)]);
+      setTimeout(() => setShowLabel(null), 1500);
+    }
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%' }}>
-      <div style={{ display: 'flex', gap: 10 }}>
+      <div style={{ display: 'flex', gap: 10, position: 'relative' }}>
         {[1, 2, 3, 4, 5].map((n) => {
           const isFilled = filled >= n;
           const isCurrent = value === n;
           return (
             <button
               key={n}
-              onClick={() => onChange(value === n ? 0 : n)}
+              onClick={() => handleTap(n)}
               aria-label={scaleLabels?.[String(n)] || `${n} of 5`}
               style={{
                 width: 32,
@@ -83,6 +94,18 @@ function Scale5Input({ value, onChange, scaleLabels }) {
           );
         })}
       </div>
+      {/* Tap label tooltip */}
+      {showLabel && (
+        <div style={{
+          fontSize: '0.72rem',
+          color: '#0d9488',
+          fontWeight: 600,
+          textAlign: 'center',
+          transition: 'opacity 0.3s ease',
+        }}>
+          {showLabel}
+        </div>
+      )}
       <div style={{ display: 'flex', justifyContent: 'space-between', maxWidth: 200 }}>
         <span style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 500 }}>
           {scaleLabels?.['1'] || 'Low'}
@@ -225,7 +248,7 @@ function BehaviorRow({ behavior, value, onChange }) {
   );
 }
 
-export default function JournalEntry({ user, date, onTrajectoryUpdate }) {
+export default function JournalEntry({ user, date, onTrajectoryUpdate, onSaved }) {
   const [config, setConfig] = useState(null);
   const [categories, setCategories] = useState([]);
   const [allBehaviors, setAllBehaviors] = useState([]);
@@ -239,6 +262,12 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate }) {
   const [error, setError] = useState(null);
   const [welcomeBack, setWelcomeBack] = useState(null);
   const [riyaReminder, setRiyaReminder] = useState(false);
+  const [quickLog, setQuickLog] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try { return localStorage.getItem('iman_quick_log') === 'true'; } catch { return false; }
+    }
+    return false;
+  });
 
   // Fetch config and existing log
   useEffect(() => {
@@ -351,6 +380,7 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate }) {
         };
         onTrajectoryUpdate(enrichedTrajectory, data.safeguards);
       }
+      if (onSaved) onSaved(data);
       if (data.welcome_back) setWelcomeBack(data.welcome_back);
       if (data.anti_riya_reminder) setRiyaReminder(true);
     } catch (err) {
@@ -411,12 +441,28 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate }) {
     return <div className="journal-error">{error}</div>;
   }
 
+  // Toggle quick-log and persist
+  const toggleQuickLog = () => {
+    const next = !quickLog;
+    setQuickLog(next);
+    if (typeof window !== 'undefined') {
+      try { localStorage.setItem('iman_quick_log', String(next)); } catch {}
+    }
+  };
+
   // Group tracked behaviors by category, then by practice_group within each category
   const trackedIds = new Set(
     (config?.tracked_behaviors || [])
       .filter((b) => b.active !== false)
       .map((b) => b.id)
   );
+
+  // Completion indicator
+  const totalTracked = trackedIds.size;
+  const filledCount = [...trackedIds].filter((bid) => {
+    const v = values[bid];
+    return v !== undefined && v !== null && v !== 0 && v !== '';
+  }).length;
 
   // Build practice groups per category for visual sub-grouping
   const groupedByCategory = {};
@@ -437,8 +483,49 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate }) {
     groupedByCategory[cat.id] = groups;
   }
 
+  // Filter categories for quick-log mode
+  const visibleCategories = quickLog
+    ? categories.filter((cat) => cat.id === 'fard')
+    : categories;
+
   return (
     <div className="journal-entry">
+      {/* Quick-log toggle + completion indicator */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 4,
+      }}>
+        <button
+          onClick={toggleQuickLog}
+          style={{
+            padding: '5px 12px',
+            borderRadius: 16,
+            border: `1.5px solid ${quickLog ? '#0d9488' : '#e2e8f0'}`,
+            background: quickLog ? '#0d948815' : 'white',
+            fontSize: '0.75rem',
+            fontWeight: 600,
+            color: quickLog ? '#0d9488' : '#6b7280',
+            cursor: 'pointer',
+            transition: 'all 0.15s ease',
+          }}
+        >
+          {quickLog ? 'Quick Log ON' : 'Quick Log'}
+        </button>
+        <span style={{
+          fontSize: '0.75rem',
+          fontWeight: 600,
+          color: filledCount === totalTracked ? '#059669' : '#9ca3af',
+          background: filledCount === totalTracked ? '#ecfdf5' : '#f8fafc',
+          padding: '4px 10px',
+          borderRadius: 12,
+          fontVariantNumeric: 'tabular-nums',
+        }}>
+          {filledCount}/{totalTracked} tracked
+        </span>
+      </div>
+
       {/* Welcome-back banner */}
       {welcomeBack && (
         <div className="welcome-back-banner">{welcomeBack}</div>
@@ -452,7 +539,7 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate }) {
       )}
 
       {/* Behavior sections grouped by category, sub-grouped by practice */}
-      {categories.map((cat) => {
+      {visibleCategories.map((cat) => {
         const groups = groupedByCategory[cat.id] || [];
         const totalBehaviors = groups.reduce((n, g) => n + g.behaviors.length, 0);
         if (totalBehaviors === 0) return null;

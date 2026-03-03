@@ -5,13 +5,18 @@ import { auth } from '../lib/firebase';
 import { BACKEND_URL } from '../lib/config';
 import Link from 'next/link';
 
-import { Settings } from 'lucide-react';
+import { Settings, Calendar } from 'lucide-react';
 import JournalEntry from '../components/JournalEntry';
 import TrajectoryDisplay from '../components/TrajectoryDisplay';
 import DigestViewer from '../components/DigestViewer';
 import HeartPatterns from '../components/HeartPatterns';
 import StruggleDeclaration from '../components/StruggleDeclaration';
 import StruggleCard from '../components/StruggleCard';
+import StruggleGoals from '../components/StruggleGoals';
+import MilestoneCelebration from '../components/MilestoneCelebration';
+import DailyInsightCard from '../components/DailyInsightCard';
+import CorrelationCard from '../components/CorrelationCard';
+import HeartNoteHistory from '../components/HeartNoteHistory';
 import ImanOnboarding from '../components/ImanOnboarding';
 import BottomNav from '../components/BottomNav';
 
@@ -35,8 +40,12 @@ export default function JournalPage() {
   const [activeStruggles, setActiveStruggles] = useState([]);
   const [showStruggleGrid, setShowStruggleGrid] = useState(false);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
+  const [correlations, setCorrelations] = useState([]);
   const [correlationInsight, setCorrelationInsight] = useState(null);
   const [safeguards, setSafeguards] = useState(null);
+  const [showDailyInsight, setShowDailyInsight] = useState(false);
+  const [strainTrend, setStrainTrend] = useState(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   // Auth
   useEffect(() => {
@@ -113,6 +122,7 @@ export default function JournalPage() {
       });
       if (res.ok) {
         const data = await res.json();
+        setCorrelations(data.correlations || []);
         if (data.weekly_insight) {
           setCorrelationInsight(data.weekly_insight);
         }
@@ -147,7 +157,14 @@ export default function JournalPage() {
     if (responseSafeguards) setSafeguards(responseSafeguards);
   };
 
-  // Generate date navigation (today + past 6 days)
+  const handleJournalSaved = (data) => {
+    setShowDailyInsight(true);
+    if (data?.strain_trend) {
+      setStrainTrend(data.strain_trend);
+    }
+  };
+
+  // Generate date navigation (today + past 6 days as chips, + 30-day calendar)
   const dateOptions = [];
   for (let i = 0; i < 7; i++) {
     const ds = getDateStr(-i);
@@ -155,6 +172,12 @@ export default function JournalPage() {
       date: ds,
       label: i === 0 ? 'Today' : i === 1 ? 'Yesterday' : formatDate(ds),
     });
+  }
+
+  // Generate 30-day grid for calendar picker
+  const calendarDates = [];
+  for (let i = 0; i < 30; i++) {
+    calendarDates.push(getDateStr(-i));
   }
 
   if (isLoading) {
@@ -208,12 +231,39 @@ export default function JournalPage() {
               <button
                 key={opt.date}
                 className={`date-chip ${selectedDate === opt.date ? 'active' : ''}`}
-                onClick={() => setSelectedDate(opt.date)}
+                onClick={() => { setSelectedDate(opt.date); setShowDatePicker(false); }}
               >
                 {opt.label}
               </button>
             ))}
+            <button
+              className={`date-chip ${showDatePicker ? 'active' : ''}`}
+              onClick={() => setShowDatePicker(!showDatePicker)}
+              style={{ display: 'flex', alignItems: 'center', gap: 4 }}
+            >
+              <Calendar size={14} />
+            </button>
           </div>
+          {/* 30-day calendar picker */}
+          {showDatePicker && (
+            <div className="calendar-picker">
+              {calendarDates.map((ds) => {
+                const d = new Date(ds + 'T12:00:00');
+                const dayNum = d.getDate();
+                const isSelected = selectedDate === ds;
+                return (
+                  <button
+                    key={ds}
+                    className={`cal-day ${isSelected ? 'active' : ''}`}
+                    onClick={() => { setSelectedDate(ds); setShowDatePicker(false); }}
+                    title={formatDate(ds)}
+                  >
+                    {dayNum}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Scrupulosity gentleness banner */}
@@ -226,32 +276,47 @@ export default function JournalPage() {
         {/* Trajectory display */}
         <TrajectoryDisplay trajectory={trajectory} categories={categories} />
 
+        {/* Daily insight card (shown after journal save) */}
+        <DailyInsightCard user={user} date={selectedDate} visible={showDailyInsight} />
+
+        {/* Strain trend warning */}
+        {strainTrend?.direction === 'up' && strainTrend.message && (
+          <div className="strain-warning">
+            <p>{strainTrend.message}</p>
+          </div>
+        )}
+
+        {/* Correlation card (all correlations, promoted) */}
+        <CorrelationCard correlations={correlations} weeklyInsight={correlationInsight} />
+
         {/* Weekly digest */}
         <DigestViewer user={user} />
 
         {/* Heart note patterns */}
         <HeartPatterns user={user} />
 
-        {/* Correlation insight */}
-        {correlationInsight && (
-          <div className="correlation-card">
-            <h3 className="section-label">Pattern Observed</h3>
-            <p className="correlation-text">{correlationInsight.insight_text}</p>
-            <span className="correlation-caveat">This is a pattern, not a rule.</span>
-          </div>
-        )}
-
-        {/* Active struggles */}
+        {/* Active struggles with goals and milestones */}
         {activeStruggles.length > 0 && (
           <div className="struggles-section">
             <h3 className="section-label">Active Struggles</h3>
             {activeStruggles.map((s) => (
-              <StruggleCard
-                key={s.struggle_id}
-                struggle={s}
-                user={user}
-                onResolved={handleStruggleResolved}
-              />
+              <div key={s.struggle_id}>
+                {/* Milestone celebration */}
+                {s.progress?.milestone && (
+                  <MilestoneCelebration struggle={s} milestone={s.progress.milestone} />
+                )}
+                <StruggleCard
+                  struggle={s}
+                  user={user}
+                  onResolved={handleStruggleResolved}
+                />
+                <StruggleGoals
+                  user={user}
+                  struggleId={s.struggle_id}
+                  struggleColor={s.color}
+                  struggleLabel={s.label}
+                />
+              </div>
             ))}
           </div>
         )}
@@ -277,7 +342,11 @@ export default function JournalPage() {
           user={user}
           date={selectedDate}
           onTrajectoryUpdate={handleTrajectoryUpdate}
+          onSaved={handleJournalSaved}
         />
+
+        {/* Heart note history */}
+        <HeartNoteHistory user={user} />
       </div>
 
       <BottomNav user={user} />
@@ -394,6 +463,53 @@ export default function JournalPage() {
           border-color: var(--primary-teal, #0d9488);
         }
 
+        /* 30-day calendar picker */
+        .calendar-picker {
+          display: grid;
+          grid-template-columns: repeat(7, 1fr);
+          gap: 4px;
+          padding: 10px 0;
+          margin-top: 8px;
+        }
+        .cal-day {
+          width: 36px;
+          height: 36px;
+          border-radius: 50%;
+          border: 1px solid #e5e7eb;
+          background: white;
+          font-size: 0.78rem;
+          cursor: pointer;
+          color: #374151;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: 0 auto;
+          transition: all 0.15s ease;
+        }
+        .cal-day:hover {
+          border-color: var(--primary-teal, #0d9488);
+        }
+        .cal-day.active {
+          background: var(--primary-teal, #0d9488);
+          color: white;
+          border-color: var(--primary-teal, #0d9488);
+        }
+
+        /* Strain warning */
+        .strain-warning {
+          background: #fffbeb;
+          border: 1px solid #fde68a;
+          border-radius: 10px;
+          padding: 12px 16px;
+          border-left: 3px solid #d97706;
+        }
+        .strain-warning p {
+          font-size: 0.85rem;
+          color: #92400e;
+          margin: 0;
+          line-height: 1.5;
+        }
+
         /* Gentleness banner (scrupulosity safeguard) */
         .gentleness-banner {
           background: #fefce8;
@@ -407,25 +523,6 @@ export default function JournalPage() {
           margin: 0;
           line-height: 1.5;
           text-align: center;
-        }
-
-        /* Correlation insight card */
-        .correlation-card {
-          background: white;
-          border-radius: 14px;
-          border: 1px solid var(--border-light, #e5e7eb);
-          padding: 16px;
-        }
-        .correlation-text {
-          font-size: 0.85rem;
-          color: #374151;
-          margin: 0 0 8px 0;
-          line-height: 1.5;
-        }
-        .correlation-caveat {
-          font-size: 0.75rem;
-          color: #9ca3af;
-          font-style: italic;
         }
 
         .struggles-section {

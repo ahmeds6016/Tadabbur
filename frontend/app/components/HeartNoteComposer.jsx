@@ -10,14 +10,22 @@ const NOTE_TYPES = [
   { id: 'quran_insight', label: 'Quran Insight', emoji: 'Ayah' },
 ];
 
-const MAX_CHARS = 280;
+const CHAR_LIMITS = {
+  gratitude: 280,
+  dua: 280,
+  tawbah: 280,
+  connection: 280,
+  reflection: 500,
+  quran_insight: 500,
+};
 
-export default function HeartNoteComposer({ onSave, disabled = false }) {
+export default function HeartNoteComposer({ onSave, disabled = false, existingNotes = [], onEdit, onDelete }) {
   const [selectedType, setSelectedType] = useState(null);
   const [text, setText] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const charsLeft = MAX_CHARS - text.length;
+  const maxChars = CHAR_LIMITS[selectedType] || 280;
+  const charsLeft = maxChars - text.length;
   const canSave = selectedType && text.trim().length > 0 && charsLeft >= 0;
 
   const handleSave = async () => {
@@ -54,7 +62,7 @@ export default function HeartNoteComposer({ onSave, disabled = false }) {
         <div className="note-input-area">
           <textarea
             value={text}
-            onChange={(e) => setText(e.target.value.slice(0, MAX_CHARS))}
+            onChange={(e) => setText(e.target.value.slice(0, maxChars))}
             placeholder={`Write your ${NOTE_TYPES.find(n => n.id === selectedType)?.label.toLowerCase()}...`}
             rows={3}
             disabled={disabled || saving}

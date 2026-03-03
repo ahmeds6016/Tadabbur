@@ -33,10 +33,13 @@ export default function DigestViewer({ user }) {
     }
   };
 
+  const [restriction, setRestriction] = useState(null);
+
   const handleGenerate = async () => {
     if (generating) return;
     setGenerating(true);
     setError('');
+    setRestriction(null);
     try {
       const token = await user.getIdToken();
       const res = await fetch(`${BACKEND_URL}/iman/digest/generate`, {
@@ -49,6 +52,10 @@ export default function DigestViewer({ user }) {
       });
       const data = await res.json();
       if (!res.ok) {
+        if (data.restriction) {
+          setRestriction(data);
+          return;
+        }
         setError(data.error || 'Failed to generate digest');
         return;
       }
@@ -69,17 +76,66 @@ export default function DigestViewer({ user }) {
     <div className="digest-viewer">
       {!digest ? (
         <div className="dv-empty">
-          <p className="dv-empty-text">
-            Your weekly spiritual reflection awaits.
-          </p>
-          <button
-            className="dv-generate-btn"
-            onClick={handleGenerate}
-            disabled={generating}
-          >
-            {generating ? 'Reflecting on your week...' : "Generate This Week's Digest"}
-          </button>
-          {error && <p className="dv-error">{error}</p>}
+          {restriction ? (
+            <>
+              {restriction.restriction === 'monday_only' ? (
+                <>
+                  <p className="dv-empty-text">
+                    Your weekly digest will be ready on Monday.
+                  </p>
+                  <p style={{ fontSize: '0.78rem', color: '#9ca3af', margin: '4px 0 0 0' }}>
+                    Today is {restriction.day_of_week}. Keep logging — your reflection awaits.
+                  </p>
+                </>
+              ) : restriction.restriction === 'min_days' ? (
+                <>
+                  <p className="dv-empty-text">
+                    Almost there! Log a few more days to unlock your digest.
+                  </p>
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    gap: 6,
+                    margin: '10px 0',
+                  }}>
+                    {[1, 2, 3, 4].map((n) => (
+                      <div key={n} style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: '50%',
+                        background: n <= (restriction.days_logged || 0) ? '#0d9488' : '#e5e7eb',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '0.7rem',
+                        fontWeight: 600,
+                        color: n <= (restriction.days_logged || 0) ? 'white' : '#9ca3af',
+                      }}>
+                        {n}
+                      </div>
+                    ))}
+                  </div>
+                  <p style={{ fontSize: '0.72rem', color: '#9ca3af', margin: 0 }}>
+                    {restriction.days_logged}/4 days logged this week
+                  </p>
+                </>
+              ) : null}
+            </>
+          ) : (
+            <>
+              <p className="dv-empty-text">
+                Your weekly spiritual reflection awaits.
+              </p>
+              <button
+                className="dv-generate-btn"
+                onClick={handleGenerate}
+                disabled={generating}
+              >
+                {generating ? 'Reflecting on your week...' : "Generate This Week's Digest"}
+              </button>
+              {error && <p className="dv-error">{error}</p>}
+            </>
+          )}
         </div>
       ) : (
         <div className="dv-content">

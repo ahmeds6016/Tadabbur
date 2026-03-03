@@ -75,11 +75,15 @@ from services.iman_service import (
     compute_struggle_progress,
     prepare_digest_context,
     build_digest_prompt,
+    prepare_daily_insight_context,
+    build_daily_insight_prompt,
     compute_heart_note_patterns,
     compute_behavior_correlations,
     select_weekly_insight,
     compute_strain_recovery,
+    compute_strain_trend,
     compute_safeguard_status,
+    HEART_NOTE_LIMITS,
     MAX_TRACKED_BEHAVIORS,
     ENGINE_VERSION,
 )
@@ -8207,10 +8211,11 @@ def iman_submit_log():
                 except ValueError:
                     pass
 
-        # Strain/Recovery + Safeguards
+        # Strain/Recovery + Safeguards + Strain Trend
         tracked_ids = get_tracked_behavior_ids(config)
         sr_data = compute_strain_recovery(all_logs, tracked_ids)
         safeguards = compute_safeguard_status(all_logs, trajectory, sr_data, uid)
+        strain_trend = compute_strain_trend(all_logs, tracked_ids)
 
         print(f"[IMAN] Log saved for {uid[:8]}... date={date_str} — state={trajectory.get('current_state')}")
         return jsonify({
@@ -8219,6 +8224,7 @@ def iman_submit_log():
             "trajectory": trajectory,
             "strain_recovery": sr_data,
             "safeguards": safeguards,
+            "strain_trend": strain_trend,
             "anti_riya_reminder": should_show_anti_riya_reminder(),
             "welcome_back": welcome_back,
         }), 200
@@ -8812,6 +8818,29 @@ def iman_generate_digest():
 
         # Determine week boundaries
         now = datetime.now(timezone.utc)
+
+        # Weekly digest restriction: Monday only + minimum 4 days logged
+        if now.weekday() != 0:  # 0 = Monday
+            return jsonify({
+                "error": "Weekly digest is available on Mondays only.",
+                "restriction": "monday_only",
+                "day_of_week": now.strftime("%A"),
+            }), 400
+
+        week_ago = (now - timedelta(days=7)).strftime("%Y-%m-%d")
+        recent_logs_ref = (
+            users_db.collection("users").document(uid)
+            .collection("iman_daily_logs")
+            .where("date", ">=", week_ago)
+        )
+        recent_count = sum(1 for _ in recent_logs_ref.stream())
+        if recent_count < 4:
+            return jsonify({
+                "error": f"Log at least 4 days this week to unlock your digest ({recent_count}/4 so far).",
+                "restriction": "min_days",
+                "days_logged": recent_count,
+            }), 400
+
         if data.get("week_start") and data.get("week_end"):
             week_start = data["week_start"]
             week_end = data["week_end"]
@@ -9088,6 +9117,430 @@ def _decrypt_digest(digest: dict, uid: str) -> dict:
     result["context_summary"] = digest.get("context_summary", {})
 
     return result
+
+
+# ---------------------------------------------------------------------------
+# Iman — Daily Insight (Gemini-powered)
+# ---------------------------------------------------------------------------
+
+@app.route("/iman/daily-insight/<date_str>", methods=["GET"])
+@firebase_auth_required
+def iman_get_daily_insight(date_str):
+    """Get Gemini-powered daily insight for a specific date. Cached per date."""
+    uid = request.user["uid"]
+    try:
+        # Validate date
+        try:
+            datetime.strptime(date_str, "%Y-%m-%d")
+        except ValueError:
+            return jsonify({"error": "Invalid date format. Use YYYY-MM-DD"}), 400
+
+        # Check cache
+        insight_ref = (
+            users_db.collection("users").document(uid)
+            .collection("iman_daily_insights").document(date_str)
+        )
+        existing = insight_ref.get()
+        if existing.exists:
+            cached = existing.to_dict()
+            # Decrypt fields
+            decrypted = {}
+            for field in ["observation", "correlation", "encouragement", "strain_note"]:
+                val = cached.get(field)
+                if val:
+                    try:
+                        decrypted[field] = _decrypt_text(val, uid)
+                    except Exception:
+                        decrypted[field] = val
+                else:
+                    decrypted[field] = None
+            return jsonify({"insight": decrypted, "date": date_str, "cached": True}), 200
+
+        # Fetch today's log
+        log_ref = users_db.collection("users").document(uid).collection("iman_daily_logs").document(date_str)
+        log_doc = log_ref.get()
+        if not log_doc.exists:
+            return jsonify({"error": "No log found for this date."}), 404
+        today_log = log_doc.to_dict()
+
+        # Fetch last 7 days of logs
+        cutoff = (datetime.strptime(date_str, "%Y-%m-%d") - timedelta(days=7)).strftime("%Y-%m-%d")
+        logs_query = (
+            users_db.collection("users").document(uid)
+            .collection("iman_daily_logs")
+            .where("date", ">=", cutoff)
+            .where("date", "<=", date_str)
+            .order_by("date")
+        )
+        recent_logs = [d.to_dict() for d in logs_query.stream()]
+
+        # Config
+        config_ref = users_db.collection("users").document(uid).collection("iman_config").document("settings")
+        config_doc = config_ref.get()
+        config = config_doc.to_dict() if config_doc.exists else build_default_config()
+
+        # Trajectory
+        traj_ref = users_db.collection("users").document(uid).collection("iman_trajectory").document("current")
+        traj_doc = traj_ref.get()
+        trajectory = traj_doc.to_dict() if traj_doc.exists else {}
+
+        # Active struggles
+        struggles_ref = users_db.collection("users").document(uid).collection("iman_struggles")
+        active_struggles = []
+        for doc in struggles_ref.stream():
+            s = doc.to_dict()
+            sid = s.get("struggle_id", doc.id)
+            if s.get("resolved_at") or sid not in STRUGGLE_MAP:
+                continue
+            s_config = STRUGGLE_MAP[sid]
+            progress = compute_struggle_progress(sid, s.get("declared_at", ""), recent_logs, s_config)
+            active_struggles.append({"label": s_config["label"], "progress": progress})
+
+        # User persona
+        user_doc = users_db.collection("users").document(uid).get()
+        persona_name = "practicing_muslim"
+        if user_doc.exists:
+            persona_name = user_doc.to_dict().get("persona", "practicing_muslim")
+
+        # Build context and prompt
+        context = prepare_daily_insight_context(today_log, recent_logs, trajectory, config, active_struggles)
+        prompt = build_daily_insight_prompt(context, persona_name)
+
+        # Call Gemini
+        import google.auth
+        from google.auth.transport.requests import Request as GoogleRequest
+        credentials, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
+        auth_req = GoogleRequest()
+        credentials.refresh(auth_req)
+        gemini_token = credentials.token
+
+        vertex_endpoint = (
+            f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/"
+            f"{GCP_INFRASTRUCTURE_PROJECT}/locations/{LOCATION}/"
+            f"publishers/google/models/{GEMINI_MODEL_ID}:generateContent"
+        )
+
+        body = {
+            "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+            "generation_config": {
+                "response_mime_type": "application/json",
+                "temperature": 0.7,
+                "maxOutputTokens": 2048,
+            },
+        }
+
+        max_retries = 3
+        response = None
+        for attempt in range(max_retries):
+            retry_delay = 2 ** (attempt + 1)
+            try:
+                response = requests.post(
+                    vertex_endpoint,
+                    headers={"Authorization": f"Bearer {gemini_token}", "Content-Type": "application/json"},
+                    json=body,
+                    timeout=30,
+                )
+                response.raise_for_status()
+                break
+            except requests.Timeout:
+                if attempt == max_retries - 1:
+                    return jsonify({"error": "AI service timeout", "retry": True}), 503
+                time.sleep(retry_delay)
+            except requests.HTTPError:
+                status_code = response.status_code if response else 500
+                if status_code in (429, 503) and attempt < max_retries - 1:
+                    time.sleep(retry_delay)
+                    continue
+                return jsonify({"error": "AI service error"}), 502
+
+        raw_response = response.json()
+        generated_text = safe_get_nested(raw_response, "candidates", 0, "content", "parts", 0, "text")
+        if not generated_text:
+            return jsonify({"error": "Empty response from AI service"}), 502
+
+        insight_data = extract_json_from_response(generated_text)
+        if not insight_data:
+            return jsonify({"error": "Could not parse insight response"}), 502
+
+        # Encrypt and cache
+        encrypted = {}
+        for field in ["observation", "correlation", "encouragement", "strain_note"]:
+            val = insight_data.get(field)
+            if val and val != "null" and str(val).lower() != "none":
+                encrypted[field] = _encrypt_text(str(val), uid)
+            else:
+                encrypted[field] = None
+
+        now = datetime.now(timezone.utc).isoformat()
+        encrypted["generated_at"] = now
+        encrypted["date"] = date_str
+        insight_ref.set(encrypted)
+
+        print(f"[IMAN] Daily insight generated for {uid[:8]}... date={date_str}")
+        return jsonify({"insight": insight_data, "date": date_str, "cached": False}), 200
+
+    except Exception as e:
+        print(f"ERROR in GET /iman/daily-insight/{date_str}: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+# ---------------------------------------------------------------------------
+# Iman — Heart Note Edit / Delete / History
+# ---------------------------------------------------------------------------
+
+@app.route("/iman/heart-note/<date_str>/<int:index>", methods=["PUT"])
+@firebase_auth_required
+def iman_edit_heart_note(date_str, index):
+    """Edit a heart note (same-day only)."""
+    uid = request.user["uid"]
+    try:
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        if date_str != today:
+            return jsonify({"error": "Can only edit same-day notes"}), 400
+
+        data = request.get_json(silent=True) or {}
+        new_text = data.get("text", "")
+
+        log_ref = users_db.collection("users").document(uid).collection("iman_daily_logs").document(date_str)
+        doc = log_ref.get()
+        if not doc.exists:
+            return jsonify({"error": "No log found for this date"}), 404
+
+        log = doc.to_dict()
+        notes = log.get("heart_notes", [])
+        if index < 0 or index >= len(notes):
+            return jsonify({"error": "Invalid note index"}), 400
+
+        note_type = notes[index].get("type", "gratitude")
+        ok, err = validate_heart_note(note_type, new_text)
+        if not ok:
+            return jsonify({"error": err}), 400
+
+        now = datetime.now(timezone.utc).isoformat()
+        notes[index]["text"] = _encrypt_text(new_text.strip(), uid)
+        notes[index]["edited_at"] = now
+        log_ref.update({"heart_notes": notes, "updated_at": now})
+
+        return jsonify({"message": "Heart note updated"}), 200
+
+    except Exception as e:
+        print(f"ERROR in PUT /iman/heart-note/{date_str}/{index}: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/iman/heart-note/<date_str>/<int:index>", methods=["DELETE"])
+@firebase_auth_required
+def iman_delete_heart_note(date_str, index):
+    """Delete a heart note (same-day only)."""
+    uid = request.user["uid"]
+    try:
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        if date_str != today:
+            return jsonify({"error": "Can only delete same-day notes"}), 400
+
+        log_ref = users_db.collection("users").document(uid).collection("iman_daily_logs").document(date_str)
+        doc = log_ref.get()
+        if not doc.exists:
+            return jsonify({"error": "No log found for this date"}), 404
+
+        log = doc.to_dict()
+        notes = log.get("heart_notes", [])
+        if index < 0 or index >= len(notes):
+            return jsonify({"error": "Invalid note index"}), 400
+
+        notes.pop(index)
+        now = datetime.now(timezone.utc).isoformat()
+        log_ref.update({"heart_notes": notes, "updated_at": now})
+
+        return jsonify({"message": "Heart note deleted"}), 200
+
+    except Exception as e:
+        print(f"ERROR in DELETE /iman/heart-note/{date_str}/{index}: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/iman/heart-notes", methods=["GET"])
+@firebase_auth_required
+def iman_heart_note_history():
+    """Get heart note history with filtering and search."""
+    uid = request.user["uid"]
+    try:
+        days = int(request.args.get("days", 30))
+        note_type = request.args.get("type", "")
+        search_q = request.args.get("q", "").strip().lower()
+
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).strftime("%Y-%m-%d")
+        logs_ref = (
+            users_db.collection("users").document(uid)
+            .collection("iman_daily_logs")
+            .where("date", ">=", cutoff)
+            .order_by("date", direction=firestore.Query.DESCENDING)
+        )
+
+        all_notes = []
+        for doc in logs_ref.stream():
+            log = doc.to_dict()
+            log_date = log.get("date", "")
+            for i, note in enumerate(log.get("heart_notes", [])):
+                n_type = note.get("type", "")
+                if note_type and n_type != note_type:
+                    continue
+
+                try:
+                    decrypted_text = _decrypt_text(note.get("text", ""), uid)
+                except Exception:
+                    decrypted_text = ""
+
+                if search_q and search_q not in decrypted_text.lower():
+                    continue
+
+                all_notes.append({
+                    "date": log_date,
+                    "index": i,
+                    "type": n_type,
+                    "text": decrypted_text,
+                    "created_at": note.get("created_at", ""),
+                })
+
+        return jsonify({"notes": all_notes, "total": len(all_notes)}), 200
+
+    except Exception as e:
+        print(f"ERROR in GET /iman/heart-notes: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+# ---------------------------------------------------------------------------
+# Iman — Struggle Goals
+# ---------------------------------------------------------------------------
+
+@app.route("/iman/struggle/<struggle_id>/goals", methods=["GET"])
+@firebase_auth_required
+def iman_get_struggle_goals(struggle_id):
+    """Get active daily + weekly goals for a struggle based on current phase."""
+    uid = request.user["uid"]
+    try:
+        if struggle_id not in STRUGGLE_MAP:
+            return jsonify({"error": "Unknown struggle"}), 404
+
+        s_config = STRUGGLE_MAP[struggle_id]
+        goals_catalog = s_config.get("goals", {})
+        if not goals_catalog:
+            return jsonify({"error": "No goals defined for this struggle"}), 404
+
+        # Get struggle doc
+        struggle_ref = users_db.collection("users").document(uid).collection("iman_struggles").document(struggle_id)
+        struggle_doc = struggle_ref.get()
+        if not struggle_doc.exists:
+            return jsonify({"error": "Struggle not found"}), 404
+
+        s = struggle_doc.to_dict()
+        if s.get("resolved_at"):
+            return jsonify({"error": "Struggle is resolved"}), 400
+
+        # Compute current phase
+        declared_at = s.get("declared_at", "")
+        now = datetime.now(timezone.utc)
+        try:
+            start = datetime.fromisoformat(declared_at.replace("Z", "+00:00")).replace(tzinfo=None)
+        except (ValueError, AttributeError):
+            start = now
+        days_active = max(0, (now - start).days)
+        current_phase = min(days_active // 7, 3)
+
+        phase_goals = goals_catalog.get(current_phase, goals_catalog.get(str(current_phase), {}))
+        if not phase_goals:
+            return jsonify({"daily": [], "weekly": None}), 200
+
+        # Completion tracking
+        today = now.strftime("%Y-%m-%d")
+        tracking_ref = users_db.collection("users").document(uid).collection("iman_struggle_goals").document(struggle_id)
+        tracking_doc = tracking_ref.get()
+        completions = tracking_doc.to_dict().get("completions", {}) if tracking_doc.exists else {}
+
+        # Build daily goals
+        daily_goals = []
+        for goal in phase_goals.get("daily", []):
+            goal_dates = completions.get(goal["id"], [])
+            daily_goals.append({
+                **goal,
+                "completed_today": today in goal_dates,
+            })
+
+        # Build weekly goal
+        weekly_goal = None
+        wg = phase_goals.get("weekly")
+        if wg:
+            wg_dates = completions.get(wg["id"], [])
+            # Check if completed in last 7 days
+            week_ago = (now - timedelta(days=7)).strftime("%Y-%m-%d")
+            completed_this_week = any(d >= week_ago for d in wg_dates)
+            # Days until reset
+            if wg_dates:
+                last_completion = max(wg_dates)
+                try:
+                    lc = datetime.strptime(last_completion, "%Y-%m-%d")
+                    days_since = (now - lc).days
+                    days_until_reset = max(0, 7 - days_since)
+                except ValueError:
+                    days_until_reset = 0
+            else:
+                days_until_reset = 0
+
+            weekly_goal = {
+                **wg,
+                "completed_this_week": completed_this_week,
+                "days_until_reset": days_until_reset,
+            }
+
+        return jsonify({"daily": daily_goals, "weekly": weekly_goal, "phase": current_phase}), 200
+
+    except Exception as e:
+        print(f"ERROR in GET /iman/struggle/{struggle_id}/goals: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/iman/struggle/<struggle_id>/goal/complete", methods=["POST"])
+@firebase_auth_required
+def iman_complete_struggle_goal(struggle_id):
+    """Mark a struggle goal as completed."""
+    uid = request.user["uid"]
+    try:
+        data = request.get_json(silent=True) or {}
+        goal_id = data.get("goal_id", "")
+        if not goal_id:
+            return jsonify({"error": "goal_id is required"}), 400
+
+        if struggle_id not in STRUGGLE_MAP:
+            return jsonify({"error": "Unknown struggle"}), 404
+
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+        tracking_ref = users_db.collection("users").document(uid).collection("iman_struggle_goals").document(struggle_id)
+        tracking_doc = tracking_ref.get()
+        completions = tracking_doc.to_dict().get("completions", {}) if tracking_doc.exists else {}
+
+        goal_dates = completions.get(goal_id, [])
+
+        # Check if it's a weekly goal (id ends with _w*)
+        is_weekly = "_w" in goal_id and goal_id.split("_w")[-1].isdigit()
+        if is_weekly:
+            week_ago = (datetime.now(timezone.utc) - timedelta(days=7)).strftime("%Y-%m-%d")
+            if any(d >= week_ago for d in goal_dates):
+                return jsonify({"error": "Weekly goal already completed this week"}), 400
+
+        if today not in goal_dates:
+            goal_dates.append(today)
+
+        completions[goal_id] = goal_dates
+        tracking_ref.set({"completions": completions}, merge=True)
+
+        return jsonify({"message": "Goal completed", "goal_id": goal_id, "date": today}), 200
+
+    except Exception as e:
+        print(f"ERROR in POST /iman/struggle/{struggle_id}/goal/complete: {e}")
+        return jsonify({"error": str(e)}), 500
 
 
 # --- Main ---
