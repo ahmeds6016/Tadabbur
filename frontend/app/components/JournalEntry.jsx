@@ -15,22 +15,35 @@ const HEART_STATES = [
 ];
 
 function BinaryInput({ value, onChange, label }) {
+  const isOn = !!value;
   return (
     <button
-      className={`binary-toggle ${value ? 'on' : 'off'}`}
       onClick={() => onChange(value ? 0 : 1)}
-      aria-label={`${label}: ${value ? 'Done' : 'Not done'}`}
+      aria-label={`${label}: ${isOn ? 'Done' : 'Not done'}`}
       style={{
-        width: 36, height: 36, minWidth: 36, borderRadius: '50%',
-        border: `2px solid ${value ? 'var(--primary-teal, #0d9488)' : 'var(--border-light, #e5e7eb)'}`,
-        background: value ? 'var(--primary-teal, #0d9488)' : 'white',
-        color: value ? 'white' : '#9ca3af',
-        padding: 0, fontSize: '1.1rem', cursor: 'pointer',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        boxSizing: 'border-box', transition: 'all 0.15s ease',
+        width: 40,
+        height: 40,
+        minWidth: 40,
+        borderRadius: '50%',
+        border: isOn ? '2px solid #0d9488' : '2px solid #d1d5db',
+        background: isOn ? '#0d9488' : '#f8fafc',
+        color: isOn ? 'white' : '#cbd5e1',
+        padding: 0,
+        fontSize: '1.1rem',
+        fontWeight: 700,
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        boxSizing: 'border-box',
+        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+        transform: isOn ? 'scale(1.05)' : 'none',
+        boxShadow: isOn
+          ? '0 2px 8px rgba(13, 148, 136, 0.3)'
+          : 'inset 0 1px 2px rgba(0, 0, 0, 0.06)',
       }}
     >
-      {value ? '\u2713' : '\u25CB'}
+      {isOn ? '\u2713' : ''}
     </button>
   );
 }
@@ -38,28 +51,45 @@ function BinaryInput({ value, onChange, label }) {
 function Scale5Input({ value, onChange, scaleLabels }) {
   const filled = value || 0;
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-      <div style={{ display: 'flex', gap: 5 }}>
-        {[1, 2, 3, 4, 5].map((n) => (
-          <button
-            key={n}
-            onClick={() => onChange(value === n ? 0 : n)}
-            aria-label={scaleLabels?.[String(n)] || `${n} of 5`}
-            style={{
-              width: 22, height: 22, minWidth: 22, borderRadius: '50%',
-              border: `2px solid ${filled >= n ? 'var(--primary-teal, #0d9488)' : 'var(--border-light, #e5e7eb)'}`,
-              background: filled >= n ? 'var(--primary-teal, #0d9488)' : 'white',
-              cursor: 'pointer', padding: 0, boxSizing: 'border-box',
-              transition: 'all 0.12s ease',
-              transform: value === n ? 'scale(1.15)' : 'none',
-              boxShadow: value === n ? '0 0 0 2px rgba(13,148,136,0.3)' : 'none',
-            }}
-          />
-        ))}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%' }}>
+      <div style={{ display: 'flex', gap: 10 }}>
+        {[1, 2, 3, 4, 5].map((n) => {
+          const isFilled = filled >= n;
+          const isCurrent = value === n;
+          return (
+            <button
+              key={n}
+              onClick={() => onChange(value === n ? 0 : n)}
+              aria-label={scaleLabels?.[String(n)] || `${n} of 5`}
+              style={{
+                width: 32,
+                height: 32,
+                minWidth: 32,
+                borderRadius: '50%',
+                border: 'none',
+                background: isFilled ? '#0d9488' : '#e8ecf1',
+                cursor: 'pointer',
+                padding: 0,
+                boxSizing: 'border-box',
+                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                transform: isCurrent ? 'scale(1.12)' : 'none',
+                boxShadow: isCurrent
+                  ? '0 0 0 3px rgba(13, 148, 136, 0.25), 0 2px 8px rgba(13, 148, 136, 0.2)'
+                  : isFilled
+                    ? '0 1px 3px rgba(13, 148, 136, 0.15)'
+                    : 'inset 0 1px 2px rgba(0, 0, 0, 0.06)',
+              }}
+            />
+          );
+        })}
       </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-        <span style={{ fontSize: '0.6rem', color: '#9ca3af' }}>{scaleLabels?.['1'] || 'Low'}</span>
-        <span style={{ fontSize: '0.6rem', color: '#9ca3af' }}>{scaleLabels?.['5'] || 'High'}</span>
+      <div style={{ display: 'flex', justifyContent: 'space-between', maxWidth: 200 }}>
+        <span style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 500 }}>
+          {scaleLabels?.['1'] || 'Low'}
+        </span>
+        <span style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 500 }}>
+          {scaleLabels?.['5'] || 'High'}
+        </span>
       </div>
     </div>
   );
@@ -100,22 +130,44 @@ function HoursInput({ value, onChange }) {
 }
 
 const stepperBtnStyle = {
-  width: 30, height: 30, minWidth: 30, borderRadius: 8,
-  border: '1px solid var(--border-light, #e5e7eb)', background: 'white',
-  fontSize: '1rem', cursor: 'pointer', padding: 0,
-  display: 'flex', alignItems: 'center', justifyContent: 'center',
-  color: 'var(--deep-blue, #1e293b)', boxSizing: 'border-box',
+  width: 34,
+  height: 34,
+  minWidth: 34,
+  borderRadius: '50%',
+  border: '1.5px solid #e2e8f0',
+  background: '#f8fafc',
+  fontSize: '1.1rem',
+  fontWeight: 500,
+  cursor: 'pointer',
+  padding: 0,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  color: '#475569',
+  boxSizing: 'border-box',
+  transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
 };
 
 function CountInput({ value, onChange }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
       <button
-        style={{ ...stepperBtnStyle, opacity: !value ? 0.3 : 1 }}
+        style={{
+          ...stepperBtnStyle,
+          opacity: !value ? 0.3 : 1,
+          cursor: !value ? 'default' : 'pointer',
+        }}
         onClick={() => onChange(Math.max(0, (value || 0) - 1))}
         disabled={!value}
       >{'\u2212'}</button>
-      <span style={{ fontSize: '0.95rem', fontWeight: 600, minWidth: 20, textAlign: 'center', color: 'var(--deep-blue, #1e293b)' }}>
+      <span style={{
+        fontSize: '1.1rem',
+        fontWeight: 700,
+        minWidth: 24,
+        textAlign: 'center',
+        color: '#1e293b',
+        fontVariantNumeric: 'tabular-nums',
+      }}>
         {value || 0}
       </span>
       <button
@@ -127,6 +179,8 @@ function CountInput({ value, onChange }) {
 }
 
 function BehaviorRow({ behavior, value, onChange }) {
+  const isScale = behavior.input_type === 'scale_5';
+
   const renderInput = () => {
     switch (behavior.input_type) {
       case 'binary':
@@ -146,9 +200,27 @@ function BehaviorRow({ behavior, value, onChange }) {
   };
 
   return (
-    <div className="behavior-row">
-      <span className="behavior-label">{behavior.label}</span>
-      <div className="behavior-input">{renderInput()}</div>
+    <div style={{
+      display: 'flex',
+      flexDirection: isScale ? 'column' : 'row',
+      justifyContent: isScale ? 'flex-start' : 'space-between',
+      alignItems: isScale ? 'stretch' : 'center',
+      gap: isScale ? 6 : 0,
+      padding: '6px 0',
+    }}>
+      <span style={{
+        fontSize: '0.9rem',
+        color: '#1e293b',
+        flex: isScale ? 'none' : 1,
+      }}>
+        {behavior.label}
+      </span>
+      <div style={{
+        flexShrink: 0,
+        marginLeft: isScale ? 0 : 12,
+      }}>
+        {renderInput()}
+      </div>
     </div>
   );
 }
@@ -490,114 +562,102 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate }) {
           color: #ef4444;
         }
         .welcome-back-banner {
-          padding: 12px 16px;
+          padding: 14px 18px;
           background: linear-gradient(135deg, #ecfdf5, #f0fdf4);
-          border-radius: 10px;
+          border-radius: 14px;
           border: 1px solid #a7f3d0;
           color: #065f46;
           font-size: 0.9rem;
           text-align: center;
           font-weight: 500;
+          box-shadow: 0 1px 4px rgba(5, 150, 105, 0.08);
         }
         .riya-reminder {
-          padding: 12px 16px;
+          padding: 14px 18px;
           background: linear-gradient(135deg, #faf6f0, #fef3c7);
-          border-radius: 10px;
+          border-radius: 14px;
           border: 1px solid #fde68a;
           color: #92400e;
           font-size: 0.85rem;
           text-align: center;
           font-style: italic;
           cursor: pointer;
+          box-shadow: 0 1px 4px rgba(146, 64, 14, 0.06);
         }
 
-        /* Practice group sub-headings */
-        .behavior-list :global(.practice-group) {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-        .behavior-list :global(.practice-group + .practice-group) {
-          margin-top: 8px;
-          padding-top: 8px;
-          border-top: 1px solid rgba(0, 0, 0, 0.04);
-        }
-        .behavior-list :global(.pg-label) {
-          font-size: 0.65rem;
-          font-weight: 600;
-          color: #9ca3af;
-          text-transform: uppercase;
-          letter-spacing: 0.4px;
-          margin-bottom: -4px;
-        }
-
-        /* Behavior rows */
+        /* Behavior list and practice groups */
         .behavior-list {
           display: flex;
           flex-direction: column;
-          gap: 12px;
+          gap: 4px;
         }
-        .behavior-row {
+        .behavior-list :global(.practice-group) {
           display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 4px 0;
+          flex-direction: column;
+          gap: 4px;
         }
-        .behavior-label {
-          font-size: 0.9rem;
-          color: var(--deep-blue, #1e293b);
-          flex: 1;
+        .behavior-list :global(.practice-group + .practice-group) {
+          margin-top: 12px;
+          padding-top: 12px;
+          border-top: 1px solid #f1f5f9;
         }
-        .behavior-input {
-          flex-shrink: 0;
-          margin-left: 12px;
+        .behavior-list :global(.pg-label) {
+          font-size: 0.7rem;
+          font-weight: 600;
+          color: #94a3b8;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          padding-bottom: 2px;
         }
 
         /* Minutes / Hours slider */
-        .behavior-row :global(.minutes-input),
-        .behavior-row :global(.hours-input) {
+        .behavior-list :global(.minutes-input),
+        .behavior-list :global(.hours-input) {
           display: flex;
           align-items: center;
           gap: 8px;
-          width: 140px;
+          width: 150px;
         }
-        .behavior-row :global(.range-slider) {
+        .behavior-list :global(.range-slider) {
           flex: 1;
           height: 4px;
           -webkit-appearance: none;
           appearance: none;
-          background: var(--border-light, #e5e7eb);
+          background: #e2e8f0;
           border-radius: 2px;
           outline: none;
         }
-        .behavior-row :global(.range-slider::-webkit-slider-thumb) {
+        .behavior-list :global(.range-slider::-webkit-slider-thumb) {
           -webkit-appearance: none;
-          width: 18px;
-          height: 18px;
+          width: 20px;
+          height: 20px;
           border-radius: 50%;
-          background: var(--primary-teal, #0d9488);
+          background: #0d9488;
           cursor: pointer;
+          box-shadow: 0 1px 4px rgba(13, 148, 136, 0.3);
         }
-        .behavior-row :global(.minutes-label),
-        .behavior-row :global(.hours-label) {
+        .behavior-list :global(.minutes-label),
+        .behavior-list :global(.hours-label) {
           font-size: 0.8rem;
-          color: #6b7280;
+          color: #64748b;
+          font-weight: 500;
           width: 32px;
           text-align: right;
+          font-variant-numeric: tabular-nums;
         }
 
         /* Heart state */
         .heart-state-section {
-          padding: 16px;
-          background: var(--cream, #faf6f0);
-          border-radius: 12px;
-          border: 1px solid var(--border-light, #e5e7eb);
+          padding: 20px;
+          background: #fafaf8;
+          border-radius: 14px;
+          border: 1px solid #e8ecf1;
         }
         .section-title {
-          margin: 0 0 10px 0;
-          font-size: 0.95rem;
+          margin: 0 0 14px 0;
+          font-size: 1rem;
           font-weight: 600;
-          color: var(--deep-blue, #1e293b);
+          color: #1e293b;
         }
         .heart-state-pills {
           display: flex;
@@ -605,38 +665,43 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate }) {
           gap: 8px;
         }
         .heart-pill {
-          padding: 6px 14px;
-          border-radius: 20px;
-          border: 1px solid var(--border-light, #e5e7eb);
-          background: white;
+          padding: 8px 16px;
+          border-radius: 24px;
+          border: 1.5px solid #e2e8f0;
+          background: #f8fafc;
           font-size: 0.8rem;
           cursor: pointer;
-          transition: all 0.15s ease;
-          color: #374151;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          color: #475569;
           display: flex;
           flex-direction: column;
           align-items: center;
           gap: 1px;
         }
         .heart-pill:hover {
-          border-color: #9ca3af;
+          border-color: #94a3b8;
+          background: white;
         }
         .heart-pill.active {
           color: white;
+          border-color: transparent;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+          transform: scale(1.03);
         }
         .hp-label {
-          font-weight: 500;
+          font-weight: 600;
         }
         .hp-arabic {
           font-size: 0.6rem;
           opacity: 0.7;
         }
         .heart-response-card {
-          margin-top: 12px;
-          padding: 14px;
+          margin-top: 14px;
+          padding: 16px;
           background: white;
-          border-radius: 10px;
+          border-radius: 12px;
           border-left: 3px solid #0d9488;
+          box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
         }
         .hr-verse {
           font-size: 0.88rem;
@@ -710,25 +775,33 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate }) {
         }
         .save-btn {
           width: 100%;
-          padding: 14px;
-          border-radius: 12px;
+          padding: 16px;
+          border-radius: 14px;
           border: none;
-          background: var(--primary-teal, #0d9488);
+          background: #0d9488;
           color: white;
           font-size: 1rem;
           font-weight: 600;
           cursor: pointer;
-          transition: all 0.15s ease;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: 0 2px 8px rgba(13, 148, 136, 0.25);
         }
         .save-btn:hover:not(:disabled) {
-          opacity: 0.9;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(13, 148, 136, 0.3);
+        }
+        .save-btn:active:not(:disabled) {
+          transform: translateY(0);
+          box-shadow: 0 1px 4px rgba(13, 148, 136, 0.2);
         }
         .save-btn:disabled {
           opacity: 0.5;
           cursor: not-allowed;
+          box-shadow: none;
         }
         .save-btn.saved {
           background: #059669;
+          box-shadow: 0 2px 8px rgba(5, 150, 105, 0.25);
         }
       `}</style>
     </div>

@@ -58,16 +58,24 @@ export default function CollapsibleSection({
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            marginBottom: '16px'
+            marginBottom: '18px',
+            paddingBottom: '12px',
+            borderBottom: '1px solid #e8ecf1',
           }}>
-            <h2 style={{ margin: 0 }}>
+            <h2 style={{
+              margin: 0,
+              fontSize: '1.1rem',
+              fontWeight: 700,
+              color: '#1e293b',
+              letterSpacing: '-0.01em',
+            }}>
               {title}
               {count !== null && (
                 <span style={{
                   fontSize: '0.8em',
-                  color: '#718096',
+                  color: '#94a3b8',
                   marginLeft: '8px',
-                  fontWeight: 'normal'
+                  fontWeight: 500,
                 }}>
                   ({count})
                 </span>
@@ -89,51 +97,52 @@ export default function CollapsibleSection({
         aria-expanded={isExpanded}
         style={{
           width: '100%',
-          background: isExpanded ? 'var(--cream, #faf6f0)' : 'white',
+          background: isExpanded ? '#fafaf8' : 'white',
           border: 'none',
-          padding: '12px 16px',
+          padding: '14px 18px',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           cursor: 'pointer',
-          borderBottom: '1px solid var(--border-light, #e5e7eb)',
-          transition: 'background 0.2s ease'
+          borderBottom: '1px solid #e8ecf1',
+          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
         }}
       >
         <div style={{
           display: 'flex',
           alignItems: 'center',
           gap: '10px',
-          flex: 1
+          flex: 1,
         }}>
           <span
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
-              width: '18px',
-              height: '18px',
-              transition: 'transform 0.2s ease',
+              width: '20px',
+              height: '20px',
+              transition: 'transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
               transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
-              fontSize: '12px',
-              color: 'var(--primary-teal, #0d9488)'
+              fontSize: '11px',
+              color: '#0d9488',
             }}
           >
             ▶
           </span>
           <h2 style={{
             margin: 0,
-            fontSize: '1rem',
-            fontWeight: '600',
-            color: 'var(--deep-blue, #1e293b)'
+            fontSize: '1.05rem',
+            fontWeight: 700,
+            color: '#1e293b',
+            letterSpacing: '-0.01em',
           }}>
             {title}
             {count !== null && (
               <span style={{
                 fontSize: '0.8rem',
-                color: '#6b7280',
+                color: '#94a3b8',
                 marginLeft: '8px',
-                fontWeight: 'normal'
+                fontWeight: 500,
               }}>
                 ({count})
               </span>
@@ -156,11 +165,11 @@ export default function CollapsibleSection({
         style={{
           height: isExpanded ? 'auto' : '0',
           overflow: 'hidden',
-          transition: 'height 0.2s ease',
-          visibility: isExpanded ? 'visible' : 'hidden'
+          transition: 'height 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+          visibility: isExpanded ? 'visible' : 'hidden',
         }}
       >
-        <div style={{ padding: '12px 16px' }}>
+        <div style={{ padding: '14px 18px 18px' }}>
           {children}
         </div>
       </div>
