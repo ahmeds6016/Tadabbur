@@ -24,6 +24,7 @@ import DesktopNav from './components/DesktopNav';
 import Tooltip from './components/Tooltip';
 import HelpMenu, { FloatingHelpButton } from './components/HelpMenu';
 import FeatureIntroModal from './components/FeatureIntroModal';
+import JournalAnnouncementModal from './components/JournalAnnouncementModal';
 import FloatingAnnotateButton from './components/FloatingAnnotateButton';
 import ConfirmDialog from './components/ConfirmDialog';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -2203,6 +2204,11 @@ function MainApp({ user, userProfile, onResetProfile }) {
           }}
           userName={user.displayName || null}
         />
+
+        {/* Journal Announcement (one-time for existing users who already completed onboarding) */}
+        {onboardingLoaded && onboardingState.hasSeenFeatureIntro && !showFeatureIntro && (
+          <JournalAnnouncementModal user={user} />
+        )}
 
         {/* Help Menu */}
         <HelpMenu

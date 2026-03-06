@@ -23,6 +23,11 @@ const FEATURE_STEPS = [
     title: 'Your Learning Journey',
     description: 'Save answers, write reflections, follow reading plans, track your progress across the Quran, and earn badges as you grow. Your reflections are encrypted and private — only you can see them.',
     iconLabel: 'R',
+  },
+  {
+    title: 'Your Iman Journal',
+    description: 'A private, intelligent journal that helps you reflect on your spiritual life. Track daily behaviors, write heart notes, set struggle goals, and receive personalized insights that learn your patterns over time — a mirror for your heart, not a scorecard.',
+    iconLabel: 'J',
   }
 ];
 
