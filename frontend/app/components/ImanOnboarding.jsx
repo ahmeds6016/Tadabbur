@@ -39,7 +39,6 @@ export default function ImanOnboarding({ user, onComplete }) {
   }, [user]);
 
   const handleSkip = useCallback(async () => {
-    // Silent default setup (same as current behavior)
     setSubmitting(true);
     try {
       const token = await user.getIdToken();
@@ -122,14 +121,14 @@ export default function ImanOnboarding({ user, onComplete }) {
   }
 
   const canProceedStep1 = selectedBehaviors.length >= 3;
-  const totalSteps = 4;
+  const totalSteps = 5;
 
   return (
     <div className="iman-onboarding">
       <div className="ob-container">
         {/* Progress dots */}
         <div className="ob-progress">
-          {[0, 1, 2, 3].map((i) => (
+          {[0, 1, 2, 3, 4].map((i) => (
             <div
               key={i}
               className={`ob-dot ${i === step ? 'active' : ''} ${i < step ? 'done' : ''}`}
@@ -148,15 +147,15 @@ export default function ImanOnboarding({ user, onComplete }) {
             <div className="ob-medallion">
               <span className="ob-medallion-icon">&#xFDFD;</span>
             </div>
-            <h2 className="ob-title">A Mirror, Not a Measure</h2>
+            <h2 className="ob-title">A Companion for Your Heart</h2>
             <p className="ob-body">
-              Your spiritual journey is between you and Allah. This journal is
-              simply a mirror — helping you see your patterns, celebrate your
-              growth, and gently notice where you might turn your heart.
+              This journal is a gentle, intelligent companion for your spiritual
+              life. It learns your rhythms, notices your patterns, and reflects
+              them back to you with mercy — never judgment.
             </p>
             <p className="ob-body">
               There are no scores to chase, no grades to earn. Just honest
-              reflection.
+              reflection that grows deeper with every day you show up.
             </p>
             <p className="ob-verse">
               "O you who believe, fear Allah, and let every soul look to what it
@@ -177,6 +176,13 @@ export default function ImanOnboarding({ user, onComplete }) {
               Choose the practices you want to track daily. Start with 6-10 for
               the clearest picture. You can always change these later.
             </p>
+            <div className="ob-hint">
+              <span className="ob-hint-icon">&#x26A1;</span>
+              <span className="ob-hint-text">
+                Short on time? You can use Quick Log mode to record just
+                the essentials in seconds.
+              </span>
+            </div>
             <BehaviorSelector
               categories={catalog.categories}
               behaviors={catalog.behaviors}
@@ -205,9 +211,10 @@ export default function ImanOnboarding({ user, onComplete }) {
           <div className="ob-step">
             <h2 className="ob-title">Is there something you are working on?</h2>
             <p className="ob-subtitle">
-              Declaring a struggle is an act of courage, not weakness. Scholarly
-              guidance from the Ihya, Madarij, and Riyad will be matched to help
-              you. This step is optional.
+              Declaring a struggle is an act of courage, not weakness. Each
+              struggle comes with curated daily goals, weekly milestones, and
+              scholarly guidance from the Ihya, Madarij, and Riyad — matched
+              to your current phase.
             </p>
             <div className="ob-struggle-grid">
               {catalog.struggles.map((s) => {
@@ -246,15 +253,94 @@ export default function ImanOnboarding({ user, onComplete }) {
           </div>
         )}
 
-        {/* Step 3: Calibration */}
+        {/* Step 3: What to Expect */}
         {step === 3 && (
+          <div className="ob-step">
+            <h2 className="ob-title">What to Expect</h2>
+            <p className="ob-body" style={{ marginBottom: 16 }}>
+              Your journal becomes more perceptive over time. Here is how
+              it unfolds:
+            </p>
+
+            <div className="ob-features">
+              <div className="ob-feature-row">
+                <div className="ob-feature-dot" style={{ background: '#0d9488' }} />
+                <div className="ob-feature-content">
+                  <span className="ob-feature-title">Daily Reflections</span>
+                  <span className="ob-feature-desc">
+                    After each journal entry, receive a personalized observation
+                    about your day — rooted in what you actually logged, never generic.
+                  </span>
+                </div>
+              </div>
+
+              <div className="ob-feature-row">
+                <div className="ob-feature-dot" style={{ background: '#2563eb' }} />
+                <div className="ob-feature-content">
+                  <span className="ob-feature-title">Patterns and Correlations</span>
+                  <span className="ob-feature-desc">
+                    The journal notices connections between your practices. For
+                    example, how your Quran reading might lift your overall state.
+                  </span>
+                </div>
+              </div>
+
+              <div className="ob-feature-row">
+                <div className="ob-feature-dot" style={{ background: '#d97706' }} />
+                <div className="ob-feature-content">
+                  <span className="ob-feature-title">Gentle Strain Awareness</span>
+                  <span className="ob-feature-desc">
+                    If you are pushing hard, the journal will gently remind you
+                    of balance — your body has a right over you.
+                  </span>
+                </div>
+              </div>
+
+              <div className="ob-feature-row">
+                <div className="ob-feature-dot" style={{ background: '#8b5cf6' }} />
+                <div className="ob-feature-content">
+                  <span className="ob-feature-title">Heart Notes</span>
+                  <span className="ob-feature-desc">
+                    Capture a dua, a moment of gratitude, a reflection — in your
+                    own words. These are private, encrypted, and yours alone.
+                  </span>
+                </div>
+              </div>
+
+              {selectedStruggles.length > 0 && (
+                <div className="ob-feature-row">
+                  <div className="ob-feature-dot" style={{ background: '#059669' }} />
+                  <div className="ob-feature-content">
+                    <span className="ob-feature-title">Struggle Goals and Milestones</span>
+                    <span className="ob-feature-desc">
+                      Your declared struggles come with curated daily goals
+                      and phase-based milestones that evolve as you progress.
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="ob-nav">
+              <button className="ob-btn secondary" onClick={() => setStep(2)}>
+                Back
+              </button>
+              <button className="ob-btn primary" onClick={() => setStep(4)}>
+                Next
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 4: Calibration + Start */}
+        {step === 4 && (
           <div className="ob-step">
             <h2 className="ob-title">Your First 14 Days</h2>
             <p className="ob-body">
-              For the first 14 days, we are learning YOUR normal. Log honestly —
-              there is no right or wrong. After 14 days, the journal will start
-              showing you patterns and gentle observations based on your own
-              baseline, not anyone else's.
+              For the first two weeks, the journal is learning YOUR rhythms.
+              Log honestly — there is no right or wrong. After this calibration
+              period, your reflections, patterns, and insights will become
+              deeply personal.
             </p>
 
             <div className="ob-cal-bar">
@@ -265,13 +351,18 @@ export default function ImanOnboarding({ user, onComplete }) {
             <div className="ob-tips">
               <p className="ob-tip"><span className="ob-bullet">&#x2022;</span> Log daily, even if briefly — consistency matters more than perfection</p>
               <p className="ob-tip"><span className="ob-bullet">&#x2022;</span> Missed a day? That is okay. The journal does not judge gaps</p>
-              <p className="ob-tip"><span className="ob-bullet">&#x2022;</span> Your data is private and encrypted</p>
+              <p className="ob-tip"><span className="ob-bullet">&#x2022;</span> Use Quick Log on busy days — just the fard essentials</p>
+              <p className="ob-tip"><span className="ob-bullet">&#x2022;</span> Your data is private and encrypted — only you can see it</p>
             </div>
+
+            <p className="ob-closing">
+              This is a mirror, not a measure. Your journey is known only to Allah.
+            </p>
 
             {error && <p className="ob-error">{error}</p>}
 
             <div className="ob-nav">
-              <button className="ob-btn secondary" onClick={() => setStep(2)}>
+              <button className="ob-btn secondary" onClick={() => setStep(3)}>
                 Back
               </button>
               <button
@@ -393,6 +484,77 @@ export default function ImanOnboarding({ user, onComplete }) {
           font-style: normal;
           margin-top: 6px;
         }
+        .ob-closing {
+          font-size: 0.82rem;
+          font-style: italic;
+          color: #6b7280;
+          margin: 16px 0 4px 0;
+          line-height: 1.5;
+          max-width: 380px;
+        }
+
+        /* Hint box */
+        .ob-hint {
+          display: flex;
+          align-items: flex-start;
+          gap: 8px;
+          padding: 10px 14px;
+          background: #f0fdf4;
+          border-radius: 10px;
+          border: 1px solid #a7f3d0;
+          margin-bottom: 16px;
+          max-width: 400px;
+          text-align: left;
+        }
+        .ob-hint-icon {
+          font-size: 0.9rem;
+          flex-shrink: 0;
+          margin-top: 1px;
+        }
+        .ob-hint-text {
+          font-size: 0.78rem;
+          color: #065f46;
+          line-height: 1.4;
+        }
+
+        /* Features list */
+        .ob-features {
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+          width: 100%;
+          max-width: 420px;
+          text-align: left;
+          margin-bottom: 8px;
+        }
+        .ob-feature-row {
+          display: flex;
+          gap: 12px;
+          align-items: flex-start;
+        }
+        .ob-feature-dot {
+          width: 8px;
+          height: 8px;
+          min-width: 8px;
+          border-radius: 50%;
+          margin-top: 6px;
+        }
+        .ob-feature-content {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+        .ob-feature-title {
+          font-size: 0.85rem;
+          font-weight: 600;
+          color: #1e293b;
+        }
+        .ob-feature-desc {
+          font-size: 0.78rem;
+          color: #6b7280;
+          line-height: 1.5;
+        }
+
         .ob-nav {
           display: flex;
           gap: 12px;
