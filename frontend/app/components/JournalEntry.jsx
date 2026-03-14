@@ -201,7 +201,7 @@ function CountInput({ value, onChange }) {
   );
 }
 
-function BehaviorRow({ behavior, value, onChange }) {
+function BehaviorRow({ behavior, value, onChange, struggleInfo }) {
   const isScale = behavior.input_type === 'scale_5';
 
   const renderInput = () => {
@@ -235,8 +235,24 @@ function BehaviorRow({ behavior, value, onChange }) {
         fontSize: '0.9rem',
         color: 'var(--color-text)',
         flex: isScale ? 'none' : 1,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
       }}>
         {behavior.label}
+        {struggleInfo && (
+          <span style={{
+            fontSize: '0.6rem',
+            fontWeight: 600,
+            padding: '1px 6px',
+            borderRadius: 8,
+            background: `${struggleInfo.color}18`,
+            color: struggleInfo.color,
+            whiteSpace: 'nowrap',
+          }}>
+            {struggleInfo.label}
+          </span>
+        )}
       </span>
       <div style={{
         flexShrink: 0,
@@ -262,6 +278,8 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate, onSaved }
   const [error, setError] = useState(null);
   const [welcomeBack, setWelcomeBack] = useState(null);
   const [riyaReminder, setRiyaReminder] = useState(false);
+  const [activeStruggles, setActiveStruggles] = useState([]);
+  const [struggleReflections, setStruggleReflections] = useState({});
   const [quickLog, setQuickLog] = useState(() => {
     if (typeof window !== 'undefined') {
       try { return localStorage.getItem('iman_quick_log') === 'true'; } catch { return false; }
@@ -303,6 +321,7 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate, onSaved }
             setConfig(retryData.config);
             setCategories(retryData.categories || []);
             setAllBehaviors(retryData.all_behaviors || []);
+            setActiveStruggles(retryData.active_struggles || []);
           }
         } else if (configRes.ok) {
           const configData = await configRes.json();
@@ -310,6 +329,7 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate, onSaved }
             setConfig(configData.config);
             setCategories(configData.categories || []);
             setAllBehaviors(configData.all_behaviors || []);
+            setActiveStruggles(configData.active_struggles || []);
           }
         } else {
           throw new Error(`Config error: ${configRes.status}`);
@@ -326,6 +346,14 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate, onSaved }
             }
             setValues(existingValues);
             setHeartState(logData.log.heart_state || null);
+            // Pre-fill struggle reflections
+            if (logData.log.struggle_reflections) {
+              const existingReflections = {};
+              for (const [sid, ref] of Object.entries(logData.log.struggle_reflections)) {
+                if (ref?.text) existingReflections[sid] = ref.text;
+              }
+              setStruggleReflections(existingReflections);
+            }
           }
         }
       } catch (err) {
@@ -361,6 +389,8 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate, onSaved }
           date,
           behaviors: values,
           heart_state: heartState,
+          struggle_reflections: Object.keys(struggleReflections).length > 0
+            ? struggleReflections : undefined,
         }),
       });
 
@@ -456,6 +486,16 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate, onSaved }
       .filter((b) => b.active !== false)
       .map((b) => b.id)
   );
+
+  // Build a map of behavior_id → struggle info for visual indicators
+  const struggleBehaviorMap = {};
+  for (const s of activeStruggles) {
+    for (const bid of (s.linked_behaviors || [])) {
+      if (!struggleBehaviorMap[bid]) {
+        struggleBehaviorMap[bid] = { label: s.label, color: s.color };
+      }
+    }
+  }
 
   // Completion indicator
   const totalTracked = trackedIds.size;
@@ -563,6 +603,7 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate, onSaved }
                       behavior={b}
                       value={values[b.id]}
                       onChange={(v) => handleValueChange(b.id, v)}
+                      struggleInfo={struggleBehaviorMap[b.id]}
                     />
                   ))}
                 </div>
@@ -623,6 +664,33 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate, onSaved }
 
       {/* Heart Note Composer */}
       <HeartNoteComposer onSave={handleHeartNote} disabled={saving} />
+
+      {/* Struggle reflections */}
+      {activeStruggles.length > 0 && (
+        <div className="struggle-reflections-section">
+          <h3 className="section-title">Active Struggles</h3>
+          <p className="sr-subtitle">How did today go?</p>
+          {activeStruggles.map((s) => (
+            <div key={s.struggle_id} className="sr-card" style={{ borderLeftColor: s.color }}>
+              <span className="sr-label" style={{ color: s.color }}>{s.label}</span>
+              <textarea
+                className="sr-input"
+                placeholder={`Any slips, wins, or reflections on ${s.label.toLowerCase()} today?`}
+                value={struggleReflections[s.struggle_id] || ''}
+                onChange={(e) => {
+                  setStruggleReflections(prev => ({
+                    ...prev,
+                    [s.struggle_id]: e.target.value,
+                  }));
+                  setSaved(false);
+                }}
+                maxLength={500}
+                rows={2}
+              />
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Save button */}
       <div className="save-area">
@@ -870,6 +938,49 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate, onSaved }
         }
         @keyframes hr-spin {
           to { transform: rotate(360deg); }
+        }
+
+        /* Struggle reflections */
+        .struggle-reflections-section {
+          padding-top: 4px;
+        }
+        .sr-subtitle {
+          font-size: 0.78rem;
+          color: var(--color-text-secondary);
+          margin: 0 0 10px 0;
+        }
+        .sr-card {
+          padding: 10px 12px;
+          background: var(--color-surface);
+          border: 1px solid var(--color-border);
+          border-left: 3px solid;
+          border-radius: 10px;
+          margin-bottom: 8px;
+        }
+        .sr-label {
+          font-size: 0.8rem;
+          font-weight: 600;
+          display: block;
+          margin-bottom: 6px;
+        }
+        .sr-input {
+          width: 100%;
+          border: 1px solid var(--color-border);
+          border-radius: 8px;
+          padding: 8px 10px;
+          font-size: 0.82rem;
+          font-family: inherit;
+          background: var(--color-surface-muted);
+          color: var(--color-text);
+          resize: none;
+          line-height: 1.4;
+        }
+        .sr-input::placeholder {
+          color: var(--color-text-muted);
+        }
+        .sr-input:focus {
+          outline: none;
+          border-color: var(--primary-teal);
         }
 
         /* Save area */

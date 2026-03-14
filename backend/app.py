@@ -7932,10 +7932,32 @@ def iman_get_config():
                 "base_weight": cat_meta["base_weight"],
             })
 
+        # Include active struggles for journal integration
+        active_struggles = []
+        try:
+            struggles_ref = (
+                users_db.collection("users").document(uid)
+                .collection("iman_struggles")
+            )
+            for sdoc in struggles_ref.stream():
+                sdata = sdoc.to_dict()
+                if not sdata.get("resolved_at"):
+                    sid = sdoc.id
+                    if sid in STRUGGLE_MAP:
+                        active_struggles.append({
+                            "struggle_id": sid,
+                            "label": STRUGGLE_MAP[sid]["label"],
+                            "linked_behaviors": STRUGGLE_MAP[sid].get("linked_behaviors", []),
+                            "color": STRUGGLE_MAP[sid].get("color", "#6b7280"),
+                        })
+        except Exception:
+            pass  # Non-critical
+
         return jsonify({
             "config": config,
             "categories": categories,
             "all_behaviors": IMAN_BEHAVIORS,
+            "active_struggles": active_struggles,
         }), 200
 
     except Exception as e:
@@ -8125,6 +8147,7 @@ def iman_submit_log():
         behaviors_raw = data.get("behaviors", {})
         heart_state = data.get("heart_state")
         heart_notes_raw = data.get("heart_notes", [])
+        struggle_reflections_raw = data.get("struggle_reflections", {})
 
         if not date_str:
             return jsonify({"error": "date is required (YYYY-MM-DD)"}), 400
@@ -8178,6 +8201,18 @@ def iman_submit_log():
                 "created_at": now,
             })
 
+        # Validate & encrypt struggle reflections
+        encrypted_reflections = {}
+        if struggle_reflections_raw and isinstance(struggle_reflections_raw, dict):
+            for sid, reflection_text in struggle_reflections_raw.items():
+                if sid in STRUGGLE_MAP and isinstance(reflection_text, str):
+                    text = reflection_text.strip()[:500]  # Cap at 500 chars
+                    if text:
+                        encrypted_reflections[sid] = {
+                            "text": _encrypt_text(text, uid),
+                            "created_at": now,
+                        }
+
         # Build daily log document
         log_doc = {
             "date": date_str,
@@ -8186,6 +8221,8 @@ def iman_submit_log():
             "heart_notes": encrypted_notes,
             "updated_at": now,
         }
+        if encrypted_reflections:
+            log_doc["struggle_reflections"] = encrypted_reflections
 
         # Save to Firestore
         log_ref = users_db.collection("users").document(uid).collection("iman_daily_logs").document(date_str)
@@ -8286,6 +8323,12 @@ def iman_get_log(date_str):
         if log.get("heart_notes"):
             for note in log["heart_notes"]:
                 note["text"] = _decrypt_text(note.get("text", ""), uid)
+
+        # Decrypt struggle reflections for display
+        if log.get("struggle_reflections"):
+            for sid, ref in log["struggle_reflections"].items():
+                if isinstance(ref, dict) and ref.get("text"):
+                    ref["text"] = _decrypt_text(ref["text"], uid)
 
         return jsonify({"log": log, "date": date_str}), 200
 
@@ -8847,6 +8890,42 @@ def iman_declare_struggle():
         }
         struggle_ref.set(doc_data)
 
+        # Auto-add linked behaviors to tracked config
+        behaviors_added = []
+        linked = struggle_config.get("linked_behaviors", [])
+        if linked:
+            try:
+                config_ref = (
+                    users_db.collection("users").document(uid)
+                    .collection("iman_config").document("settings")
+                )
+                config_doc = config_ref.get()
+                if config_doc.exists:
+                    config_data = config_doc.to_dict()
+                    tracked = config_data.get("tracked_behaviors", [])
+                    tracked_ids = {t["id"] for t in tracked}
+
+                    for bid in linked:
+                        if bid not in tracked_ids and bid in BEHAVIOR_MAP:
+                            b = BEHAVIOR_MAP[bid]
+                            tracked.append({
+                                "id": b["id"],
+                                "category": b["category"],
+                                "label": b["label"],
+                                "input_type": b["input_type"],
+                                "weight_override": None,
+                                "active": True,
+                                "added_at": now,
+                                "added_by_struggle": struggle_id,
+                            })
+                            behaviors_added.append(b["label"])
+
+                    if behaviors_added:
+                        config_ref.update({"tracked_behaviors": tracked})
+                        print(f"[IMAN] Auto-added {len(behaviors_added)} behaviors for struggle {struggle_id}: {behaviors_added}")
+            except Exception as cfg_err:
+                print(f"[IMAN] Warning: Could not auto-add behaviors: {cfg_err}")
+
         print(f"[IMAN] Struggle declared: {struggle_id} for {uid[:8]}...")
         return jsonify({
             "message": "Struggle declared",
@@ -8855,6 +8934,8 @@ def iman_declare_struggle():
             "phases": struggle_config["phases"],
             "comfort_verse": doc_data["comfort_verse"],
             "guidance_excerpts": summarized,
+            "behaviors_added": behaviors_added,
+            "linked_behaviors": linked,
             "declared_at": now,
         }), 201
 
