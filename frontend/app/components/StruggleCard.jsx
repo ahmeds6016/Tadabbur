@@ -194,10 +194,11 @@ export default function StruggleCard({ struggle, user, onResolved }) {
         <div className="sc-guidance">
           {guidance.guidance_excerpts?.map((g, i) => (
             <div key={i} className="sc-excerpt">
-              <span className="sc-source">{g.source}: {g.title}</span>
+              <span className="sc-source">{g.source}</span>
+              {g.title && <span className="sc-title">{g.title}</span>}
               <p className="sc-text">
-                {expandedExcerpts[i] ? g.text : g.text?.slice(0, 500)}
-                {g.text?.length > 500 && (
+                {expandedExcerpts[i] ? g.text : g.text?.slice(0, 300)}
+                {g.text?.length > 300 && (
                   <button
                     className="sc-expand-btn"
                     onClick={() => setExpandedExcerpts(prev => ({ ...prev, [i]: !prev[i] }))}
@@ -359,6 +360,14 @@ export default function StruggleCard({ struggle, user, onResolved }) {
           font-weight: 600;
           color: var(--color-text-muted);
           text-transform: uppercase;
+          display: block;
+        }
+        .sc-title {
+          font-size: 0.75rem;
+          font-weight: 500;
+          color: var(--color-text-secondary);
+          display: block;
+          margin-top: 2px;
         }
         .sc-text {
           font-size: 0.8rem;

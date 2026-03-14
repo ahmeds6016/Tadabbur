@@ -397,16 +397,16 @@ export default function SurahVersePicker({ onSelect, initialSurah = null, initia
   // Shared select styles
   const selectStyle = {
     padding: '10px 14px',
-    border: '1px solid var(--border-light, #e5e7eb)',
+    border: '1px solid var(--color-border, #e5e7eb)',
     borderRadius: '8px',
     fontSize: '16px',
-    background: 'white',
-    color: '#333',
+    background: 'var(--color-surface, white)',
+    color: 'var(--color-text, #333)',
     outline: 'none',
     cursor: 'pointer',
     appearance: 'none',
     WebkitAppearance: 'none',
-    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 8L1 3h10z'/%3E%3C/svg%3E")`,
+    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23999' d='M6 8L1 3h10z'/%3E%3C/svg%3E")`,
     backgroundRepeat: 'no-repeat',
     backgroundPosition: 'right 12px center',
     paddingRight: '36px'
@@ -414,10 +414,11 @@ export default function SurahVersePicker({ onSelect, initialSurah = null, initia
 
   return (
     <div style={{
-      background: 'white',
+      background: 'var(--color-surface, white)',
       borderRadius: '10px',
       padding: '12px',
       boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+      border: '1px solid var(--color-border, transparent)',
       marginBottom: '16px'
     }}>
       {/* Quick Select Buttons */}
@@ -434,7 +435,7 @@ export default function SurahVersePicker({ onSelect, initialSurah = null, initia
             onClick={() => handleQuickSelect(item)}
             style={{
               padding: '6px 5px',
-              background: 'white',
+              background: 'var(--color-surface, white)',
               border: '1px solid var(--primary-teal, #0d9488)',
               borderRadius: '8px',
               fontSize: '0.68rem',
@@ -454,7 +455,7 @@ export default function SurahVersePicker({ onSelect, initialSurah = null, initia
               e.currentTarget.style.color = 'white';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'white';
+              e.currentTarget.style.background = 'var(--color-surface, white)';
               e.currentTarget.style.color = 'var(--primary-teal, #0d9488)';
             }}
           >
@@ -546,7 +547,7 @@ export default function SurahVersePicker({ onSelect, initialSurah = null, initia
             style={{
               width: '100%',
               padding: '12px',
-              background: canApply ? 'var(--primary-teal, #0d9488)' : '#cbd5e0',
+              background: canApply ? 'var(--primary-teal, #0d9488)' : 'var(--color-border, #cbd5e0)',
               color: 'white',
               border: 'none',
               borderRadius: '8px',

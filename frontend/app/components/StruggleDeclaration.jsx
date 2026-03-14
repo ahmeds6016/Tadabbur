@@ -103,8 +103,9 @@ export default function StruggleDeclaration({ user, activeStruggleIds = [], onDe
               <p className="sd-guidance-label">From the scholars:</p>
               {result.guidance_excerpts.slice(0, 2).map((g, i) => (
                 <div key={i} className="sd-excerpt">
-                  <span className="sd-source">{g.source}: {g.title}</span>
-                  <p className="sd-text">{g.text?.slice(0, 400)}{g.text?.length > 400 ? '...' : ''}</p>
+                  <span className="sd-source">{g.source}</span>
+                  {g.title && <span className="sd-title">{g.title}</span>}
+                  <p className="sd-text">{g.text}</p>
                 </div>
               ))}
             </div>
@@ -234,6 +235,14 @@ export default function StruggleDeclaration({ user, activeStruggleIds = [], onDe
           font-weight: 600;
           color: var(--color-text-secondary, #9ca3af);
           text-transform: uppercase;
+          display: block;
+        }
+        .sd-title {
+          font-size: 0.75rem;
+          font-weight: 500;
+          color: var(--color-text-secondary, #9ca3af);
+          display: block;
+          margin-top: 2px;
         }
         .sd-text {
           font-size: 0.8rem;

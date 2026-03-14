@@ -8683,6 +8683,103 @@ def iman_get_safeguard_status():
 # Iman — Struggle Endpoints
 # ---------------------------------------------------------------------------
 
+
+def _summarize_guidance_excerpts(excerpts, struggle_label):
+    """Use Gemini to distill raw scholarly text into concise, relevant guidance."""
+    if not excerpts:
+        return excerpts
+
+    try:
+        credentials, _ = google.auth.default(
+            scopes=["https://www.googleapis.com/auth/cloud-platform"]
+        )
+        auth_req = GoogleRequest()
+        credentials.refresh(auth_req)
+
+        sources_block = ""
+        for i, ex in enumerate(excerpts):
+            sources_block += (
+                f"\n--- Source {i+1}: {ex.get('source', '')} — {ex.get('title', '')} ---\n"
+                f"{ex.get('text', '')}\n"
+            )
+
+        prompt = f"""You are a scholarly Islamic studies assistant. A user is working on the struggle: "{struggle_label}".
+
+Below are raw excerpts from classical Islamic texts. They may contain OCR artifacts, mixed scripts, or irrelevant sections.
+
+For EACH source, produce a clean, concise summary (100-150 words) that:
+1. Extracts ONLY the content relevant to "{struggle_label}"
+2. Removes OCR artifacts, formatting noise, and untranslated Arabic text
+3. Preserves the scholarly voice and key teachings
+4. Focuses on practical spiritual guidance the reader can apply
+
+{sources_block}
+
+Return valid JSON — an array of objects, one per source, in the same order:
+[
+  {{"source": "source name", "title": "chapter/section title", "summary": "the clean summary"}}
+]
+
+Return ONLY the JSON array, no markdown fences."""
+
+        vertex_endpoint = (
+            f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/"
+            f"{GCP_INFRASTRUCTURE_PROJECT}/locations/{LOCATION}/"
+            f"publishers/google/models/gemini-2.5-flash-lite:generateContent"
+        )
+
+        body = {
+            "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+            "generation_config": {
+                "response_mime_type": "application/json",
+                "temperature": 0.3,
+                "maxOutputTokens": 2048,
+            },
+        }
+
+        response = requests.post(
+            vertex_endpoint,
+            headers={
+                "Authorization": f"Bearer {credentials.token}",
+                "Content-Type": "application/json",
+            },
+            json=body,
+            timeout=30,
+        )
+
+        if response.status_code != 200:
+            print(f"[IMAN] Guidance summarization failed: HTTP {response.status_code}")
+            return excerpts  # Fall back to raw text
+
+        result = response.json()
+        text = (
+            result.get("candidates", [{}])[0]
+            .get("content", {})
+            .get("parts", [{}])[0]
+            .get("text", "")
+        )
+
+        summaries = json.loads(text)
+        if not isinstance(summaries, list) or len(summaries) != len(excerpts):
+            print(f"[IMAN] Guidance summarization returned unexpected shape")
+            return excerpts
+
+        summarized = []
+        for i, ex in enumerate(excerpts):
+            summarized.append({
+                "source": ex.get("source", ""),
+                "title": summaries[i].get("title", ex.get("title", "")),
+                "text": summaries[i].get("summary", ex.get("text", "")),
+            })
+
+        print(f"[IMAN] Guidance summarized for '{struggle_label}': {len(summarized)} excerpts")
+        return summarized
+
+    except Exception as e:
+        print(f"[IMAN] Guidance summarization error: {e}")
+        return excerpts  # Fall back to raw text
+
+
 @app.route("/iman/struggle", methods=["POST"])
 @firebase_auth_required
 def iman_declare_struggle():
@@ -8713,38 +8810,42 @@ def iman_declare_struggle():
 
         # Resolve scholarly pointers for initial guidance
         pointers = struggle_config.get("scholarly_pointers", [])
-        guidance_excerpts = []
+        raw_excerpts = []
         try:
             resolved = resolve_scholarly_pointers(pointers)
             for r in resolved.get("excerpts", []):
                 if r.get("text"):
-                    guidance_excerpts.append({
+                    raw_excerpts.append({
                         "source": r.get("source", ""),
                         "title": r.get("title", ""),
-                        "text": _encrypt_text(r["text"][:2000], uid),
+                        "text": r["text"][:2000],
                     })
         except Exception as re_err:
             print(f"[IMAN] Warning: Could not resolve pointers for {struggle_id}: {re_err}")
+
+        # Summarize raw text with Gemini
+        summarized = _summarize_guidance_excerpts(raw_excerpts, struggle_config["label"])
+
+        # Encrypt raw excerpts for Firestore storage
+        encrypted_excerpts = []
+        for r in raw_excerpts:
+            encrypted_excerpts.append({
+                "source": r["source"],
+                "title": r["title"],
+                "text": _encrypt_text(r["text"], uid),
+            })
 
         now = datetime.now(timezone.utc).isoformat()
         doc_data = {
             "struggle_id": struggle_id,
             "declared_at": now,
             "resolved_at": None,
-            "guidance_excerpts": guidance_excerpts,
+            "guidance_excerpts": encrypted_excerpts,
+            "summarized_guidance": summarized,
             "comfort_verse": struggle_config.get("comfort_verses", [{}])[0] if struggle_config.get("comfort_verses") else None,
             "updated_at": now,
         }
         struggle_ref.set(doc_data)
-
-        # Return decrypted guidance for immediate display
-        decrypted_excerpts = []
-        for g in guidance_excerpts:
-            decrypted_excerpts.append({
-                "source": g["source"],
-                "title": g["title"],
-                "text": _decrypt_text(g["text"], uid),
-            })
 
         print(f"[IMAN] Struggle declared: {struggle_id} for {uid[:8]}...")
         return jsonify({
@@ -8753,7 +8854,7 @@ def iman_declare_struggle():
             "label": struggle_config["label"],
             "phases": struggle_config["phases"],
             "comfort_verse": doc_data["comfort_verse"],
-            "guidance_excerpts": decrypted_excerpts,
+            "guidance_excerpts": summarized,
             "declared_at": now,
         }), 201
 
@@ -8882,7 +8983,7 @@ def iman_update_struggle(struggle_id):
 @app.route("/iman/struggle/<struggle_id>/guidance", methods=["GET"])
 @firebase_auth_required
 def iman_struggle_guidance(struggle_id):
-    """Re-resolve scholarly pointers for fresh guidance text."""
+    """Resolve and summarize scholarly guidance for a declared struggle."""
     uid = request.user["uid"]
     try:
         if struggle_id not in STRUGGLE_MAP:
@@ -8899,6 +9000,19 @@ def iman_struggle_guidance(struggle_id):
         if not doc.exists:
             return jsonify({"error": "Struggle not declared."}), 404
 
+        doc_data = doc.to_dict()
+
+        # Return cached summarized guidance if available
+        if doc_data.get("summarized_guidance"):
+            print(f"[IMAN] Returning cached summarized guidance for {struggle_id}")
+            return jsonify({
+                "struggle_id": struggle_id,
+                "label": config["label"],
+                "phases": config["phases"],
+                "comfort_verses": config.get("comfort_verses", []),
+                "guidance_excerpts": doc_data["summarized_guidance"],
+            }), 200
+
         # Resolve scholarly pointers
         pointers = config.get("scholarly_pointers", [])
         guidance_excerpts = []
@@ -8914,12 +9028,19 @@ def iman_struggle_guidance(struggle_id):
         except Exception as re_err:
             print(f"[IMAN] Warning: Could not resolve pointers for {struggle_id}: {re_err}")
 
+        # Summarize with Gemini and cache
+        summarized = _summarize_guidance_excerpts(guidance_excerpts, config["label"])
+        try:
+            struggle_ref.update({"summarized_guidance": summarized})
+        except Exception:
+            pass  # Non-critical — just serve without caching
+
         return jsonify({
             "struggle_id": struggle_id,
             "label": config["label"],
             "phases": config["phases"],
             "comfort_verses": config.get("comfort_verses", []),
-            "guidance_excerpts": guidance_excerpts,
+            "guidance_excerpts": summarized,
         }), 200
 
     except Exception as e:

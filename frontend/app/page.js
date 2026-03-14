@@ -243,7 +243,7 @@ function AuthComponent() {
         {authMode === 'signUp' && (
           <>
             <h1 style={{ textAlign: 'center', marginBottom: '16px' }}>Welcome to Tadabbur</h1>
-            <p style={{ fontSize: '1rem', color: '#666', marginBottom: '32px', textAlign: 'center', lineHeight: '1.6' }}>
+            <p style={{ fontSize: '1rem', color: 'var(--color-text-secondary, #666)', marginBottom: '32px', textAlign: 'center', lineHeight: '1.6' }}>
               Quranic commentary drawn from classical scholarship and personalized to how you learn — with progress tracking, reflections, and reading plans to support your journey.
             </p>
             <form onSubmit={handleAuthAction} className="form">
@@ -277,7 +277,7 @@ function AuthComponent() {
                       style={{
                         position: 'absolute', top: '6px', right: '8px',
                         background: 'none', border: 'none', cursor: 'pointer',
-                        fontSize: '1.1rem', color: '#999', lineHeight: 1
+                        fontSize: '1.1rem', color: 'var(--color-text-muted, #999)', lineHeight: 1
                       }}
                       aria-label="Dismiss"
                     >
@@ -289,7 +289,7 @@ function AuthComponent() {
                     }}>
                       About this name
                     </p>
-                    <p style={{ margin: 0, color: '#555', fontSize: '0.9rem', lineHeight: '1.5' }}>
+                    <p style={{ margin: 0, color: 'var(--color-text-secondary, #555)', fontSize: '0.9rem', lineHeight: '1.5' }}>
                       {nameInfo.short}
                     </p>
                   </div>
@@ -324,7 +324,7 @@ function AuthComponent() {
         {authMode === 'signIn' && (
           <>
             <h1 style={{ textAlign: 'center', marginBottom: '16px' }}>Welcome to Tadabbur</h1>
-            <p style={{ fontSize: '1rem', color: '#666', marginBottom: '32px', textAlign: 'center', lineHeight: '1.6' }}>
+            <p style={{ fontSize: '1rem', color: 'var(--color-text-secondary, #666)', marginBottom: '32px', textAlign: 'center', lineHeight: '1.6' }}>
               Sign in to continue your Quranic journey.
             </p>
             <form onSubmit={handleAuthAction} className="form">
@@ -378,7 +378,7 @@ function AuthComponent() {
         {authMode === 'forgotPassword' && (
           <>
             <h1 style={{ textAlign: 'center', marginBottom: '16px' }}>Reset Password</h1>
-            <p style={{ fontSize: '1rem', color: '#666', marginBottom: '32px', textAlign: 'center', lineHeight: '1.6' }}>
+            <p style={{ fontSize: '1rem', color: 'var(--color-text-secondary, #666)', marginBottom: '32px', textAlign: 'center', lineHeight: '1.6' }}>
               Enter your email address and we&apos;ll send you a link to reset your password.
             </p>
             <form onSubmit={handlePasswordReset} className="form">
@@ -419,13 +419,13 @@ function AuthComponent() {
               }}>
                 &#x2713;
               </div>
-              <p style={{ fontSize: '1rem', color: '#666', lineHeight: '1.6', marginBottom: '8px' }}>
+              <p style={{ fontSize: '1rem', color: 'var(--color-text-secondary, #666)', lineHeight: '1.6', marginBottom: '8px' }}>
                 We&apos;ve sent a password reset link to:
               </p>
               <p style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--primary-teal)', marginBottom: '24px' }}>
                 {email}
               </p>
-              <p style={{ fontSize: '0.9rem', color: '#999', lineHeight: '1.5' }}>
+              <p style={{ fontSize: '0.9rem', color: 'var(--color-text-muted, #999)', lineHeight: '1.5' }}>
                 Check your inbox and follow the link to create a new password. The link expires in 1 hour.
               </p>
             </div>
@@ -630,7 +630,7 @@ function OnboardingComponent({ user, onProfileComplete }) {
           }}>
             {arabicGreeting.arabic}
           </h1>
-          <p style={{ margin: '4px 0', fontSize: '0.95rem', color: '#666', fontStyle: 'italic' }}>
+          <p style={{ margin: '4px 0', fontSize: '0.95rem', color: 'var(--color-text-secondary, #666)', fontStyle: 'italic' }}>
             {arabicGreeting.meaning}
           </p>
         </div>
@@ -640,7 +640,7 @@ function OnboardingComponent({ user, onProfileComplete }) {
           <p style={{
             fontSize: '1.15rem',
             lineHeight: '1.7',
-            color: '#555',
+            color: 'var(--color-text-secondary, #555)',
             whiteSpace: 'pre-line',
             marginBottom: '16px'
           }}>
@@ -699,7 +699,7 @@ function OnboardingComponent({ user, onProfileComplete }) {
             <h2 style={{ textAlign: 'center', color: 'var(--primary-teal)', marginBottom: '24px' }}>
               2. What is your knowledge level?
             </h2>
-            <p style={{ marginBottom: '24px', color: '#666', textAlign: 'center' }}>
+            <p style={{ marginBottom: '24px', color: 'var(--color-text-secondary, #666)', textAlign: 'center' }}>
               This helps us tailor the depth and complexity of explanations.
             </p>
             <div className="level-buttons">
@@ -746,7 +746,7 @@ function OnboardingComponent({ user, onProfileComplete }) {
             <h2 style={{ textAlign: 'center', color: 'var(--primary-teal)', marginBottom: '24px' }}>
               {isDeterministicPersona ? '2' : '3'}. What is your learning goal?
             </h2>
-            <p style={{ marginBottom: '24px', color: '#666', textAlign: 'center' }}>
+            <p style={{ marginBottom: '24px', color: 'var(--color-text-secondary, #666)', textAlign: 'center' }}>
               Choose what matters most to you when studying Quran.
             </p>
             <div className="level-buttons">
@@ -776,7 +776,7 @@ function OnboardingComponent({ user, onProfileComplete }) {
         {step === 4 && !error && (
           <div style={{ textAlign: 'center', padding: '40px' }}>
             <div className="loading-spinner"></div>
-            <p style={{ marginTop: '20px', color: '#666' }}>Saving your profile...</p>
+            <p style={{ marginTop: '20px', color: 'var(--color-text-secondary, #666)' }}>Saving your profile...</p>
           </div>
         )}
 
@@ -1815,21 +1815,21 @@ function MainApp({ user, userProfile, onResetProfile }) {
 
         {response && response.needs_clarification && (
           <div style={{
-            background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
-            border: '2px solid #f59e0b',
+            background: 'rgba(251, 191, 36, 0.12)',
+            border: '2px solid var(--gold, #f59e0b)',
             borderRadius: '12px',
             padding: '24px',
             marginBottom: '20px'
           }}>
-            <h3 style={{ color: '#92400e', marginBottom: '12px', fontSize: '1.1rem' }}>
+            <h3 style={{ color: 'var(--color-text, #92400e)', marginBottom: '12px', fontSize: '1.1rem' }}>
               {response.message}
             </h3>
-            <p style={{ color: '#78350f', marginBottom: '16px', fontSize: '0.95rem' }}>
+            <p style={{ color: 'var(--color-text-secondary, #78350f)', marginBottom: '16px', fontSize: '0.95rem' }}>
               {response.help_text}
             </p>
             {response.suggestions && response.suggestions.length > 0 && (
               <>
-                <p style={{ fontWeight: '600', color: '#92400e', marginBottom: '10px' }}>
+                <p style={{ fontWeight: '600', color: 'var(--color-text, #92400e)', marginBottom: '10px' }}>
                   Did you mean:
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -1842,22 +1842,22 @@ function MainApp({ user, userProfile, onResetProfile }) {
                       }}
                       style={{
                         padding: '12px 16px',
-                        background: 'white',
-                        border: '2px solid #f59e0b',
+                        background: 'var(--color-surface, white)',
+                        border: '2px solid var(--gold, #f59e0b)',
                         borderRadius: '8px',
                         cursor: 'pointer',
                         textAlign: 'left',
                         fontSize: '0.95rem',
-                        color: '#78350f',
+                        color: 'var(--color-text, #78350f)',
                         fontWeight: '500',
                         transition: 'all 0.2s ease'
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.background = '#fef3c7';
+                        e.currentTarget.style.background = 'rgba(251, 191, 36, 0.15)';
                         e.currentTarget.style.transform = 'translateX(4px)';
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'white';
+                        e.currentTarget.style.background = 'var(--color-surface, white)';
                         e.currentTarget.style.transform = 'translateX(0)';
                       }}
                     >
@@ -1877,7 +1877,7 @@ function MainApp({ user, userProfile, onResetProfile }) {
               position: 'sticky',
               top: 'calc(env(safe-area-inset-top) + 56px)',
               zIndex: 'var(--z-sticky, 200)',
-              background: 'white',
+              background: 'var(--color-surface, white)',
               borderBottom: '1px solid var(--border-light)',
               padding: '10px 16px',
               marginBottom: '20px',
@@ -1931,12 +1931,12 @@ function MainApp({ user, userProfile, onResetProfile }) {
               {/* Center: Query label */}
               <div style={{
                 fontSize: '0.8rem',
-                color: '#555',
+                color: 'var(--color-text-secondary, #555)',
                 fontWeight: '600',
                 padding: '4px 10px',
-                background: 'var(--cream)',
+                background: 'var(--color-surface-muted, #faf6f0)',
                 borderRadius: '6px',
-                border: '1px solid var(--border-light)',
+                border: '1px solid var(--color-border, #e5e7eb)',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap',
@@ -2128,7 +2128,7 @@ function MainApp({ user, userProfile, onResetProfile }) {
                 <h3 style={{ margin: 0, fontSize: '1.05rem', color: 'var(--deep-blue, #1e3a5f)' }}>Save to Folder</h3>
                 <button
                   onClick={() => setShowFolderPicker(false)}
-                  style={{ background: 'none', border: 'none', fontSize: '1.1rem', color: '#6b7280', cursor: 'pointer' }}
+                  style={{ background: 'none', border: 'none', fontSize: '1.1rem', color: 'var(--color-text-muted, #6b7280)', cursor: 'pointer' }}
                 >
                   x
                 </button>
@@ -2140,7 +2140,7 @@ function MainApp({ user, userProfile, onResetProfile }) {
                   onClick={() => doSaveToFolder('Uncategorized')}
                   style={{
                     padding: '10px 14px',
-                    background: 'white',
+                    background: 'var(--color-surface, white)',
                     border: '1px solid var(--border-light, #e5e7eb)',
                     borderRadius: 8,
                     textAlign: 'left',
@@ -2157,7 +2157,7 @@ function MainApp({ user, userProfile, onResetProfile }) {
                     onClick={() => doSaveToFolder(folder)}
                     style={{
                       padding: '10px 14px',
-                      background: 'white',
+                      background: 'var(--color-surface, white)',
                       border: '1px solid var(--border-light, #e5e7eb)',
                       borderRadius: 8,
                       textAlign: 'left',
@@ -2173,7 +2173,7 @@ function MainApp({ user, userProfile, onResetProfile }) {
 
               {/* Create new folder */}
               <div style={{ borderTop: '1px solid var(--border-light, #e5e7eb)', paddingTop: 12 }}>
-                <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 6 }}>
+                <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-muted, #6b7280)', display: 'block', marginBottom: 6 }}>
                   Create new folder
                 </label>
                 <div style={{ display: 'flex', gap: 8 }}>
@@ -2342,7 +2342,7 @@ function InlineAnnotationForm({ verse, user, onSaved, onCancel }) {
     <div style={{
       marginTop: '16px',
       padding: '20px',
-      background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)',
+      background: 'var(--color-surface-muted, #fffbeb)',
       border: '2px solid var(--gold)',
       borderRadius: '12px',
       animation: 'slideDown 0.3s ease'
@@ -2359,7 +2359,7 @@ function InlineAnnotationForm({ verse, user, onSaved, onCancel }) {
               onClick={() => setType(value)}
               style={{
                 padding: '8px 12px',
-                background: type === value ? 'var(--primary-teal)' : 'white',
+                background: type === value ? 'var(--primary-teal)' : 'var(--color-surface, white)',
                 color: type === value ? 'white' : 'var(--foreground)',
                 border: '2px solid var(--border-light)',
                 borderRadius: '8px',
@@ -2419,7 +2419,7 @@ function InlineAnnotationForm({ verse, user, onSaved, onCancel }) {
             fontSize: '0.95rem',
             fontFamily: 'inherit',
             resize: 'vertical',
-            background: 'white'
+            background: 'var(--color-surface, white)'
           }}
         />
       </div>
@@ -2477,7 +2477,7 @@ function InlineAnnotationForm({ verse, user, onSaved, onCancel }) {
               border: '2px solid var(--border-medium)',
               borderRadius: '8px',
               fontSize: '0.9rem',
-              background: 'white'
+              background: 'var(--color-surface, white)'
             }}
           />
           <button
@@ -2502,7 +2502,7 @@ function InlineAnnotationForm({ verse, user, onSaved, onCancel }) {
           <div style={{ marginTop: '8px' }}>
             <div style={{
               fontSize: '0.75rem',
-              color: '#666',
+              color: 'var(--color-text-secondary, #666)',
               marginBottom: '6px',
               fontWeight: '600'
             }}>
@@ -2566,7 +2566,7 @@ function InlineAnnotationForm({ verse, user, onSaved, onCancel }) {
           onClick={onCancel}
           style={{
             padding: '10px 20px',
-            background: 'white',
+            background: 'var(--color-surface, white)',
             border: '2px solid var(--border-medium)',
             color: 'var(--foreground)',
             borderRadius: '8px',
@@ -2778,7 +2778,7 @@ function EnhancedResultsDisplay({
   if (verses.length === 0 && tafsir_explanations.length === 0 && lessons_practical_applications.length === 0) {
     return (
       <div className="results-container" role="region" aria-label="Search results" aria-live="polite">
-        <p style={{ textAlign: 'center', fontSize: '1.1rem', color: '#666' }}>
+        <p style={{ textAlign: 'center', fontSize: '1.1rem', color: 'var(--color-text-secondary, #666)' }}>
           No relevant information found in the source text for your query.
         </p>
       </div>
@@ -2899,12 +2899,12 @@ function EnhancedResultsDisplay({
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.background = 'none';
-                    e.currentTarget.style.borderColor = '#e2e8f0';
+                    e.currentTarget.style.borderColor = 'var(--color-border, #e2e8f0)';
                   }}
                   title={`Click to view Tafsir of verse ${ref.verse}`}
                 >
-                  <strong style={{ color: '#4a5568' }}>{ref.verse}</strong>
-                  <span style={{ color: '#718096', display: 'block', marginTop: '4px' }}>
+                  <strong style={{ color: 'var(--color-text, #4a5568)' }}>{ref.verse}</strong>
+                  <span style={{ color: 'var(--color-text-secondary, #718096)', display: 'block', marginTop: '4px' }}>
                     {ref.relevance}
                   </span>
                 </button>
@@ -2925,26 +2925,26 @@ function EnhancedResultsDisplay({
                         <div
                           key={index}
                           style={{
-                            background: '#fef3c7',
-                            border: '1px solid #fbbf24',
+                            background: 'rgba(251, 191, 36, 0.12)',
+                            border: '1px solid var(--gold, #fbbf24)',
                             borderRadius: '8px',
                             padding: '12px',
                           }}
                         >
-                          <div style={{ fontWeight: '600', color: '#92400e', marginBottom: '8px' }}>
+                          <div style={{ fontWeight: '600', color: 'var(--color-text, #92400e)', marginBottom: '8px' }}>
                             {h.reference}
                           </div>
                           {h.text && (
                             <div style={{
                               fontStyle: 'italic',
-                              color: '#78350f',
+                              color: 'var(--color-text, #78350f)',
                               marginBottom: '8px',
                               lineHeight: '1.6'
                             }}>
                               &quot;{h.text}&quot;
                             </div>
                           )}
-                          <div style={{ color: '#78350f', fontSize: '0.9rem' }}>
+                          <div style={{ color: 'var(--color-text-secondary, #78350f)', fontSize: '0.9rem' }}>
                             {h.relevance}
                           </div>
                         </div>
@@ -2960,8 +2960,8 @@ function EnhancedResultsDisplay({
                     gap: '12px',
                     padding: '14px 16px',
                     marginTop: '20px',
-                    background: 'linear-gradient(135deg, #faf5ff 0%, #f3e8ff 50%, #ede9fe 100%)',
-                    border: '1px solid #ddd6fe',
+                    background: 'rgba(124, 58, 237, 0.08)',
+                    border: '1px solid rgba(124, 58, 237, 0.2)',
                     borderRadius: '12px',
                   }}>
                     <div style={{ flex: 1 }}>
@@ -2975,7 +2975,7 @@ function EnhancedResultsDisplay({
                       }}>Reflection</p>
                       <p style={{
                         fontSize: '0.92rem',
-                        color: '#374151',
+                        color: 'var(--color-text, #374151)',
                         lineHeight: 1.6,
                         margin: '0 0 12px 0',
                       }}>{data.reflection_prompt}</p>
