@@ -9543,6 +9543,263 @@ def iman_complete_struggle_goal(struggle_id):
         return jsonify({"error": str(e)}), 500
 
 
+# ============================================================================
+# FEEDBACK SYSTEM — Gemini enrichment + GitHub Issues + Daily Email Summary
+# ============================================================================
+
+FEEDBACK_GITHUB_REPO = os.environ.get("FEEDBACK_GITHUB_REPO", "ahmeds6016/tafsir-simplified-app")
+FEEDBACK_GITHUB_TOKEN = os.environ.get("FEEDBACK_GITHUB_TOKEN", "")
+FEEDBACK_SUMMARY_EMAIL = os.environ.get("FEEDBACK_SUMMARY_EMAIL", "")
+
+
+def _enrich_feedback_with_gemini(feedback_type, raw_message):
+    """Use Gemini to clean up and structure user feedback."""
+    try:
+        creds, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
+        creds.refresh(GoogleRequest())
+
+        endpoint = (
+            f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/"
+            f"{GCP_INFRASTRUCTURE_PROJECT}/locations/{LOCATION}/"
+            f"publishers/google/models/gemini-2.5-flash-lite:generateContent"
+        )
+
+        type_labels = {"feature": "feature request", "bug": "bug report", "general": "general feedback"}
+        prompt = (
+            f"You are a product manager assistant. A user submitted the following {type_labels.get(feedback_type, 'feedback')} "
+            f"for a Quran study app called Tadabbur.\n\n"
+            f"Raw user message:\n\"{raw_message}\"\n\n"
+            f"Return a JSON object with exactly these fields:\n"
+            f"- \"title\": A concise, clear title (under 80 chars) suitable for a GitHub issue\n"
+            f"- \"body\": A cleaned-up, well-structured version of the feedback (2-4 sentences max). "
+            f"Fix grammar and spelling but preserve the user's intent. Do not add information they didn't mention.\n"
+            f"- \"labels\": An array of 1-2 relevant labels from this list: "
+            f"[\"enhancement\", \"bug\", \"ux\", \"content\", \"performance\", \"mobile\", \"accessibility\"]\n\n"
+            f"Return ONLY valid JSON, no markdown fences."
+        )
+
+        body = {
+            "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+            "generation_config": {
+                "response_mime_type": "application/json",
+                "temperature": 0.1,
+                "maxOutputTokens": 1024,
+            },
+        }
+
+        resp = requests.post(
+            endpoint,
+            headers={"Authorization": f"Bearer {creds.token}", "Content-Type": "application/json"},
+            json=body,
+            timeout=15,
+        )
+
+        if resp.status_code == 200:
+            text = resp.json()["candidates"][0]["content"]["parts"][0]["text"]
+            enriched = json.loads(text)
+            print(f"[FEEDBACK] Gemini enrichment OK — title: {enriched.get('title', '')[:60]}")
+            return enriched
+        else:
+            print(f"[FEEDBACK] Gemini enrichment failed: HTTP {resp.status_code}")
+            return None
+
+    except Exception as e:
+        print(f"[FEEDBACK] Gemini enrichment error: {e}")
+        return None
+
+
+def _create_github_issue(feedback_type, title, body, labels):
+    """Create a GitHub issue from enriched feedback."""
+    if not FEEDBACK_GITHUB_TOKEN:
+        print("[FEEDBACK] No FEEDBACK_GITHUB_TOKEN set — skipping GitHub issue")
+        return None
+
+    try:
+        type_label = "enhancement" if feedback_type == "feature" else "bug" if feedback_type == "bug" else "feedback"
+        all_labels = list(set([type_label] + (labels or [])))
+
+        issue_body = f"{body}\n\n---\n*Submitted via in-app feedback*"
+
+        resp = requests.post(
+            f"https://api.github.com/repos/{FEEDBACK_GITHUB_REPO}/issues",
+            headers={
+                "Authorization": f"token {FEEDBACK_GITHUB_TOKEN}",
+                "Accept": "application/vnd.github.v3+json",
+            },
+            json={
+                "title": title,
+                "body": issue_body,
+                "labels": all_labels,
+            },
+            timeout=10,
+        )
+
+        if resp.status_code == 201:
+            issue_url = resp.json().get("html_url", "")
+            print(f"[FEEDBACK] GitHub issue created: {issue_url}")
+            return issue_url
+        else:
+            print(f"[FEEDBACK] GitHub issue creation failed: HTTP {resp.status_code} — {resp.text[:200]}")
+            return None
+
+    except Exception as e:
+        print(f"[FEEDBACK] GitHub issue error: {e}")
+        return None
+
+
+@app.route("/feedback", methods=["POST"])
+@firebase_auth_required
+def submit_feedback():
+    """Store user feedback in Firestore, enrich with Gemini, create GitHub issue."""
+    try:
+        uid = request.user["uid"]
+        data = request.get_json()
+
+        feedback_type = data.get("type", "general")
+        message = (data.get("message") or "").strip()
+
+        if not message:
+            return jsonify({"error": "Message is required"}), 400
+        if len(message) > 2000:
+            return jsonify({"error": "Message must be under 2000 characters"}), 400
+        if feedback_type not in ("feature", "bug", "general"):
+            return jsonify({"error": "Invalid feedback type"}), 400
+
+        # Enrich with Gemini (non-blocking — failures don't prevent submission)
+        enriched = _enrich_feedback_with_gemini(feedback_type, message)
+
+        title = enriched["title"] if enriched else f"[{feedback_type}] {message[:70]}"
+        body = enriched["body"] if enriched else message
+        labels = enriched.get("labels", []) if enriched else []
+
+        doc = {
+            "uid": uid,
+            "email": request.user.get("email", ""),
+            "type": feedback_type,
+            "message": message,
+            "enriched_title": title,
+            "enriched_body": body,
+            "labels": labels,
+            "created_at": firestore.SERVER_TIMESTAMP,
+        }
+        _, doc_ref = users_db.collection("feedback").add(doc)
+        print(f"[FEEDBACK] {feedback_type} from {uid[:8]}...: {message[:80]}")
+
+        # Create GitHub issue in background thread (don't slow down response)
+        def _bg_github(ref):
+            issue_url = _create_github_issue(feedback_type, title, body, labels)
+            if issue_url:
+                try:
+                    ref.update({"github_issue_url": issue_url})
+                except Exception as e:
+                    print(f"[FEEDBACK] Failed to update doc with issue URL: {e}")
+
+        threading.Thread(target=_bg_github, args=(doc_ref,), daemon=True).start()
+
+        return jsonify({"message": "Feedback submitted. Thank you!"}), 200
+
+    except Exception as e:
+        print(f"ERROR in POST /feedback: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/feedback/daily-summary", methods=["POST"])
+def feedback_daily_summary():
+    """
+    Generate and email a daily summary of feedback.
+    Intended to be called by Cloud Scheduler (no auth — use IAM or a shared secret).
+    """
+    try:
+        # Verify Cloud Scheduler secret (optional, set FEEDBACK_CRON_SECRET env var)
+        cron_secret = os.environ.get("FEEDBACK_CRON_SECRET", "")
+        if cron_secret:
+            provided = request.headers.get("X-Cron-Secret", "")
+            if provided != cron_secret:
+                return jsonify({"error": "Unauthorized"}), 403
+
+        if not FEEDBACK_SUMMARY_EMAIL:
+            return jsonify({"error": "FEEDBACK_SUMMARY_EMAIL not configured"}), 500
+
+        # Get feedback from the last 24 hours
+        yesterday = datetime.now(timezone.utc) - timedelta(hours=24)
+        docs = (
+            users_db.collection("feedback")
+            .where(filter=FieldFilter("created_at", ">=", yesterday))
+            .order_by("created_at", direction="DESCENDING")
+            .get()
+        )
+
+        if not docs:
+            print("[FEEDBACK] No feedback in last 24h — skipping summary email")
+            return jsonify({"message": "No feedback to summarize"}), 200
+
+        items = []
+        for doc in docs:
+            d = doc.to_dict()
+            items.append({
+                "type": d.get("type", "general"),
+                "title": d.get("enriched_title", d.get("message", "")[:70]),
+                "body": d.get("enriched_body", d.get("message", "")),
+                "email": d.get("email", "anonymous"),
+                "github": d.get("github_issue_url", ""),
+            })
+
+        # Build email body
+        type_icons = {"feature": "NEW FEATURE", "bug": "BUG REPORT", "general": "GENERAL"}
+        lines = [f"Tadabbur Feedback Summary — {len(items)} item(s)\n"]
+        lines.append(f"Period: {yesterday.strftime('%Y-%m-%d %H:%M UTC')} to now\n")
+        lines.append("=" * 60 + "\n")
+
+        for i, item in enumerate(items, 1):
+            lines.append(f"\n{i}. [{type_icons.get(item['type'], 'OTHER')}] {item['title']}")
+            lines.append(f"   From: {item['email']}")
+            lines.append(f"   {item['body']}")
+            if item["github"]:
+                lines.append(f"   GitHub: {item['github']}")
+            lines.append("")
+
+        email_body = "\n".join(lines)
+
+        # Send via SMTP (Gmail app password or any SMTP provider)
+        smtp_email = os.environ.get("FEEDBACK_SMTP_EMAIL", "")
+        smtp_password = os.environ.get("FEEDBACK_SMTP_PASSWORD", "")
+        smtp_host = os.environ.get("FEEDBACK_SMTP_HOST", "smtp.gmail.com")
+        smtp_port = int(os.environ.get("FEEDBACK_SMTP_PORT", "587"))
+
+        if smtp_email and smtp_password:
+            try:
+                import smtplib
+                from email.mime.text import MIMEText
+
+                mime_msg = MIMEText(email_body, "plain", "utf-8")
+                mime_msg["From"] = smtp_email
+                mime_msg["To"] = FEEDBACK_SUMMARY_EMAIL
+                mime_msg["Subject"] = (
+                    f"Tadabbur Feedback: {len(items)} new item(s) "
+                    f"— {datetime.now(timezone.utc).strftime('%b %d')}"
+                )
+
+                with smtplib.SMTP(smtp_host, smtp_port) as server:
+                    server.starttls()
+                    server.login(smtp_email, smtp_password)
+                    server.send_message(mime_msg)
+
+                print(f"[FEEDBACK] Daily summary email sent to {FEEDBACK_SUMMARY_EMAIL}")
+
+            except Exception as mail_err:
+                print(f"[FEEDBACK] Email send failed: {mail_err}")
+                print(f"[FEEDBACK] Summary (logged):\n{email_body}")
+        else:
+            print("[FEEDBACK] SMTP not configured — logging summary instead")
+            print(f"[FEEDBACK] Summary:\n{email_body}")
+
+        return jsonify({"message": f"Summary generated for {len(items)} items"}), 200
+
+    except Exception as e:
+        print(f"ERROR in POST /feedback/daily-summary: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
 # --- Main ---
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))

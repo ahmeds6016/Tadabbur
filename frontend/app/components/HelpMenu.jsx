@@ -2,6 +2,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Home, BookOpen, Star, FileText } from 'lucide-react';
+import { auth } from '../lib/firebase';
+import { BACKEND_URL } from '../lib/config';
 
 const helpContent = {
   home: {
@@ -141,8 +143,35 @@ const helpContent = {
 export default function HelpMenu({ currentPage = 'home', isOpen, onClose, onReplayFeatureIntro, user }) {
   const [expandedSection, setExpandedSection] = useState(null);
   const [activeTab, setActiveTab] = useState('help');
+  const [feedbackType, setFeedbackType] = useState('feature');
+  const [feedbackMessage, setFeedbackMessage] = useState('');
+  const [feedbackStatus, setFeedbackStatus] = useState(null); // 'sending' | 'sent' | 'error'
   const content = helpContent[currentPage] || helpContent.home;
   const router = useRouter();
+
+  const handleFeedbackSubmit = async (e) => {
+    e.preventDefault();
+    if (!feedbackMessage.trim()) return;
+    setFeedbackStatus('sending');
+    try {
+      const currentUser = auth.currentUser;
+      if (!currentUser) { setFeedbackStatus('error'); return; }
+      const token = await currentUser.getIdToken();
+      const res = await fetch(`${BACKEND_URL}/feedback`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: feedbackType, message: feedbackMessage.trim() }),
+      });
+      if (res.ok) {
+        setFeedbackStatus('sent');
+        setFeedbackMessage('');
+      } else {
+        setFeedbackStatus('error');
+      }
+    } catch {
+      setFeedbackStatus('error');
+    }
+  };
 
   const helpNavItems = [
     { label: 'Home', icon: Home, path: '/' },
@@ -212,6 +241,12 @@ export default function HelpMenu({ currentPage = 'home', isOpen, onClose, onRepl
           >
             FAQ
           </button>
+          <button
+            className={`help-tab ${activeTab === 'feedback' ? 'active' : ''}`}
+            onClick={() => setActiveTab('feedback')}
+          >
+            Feedback
+          </button>
         </div>
 
         <div className="help-content" style={{ paddingBottom: 80 }}>
@@ -276,6 +311,74 @@ export default function HelpMenu({ currentPage = 'home', isOpen, onClose, onRepl
                 </div>
               ) : (
                 <p className="no-shortcuts">No keyboard shortcuts available for this page.</p>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'feedback' && (
+            <div className="feedback-form-container">
+              <h3>Share Your Feedback</h3>
+              <p className="feedback-description">
+                Have an idea, found a bug, or just want to share your thoughts? We read every submission.
+              </p>
+
+              {feedbackStatus === 'sent' ? (
+                <div className="feedback-success">
+                  <div className="feedback-success-icon">&#x2714;</div>
+                  <p className="feedback-success-title">Thank you!</p>
+                  <p className="feedback-success-subtitle">Your feedback has been submitted.</p>
+                  <button
+                    onClick={() => setFeedbackStatus(null)}
+                    className="feedback-another-btn"
+                  >
+                    Submit Another
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handleFeedbackSubmit}>
+                  <div className="feedback-type-selector">
+                    {[
+                      { value: 'feature', label: 'Feature Request' },
+                      { value: 'bug', label: 'Bug Report' },
+                      { value: 'general', label: 'General' },
+                    ].map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        className={`feedback-type-btn ${feedbackType === opt.value ? 'active' : ''}`}
+                        onClick={() => setFeedbackType(opt.value)}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <textarea
+                    value={feedbackMessage}
+                    onChange={(e) => setFeedbackMessage(e.target.value)}
+                    placeholder={
+                      feedbackType === 'feature' ? 'Describe the feature you would like to see...'
+                        : feedbackType === 'bug' ? 'What happened? What did you expect to happen?'
+                        : 'Share your thoughts...'
+                    }
+                    maxLength={2000}
+                    className="feedback-textarea"
+                    rows={5}
+                  />
+                  <div className="feedback-footer">
+                    <span className="feedback-char-count">{feedbackMessage.length}/2000</span>
+                    <button
+                      type="submit"
+                      disabled={!feedbackMessage.trim() || feedbackStatus === 'sending'}
+                      className="feedback-submit-btn"
+                    >
+                      {feedbackStatus === 'sending' ? 'Submitting...' : 'Submit'}
+                    </button>
+                  </div>
+                  {feedbackStatus === 'error' && (
+                    <p className="feedback-error">Something went wrong. Please try again.</p>
+                  )}
+                </form>
               )}
             </div>
           )}
@@ -590,6 +693,163 @@ export default function HelpMenu({ currentPage = 'home', isOpen, onClose, onRepl
             border-bottom: none;
           }
 
+          .feedback-form-container {
+            padding-top: 16px;
+          }
+
+          .feedback-description {
+            color: #666;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            margin-bottom: 20px;
+          }
+
+          .feedback-success {
+            text-align: center;
+            padding: 32px 16px;
+            background: linear-gradient(135deg, var(--cream) 0%, rgba(212, 175, 55, 0.08) 100%);
+            border-radius: 12px;
+            border: 1px solid var(--border-light);
+          }
+
+          .feedback-success-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: rgba(13, 148, 136, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px;
+            font-size: 1.4rem;
+            color: var(--primary-teal);
+          }
+
+          .feedback-success-title {
+            font-weight: 600;
+            color: var(--primary-teal);
+            margin-bottom: 4px;
+            font-size: 1.1rem;
+          }
+
+          .feedback-success-subtitle {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 0;
+          }
+
+          .feedback-another-btn {
+            margin-top: 20px;
+            background: white;
+            border: 2px solid var(--border-light);
+            border-radius: 10px;
+            padding: 10px 24px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--deep-blue);
+            transition: all 0.2s ease;
+          }
+
+          .feedback-another-btn:hover {
+            border-color: var(--primary-teal);
+            color: var(--primary-teal);
+          }
+
+          .feedback-type-selector {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+          }
+
+          .feedback-type-btn {
+            flex: 1;
+            padding: 10px 8px;
+            border: 2px solid var(--border-light);
+            border-radius: 10px;
+            background: white;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.2s ease;
+          }
+
+          .feedback-type-btn:hover {
+            border-color: var(--primary-teal);
+            color: var(--primary-teal);
+          }
+
+          .feedback-type-btn.active {
+            border-color: var(--primary-teal);
+            background: rgba(13, 148, 136, 0.08);
+            color: var(--primary-teal);
+          }
+
+          .feedback-textarea {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid var(--border-light);
+            border-radius: 12px;
+            font-family: inherit;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            resize: vertical;
+            transition: border-color 0.2s ease;
+            background: white;
+            color: var(--deep-blue);
+            box-sizing: border-box;
+          }
+
+          .feedback-textarea:focus {
+            outline: none;
+            border-color: var(--primary-teal);
+          }
+
+          .feedback-textarea::placeholder {
+            color: #aaa;
+          }
+
+          .feedback-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 10px;
+          }
+
+          .feedback-char-count {
+            font-size: 0.8rem;
+            color: #999;
+          }
+
+          .feedback-error {
+            color: #e74c3c;
+            font-size: 0.85rem;
+            margin-top: 10px;
+          }
+
+          .feedback-submit-btn {
+            padding: 10px 28px;
+            background: linear-gradient(135deg, var(--primary-teal) 0%, var(--gold) 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+          }
+
+          .feedback-submit-btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+          }
+
+          .feedback-submit-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+          }
+
           .faq-item h4 {
             color: var(--primary-teal);
             margin-bottom: 8px;
@@ -646,9 +906,23 @@ export default function HelpMenu({ currentPage = 'home', isOpen, onClose, onRepl
               font-size: 1.6rem;
             }
 
+            .help-tab {
+              padding: 10px 6px;
+              font-size: 0.85rem;
+            }
+
             .help-bottom-nav {
               display: flex;
               justify-content: space-around;
+            }
+
+            .feedback-type-selector {
+              gap: 6px;
+            }
+
+            .feedback-type-btn {
+              padding: 8px 4px;
+              font-size: 0.8rem;
             }
           }
 
