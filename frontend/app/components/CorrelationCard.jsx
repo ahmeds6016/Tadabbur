@@ -1,7 +1,13 @@
 'use client';
+import { useState } from 'react';
 
-export default function CorrelationCard({ correlations, weeklyInsight }) {
-  if ((!correlations || correlations.length === 0) && !weeklyInsight) return null;
+export default function CorrelationCard({ correlations, weeklyInsight, narrative }) {
+  const [showRawData, setShowRawData] = useState(false);
+  const hasNarrative = narrative && (narrative.narrative || narrative.key_insight);
+  const hasClusters = narrative?.clusters?.length > 0;
+  const hasCorrelations = correlations?.length > 0;
+
+  if (!hasCorrelations && !weeklyInsight && !hasNarrative) return null;
 
   return (
     <div style={{
@@ -21,86 +27,213 @@ export default function CorrelationCard({ correlations, weeklyInsight }) {
         Patterns Observed
       </div>
 
-      {/* Weekly insight (highlighted) */}
-      {weeklyInsight && (
-        <div style={{
-          padding: '10px 12px',
-          background: '#f0fdf4',
-          borderRadius: 10,
-          marginBottom: correlations?.length > 0 ? 12 : 0,
-          borderLeft: '3px solid #0d9488',
-        }}>
+      {/* AI-powered narrative (primary display when available) */}
+      {hasNarrative && (
+        <div style={{ marginBottom: 12 }}>
+          {/* Main narrative */}
           <p style={{
-            fontSize: '0.85rem',
+            fontSize: '0.88rem',
             color: '#1e293b',
-            margin: 0,
-            lineHeight: 1.5,
+            margin: '0 0 10px 0',
+            lineHeight: 1.65,
           }}>
-            {weeklyInsight.insight_text}
+            {narrative.narrative}
           </p>
+
+          {/* Key insight (highlighted) */}
+          {narrative.key_insight && (
+            <div style={{
+              padding: '10px 12px',
+              background: '#f0fdf4',
+              borderRadius: 10,
+              borderLeft: '3px solid #0d9488',
+              marginBottom: hasClusters ? 12 : 0,
+            }}>
+              <span style={{
+                fontSize: '0.62rem',
+                fontWeight: 600,
+                color: '#0d9488',
+                textTransform: 'uppercase',
+                letterSpacing: '0.4px',
+                display: 'block',
+                marginBottom: 4,
+              }}>
+                Key Insight
+              </span>
+              <p style={{
+                fontSize: '0.85rem',
+                color: '#1e293b',
+                margin: 0,
+                lineHeight: 1.5,
+              }}>
+                {narrative.key_insight}
+              </p>
+            </div>
+          )}
+
+          {/* Behavior clusters */}
+          {hasClusters && (
+            <div style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: 8,
+              marginTop: 8,
+            }}>
+              {narrative.clusters.map((cluster, i) => (
+                <div key={i} style={{
+                  flex: '1 1 auto',
+                  minWidth: '140px',
+                  padding: '10px 12px',
+                  background: '#f8fafc',
+                  borderRadius: 10,
+                  borderLeft: `3px solid ${cluster.direction === 'positive' ? '#0d9488' : '#d97706'}`,
+                }}>
+                  <span style={{
+                    fontSize: '0.7rem',
+                    fontWeight: 600,
+                    color: cluster.direction === 'positive' ? '#0d9488' : '#d97706',
+                    display: 'block',
+                    marginBottom: 4,
+                  }}>
+                    {cluster.theme}
+                  </span>
+                  <p style={{
+                    fontSize: '0.78rem',
+                    color: '#4b5563',
+                    margin: 0,
+                    lineHeight: 1.4,
+                  }}>
+                    {cluster.description}
+                  </p>
+                  <div style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: 4,
+                    marginTop: 6,
+                  }}>
+                    {cluster.behaviors?.map((b, j) => (
+                      <span key={j} style={{
+                        fontSize: '0.62rem',
+                        padding: '2px 6px',
+                        background: 'white',
+                        borderRadius: 8,
+                        color: '#6b7280',
+                        border: '1px solid #e5e7eb',
+                      }}>
+                        {b}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Toggle to see raw correlations */}
+          {hasCorrelations && (
+            <button
+              onClick={() => setShowRawData(!showRawData)}
+              style={{
+                display: 'block',
+                margin: '10px auto 0',
+                padding: '4px 12px',
+                borderRadius: 6,
+                border: '1px solid #e5e7eb',
+                background: 'transparent',
+                fontSize: '0.7rem',
+                color: '#9ca3af',
+                cursor: 'pointer',
+              }}
+            >
+              {showRawData ? 'Hide details' : 'See raw patterns'}
+            </button>
+          )}
         </div>
       )}
 
-      {/* All correlations */}
-      {correlations?.map((corr, i) => {
-        // Skip if same as weekly insight
-        if (weeklyInsight && corr.insight_text === weeklyInsight.insight_text) return null;
-
-        const isPositive = corr.direction === 'positive';
-        const strength = Math.abs(corr.r || 0);
-        const barWidth = Math.round(strength * 100);
-
-        return (
-          <div key={i} style={{
-            padding: '8px 0',
-            borderTop: i > 0 || weeklyInsight ? '1px solid #f3f4f6' : 'none',
-          }}>
+      {/* Raw correlations (shown by default when no narrative, or toggled) */}
+      {(!hasNarrative || showRawData) && (
+        <>
+          {/* Weekly insight (highlighted) */}
+          {!hasNarrative && weeklyInsight && (
             <div style={{
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: 8,
+              padding: '10px 12px',
+              background: '#f0fdf4',
+              borderRadius: 10,
+              marginBottom: hasCorrelations ? 12 : 0,
+              borderLeft: '3px solid #0d9488',
             }}>
-              <span style={{
+              <p style={{
                 fontSize: '0.85rem',
-                color: isPositive ? '#059669' : '#dc2626',
-                fontWeight: 600,
-                lineHeight: 1,
-                marginTop: 2,
-                flexShrink: 0,
+                color: '#1e293b',
+                margin: 0,
+                lineHeight: 1.5,
               }}>
-                {isPositive ? '\u2191' : '\u2193'}
-              </span>
-              <div style={{ flex: 1 }}>
-                <p style={{
-                  fontSize: '0.82rem',
-                  color: '#374151',
-                  margin: 0,
-                  lineHeight: 1.5,
-                }}>
-                  {corr.insight_text}
-                </p>
-                {/* Strength bar */}
+                {weeklyInsight.insight_text}
+              </p>
+            </div>
+          )}
+
+          {/* All correlations */}
+          {correlations?.map((corr, i) => {
+            if (!hasNarrative && weeklyInsight && corr.insight_text === weeklyInsight.insight_text) return null;
+
+            const isPositive = corr.direction === 'positive';
+            const strength = Math.abs(corr.r || 0);
+            const barWidth = Math.round(strength * 100);
+
+            return (
+              <div key={i} style={{
+                padding: '8px 0',
+                borderTop: i > 0 || (!hasNarrative && weeklyInsight) ? '1px solid #f3f4f6' : 'none',
+              }}>
                 <div style={{
-                  marginTop: 4,
-                  height: 3,
-                  background: '#f3f4f6',
-                  borderRadius: 2,
-                  overflow: 'hidden',
-                  maxWidth: 80,
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 8,
                 }}>
-                  <div style={{
-                    height: '100%',
-                    width: `${barWidth}%`,
-                    background: isPositive ? '#0d9488' : '#dc2626',
-                    borderRadius: 2,
-                    transition: 'width 0.3s ease',
-                  }} />
+                  <span style={{
+                    fontSize: '0.85rem',
+                    color: isPositive ? '#059669' : '#dc2626',
+                    fontWeight: 600,
+                    lineHeight: 1,
+                    marginTop: 2,
+                    flexShrink: 0,
+                  }}>
+                    {isPositive ? '\u2191' : '\u2193'}
+                  </span>
+                  <div style={{ flex: 1 }}>
+                    <p style={{
+                      fontSize: '0.82rem',
+                      color: '#374151',
+                      margin: 0,
+                      lineHeight: 1.5,
+                    }}>
+                      {corr.insight_text}
+                    </p>
+                    <div style={{
+                      marginTop: 4,
+                      height: 3,
+                      background: '#f3f4f6',
+                      borderRadius: 2,
+                      overflow: 'hidden',
+                      maxWidth: 80,
+                    }}>
+                      <div style={{
+                        height: '100%',
+                        width: `${barWidth}%`,
+                        background: isPositive ? '#0d9488' : '#dc2626',
+                        borderRadius: 2,
+                        transition: 'width 0.3s ease',
+                      }} />
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
-        );
-      })}
+            );
+          })}
+        </>
+      )}
 
       <p style={{
         fontSize: '0.7rem',

@@ -42,6 +42,7 @@ export default function JournalPage() {
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [correlations, setCorrelations] = useState([]);
   const [correlationInsight, setCorrelationInsight] = useState(null);
+  const [correlationNarrative, setCorrelationNarrative] = useState(null);
   const [safeguards, setSafeguards] = useState(null);
   const [showDailyInsight, setShowDailyInsight] = useState(false);
   const [strainTrend, setStrainTrend] = useState(null);
@@ -125,6 +126,9 @@ export default function JournalPage() {
         setCorrelations(data.correlations || []);
         if (data.weekly_insight) {
           setCorrelationInsight(data.weekly_insight);
+        }
+        if (data.narrative) {
+          setCorrelationNarrative(data.narrative);
         }
       }
     } catch (err) {
@@ -287,7 +291,7 @@ export default function JournalPage() {
         )}
 
         {/* Correlation card (all correlations, promoted) */}
-        <CorrelationCard correlations={correlations} weeklyInsight={correlationInsight} />
+        <CorrelationCard correlations={correlations} weeklyInsight={correlationInsight} narrative={correlationNarrative} />
 
         {/* Weekly digest */}
         <DigestViewer user={user} onDigestGenerated={() => fetchCorrelations(user)} />

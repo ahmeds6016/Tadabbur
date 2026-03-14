@@ -505,6 +505,65 @@ def select_weekly_insight(
     return None
 
 
+def build_correlation_narrative_prompt(
+    correlations: List[dict],
+    trajectory_state: str = "",
+    days_logged: int = 0,
+    user_name: str = "",
+) -> Optional[str]:
+    """Build a Gemini prompt to generate a rich narrative from raw correlations.
+
+    Returns None if there aren't enough correlations to narrate.
+    """
+    if not correlations or len(correlations) < 1:
+        return None
+
+    corr_lines = []
+    for c in correlations[:8]:
+        label_a = BEHAVIOR_MAP.get(c["behavior_a"], {}).get("label", c["behavior_a"])
+        label_b = BEHAVIOR_MAP.get(c["behavior_b"], {}).get("label", c["behavior_b"])
+        direction = "positively correlated" if c["direction"] == "positive" else "inversely correlated"
+        strength = "strongly" if abs(c["r"]) > 0.7 else "moderately" if abs(c["r"]) > 0.5 else "noticeably"
+        corr_lines.append(
+            f"  - {label_a} ↔ {label_b}: {strength} {direction} "
+            f"(r={c['r']:.2f}, {c.get('data_points', 0)} data points)"
+        )
+
+    corr_text = "\n".join(corr_lines)
+
+    name_ref = f" ({user_name})" if user_name else ""
+
+    prompt = f"""You are analyzing a Muslim's spiritual practice data{name_ref} to find meaningful patterns.
+
+They have been logging for {days_logged} days. Current trajectory: {trajectory_state or 'calibrating'}.
+
+RAW CORRELATION DATA (from Pearson correlation analysis):
+{corr_text}
+
+Write a PATTERNS ANALYSIS in VALID JSON with exactly these 3 keys:
+{{
+  "narrative": "A 2-3 sentence synthesis of the most meaningful patterns. Write naturally, as a wise spiritual companion would — connecting the dots between behaviors. Focus on the 2-3 most interesting connections. Do NOT list every correlation. Do NOT use statistical language (no 'r values', no 'correlations'). Instead say things like 'there's a beautiful rhythm forming between...', 'your practice reveals that when you...', 'a quiet pattern has emerged...'",
+  "key_insight": "The single most actionable, interesting insight from the data. One sentence. Something they might not have noticed themselves.",
+  "clusters": [
+    {{
+      "theme": "A 2-3 word theme name (e.g., 'Inner Stillness Chain', 'Prayer-Character Bridge')",
+      "behaviors": ["behavior_label_1", "behavior_label_2"],
+      "direction": "positive or negative",
+      "description": "One sentence describing this cluster naturally."
+    }}
+  ]
+}}
+
+RULES:
+- Maximum 3 clusters.
+- Never show raw numbers, r-values, or percentages.
+- Frame everything with wisdom and warmth.
+- Make it feel like insight, not statistics.
+- Be specific to their actual behaviors, not generic spiritual advice."""
+
+    return prompt
+
+
 # ---------------------------------------------------------------------------
 # Heart Note Pattern Detection
 # ---------------------------------------------------------------------------
@@ -990,12 +1049,61 @@ def recompute_trajectory(
     )
     growth_edges = [cat_id for cat_id, _ in edges[:2]]
 
+    # Week-over-week category deltas (this week avg vs last week avg)
+    category_trends = {}
+    if len(all_category_scores) >= 14:
+        this_week = all_category_scores[-7:]
+        last_week = all_category_scores[-14:-7]
+        for cat_id in IMAN_CATEGORIES:
+            tw_vals = [d.get(cat_id, 0.0) for d in this_week]
+            lw_vals = [d.get(cat_id, 0.0) for d in last_week]
+            tw_avg = sum(tw_vals) / len(tw_vals) if tw_vals else 0
+            lw_avg = sum(lw_vals) / len(lw_vals) if lw_vals else 0
+            delta = tw_avg - lw_avg
+            if delta > 0.05:
+                trend = "improving"
+            elif delta < -0.05:
+                trend = "declining"
+            else:
+                trend = "stable"
+            category_trends[cat_id] = {
+                "trend": trend,
+                "delta": round(delta, 3),
+                "this_week_avg": round(tw_avg, 3),
+            }
+
+    # Notable milestones
+    milestones = []
+    if days_logged == 14:
+        milestones.append({"type": "baseline", "text": "Baseline established"})
+    if days_logged in (30, 60, 90, 180, 365):
+        milestones.append({"type": "streak", "text": f"Day {days_logged} milestone"})
+    # Check for category peaks
+    for cat_id, pillars in category_results.items():
+        if pillars.get("performance", 0) > 0.8 and pillars.get("consistency", 0) > 0.7:
+            cat_label = IMAN_CATEGORIES.get(cat_id, {}).get("label", cat_id)
+            milestones.append({"type": "peak", "text": f"Strong in {cat_label}"})
+
+    # Composite trend over 4 weeks (for sparkline)
+    weekly_composites = []
+    if len(composites_per_day) >= 7:
+        # Compute weekly averages for the last 4 weeks
+        for w in range(min(4, len(composites_per_day) // 7)):
+            start = -(w + 1) * 7
+            end = -w * 7 if w > 0 else None
+            week_slice = composites_per_day[start:end]
+            if week_slice:
+                weekly_composites.insert(0, round(sum(week_slice) / len(week_slice), 4))
+
     trajectory_doc = {
         **trajectory_state,
         "days_logged": days_logged,
         "baseline_established": True,
         "calibration_days_remaining": 0,
         "category_scores": category_results,
+        "category_trends": category_trends,
+        "weekly_composites": weekly_composites,
+        "milestones": milestones,
         "daily_scores": daily_scores_output,
         "active_weights": dict(BASE_WEIGHTS),
         "growth_edges": growth_edges,
@@ -1539,6 +1647,9 @@ def prepare_daily_insight_context(
     trajectory: dict,
     config: dict,
     active_struggles: List[dict],
+    user_name: str = "",
+    heart_note_texts: Optional[List[dict]] = None,
+    recent_verses_explored: Optional[List[dict]] = None,
 ) -> dict:
     """Prepare context for the Gemini daily insight prompt."""
     tracked_ids = get_tracked_behavior_ids(config)
@@ -1569,15 +1680,31 @@ def prepare_daily_insight_context(
         struggle_parts.append(f"{s.get('label', '')} (week {progress.get('weeks_active', 0) + 1})")
     struggle_summary = ", ".join(struggle_parts) if struggle_parts else "None"
 
+    # Heart note content for today
+    note_texts = heart_note_texts or []
+    note_content_parts = []
+    for n in note_texts[:5]:
+        text = n.get("text", "")
+        if text:
+            note_content_parts.append(f"[{n.get('type', 'note')}] {text[:200]}")
+
+    # Recent verses explored
+    verse_parts = []
+    for v in (recent_verses_explored or [])[:5]:
+        verse_parts.append(f"Surah {v.get('surah', '?')}:{v.get('verse', '?')}")
+
     return {
         "date": today_log.get("date", ""),
+        "user_name": user_name,
         "behavior_summary": behavior_summary,
         "heart_state": today_log.get("heart_state"),
         "heart_note_count": len(today_log.get("heart_notes", [])),
+        "heart_note_content": "\n".join(note_content_parts) if note_content_parts else "",
         "days_total": trajectory.get("days_logged", 0),
         "consistency_summary": consistency_summary,
         "strain_status": strain_status,
         "struggle_summary": struggle_summary,
+        "recent_verses": ", ".join(verse_parts) if verse_parts else "",
     }
 
 
@@ -1585,22 +1712,42 @@ def build_daily_insight_prompt(context: dict, persona_name: str = "practicing_mu
     """Build the Gemini prompt for a daily spiritual insight."""
     tone = _PERSONA_TONE.get(persona_name, _PERSONA_TONE["practicing_muslim"])
 
+    name_line = f"The user's name is {context['user_name']}. Address them by name naturally (once)." if context.get("user_name") else ""
+
+    heart_note_section = ""
+    if context.get("heart_note_content"):
+        heart_note_section = f"""
+Heart note content (private reflections they wrote today):
+{context['heart_note_content']}
+Use the THEMES and EMOTIONS from their notes to make your insight deeply personal. Do NOT quote their notes back to them."""
+
+    verse_section = ""
+    if context.get("recent_verses"):
+        verse_section = f"""
+Verses they explored recently on the app: {context['recent_verses']}
+If relevant, weave a connection between the verses they're studying and their spiritual practice."""
+
     prompt = f"""You are a gentle spiritual companion reflecting on a Muslim's day of practice.
 
 TONE: {tone}
+{name_line}
 
 CRITICAL RULES:
 - NEVER show raw numbers, scores, percentages, or indices.
 - NEVER say "you should" or "you must". Use "you might consider", "perhaps", "one beautiful practice is..."
-- Stay under 120 words total across all fields.
+- Stay under 240 words total across all fields.
 - Write with warmth and mercy.
 - Be SPECIFIC to their actual data — reference actual behaviors, not generic advice.
+- If they wrote heart notes, let the themes influence your reflection WITHOUT quoting them back.
+- Make each insight feel like it was written only for them.
 
 TODAY'S LOG ({context['date']}):
 Behaviors logged: {context['behavior_summary']}
 Heart state: {context['heart_state'] or 'Not recorded'}
 Heart notes: {context['heart_note_count']} written
 Streak: Day {context['days_total']} on their journey
+{heart_note_section}
+{verse_section}
 
 RECENT CONTEXT (last 7 days):
 Consistency: {context['consistency_summary']}
@@ -1609,9 +1756,9 @@ Active struggles: {context['struggle_summary']}
 
 Respond in VALID JSON with exactly these 4 keys:
 {{
-  "observation": "A 1-sentence specific observation about today's log. Be concrete.",
-  "correlation": "If you notice a pattern with recent days, share it naturally. Otherwise null.",
-  "encouragement": "A 1-sentence genuine encouragement rooted in what they actually did.",
+  "observation": "A 1-2 sentence specific observation about today's log. Be concrete and personal.",
+  "correlation": "If you notice a pattern with recent days or a connection to verses they're studying, share it naturally. Otherwise null.",
+  "encouragement": "A 1-sentence genuine encouragement rooted in what they actually did today.",
   "strain_note": "If strain is high or rising, a gentle 1-sentence reminder. Otherwise null."
 }}"""
     return prompt
@@ -1629,6 +1776,8 @@ def prepare_digest_context(
     active_struggles: List[dict],
     week_start: str,
     week_end: str,
+    user_name: str = "",
+    explored_verses_this_week: Optional[List[dict]] = None,
 ) -> dict:
     """
     Prepare all context needed for the Gemini weekly digest prompt.
@@ -1717,6 +1866,32 @@ def prepare_digest_context(
             "linked_trends": progress.get("linked_behavior_trends", {}),
         })
 
+    # Heart note content themes (for personalization — don't send raw text, extract themes)
+    heart_note_content_summary = []
+    for note in heart_notes[:10]:
+        text = note.get("text", "")
+        if text and len(text) > 10:
+            heart_note_content_summary.append(f"[{note.get('type', 'note')}] {text[:300]}")
+
+    # Reflection depth analysis
+    note_lengths = [len(n.get("text", "")) for n in heart_notes if n.get("text")]
+    avg_note_length = round(sum(note_lengths) / len(note_lengths)) if note_lengths else 0
+    long_reflections = sum(1 for l in note_lengths if l > 200)
+
+    # Explored verses summary
+    verse_parts = []
+    for v in (explored_verses_this_week or [])[:8]:
+        verse_parts.append(f"Surah {v.get('surah', '?')}:{v.get('verse', '?')}")
+
+    # Week-over-week comparison
+    prev_week_start = (datetime.strptime(week_start, "%Y-%m-%d") - timedelta(days=7)).strftime("%Y-%m-%d")
+    prev_week_end = (datetime.strptime(week_start, "%Y-%m-%d") - timedelta(days=1)).strftime("%Y-%m-%d")
+    prev_week_logs = [
+        log for log in daily_logs
+        if prev_week_start <= log.get("date", "") <= prev_week_end
+    ]
+    prev_week_days = len(prev_week_logs)
+
     return {
         "week_start": week_start,
         "week_end": week_end,
@@ -1725,6 +1900,7 @@ def prepare_digest_context(
         "trajectory_display": trajectory.get("composite_display", ""),
         "volatility": trajectory.get("volatility_state", ""),
         "days_total": trajectory.get("days_logged", 0),
+        "user_name": user_name,
         "behavior_summary": {
             bid: {
                 "label": BEHAVIOR_MAP.get(bid, {}).get("label", bid),
@@ -1737,6 +1913,14 @@ def prepare_digest_context(
         "heart_states": dict(heart_state_counts),
         "heart_note_count": len(heart_notes),
         "heart_note_types": dict(heart_note_types),
+        "heart_note_content": heart_note_content_summary,
+        "reflection_depth": {
+            "avg_length": avg_note_length,
+            "long_reflections": long_reflections,
+            "total_notes": len(heart_notes),
+        },
+        "explored_verses": verse_parts,
+        "prev_week_days_logged": prev_week_days,
         "correlations": [
             {
                 "pair": f"{c['behavior_a']}|{c['behavior_b']}",
@@ -1773,6 +1957,8 @@ def build_digest_prompt(context: dict, persona_name: str = "practicing_muslim") 
         Prompt string for Gemini.
     """
     tone = _PERSONA_TONE.get(persona_name, _PERSONA_TONE["practicing_muslim"])
+
+    name_line = f"The user's name is {context['user_name']}. Address them by name in the opening (once, naturally)." if context.get("user_name") else ""
 
     # Format behavior summary
     behavior_lines = []
@@ -1820,23 +2006,62 @@ def build_digest_prompt(context: dict, persona_name: str = "practicing_muslim") 
         )
     struggle_text = "\n".join(struggle_lines) if struggle_lines else "  No active struggles."
 
+    # Heart note content themes
+    heart_content_section = ""
+    heart_content = context.get("heart_note_content", [])
+    if heart_content:
+        heart_content_text = "\n".join(f"  - {c}" for c in heart_content[:8])
+        heart_content_section = f"""
+Their private reflections this week (themes to weave in — do NOT quote directly):
+{heart_content_text}"""
+
+    # Reflection depth
+    depth = context.get("reflection_depth", {})
+    depth_section = ""
+    if depth.get("total_notes", 0) > 0:
+        depth_desc = "brief" if depth.get("avg_length", 0) < 100 else "moderate" if depth.get("avg_length", 0) < 250 else "deep and thoughtful"
+        depth_section = f"\nReflection style: {depth_desc} ({depth.get('long_reflections', 0)} detailed reflections this week)"
+
+    # Explored verses
+    verse_section = ""
+    explored = context.get("explored_verses", [])
+    if explored:
+        verse_section = f"\nVerses they studied on the app this week: {', '.join(explored)}\nIf relevant, connect a verse they studied to something you observe in their practice."
+
+    # Week-over-week comparison
+    wow_section = ""
+    prev_days = context.get("prev_week_days_logged", 0)
+    curr_days = context.get("days_logged_this_week", 0)
+    if prev_days > 0:
+        if curr_days > prev_days:
+            wow_section = f"\nCompared to last week: they logged MORE days ({curr_days} vs {prev_days}). Acknowledge the increased dedication."
+        elif curr_days < prev_days:
+            wow_section = f"\nCompared to last week: they logged fewer days ({curr_days} vs {prev_days}). Frame gently — life has seasons."
+        else:
+            wow_section = f"\nCompared to last week: same consistency ({curr_days} days). Acknowledge the steadiness."
+
     prompt = f"""You are a gentle spiritual companion reflecting on a Muslim's week of spiritual practice.
 
 TONE: {tone}
+{name_line}
 
 CRITICAL RULES:
 - NEVER show raw numbers, scores, percentages, or indices to the user.
 - NEVER say "you should", "you must", or "you need to". Use "you might consider", "perhaps", "one beautiful practice is..."
 - NEVER compare the user to others or to an ideal.
-- Stay under 300 words total across all sections.
+- Stay under 600 words total across all sections.
 - End with a note of humility — you are a mirror, not a judge.
 - Write in second person ("you"), with warmth and mercy.
+- Make this digest feel deeply personal — as if written by someone who truly knows their journey.
+- Reference the THEMES from their heart notes and the verses they studied, weaving them naturally into the narrative.
 
 CONTEXT FOR THIS WEEK ({context['week_start']} to {context['week_end']}):
 
 Overall trajectory: {context['trajectory_state']} ({context['trajectory_display']})
 Days logged this week: {context['days_logged_this_week']}
 Total days on journey: {context['days_total']}
+{wow_section}
+{depth_section}
 
 Behaviors this week:
 {behavior_text}
@@ -1844,6 +2069,8 @@ Behaviors this week:
 Heart states this week:
 {heart_text}
 Heart notes written: {context['heart_note_count']} ({', '.join(f'{k}: {v}' for k, v in context.get('heart_note_types', {}).items()) or 'none'})
+{heart_content_section}
+{verse_section}
 
 Behavioral correlations observed:
 {corr_text}
@@ -1859,16 +2086,16 @@ Growth edges (areas with lowest consistency):
 
 Respond in VALID JSON with exactly these 7 keys:
 {{
-  "opening": "A 1-2 sentence warm opening acknowledging their week.",
-  "weekly_story": "A 2-3 sentence narrative of what their week looked like spiritually — weave behaviors and heart states into a story, not a report.",
-  "strength_noticed": "One specific strength you noticed this week. Be concrete.",
-  "correlation_insight": "If correlations exist, share one insight naturally (e.g., 'It seems that on days you...'). If no correlations, share an encouraging observation.",
-  "gentle_attention": "One area that might benefit from gentle attention. Frame with mercy, not criticism.",
+  "opening": "A 1-2 sentence warm, personal opening. If you know their name, use it. Acknowledge something specific about their week — not generic.",
+  "weekly_story": "A 3-4 sentence narrative of what their week looked like spiritually. Weave behaviors, heart states, and the themes from their reflections into a living story. Reference verses they studied if relevant. This should feel like a letter from a wise friend, not a report.",
+  "strength_noticed": "One specific strength you noticed this week. Ground it in their actual data — what they did, what they wrote, how they showed up.",
+  "correlation_insight": "Share a meaningful pattern you see in their data — connect behaviors to heart states, reflections to actions, or verses to practices. Make it feel like a genuine insight, not a template.",
+  "gentle_attention": "One area that might benefit from gentle attention. Frame with mercy, not criticism. If they wrote about struggles in their notes, acknowledge that.",
   "verse_to_carry": {{
     "surah": 0,
     "verse": 0,
     "text": "The verse text in English",
-    "why": "A sentence explaining why this verse feels relevant to their week."
+    "why": "A 1-2 sentence explanation of why THIS verse for THIS person THIS week. Connect it to something specific in their practice or reflections."
   }},
   "closing": "A 1-sentence closing with humility. Remind them this is a mirror, not a measure."
 }}"""

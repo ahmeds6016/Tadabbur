@@ -83,6 +83,7 @@ from services.iman_service import (
     compute_strain_recovery,
     compute_strain_trend,
     compute_safeguard_status,
+    build_correlation_narrative_prompt,
     HEART_NOTE_LIMITS,
     MAX_TRACKED_BEHAVIORS,
     ENGINE_VERSION,
@@ -8535,10 +8536,93 @@ def iman_get_correlations():
                 # Cap at 50 to prevent unbounded growth
                 config_ref.update({"shown_correlations": updated_shown[-50:]})
 
+        # Generate Gemini-powered narrative (cached daily)
+        narrative_data = None
+        if len(correlations) >= 2:
+            # Check daily cache
+            today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            narrative_ref = (
+                users_db.collection("users").document(uid)
+                .collection("iman_correlation_narratives").document(today_str)
+            )
+            cached_narrative = narrative_ref.get()
+            if cached_narrative.exists:
+                narrative_data = cached_narrative.to_dict()
+                # Decrypt fields
+                for field in ["narrative", "key_insight"]:
+                    val = narrative_data.get(field)
+                    if val:
+                        try:
+                            narrative_data[field] = _decrypt_text(val, uid)
+                        except Exception:
+                            pass
+            else:
+                # Get trajectory and user info for context
+                traj_ref = users_db.collection("users").document(uid).collection("iman_trajectory").document("current")
+                traj_doc = traj_ref.get()
+                traj = traj_doc.to_dict() if traj_doc.exists else {}
+                user_doc = users_db.collection("users").document(uid).get()
+                user_name = ""
+                if user_doc.exists:
+                    ud = user_doc.to_dict()
+                    user_name = ud.get("displayName", ud.get("display_name", ""))
+
+                narrative_prompt = build_correlation_narrative_prompt(
+                    correlations,
+                    trajectory_state=traj.get("composite_display", ""),
+                    days_logged=traj.get("days_logged", 0),
+                    user_name=user_name,
+                )
+                if narrative_prompt:
+                    try:
+                        import google.auth
+                        from google.auth.transport.requests import Request as GoogleRequest
+                        credentials, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
+                        auth_req = GoogleRequest()
+                        credentials.refresh(auth_req)
+
+                        vertex_endpoint = (
+                            f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/"
+                            f"{GCP_INFRASTRUCTURE_PROJECT}/locations/{LOCATION}/"
+                            f"publishers/google/models/{GEMINI_MODEL_ID}:generateContent"
+                        )
+                        body = {
+                            "contents": [{"role": "user", "parts": [{"text": narrative_prompt}]}],
+                            "generation_config": {
+                                "response_mime_type": "application/json",
+                                "temperature": 0.6,
+                                "maxOutputTokens": 1024,
+                            },
+                        }
+                        resp = requests.post(
+                            vertex_endpoint,
+                            headers={"Authorization": f"Bearer {credentials.token}", "Content-Type": "application/json"},
+                            json=body,
+                            timeout=20,
+                        )
+                        if resp.ok:
+                            raw = resp.json()
+                            gen_text = safe_get_nested(raw, "candidates", 0, "content", "parts", 0, "text")
+                            if gen_text:
+                                narrative_data = extract_json_from_response(gen_text)
+                                if narrative_data:
+                                    # Cache (encrypt text fields)
+                                    encrypted = {
+                                        "narrative": _encrypt_text(str(narrative_data.get("narrative", "")), uid),
+                                        "key_insight": _encrypt_text(str(narrative_data.get("key_insight", "")), uid),
+                                        "clusters": narrative_data.get("clusters", []),
+                                        "generated_at": datetime.now(timezone.utc).isoformat(),
+                                    }
+                                    narrative_ref.set(encrypted)
+                                    print(f"[IMAN] Correlation narrative generated for {uid[:8]}...")
+                    except Exception as narr_err:
+                        print(f"[IMAN] Narrative generation failed (non-blocking): {narr_err}")
+
         print(f"[IMAN] Correlations for {uid[:8]}...: {len(correlations)} found")
         return jsonify({
             "correlations": correlations[:5],
             "weekly_insight": weekly_insight,
+            "narrative": narrative_data,
         }), 200
 
     except Exception as e:
@@ -8943,16 +9027,28 @@ def iman_generate_digest():
                 "progress": progress,
             })
 
-        # 6. User persona
+        # 6. User persona + display name
         user_doc = users_db.collection("users").document(uid).get()
         persona_name = "practicing_muslim"
+        user_name = ""
+        explored_verses_this_week = []
         if user_doc.exists:
-            persona_name = user_doc.to_dict().get("persona", "practicing_muslim")
+            user_data = user_doc.to_dict()
+            persona_name = user_data.get("persona", "practicing_muslim")
+            user_name = user_data.get("displayName", user_data.get("display_name", ""))
+            # Get explored verses for this week
+            explored = user_data.get("explored_verses", {})
+            for surah_num, verse_list in explored.items():
+                for v in verse_list[-5:]:  # Last 5 per surah
+                    explored_verses_this_week.append({"surah": surah_num, "verse": v})
+            explored_verses_this_week = explored_verses_this_week[-10:]  # Cap at 10
 
         # Build context and prompt
         context = prepare_digest_context(
             daily_logs, trajectory, config, heart_notes,
             active_struggles, week_start, week_end,
+            user_name=user_name,
+            explored_verses_this_week=explored_verses_this_week,
         )
         prompt = build_digest_prompt(context, persona_name)
 
@@ -9222,14 +9318,40 @@ def iman_get_daily_insight(date_str):
             progress = compute_struggle_progress(sid, s.get("declared_at", ""), recent_logs, s_config)
             active_struggles.append({"label": s_config["label"], "progress": progress})
 
-        # User persona
+        # User persona + display name
         user_doc = users_db.collection("users").document(uid).get()
         persona_name = "practicing_muslim"
+        user_name = ""
+        recent_verses = []
         if user_doc.exists:
-            persona_name = user_doc.to_dict().get("persona", "practicing_muslim")
+            user_data = user_doc.to_dict()
+            persona_name = user_data.get("persona", "practicing_muslim")
+            user_name = user_data.get("displayName", user_data.get("display_name", ""))
+            # Recent explored verses
+            explored = user_data.get("explored_verses", {})
+            for surah_num, verse_list in explored.items():
+                for v in verse_list[-3:]:
+                    recent_verses.append({"surah": surah_num, "verse": v})
+            recent_verses = recent_verses[-5:]
+
+        # Decrypt today's heart notes for context
+        heart_note_texts = []
+        for note in today_log.get("heart_notes", []):
+            try:
+                heart_note_texts.append({
+                    "type": note.get("type", ""),
+                    "text": _decrypt_text(note.get("text", ""), uid),
+                })
+            except Exception:
+                pass
 
         # Build context and prompt
-        context = prepare_daily_insight_context(today_log, recent_logs, trajectory, config, active_struggles)
+        context = prepare_daily_insight_context(
+            today_log, recent_logs, trajectory, config, active_struggles,
+            user_name=user_name,
+            heart_note_texts=heart_note_texts,
+            recent_verses_explored=recent_verses,
+        )
         prompt = build_daily_insight_prompt(context, persona_name)
 
         # Call Gemini

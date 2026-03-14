@@ -14,6 +14,12 @@ const VOL_LABELS = {
   turbulent: 'Turbulent',
 };
 
+const TREND_ARROWS = {
+  improving: { symbol: '↑', color: '#059669' },
+  stable: { symbol: '→', color: '#6b7280' },
+  declining: { symbol: '↓', color: '#d97706' },
+};
+
 export default function TrajectoryDisplay({ trajectory, categories = [] }) {
   if (!trajectory) return null;
 
@@ -26,6 +32,9 @@ export default function TrajectoryDisplay({ trajectory, categories = [] }) {
     baseline_established,
     calibration_days_remaining = 0,
     category_scores = {},
+    category_trends = {},
+    weekly_composites = [],
+    milestones = [],
     growth_edges = [],
     comfort = null,
     strain_recovery = null,
@@ -37,9 +46,10 @@ export default function TrajectoryDisplay({ trajectory, categories = [] }) {
   const showEmergency = safeguards?.emergency_override?.active;
   const showHumility = safeguards?.humility_reset?.active;
 
-  // Build category bar data
+  // Build category bar data with trends
   const categoryBars = categories.map((cat) => {
     const scores = category_scores[cat.id] || {};
+    const trend = category_trends[cat.id] || {};
     return {
       id: cat.id,
       label: cat.label,
@@ -49,8 +59,13 @@ export default function TrajectoryDisplay({ trajectory, categories = [] }) {
       consistency: scores.consistency || 0,
       trajectory: scores.trajectory || 0,
       isGrowthEdge: growth_edges.includes(cat.id),
+      trend: trend.trend || null,
+      trendDelta: trend.delta || 0,
     };
   });
+
+  // Compute weekly sparkline from weekly_composites
+  const sparklineData = weekly_composites.length >= 2 ? weekly_composites : null;
 
   // Emergency override replaces ALL content
   if (showEmergency) {
@@ -151,15 +166,50 @@ export default function TrajectoryDisplay({ trajectory, categories = [] }) {
         </div>
       )}
 
-      {/* Category bars (only after baseline, hidden in comfort/humility mode) */}
+      {/* Weekly trend sparkline (after baseline) */}
+      {baseline_established && !showComfort && !showHumility && sparklineData && (
+        <div className="sparkline-section">
+          <span className="sparkline-label">Weekly trend</span>
+          <div className="sparkline-container">
+            {sparklineData.map((val, i) => {
+              const min = Math.min(...sparklineData);
+              const max = Math.max(...sparklineData);
+              const range = max - min || 1;
+              const height = Math.max(4, ((val - min) / range) * 28);
+              const isLast = i === sparklineData.length - 1;
+              return (
+                <div
+                  key={i}
+                  className="sparkline-bar"
+                  style={{
+                    height: `${height}px`,
+                    backgroundColor: isLast ? (color || '#0d9488') : '#d1d5db',
+                    opacity: isLast ? 1 : 0.5,
+                  }}
+                />
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Category bars with trends (only after baseline, hidden in comfort/humility mode) */}
       {baseline_established && !showComfort && !showHumility && categoryBars.length > 0 && (
         <div className="category-bars">
           {categoryBars.map((bar) => {
             // Scale composite from [-1, 1] to visual width [0, 100]
             const visual = Math.max(0, Math.min(100, (bar.composite + 1) * 50));
+            const trendInfo = bar.trend ? TREND_ARROWS[bar.trend] : null;
             return (
               <div key={bar.id} className={`cat-bar-row ${bar.isGrowthEdge ? 'growth-edge' : ''}`}>
-                <span className="cat-label">{bar.label}</span>
+                <span className="cat-label">
+                  {bar.label}
+                  {trendInfo && (
+                    <span className="cat-trend" style={{ color: trendInfo.color }}>
+                      {' '}{trendInfo.symbol}
+                    </span>
+                  )}
+                </span>
                 <div className="cat-bar-track">
                   <div
                     className="cat-bar-fill"
@@ -169,6 +219,17 @@ export default function TrajectoryDisplay({ trajectory, categories = [] }) {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Milestones */}
+      {baseline_established && !showComfort && !showHumility && milestones.length > 0 && (
+        <div className="milestones-section">
+          {milestones.map((m, i) => (
+            <span key={i} className="milestone-pill">
+              {m.type === 'peak' ? '★' : m.type === 'streak' ? '🏅' : '◎'} {m.text}
+            </span>
+          ))}
         </div>
       )}
 
@@ -305,6 +366,57 @@ export default function TrajectoryDisplay({ trajectory, categories = [] }) {
           border-radius: 4px;
           transition: width 0.4s ease;
           min-width: 2px;
+        }
+        .cat-trend {
+          font-size: 0.7rem;
+          font-weight: 600;
+        }
+
+        /* Sparkline */
+        .sparkline-section {
+          margin-top: 12px;
+          margin-bottom: 4px;
+          display: flex;
+          align-items: flex-end;
+          gap: 8px;
+        }
+        .sparkline-label {
+          font-size: 0.65rem;
+          color: #9ca3af;
+          text-transform: uppercase;
+          letter-spacing: 0.3px;
+          width: 70px;
+          flex-shrink: 0;
+          text-align: right;
+          padding-bottom: 2px;
+        }
+        .sparkline-container {
+          display: flex;
+          align-items: flex-end;
+          gap: 3px;
+          flex: 1;
+          height: 32px;
+        }
+        .sparkline-bar {
+          width: 12px;
+          border-radius: 2px;
+          transition: height 0.3s ease;
+        }
+
+        /* Milestones */
+        .milestones-section {
+          margin-top: 10px;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+        }
+        .milestone-pill {
+          font-size: 0.68rem;
+          padding: 3px 8px;
+          background: rgba(13, 148, 136, 0.08);
+          border-radius: 10px;
+          color: #0d9488;
+          font-weight: 500;
         }
 
         /* Humility Reset */
