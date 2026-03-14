@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { BACKEND_URL } from '../lib/config';
 
-export default function DigestViewer({ user }) {
+export default function DigestViewer({ user, onDigestGenerated }) {
   const [digest, setDigest] = useState(null);
   const [weekId, setWeekId] = useState('');
   const [loading, setLoading] = useState(false);
@@ -61,6 +61,7 @@ export default function DigestViewer({ user }) {
       }
       setDigest(data.digest);
       setWeekId(data.week_id || '');
+      if (onDigestGenerated) onDigestGenerated();
     } catch (err) {
       setError('Network error. Please try again.');
     } finally {
@@ -121,21 +122,29 @@ export default function DigestViewer({ user }) {
                 </>
               ) : null}
             </>
-          ) : (
-            <>
-              <p className="dv-empty-text">
-                Your weekly spiritual reflection awaits.
-              </p>
-              <button
-                className="dv-generate-btn"
-                onClick={handleGenerate}
-                disabled={generating}
-              >
-                {generating ? 'Reflecting on your week...' : "Generate This Week's Digest"}
-              </button>
-              {error && <p className="dv-error">{error}</p>}
-            </>
-          )}
+          ) : (() => {
+            const isMonday = new Date().getDay() === 1;
+            return (
+              <>
+                <p className="dv-empty-text">
+                  Your weekly spiritual reflection awaits.
+                </p>
+                {!isMonday && (
+                  <p style={{ fontSize: '0.78rem', color: '#9ca3af', margin: '0 0 12px 0' }}>
+                    Digests are generated on Mondays. Keep logging — your reflection awaits.
+                  </p>
+                )}
+                <button
+                  className="dv-generate-btn"
+                  onClick={handleGenerate}
+                  disabled={generating || !isMonday}
+                >
+                  {generating ? 'Reflecting on your week...' : "Generate This Week's Digest"}
+                </button>
+                {error && <p className="dv-error">{error}</p>}
+              </>
+            );
+          })()}
         </div>
       ) : (
         <div className="dv-content">

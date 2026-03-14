@@ -290,7 +290,7 @@ export default function JournalPage() {
         <CorrelationCard correlations={correlations} weeklyInsight={correlationInsight} />
 
         {/* Weekly digest */}
-        <DigestViewer user={user} />
+        <DigestViewer user={user} onDigestGenerated={() => fetchCorrelations(user)} />
 
         {/* Heart note patterns */}
         <HeartPatterns user={user} />
@@ -315,6 +315,7 @@ export default function JournalPage() {
                   struggleId={s.struggle_id}
                   struggleColor={s.color}
                   struggleLabel={s.label}
+                  onGoalCompleted={() => fetchTrajectory(user)}
                 />
               </div>
             ))}

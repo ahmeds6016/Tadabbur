@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Check } from 'lucide-react';
 import { BACKEND_URL } from '../lib/config';
 
-export default function StruggleGoals({ user, struggleId, struggleColor, struggleLabel }) {
+export default function StruggleGoals({ user, struggleId, struggleColor, struggleLabel, onGoalCompleted }) {
   const [goals, setGoals] = useState(null);
   const [loading, setLoading] = useState(true);
   const [completingId, setCompletingId] = useState(null);
@@ -43,6 +43,7 @@ export default function StruggleGoals({ user, struggleId, struggleColor, struggl
       });
       if (res.ok) {
         await fetchGoals();
+        if (onGoalCompleted) onGoalCompleted();
       }
     } catch (err) {
       console.error('Failed to complete goal:', err);

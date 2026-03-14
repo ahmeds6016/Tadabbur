@@ -158,7 +158,9 @@ export default function StruggleCard({ struggle, user, onResolved }) {
           onClick={handleReadGuidance}
           disabled={loadingGuidance}
         >
-          {loadingGuidance ? 'Loading...' : showGuidance ? 'Hide Guidance' : 'Read Guidance'}
+          {loadingGuidance ? (
+            <><span className="sc-spinner" /> Loading...</>
+          ) : showGuidance ? 'Hide Guidance' : 'Read Guidance'}
         </button>
         <button
           className="sc-btn resolve"
@@ -290,6 +292,20 @@ export default function StruggleCard({ struggle, user, onResolved }) {
         .sc-btn:disabled {
           opacity: 0.5;
           cursor: wait;
+        }
+        .sc-spinner {
+          display: inline-block;
+          width: 12px;
+          height: 12px;
+          border: 2px solid #bfe0fb;
+          border-top-color: #0284c7;
+          border-radius: 50%;
+          animation: sc-spin 0.6s linear infinite;
+          vertical-align: middle;
+          margin-right: 4px;
+        }
+        @keyframes sc-spin {
+          to { transform: rotate(360deg); }
         }
         .sc-btn.guidance {
           background: #f0f9ff;

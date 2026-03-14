@@ -19,7 +19,7 @@ const CHAR_LIMITS = {
   quran_insight: 500,
 };
 
-export default function HeartNoteComposer({ onSave, disabled = false, existingNotes = [], onEdit, onDelete }) {
+export default function HeartNoteComposer({ onSave, disabled = false }) {
   const [selectedType, setSelectedType] = useState(null);
   const [text, setText] = useState('');
   const [saving, setSaving] = useState(false);

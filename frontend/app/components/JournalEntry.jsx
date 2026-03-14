@@ -614,7 +614,10 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate, onSaved }
           </div>
         )}
         {heartState && loadingResponse && (
-          <p className="hr-loading">Loading spiritual guidance...</p>
+          <div className="hr-loading">
+            <div className="hr-loading-spinner" />
+            <span>Loading spiritual guidance...</span>
+          </div>
         )}
       </div>
 
@@ -845,10 +848,28 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate, onSaved }
           line-height: 1.5;
         }
         .hr-loading {
+          display: flex;
+          align-items: center;
+          gap: 8px;
           font-size: 0.8rem;
           color: #9ca3af;
           font-style: italic;
-          margin: 8px 0 0 0;
+          margin: 10px 0 0 0;
+          padding: 10px 12px;
+          background: #f8fafc;
+          border-radius: 8px;
+        }
+        .hr-loading-spinner {
+          width: 14px;
+          height: 14px;
+          border: 2px solid #e5e7eb;
+          border-top-color: #0d9488;
+          border-radius: 50%;
+          animation: hr-spin 0.6s linear infinite;
+          flex-shrink: 0;
+        }
+        @keyframes hr-spin {
+          to { transform: rotate(360deg); }
         }
 
         /* Save area */

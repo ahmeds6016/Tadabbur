@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { ChevronDown, Pencil, Trash2, Search } from 'lucide-react';
 import { BACKEND_URL } from '../lib/config';
 
@@ -40,6 +40,17 @@ export default function HeartNoteHistory({ user }) {
   const [editingNote, setEditingNote] = useState(null);
   const [editText, setEditText] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const searchTimerRef = useRef(null);
+
+  // Debounce search query (300ms)
+  useEffect(() => {
+    clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 300);
+    return () => clearTimeout(searchTimerRef.current);
+  }, [searchQuery]);
 
   const fetchNotes = useCallback(async () => {
     if (!user) return;
@@ -48,7 +59,7 @@ export default function HeartNoteHistory({ user }) {
       const token = await user.getIdToken();
       let url = `${BACKEND_URL}/iman/heart-notes?days=${days}`;
       if (filterType) url += `&type=${filterType}`;
-      if (searchQuery) url += `&q=${encodeURIComponent(searchQuery)}`;
+      if (debouncedSearch) url += `&q=${encodeURIComponent(debouncedSearch)}`;
 
       const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` },
@@ -62,7 +73,7 @@ export default function HeartNoteHistory({ user }) {
     } finally {
       setLoading(false);
     }
-  }, [user, days, filterType, searchQuery]);
+  }, [user, days, filterType, debouncedSearch]);
 
   useEffect(() => {
     if (expanded) fetchNotes();
@@ -289,6 +300,15 @@ export default function HeartNoteHistory({ user }) {
                           }}>
                             {NOTE_TYPE_LABELS[note.type] || note.type}
                           </span>
+                          {!isSameDay && (
+                            <span style={{
+                              fontSize: '0.58rem',
+                              color: '#c4c8cd',
+                              fontStyle: 'italic',
+                            }}>
+                              Editable today only
+                            </span>
+                          )}
                           {isSameDay && !isEditing && (
                             <div style={{ display: 'flex', gap: 6 }}>
                               <button

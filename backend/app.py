@@ -7985,7 +7985,25 @@ def iman_update_config():
         config_ref.update({"tracked_behaviors": tracked})
 
         print(f"[IMAN] Config updated for {uid[:8]}... — {len(tracked)} behaviors")
-        return jsonify({"message": "Config updated", "tracked_count": len(tracked)}), 200
+
+        # Return full config (matching GET /iman/config shape)
+        updated_config = config_ref.get().to_dict()
+        categories = []
+        for cat_id, cat_meta in IMAN_CATEGORIES.items():
+            categories.append({
+                "id": cat_id,
+                "label": cat_meta["label"],
+                "icon": cat_meta["icon"],
+                "color": cat_meta["color"],
+                "base_weight": cat_meta["base_weight"],
+            })
+
+        return jsonify({
+            "message": "Config updated",
+            "tracked_count": len(tracked),
+            "config": updated_config,
+            "categories": categories,
+        }), 200
 
     except Exception as e:
         print(f"ERROR in PUT /iman/config: {e}")
@@ -8509,6 +8527,14 @@ def iman_get_correlations():
         previously_shown = config.get("shown_correlations", [])
         weekly_insight = select_weekly_insight(correlations, previously_shown)
 
+        # Persist the newly shown insight to avoid repeats
+        if weekly_insight:
+            key = f"{weekly_insight['behavior_a']}|{weekly_insight['behavior_b']}"
+            if key not in previously_shown:
+                updated_shown = previously_shown + [key]
+                # Cap at 50 to prevent unbounded growth
+                config_ref.update({"shown_correlations": updated_shown[-50:]})
+
         print(f"[IMAN] Correlations for {uid[:8]}...: {len(correlations)} found")
         return jsonify({
             "correlations": correlations[:5],
@@ -8867,7 +8893,7 @@ def iman_generate_digest():
 
         # Fetch all needed data
         # 1. Config
-        config_ref = users_db.collection("users").document(uid).collection("iman_config").document("current")
+        config_ref = users_db.collection("users").document(uid).collection("iman_config").document("settings")
         config_doc = config_ref.get()
         config = config_doc.to_dict() if config_doc.exists else build_default_config()
 

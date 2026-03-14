@@ -33,7 +33,7 @@ export default function TrajectoryDisplay({ trajectory, categories = [] }) {
   } = trajectory;
 
   const stateConf = STATE_CONFIG[current_state] || STATE_CONFIG.calibrating;
-  const showComfort = comfort?.hide_trajectory;
+  const showComfort = comfort && (comfort.comfort_verse || comfort.message);
   const showEmergency = safeguards?.emergency_override?.active;
   const showHumility = safeguards?.humility_reset?.active;
 
