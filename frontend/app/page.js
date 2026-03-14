@@ -11,7 +11,6 @@ import {
   signOut,
   updateProfile,
   sendPasswordResetEmail,
-  sendEmailVerification
 } from 'firebase/auth';
 import { auth } from './lib/firebase';
 import { BACKEND_URL, getPersonaTheme, getPersonaIcon } from './lib/config';
@@ -134,15 +133,6 @@ export default function HomePage() {
     return <AuthComponent />;
   }
 
-  if (user && !user.emailVerified && !userProfile) {
-    return (
-      <EmailVerificationGate
-        user={user}
-        onVerified={() => setRefreshKey(k => k + 1)}
-      />
-    );
-  }
-
   if (user && !userProfile) {
     return <OnboardingComponent user={user} onProfileComplete={setUserProfile} />;
   }
@@ -216,11 +206,6 @@ function AuthComponent() {
         const cred = await createUserWithEmailAndPassword(auth, email, password);
         if (firstName.trim()) {
           await updateProfile(cred.user, { displayName: firstName.trim() });
-        }
-        try {
-          await sendEmailVerification(cred.user);
-        } catch (verifyErr) {
-          console.warn('Could not send verification email:', verifyErr.message);
         }
       } else {
         await signInWithEmailAndPassword(auth, email, password);
@@ -452,141 +437,6 @@ function AuthComponent() {
           </>
         )}
 
-      </div>
-    </div>
-  );
-}
-
-// ============================================================================
-// EMAIL VERIFICATION GATE
-// ============================================================================
-
-function EmailVerificationGate({ user, onVerified }) {
-  const [error, setError] = useState('');
-  const [resendDisabled, setResendDisabled] = useState(false);
-  const [resendCountdown, setResendCountdown] = useState(0);
-  const [checking, setChecking] = useState(false);
-
-  useEffect(() => {
-    const interval = setInterval(async () => {
-      try {
-        await user.reload();
-        if (user.emailVerified) {
-          clearInterval(interval);
-          onVerified();
-        }
-      } catch {
-        // Reload failed, skip this cycle
-      }
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [user, onVerified]);
-
-  useEffect(() => {
-    if (resendCountdown <= 0) {
-      setResendDisabled(false);
-      return;
-    }
-    const timer = setTimeout(() => setResendCountdown(c => c - 1), 1000);
-    return () => clearTimeout(timer);
-  }, [resendCountdown]);
-
-  const handleResend = async () => {
-    setError('');
-    try {
-      await sendEmailVerification(user);
-      setResendDisabled(true);
-      setResendCountdown(60);
-    } catch (err) {
-      if (err.code === 'auth/too-many-requests') {
-        setError('Too many requests. Please wait a few minutes before trying again.');
-      } else {
-        setError(err.message);
-      }
-    }
-  };
-
-  const handleCheckNow = async () => {
-    setChecking(true);
-    setError('');
-    try {
-      await user.reload();
-      if (user.emailVerified) {
-        onVerified();
-      } else {
-        setError('Email not yet verified. Please check your inbox and click the verification link.');
-      }
-    } catch {
-      setError('Could not check verification status. Please try again.');
-    }
-    setChecking(false);
-  };
-
-  return (
-    <div className="container">
-      <div className="card">
-        <h1 style={{ textAlign: 'center', marginBottom: '16px' }}>Verify Your Email</h1>
-        <div style={{ textAlign: 'center', padding: '16px 0' }}>
-          <div style={{
-            width: '64px',
-            height: '64px',
-            borderRadius: '50%',
-            background: 'rgba(13, 148, 136, 0.1)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            margin: '0 auto 20px',
-            fontSize: '1.8rem'
-          }}>
-            &#x2709;
-          </div>
-          <p style={{ fontSize: '1rem', color: '#666', lineHeight: '1.6', marginBottom: '8px' }}>
-            We&apos;ve sent a verification link to:
-          </p>
-          <p style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--primary-teal)', marginBottom: '24px' }}>
-            {user.email}
-          </p>
-          <p style={{ fontSize: '0.9rem', color: '#999', lineHeight: '1.5', marginBottom: '24px' }}>
-            Please check your inbox and click the link to verify your email address.
-            This page will automatically update once verified.
-          </p>
-        </div>
-
-        <button
-          onClick={handleCheckNow}
-          disabled={checking}
-          style={{ width: '100%', marginBottom: '12px' }}
-        >
-          {checking ? 'Checking...' : "I've Verified My Email"}
-        </button>
-
-        <button
-          onClick={handleResend}
-          disabled={resendDisabled}
-          className="toggle-auth"
-          style={{ width: '100%', marginBottom: '12px' }}
-        >
-          {resendDisabled
-            ? `Resend in ${resendCountdown}s`
-            : 'Resend Verification Email'}
-        </button>
-
-        {error && <p className="error">{error}</p>}
-
-        <button
-          onClick={() => signOut(auth)}
-          style={{
-            width: '100%',
-            background: 'transparent',
-            color: '#999',
-            border: '1px solid #ddd',
-            borderRadius: '10px',
-            marginTop: '8px',
-            fontSize: '0.9rem'
-          }}
-        >
-          Sign Out
-        </button>
       </div>
     </div>
   );
