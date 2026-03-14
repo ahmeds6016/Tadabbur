@@ -451,12 +451,12 @@ export default function JournalPage() {
           flex-shrink: 0;
           padding: 8px 16px;
           border-radius: 20px;
-          border: 1px solid var(--border-light, #e5e7eb);
-          background: white;
+          border: 1px solid var(--color-border);
+          background: var(--color-surface);
           font-size: 0.85rem;
           cursor: pointer;
           transition: all 0.15s ease;
-          color: #374151;
+          color: var(--color-text);
           white-space: nowrap;
         }
         .date-chip:hover {
@@ -480,11 +480,11 @@ export default function JournalPage() {
           width: 36px;
           height: 36px;
           border-radius: 50%;
-          border: 1px solid #e5e7eb;
-          background: white;
+          border: 1px solid var(--color-border);
+          background: var(--color-surface);
           font-size: 0.78rem;
           cursor: pointer;
-          color: #374151;
+          color: var(--color-text);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -538,7 +538,7 @@ export default function JournalPage() {
         .section-label {
           font-size: 0.8rem;
           font-weight: 600;
-          color: #6b7280;
+          color: var(--color-text-secondary);
           text-transform: uppercase;
           letter-spacing: 0.5px;
           margin: 0 0 10px 0;
@@ -546,9 +546,9 @@ export default function JournalPage() {
         .add-struggle-btn {
           padding: 10px 16px;
           border-radius: 10px;
-          border: 1.5px dashed #d1d5db;
+          border: 1.5px dashed var(--color-border);
           background: transparent;
-          color: #6b7280;
+          color: var(--color-text-secondary);
           font-size: 0.85rem;
           cursor: pointer;
           transition: all 0.15s ease;

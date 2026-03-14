@@ -60,20 +60,20 @@ export default function CollapsibleSection({
             alignItems: 'center',
             marginBottom: '18px',
             paddingBottom: '12px',
-            borderBottom: '1px solid #e8ecf1',
+            borderBottom: '1px solid var(--color-border)',
           }}>
             <h2 style={{
               margin: 0,
               fontSize: '1.1rem',
               fontWeight: 700,
-              color: '#1e293b',
+              color: 'var(--color-text)',
               letterSpacing: '-0.01em',
             }}>
               {title}
               {count !== null && (
                 <span style={{
                   fontSize: '0.8em',
-                  color: '#94a3b8',
+                  color: 'var(--color-text-muted)',
                   marginLeft: '8px',
                   fontWeight: 500,
                 }}>
@@ -97,14 +97,14 @@ export default function CollapsibleSection({
         aria-expanded={isExpanded}
         style={{
           width: '100%',
-          background: isExpanded ? '#fafaf8' : 'white',
+          background: isExpanded ? 'var(--color-surface-muted)' : 'var(--color-surface)',
           border: 'none',
           padding: '14px 18px',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           cursor: 'pointer',
-          borderBottom: '1px solid #e8ecf1',
+          borderBottom: '1px solid var(--color-border)',
           transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
         }}
       >
@@ -133,14 +133,14 @@ export default function CollapsibleSection({
             margin: 0,
             fontSize: '1.05rem',
             fontWeight: 700,
-            color: '#1e293b',
+            color: 'var(--color-text)',
             letterSpacing: '-0.01em',
           }}>
             {title}
             {count !== null && (
               <span style={{
                 fontSize: '0.8rem',
-                color: '#94a3b8',
+                color: 'var(--color-text-muted)',
                 marginLeft: '8px',
                 fontWeight: 500,
               }}>

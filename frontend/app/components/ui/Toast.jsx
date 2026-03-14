@@ -92,7 +92,7 @@ export function Toast({
         .toast {
           position: fixed;
           z-index: 9999;
-          background: white;
+          background: var(--color-surface);
           border-radius: 12px;
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
           padding: 16px 20px;

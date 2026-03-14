@@ -11,15 +11,15 @@ export default function CorrelationCard({ correlations, weeklyInsight, narrative
 
   return (
     <div style={{
-      background: 'white',
+      background: 'var(--color-surface)',
       borderRadius: 14,
-      border: '1px solid #e5e7eb',
+      border: '1px solid var(--color-border)',
       padding: '16px',
     }}>
       <div style={{
         fontSize: '0.7rem',
         fontWeight: 600,
-        color: '#9ca3af',
+        color: 'var(--color-text-muted)',
         textTransform: 'uppercase',
         letterSpacing: '0.5px',
         marginBottom: 12,
@@ -33,7 +33,7 @@ export default function CorrelationCard({ correlations, weeklyInsight, narrative
           {/* Main narrative */}
           <p style={{
             fontSize: '0.88rem',
-            color: '#1e293b',
+            color: 'var(--color-text)',
             margin: '0 0 10px 0',
             lineHeight: 1.65,
           }}>
@@ -44,7 +44,7 @@ export default function CorrelationCard({ correlations, weeklyInsight, narrative
           {narrative.key_insight && (
             <div style={{
               padding: '10px 12px',
-              background: '#f0fdf4',
+              background: 'var(--color-surface-muted)',
               borderRadius: 10,
               borderLeft: '3px solid #0d9488',
               marginBottom: hasClusters ? 12 : 0,
@@ -62,7 +62,7 @@ export default function CorrelationCard({ correlations, weeklyInsight, narrative
               </span>
               <p style={{
                 fontSize: '0.85rem',
-                color: '#1e293b',
+                color: 'var(--color-text)',
                 margin: 0,
                 lineHeight: 1.5,
               }}>
@@ -84,7 +84,7 @@ export default function CorrelationCard({ correlations, weeklyInsight, narrative
                   flex: '1 1 auto',
                   minWidth: '140px',
                   padding: '10px 12px',
-                  background: '#f8fafc',
+                  background: 'var(--color-surface-muted)',
                   borderRadius: 10,
                   borderLeft: `3px solid ${cluster.direction === 'positive' ? '#0d9488' : '#d97706'}`,
                 }}>
@@ -99,7 +99,7 @@ export default function CorrelationCard({ correlations, weeklyInsight, narrative
                   </span>
                   <p style={{
                     fontSize: '0.78rem',
-                    color: '#4b5563',
+                    color: 'var(--color-text-secondary)',
                     margin: 0,
                     lineHeight: 1.4,
                   }}>
@@ -115,10 +115,10 @@ export default function CorrelationCard({ correlations, weeklyInsight, narrative
                       <span key={j} style={{
                         fontSize: '0.62rem',
                         padding: '2px 6px',
-                        background: 'white',
+                        background: 'var(--color-surface)',
                         borderRadius: 8,
-                        color: '#6b7280',
-                        border: '1px solid #e5e7eb',
+                        color: 'var(--color-text-secondary)',
+                        border: '1px solid var(--color-border)',
                       }}>
                         {b}
                       </span>
@@ -138,10 +138,10 @@ export default function CorrelationCard({ correlations, weeklyInsight, narrative
                 margin: '10px auto 0',
                 padding: '4px 12px',
                 borderRadius: 6,
-                border: '1px solid #e5e7eb',
+                border: '1px solid var(--color-border)',
                 background: 'transparent',
                 fontSize: '0.7rem',
-                color: '#9ca3af',
+                color: 'var(--color-text-muted)',
                 cursor: 'pointer',
               }}
             >
@@ -158,14 +158,14 @@ export default function CorrelationCard({ correlations, weeklyInsight, narrative
           {!hasNarrative && weeklyInsight && (
             <div style={{
               padding: '10px 12px',
-              background: '#f0fdf4',
+              background: 'var(--color-surface-muted)',
               borderRadius: 10,
               marginBottom: hasCorrelations ? 12 : 0,
               borderLeft: '3px solid #0d9488',
             }}>
               <p style={{
                 fontSize: '0.85rem',
-                color: '#1e293b',
+                color: 'var(--color-text)',
                 margin: 0,
                 lineHeight: 1.5,
               }}>
@@ -185,7 +185,7 @@ export default function CorrelationCard({ correlations, weeklyInsight, narrative
             return (
               <div key={i} style={{
                 padding: '8px 0',
-                borderTop: i > 0 || (!hasNarrative && weeklyInsight) ? '1px solid #f3f4f6' : 'none',
+                borderTop: i > 0 || (!hasNarrative && weeklyInsight) ? '1px solid var(--color-border-light)' : 'none',
               }}>
                 <div style={{
                   display: 'flex',
@@ -205,7 +205,7 @@ export default function CorrelationCard({ correlations, weeklyInsight, narrative
                   <div style={{ flex: 1 }}>
                     <p style={{
                       fontSize: '0.82rem',
-                      color: '#374151',
+                      color: 'var(--color-text)',
                       margin: 0,
                       lineHeight: 1.5,
                     }}>
@@ -214,7 +214,7 @@ export default function CorrelationCard({ correlations, weeklyInsight, narrative
                     <div style={{
                       marginTop: 4,
                       height: 3,
-                      background: '#f3f4f6',
+                      background: 'var(--color-border-light)',
                       borderRadius: 2,
                       overflow: 'hidden',
                       maxWidth: 80,
@@ -237,7 +237,7 @@ export default function CorrelationCard({ correlations, weeklyInsight, narrative
 
       <p style={{
         fontSize: '0.7rem',
-        color: '#9ca3af',
+        color: 'var(--color-text-muted)',
         margin: '10px 0 0 0',
         fontStyle: 'italic',
         textAlign: 'center',

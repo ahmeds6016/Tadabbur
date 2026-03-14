@@ -141,9 +141,9 @@ export default function HeartNoteHistory({ user }) {
 
   return (
     <div style={{
-      background: 'white',
+      background: 'var(--color-surface)',
       borderRadius: 14,
-      border: '1px solid #e5e7eb',
+      border: '1px solid var(--color-border)',
       overflow: 'hidden',
     }}>
       {/* Header toggle */}
@@ -163,7 +163,7 @@ export default function HeartNoteHistory({ user }) {
         <span style={{
           fontSize: '0.85rem',
           fontWeight: 600,
-          color: '#1e293b',
+          color: 'var(--color-text)',
         }}>
           Heart Note History
         </span>
@@ -185,10 +185,10 @@ export default function HeartNoteHistory({ user }) {
             alignItems: 'center',
             gap: 8,
             padding: '6px 10px',
-            background: '#f8fafc',
+            background: 'var(--color-surface-muted)',
             borderRadius: 8,
             marginBottom: 10,
-            border: '1px solid #e5e7eb',
+            border: '1px solid var(--color-border)',
           }}>
             <Search size={14} color="#9ca3af" />
             <input
@@ -201,7 +201,7 @@ export default function HeartNoteHistory({ user }) {
                 border: 'none',
                 background: 'none',
                 fontSize: '0.82rem',
-                color: '#1e293b',
+                color: 'var(--color-text)',
                 outline: 'none',
               }}
             />
@@ -219,9 +219,9 @@ export default function HeartNoteHistory({ user }) {
               style={{
                 padding: '4px 10px',
                 borderRadius: 14,
-                border: '1px solid #e5e7eb',
-                background: !filterType ? '#0d9488' : 'white',
-                color: !filterType ? 'white' : '#6b7280',
+                border: '1px solid var(--color-border)',
+                background: !filterType ? '#0d9488' : 'var(--color-surface)',
+                color: !filterType ? 'white' : 'var(--color-text-secondary)',
                 fontSize: '0.72rem',
                 fontWeight: 500,
                 cursor: 'pointer',
@@ -237,9 +237,9 @@ export default function HeartNoteHistory({ user }) {
                 style={{
                   padding: '4px 10px',
                   borderRadius: 14,
-                  border: `1px solid ${filterType === id ? NOTE_TYPE_COLORS[id] : '#e5e7eb'}`,
-                  background: filterType === id ? NOTE_TYPE_COLORS[id] : 'white',
-                  color: filterType === id ? 'white' : '#6b7280',
+                  border: `1px solid ${filterType === id ? NOTE_TYPE_COLORS[id] : 'var(--color-border)'}`,
+                  background: filterType === id ? NOTE_TYPE_COLORS[id] : 'var(--color-surface)',
+                  color: filterType === id ? 'white' : 'var(--color-text-secondary)',
                   fontSize: '0.72rem',
                   fontWeight: 500,
                   cursor: 'pointer',
@@ -252,11 +252,11 @@ export default function HeartNoteHistory({ user }) {
           </div>
 
           {loading ? (
-            <p style={{ fontSize: '0.82rem', color: '#9ca3af', textAlign: 'center', margin: '16px 0' }}>
+            <p style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)', textAlign: 'center', margin: '16px 0' }}>
               Loading notes...
             </p>
           ) : notes.length === 0 ? (
-            <p style={{ fontSize: '0.82rem', color: '#9ca3af', textAlign: 'center', margin: '16px 0' }}>
+            <p style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)', textAlign: 'center', margin: '16px 0' }}>
               No heart notes found.
             </p>
           ) : (
@@ -266,7 +266,7 @@ export default function HeartNoteHistory({ user }) {
                   <div style={{
                     fontSize: '0.7rem',
                     fontWeight: 600,
-                    color: '#9ca3af',
+                    color: 'var(--color-text-muted)',
                     textTransform: 'uppercase',
                     letterSpacing: '0.3px',
                     marginBottom: 6,
@@ -281,7 +281,7 @@ export default function HeartNoteHistory({ user }) {
                     return (
                       <div key={i} style={{
                         padding: '8px 10px',
-                        background: '#fafbfc',
+                        background: 'var(--color-surface-muted)',
                         borderRadius: 8,
                         marginBottom: 6,
                         borderLeft: `3px solid ${typeColor}`,
@@ -350,14 +350,14 @@ export default function HeartNoteHistory({ user }) {
                               style={{
                                 width: '100%',
                                 padding: '6px 8px',
-                                border: '1px solid #e5e7eb',
+                                border: '1px solid var(--color-border)',
                                 borderRadius: 6,
                                 fontSize: '0.82rem',
                                 fontFamily: 'inherit',
                                 minHeight: 50,
                                 resize: 'vertical',
-                                color: '#1e293b',
-                                background: 'white',
+                                color: 'var(--color-text)',
+                                background: 'var(--color-surface)',
                               }}
                             />
                             <div style={{ display: 'flex', gap: 6, marginTop: 6, justifyContent: 'flex-end' }}>
@@ -366,11 +366,11 @@ export default function HeartNoteHistory({ user }) {
                                 style={{
                                   padding: '4px 10px',
                                   borderRadius: 6,
-                                  border: '1px solid #e5e7eb',
-                                  background: 'white',
+                                  border: '1px solid var(--color-border)',
+                                  background: 'var(--color-surface)',
                                   fontSize: '0.75rem',
                                   cursor: 'pointer',
-                                  color: '#6b7280',
+                                  color: 'var(--color-text-secondary)',
                                 }}
                               >
                                 Cancel
@@ -397,7 +397,7 @@ export default function HeartNoteHistory({ user }) {
                         ) : (
                           <p style={{
                             fontSize: '0.82rem',
-                            color: '#374151',
+                            color: 'var(--color-text)',
                             margin: 0,
                             lineHeight: 1.5,
                           }}>
@@ -418,10 +418,10 @@ export default function HeartNoteHistory({ user }) {
                   width: '100%',
                   padding: '8px',
                   borderRadius: 8,
-                  border: '1px solid #e5e7eb',
-                  background: 'white',
+                  border: '1px solid var(--color-border)',
+                  background: 'var(--color-surface)',
                   fontSize: '0.78rem',
-                  color: '#6b7280',
+                  color: 'var(--color-text-secondary)',
                   cursor: 'pointer',
                   textAlign: 'center',
                   marginTop: 4,

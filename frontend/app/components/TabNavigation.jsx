@@ -175,8 +175,8 @@ export default function TabNavigation({
           }
 
           .desktop-section {
-            background: white;
-            border: 1px solid #e5e7eb;
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
             border-radius: 16px;
             box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
             padding: 20px 24px;
@@ -227,8 +227,8 @@ export default function TabNavigation({
             top: 100%;
             right: 0;
             margin-top: 4px;
-            background: white;
-            border: 1px solid #e5e7eb;
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
             border-radius: 10px;
             box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
             min-width: 200px;
@@ -367,9 +367,9 @@ export default function TabNavigation({
         .tab-header-container {
           position: sticky;
           top: 0;
-          background: white;
+          background: var(--color-surface);
           z-index: 50;
-          border-bottom: 1px solid #e5e7eb;
+          border-bottom: 1px solid var(--color-border);
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         }
 

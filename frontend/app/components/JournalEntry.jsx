@@ -26,7 +26,7 @@ function BinaryInput({ value, onChange, label }) {
         minWidth: 40,
         borderRadius: '50%',
         border: isOn ? '2px solid #0d9488' : '2px solid #d1d5db',
-        background: isOn ? '#0d9488' : '#f8fafc',
+        background: isOn ? '#0d9488' : 'var(--color-surface-muted)',
         color: isOn ? 'white' : '#cbd5e1',
         padding: 0,
         fontSize: '1.1rem',
@@ -158,7 +158,7 @@ const stepperBtnStyle = {
   minWidth: 34,
   borderRadius: '50%',
   border: '1.5px solid #e2e8f0',
-  background: '#f8fafc',
+  background: 'var(--color-surface-muted)',
   fontSize: '1.1rem',
   fontWeight: 500,
   cursor: 'pointer',
@@ -166,7 +166,7 @@ const stepperBtnStyle = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  color: '#475569',
+  color: 'var(--color-text-secondary)',
   boxSizing: 'border-box',
   transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
 };
@@ -188,7 +188,7 @@ function CountInput({ value, onChange }) {
         fontWeight: 700,
         minWidth: 24,
         textAlign: 'center',
-        color: '#1e293b',
+        color: 'var(--color-text)',
         fontVariantNumeric: 'tabular-nums',
       }}>
         {value || 0}
@@ -233,7 +233,7 @@ function BehaviorRow({ behavior, value, onChange }) {
     }}>
       <span style={{
         fontSize: '0.9rem',
-        color: '#1e293b',
+        color: 'var(--color-text)',
         flex: isScale ? 'none' : 1,
       }}>
         {behavior.label}
@@ -503,7 +503,7 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate, onSaved }
             padding: '5px 12px',
             borderRadius: 16,
             border: `1.5px solid ${quickLog ? '#0d9488' : '#e2e8f0'}`,
-            background: quickLog ? '#0d948815' : 'white',
+            background: quickLog ? '#0d948815' : 'var(--color-surface)',
             fontSize: '0.75rem',
             fontWeight: 600,
             color: quickLog ? '#0d9488' : '#6b7280',
@@ -517,7 +517,7 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate, onSaved }
           fontSize: '0.75rem',
           fontWeight: 600,
           color: filledCount === totalTracked ? '#059669' : '#9ca3af',
-          background: filledCount === totalTracked ? '#ecfdf5' : '#f8fafc',
+          background: filledCount === totalTracked ? '#ecfdf5' : 'var(--color-surface-muted)',
           padding: '4px 10px',
           borderRadius: 12,
           fontVariantNumeric: 'tabular-nums',
@@ -645,11 +645,11 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate, onSaved }
         .journal-loading, .journal-error {
           text-align: center;
           padding: 40px 20px;
-          color: #6b7280;
+          color: var(--color-text-secondary);
           font-size: 0.95rem;
         }
         .journal-error {
-          color: #ef4444;
+          color: var(--color-error);
         }
         .welcome-back-banner {
           padding: 14px 18px;
@@ -689,12 +689,12 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate, onSaved }
         .behavior-list :global(.practice-group + .practice-group) {
           margin-top: 12px;
           padding-top: 12px;
-          border-top: 1px solid #f1f5f9;
+          border-top: 1px solid var(--color-border-light);
         }
         .behavior-list :global(.pg-label) {
           font-size: 0.7rem;
           font-weight: 600;
-          color: #94a3b8;
+          color: var(--color-text-muted);
           text-transform: uppercase;
           letter-spacing: 0.5px;
           padding-bottom: 2px;
@@ -739,15 +739,15 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate, onSaved }
         /* Heart state */
         .heart-state-section {
           padding: 20px;
-          background: #fafaf8;
+          background: var(--color-surface-muted);
           border-radius: 14px;
-          border: 1px solid #e8ecf1;
+          border: 1px solid var(--color-border);
         }
         .section-title {
           margin: 0 0 14px 0;
           font-size: 1rem;
           font-weight: 600;
-          color: #1e293b;
+          color: var(--color-text);
         }
         .heart-state-pills {
           display: flex;
@@ -757,20 +757,20 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate, onSaved }
         .heart-pill {
           padding: 8px 16px;
           border-radius: 24px;
-          border: 1.5px solid #e2e8f0;
-          background: #f8fafc;
+          border: 1.5px solid var(--color-border);
+          background: var(--color-surface);
           font-size: 0.8rem;
           cursor: pointer;
           transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-          color: #475569;
+          color: var(--color-text-secondary);
           display: flex;
           flex-direction: column;
           align-items: center;
           gap: 1px;
         }
         .heart-pill:hover {
-          border-color: #94a3b8;
-          background: white;
+          border-color: var(--color-text-muted);
+          background: var(--color-surface-elevated);
         }
         .heart-pill.active {
           color: white;
@@ -788,7 +788,7 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate, onSaved }
         .heart-response-card {
           margin-top: 14px;
           padding: 16px;
-          background: white;
+          background: var(--color-surface);
           border-radius: 12px;
           border-left: 3px solid #0d9488;
           box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
@@ -796,26 +796,26 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate, onSaved }
         .hr-verse {
           font-size: 0.88rem;
           font-style: italic;
-          color: var(--deep-blue, #1e293b);
+          color: var(--color-text);
           margin: 0 0 10px 0;
           line-height: 1.5;
         }
         .hr-ref {
           display: block;
           font-size: 0.7rem;
-          color: #6b7280;
+          color: var(--color-text-secondary);
           font-style: normal;
           margin-top: 4px;
         }
         .hr-insight {
           font-size: 0.82rem;
-          color: #374151;
+          color: var(--color-text);
           margin: 0 0 8px 0;
           line-height: 1.5;
         }
         .hr-action {
           font-size: 0.82rem;
-          color: #374151;
+          color: var(--color-text);
           margin: 0 0 10px 0;
           line-height: 1.5;
         }
@@ -825,25 +825,25 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate, onSaved }
         .hr-excerpts-label {
           font-size: 0.75rem;
           font-weight: 600;
-          color: #6b7280;
+          color: var(--color-text-secondary);
           cursor: pointer;
         }
         .hr-excerpt {
           margin-top: 8px;
           padding: 10px;
-          background: #f8fafc;
+          background: var(--color-surface-muted);
           border-radius: 6px;
         }
         .hr-source {
           font-size: 0.7rem;
           font-weight: 600;
-          color: #9ca3af;
+          color: var(--color-text-muted);
           display: block;
           margin-bottom: 4px;
         }
         .hr-text {
           font-size: 0.78rem;
-          color: #4b5563;
+          color: var(--color-text-secondary);
           margin: 0;
           line-height: 1.5;
         }
@@ -852,17 +852,17 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate, onSaved }
           align-items: center;
           gap: 8px;
           font-size: 0.8rem;
-          color: #9ca3af;
+          color: var(--color-text-muted);
           font-style: italic;
           margin: 10px 0 0 0;
           padding: 10px 12px;
-          background: #f8fafc;
+          background: var(--color-surface-muted);
           border-radius: 8px;
         }
         .hr-loading-spinner {
           width: 14px;
           height: 14px;
-          border: 2px solid #e5e7eb;
+          border: 2px solid var(--color-border);
           border-top-color: #0d9488;
           border-radius: 50%;
           animation: hr-spin 0.6s linear infinite;

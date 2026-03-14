@@ -24,6 +24,7 @@ import Tooltip from './components/Tooltip';
 import HelpMenu, { FloatingHelpButton } from './components/HelpMenu';
 import FeatureIntroModal from './components/FeatureIntroModal';
 import JournalAnnouncementModal from './components/JournalAnnouncementModal';
+import Phase6AnnouncementModal from './components/Phase6AnnouncementModal';
 import FloatingAnnotateButton from './components/FloatingAnnotateButton';
 import ConfirmDialog from './components/ConfirmDialog';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -2058,6 +2059,11 @@ function MainApp({ user, userProfile, onResetProfile }) {
         {/* Journal Announcement (one-time for existing users who already completed onboarding) */}
         {onboardingLoaded && onboardingState.hasSeenFeatureIntro && !showFeatureIntro && (
           <JournalAnnouncementModal user={user} />
+        )}
+
+        {/* Phase 6 Announcement (deep personalization, dark mode, feedback) */}
+        {onboardingLoaded && onboardingState.hasSeenFeatureIntro && !showFeatureIntro && (
+          <Phase6AnnouncementModal user={user} />
         )}
 
         {/* Help Menu */}

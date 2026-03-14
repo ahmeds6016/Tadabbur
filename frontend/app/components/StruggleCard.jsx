@@ -195,9 +195,9 @@ export default function StruggleCard({ struggle, user, onResolved }) {
       <style jsx>{`
         .struggle-card {
           padding: 14px;
-          background: white;
+          background: var(--color-surface);
           border-radius: 12px;
-          border: 1px solid var(--border-light, #e5e7eb);
+          border: 1px solid var(--color-border);
           border-left: 3px solid;
           margin-bottom: 12px;
         }
@@ -213,7 +213,7 @@ export default function StruggleCard({ struggle, user, onResolved }) {
         }
         .sc-weeks {
           font-size: 0.75rem;
-          color: #6b7280;
+          color: var(--color-text-secondary);
         }
         .sc-phases {
           display: flex;
@@ -234,7 +234,7 @@ export default function StruggleCard({ struggle, user, onResolved }) {
           left: 5px;
           right: 5px;
           height: 3px;
-          background: #e5e7eb;
+          background: var(--color-border);
           border-radius: 2px;
           z-index: 0;
         }
@@ -245,7 +245,7 @@ export default function StruggleCard({ struggle, user, onResolved }) {
         }
         .sc-phase-text {
           font-size: 0.78rem;
-          color: #374151;
+          color: var(--color-text);
           margin: 0 0 10px 0;
           line-height: 1.4;
           font-style: italic;
@@ -260,19 +260,19 @@ export default function StruggleCard({ struggle, user, onResolved }) {
           font-size: 0.7rem;
           font-weight: 500;
           padding: 2px 8px;
-          background: #f3f4f6;
+          background: var(--color-surface-muted);
           border-radius: 12px;
         }
         .sc-comfort {
           font-size: 0.78rem;
           font-style: italic;
-          color: var(--deep-blue, #1e293b);
+          color: var(--color-text);
           margin: 0 0 10px 0;
           line-height: 1.5;
         }
         .sc-comfort-ref {
           font-size: 0.65rem;
-          color: #9ca3af;
+          color: var(--color-text-muted);
           font-style: normal;
         }
         .sc-actions {
@@ -308,33 +308,33 @@ export default function StruggleCard({ struggle, user, onResolved }) {
           to { transform: rotate(360deg); }
         }
         .sc-btn.guidance {
-          background: #f0f9ff;
-          color: #0284c7;
+          background: var(--color-info-bg, #f0f9ff);
+          color: var(--color-info, #0284c7);
         }
         .sc-btn.resolve {
-          background: #f0fdf4;
-          color: #059669;
+          background: var(--color-success-bg, #f0fdf4);
+          color: var(--color-success, #059669);
         }
         .sc-guidance {
           margin-top: 12px;
           padding-top: 12px;
-          border-top: 1px solid #e5e7eb;
+          border-top: 1px solid var(--color-border);
         }
         .sc-excerpt {
           margin-bottom: 10px;
           padding: 10px;
-          background: #f8fafc;
+          background: var(--color-surface-muted);
           border-radius: 8px;
         }
         .sc-source {
           font-size: 0.68rem;
           font-weight: 600;
-          color: #9ca3af;
+          color: var(--color-text-muted);
           text-transform: uppercase;
         }
         .sc-text {
           font-size: 0.8rem;
-          color: #374151;
+          color: var(--color-text);
           margin: 4px 0 0 0;
           line-height: 1.5;
         }
@@ -344,7 +344,7 @@ export default function StruggleCard({ struggle, user, onResolved }) {
         .sc-verse-item {
           font-size: 0.78rem;
           font-style: italic;
-          color: #4b5563;
+          color: var(--color-text-secondary);
           margin: 4px 0;
           line-height: 1.4;
         }

@@ -136,7 +136,7 @@ export default function SharedPage() {
         <div className="results-container">
           {verses.length > 0 && (
             <div className="result-section">
-              <h2>Relevant Verses</h2>
+              <h2>{verses.length === 1 ? 'Verse' : 'Verses'}</h2>
               {verses.map((verse, index) => (
                 <div key={index} className="verse-card enhanced" style={{ marginBottom: '24px' }}>
                   <div style={{ marginBottom: '16px' }}>

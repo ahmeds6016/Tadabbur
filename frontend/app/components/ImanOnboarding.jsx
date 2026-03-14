@@ -266,10 +266,11 @@ export default function ImanOnboarding({ user, onComplete }) {
               <div className="ob-feature-row">
                 <div className="ob-feature-dot" style={{ background: '#0d9488' }} />
                 <div className="ob-feature-content">
-                  <span className="ob-feature-title">Daily Reflections</span>
+                  <span className="ob-feature-title">Personalized Daily Reflections</span>
                   <span className="ob-feature-desc">
-                    After each journal entry, receive a personalized observation
-                    about your day — rooted in what you actually logged, never generic.
+                    After each entry, receive insights that address you by name,
+                    reference your heart note themes, and connect to the verses
+                    you have been studying.
                   </span>
                 </div>
               </div>
@@ -277,10 +278,10 @@ export default function ImanOnboarding({ user, onComplete }) {
               <div className="ob-feature-row">
                 <div className="ob-feature-dot" style={{ background: '#2563eb' }} />
                 <div className="ob-feature-content">
-                  <span className="ob-feature-title">Patterns and Correlations</span>
+                  <span className="ob-feature-title">AI-Powered Pattern Analysis</span>
                   <span className="ob-feature-desc">
-                    The journal notices connections between your practices. For
-                    example, how your Quran reading might lift your overall state.
+                    The journal synthesizes your behavior clusters into meaningful
+                    narratives — surfacing key insights grounded in your actual data.
                   </span>
                 </div>
               </div>
@@ -288,10 +289,11 @@ export default function ImanOnboarding({ user, onComplete }) {
               <div className="ob-feature-row">
                 <div className="ob-feature-dot" style={{ background: '#d97706' }} />
                 <div className="ob-feature-content">
-                  <span className="ob-feature-title">Gentle Strain Awareness</span>
+                  <span className="ob-feature-title">Rich Trajectory and Milestones</span>
                   <span className="ob-feature-desc">
-                    If you are pushing hard, the journal will gently remind you
-                    of balance — your body has a right over you.
+                    After calibration, see weekly sparklines, category trends,
+                    and milestone badges — plus gentle strain awareness when you
+                    need balance.
                   </span>
                 </div>
               </div>

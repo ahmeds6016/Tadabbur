@@ -119,6 +119,7 @@ export default function RootLayout({ children }) {
         
         {/* Meta tags for Islamic content */}
         <meta name="format-detection" content="telephone=no" />
+        <meta name="color-scheme" content="light dark" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-title" content="Tadabbur" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />

@@ -116,7 +116,7 @@ export default function DigestViewer({ user, onDigestGenerated }) {
                       </div>
                     ))}
                   </div>
-                  <p style={{ fontSize: '0.72rem', color: '#9ca3af', margin: 0 }}>
+                  <p style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', margin: 0 }}>
                     {restriction.days_logged}/4 days logged this week
                   </p>
                 </>
@@ -130,7 +130,7 @@ export default function DigestViewer({ user, onDigestGenerated }) {
                   Your weekly spiritual reflection awaits.
                 </p>
                 {!isMonday && (
-                  <p style={{ fontSize: '0.78rem', color: '#9ca3af', margin: '0 0 12px 0' }}>
+                  <p style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', margin: '0 0 12px 0' }}>
                     Digests are generated on Mondays. Keep logging — your reflection awaits.
                   </p>
                 )}
@@ -222,9 +222,9 @@ export default function DigestViewer({ user, onDigestGenerated }) {
 
       <style jsx>{`
         .digest-viewer {
-          background: white;
+          background: var(--color-surface);
           border-radius: 14px;
-          border: 1px solid var(--border-light, #e5e7eb);
+          border: 1px solid var(--color-border);
           overflow: hidden;
         }
         .dv-empty {
@@ -233,14 +233,14 @@ export default function DigestViewer({ user, onDigestGenerated }) {
         }
         .dv-empty-text {
           font-size: 0.9rem;
-          color: #6b7280;
+          color: var(--color-text-secondary);
           margin: 0 0 14px 0;
         }
         .dv-generate-btn {
           padding: 10px 20px;
           border-radius: 10px;
           border: none;
-          background: var(--primary-teal, #0d9488);
+          background: var(--color-secondary, #0d9488);
           color: white;
           font-size: 0.85rem;
           font-weight: 500;
@@ -252,7 +252,7 @@ export default function DigestViewer({ user, onDigestGenerated }) {
           cursor: wait;
         }
         .dv-error {
-          color: #dc2626;
+          color: var(--color-error);
           font-size: 0.8rem;
           margin-top: 10px;
         }
@@ -265,13 +265,13 @@ export default function DigestViewer({ user, onDigestGenerated }) {
         .dv-week-label {
           font-size: 0.75rem;
           font-weight: 600;
-          color: #9ca3af;
+          color: var(--color-text-muted);
           text-transform: uppercase;
           letter-spacing: 0.5px;
         }
         .dv-opening {
           font-size: 0.95rem;
-          color: var(--deep-blue, #1e293b);
+          color: var(--color-text);
           margin: 0 0 14px 0;
           line-height: 1.5;
           font-weight: 500;
@@ -282,7 +282,7 @@ export default function DigestViewer({ user, onDigestGenerated }) {
         .dv-section-label {
           font-size: 0.7rem;
           font-weight: 600;
-          color: #6b7280;
+          color: var(--color-text-secondary);
           text-transform: uppercase;
           letter-spacing: 0.4px;
           display: block;
@@ -296,40 +296,40 @@ export default function DigestViewer({ user, onDigestGenerated }) {
         }
         .dv-body {
           font-size: 0.85rem;
-          color: #374151;
+          color: var(--color-text);
           margin: 0;
           line-height: 1.6;
         }
         .dv-verse-card {
           margin: 16px 0;
           padding: 14px;
-          background: #f0fdf4;
+          background: var(--color-surface-muted);
           border-radius: 10px;
-          border-left: 3px solid var(--primary-teal, #0d9488);
+          border-left: 3px solid var(--color-secondary, #0d9488);
           text-align: center;
         }
         .dv-verse-text {
           font-size: 0.9rem;
           font-style: italic;
-          color: var(--deep-blue, #1e293b);
+          color: var(--color-text);
           margin: 0 0 6px 0;
           line-height: 1.5;
         }
         .dv-verse-ref {
           font-size: 0.7rem;
-          color: #6b7280;
+          color: var(--color-text-secondary);
           display: block;
         }
         .dv-verse-why {
           font-size: 0.78rem;
-          color: #4b5563;
+          color: var(--color-text-secondary);
           margin: 8px 0 0 0;
           font-style: italic;
           line-height: 1.4;
         }
         .dv-closing {
           font-size: 0.8rem;
-          color: #6b7280;
+          color: var(--color-text-secondary);
           font-style: italic;
           margin: 14px 0 10px 0;
           text-align: center;
@@ -340,10 +340,10 @@ export default function DigestViewer({ user, onDigestGenerated }) {
           margin: 10px auto 0;
           padding: 6px 14px;
           border-radius: 6px;
-          border: 1px solid #e5e7eb;
+          border: 1px solid var(--color-border);
           background: transparent;
           font-size: 0.75rem;
-          color: #6b7280;
+          color: var(--color-text-secondary);
           cursor: pointer;
         }
         .dv-regenerate-btn:disabled {

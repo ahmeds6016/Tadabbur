@@ -40,15 +40,15 @@ export default function DailyInsightCard({ user, date, visible }) {
   if (loading) {
     return (
       <div style={{
-        background: 'white',
+        background: 'var(--color-surface)',
         borderRadius: 14,
-        border: '1px solid #e5e7eb',
+        border: '1px solid var(--color-border)',
         padding: '20px 16px',
         textAlign: 'center',
       }}>
         <div style={{
           fontSize: '0.85rem',
-          color: '#6b7280',
+          color: 'var(--color-text-secondary)',
           fontStyle: 'italic',
         }}>
           Reflecting on your day...
@@ -60,16 +60,16 @@ export default function DailyInsightCard({ user, date, visible }) {
 
   return (
     <div style={{
-      background: 'white',
+      background: 'var(--color-surface)',
       borderRadius: 14,
-      border: '1px solid #e5e7eb',
+      border: '1px solid var(--color-border)',
       padding: '16px',
       animation: 'fadeIn 0.4s ease',
     }}>
       <div style={{
         fontSize: '0.7rem',
         fontWeight: 600,
-        color: '#9ca3af',
+        color: 'var(--color-text-muted)',
         textTransform: 'uppercase',
         letterSpacing: '0.5px',
         marginBottom: 10,
@@ -81,7 +81,7 @@ export default function DailyInsightCard({ user, date, visible }) {
       {insight.observation && (
         <p style={{
           fontSize: '0.9rem',
-          color: '#1e293b',
+          color: 'var(--color-text)',
           margin: '0 0 10px 0',
           lineHeight: 1.5,
           fontWeight: 500,
@@ -94,7 +94,7 @@ export default function DailyInsightCard({ user, date, visible }) {
       {insight.correlation && (
         <div style={{
           padding: '10px 12px',
-          background: '#f0fdf4',
+          background: 'var(--color-surface-muted)',
           borderRadius: 10,
           marginBottom: 10,
         }}>
@@ -109,7 +109,7 @@ export default function DailyInsightCard({ user, date, visible }) {
           </span>
           <p style={{
             fontSize: '0.82rem',
-            color: '#374151',
+            color: 'var(--color-text)',
             margin: '4px 0 0 0',
             lineHeight: 1.5,
           }}>

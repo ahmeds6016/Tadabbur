@@ -63,9 +63,9 @@ export default function StruggleGoals({ user, struggleId, struggleColor, struggl
     <div style={{
       marginTop: 8,
       padding: '12px',
-      background: '#fafbfc',
+      background: 'var(--color-surface-muted)',
       borderRadius: 10,
-      border: '1px solid #f0f1f3',
+      border: '1px solid var(--color-border-light)',
     }}>
       <div style={{
         fontSize: '0.7rem',
@@ -87,7 +87,7 @@ export default function StruggleGoals({ user, struggleId, struggleColor, struggl
             alignItems: 'center',
             gap: 10,
             padding: '8px 0',
-            borderBottom: '1px solid #f3f4f6',
+            borderBottom: '1px solid var(--color-border-light)',
             transition: 'opacity 0.3s ease, max-height 0.3s ease',
           }}
         >
@@ -100,7 +100,7 @@ export default function StruggleGoals({ user, struggleId, struggleColor, struggl
               minWidth: 26,
               borderRadius: '50%',
               border: `2px solid ${struggleColor || '#d1d5db'}`,
-              background: 'white',
+              background: 'var(--color-surface)',
               cursor: completingId === goal.id ? 'wait' : 'pointer',
               display: 'flex',
               alignItems: 'center',
@@ -121,7 +121,7 @@ export default function StruggleGoals({ user, struggleId, struggleColor, struggl
           </button>
           <span style={{
             fontSize: '0.82rem',
-            color: '#374151',
+            color: 'var(--color-text)',
             lineHeight: 1.4,
             flex: 1,
           }}>
@@ -157,7 +157,7 @@ export default function StruggleGoals({ user, struggleId, struggleColor, struggl
           </div>
           <span style={{
             fontSize: '0.82rem',
-            color: '#9ca3af',
+            color: 'var(--color-text-muted)',
             textDecoration: 'line-through',
             lineHeight: 1.4,
             flex: 1,
@@ -183,14 +183,14 @@ export default function StruggleGoals({ user, struggleId, struggleColor, struggl
       {weeklyGoal && (
         <>
           <div style={{
-            borderTop: '1px solid #e5e7eb',
+            borderTop: '1px solid var(--color-border)',
             marginTop: 10,
             paddingTop: 10,
           }}>
             <div style={{
               fontSize: '0.65rem',
               fontWeight: 600,
-              color: '#9ca3af',
+              color: 'var(--color-text-muted)',
               textTransform: 'uppercase',
               letterSpacing: '0.3px',
               marginBottom: 6,
@@ -225,7 +225,7 @@ export default function StruggleGoals({ user, struggleId, struggleColor, struggl
                     minWidth: 26,
                     borderRadius: '50%',
                     border: `2px solid ${struggleColor || '#d1d5db'}`,
-                    background: 'white',
+                    background: 'var(--color-surface)',
                     cursor: 'pointer',
                     padding: 0,
                     transition: 'all 0.2s ease',
@@ -245,7 +245,7 @@ export default function StruggleGoals({ user, struggleId, struggleColor, struggl
                   <span style={{
                     display: 'block',
                     fontSize: '0.68rem',
-                    color: '#9ca3af',
+                    color: 'var(--color-text-muted)',
                     marginTop: 2,
                   }}>
                     Resets in {weeklyGoal.days_until_reset} day{weeklyGoal.days_until_reset !== 1 ? 's' : ''}

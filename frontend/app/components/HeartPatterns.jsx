@@ -46,22 +46,22 @@ export default function HeartPatterns({ user }) {
 
       <style jsx>{`
         .heart-patterns-card {
-          background: white;
+          background: var(--color-surface);
           border-radius: 14px;
-          border: 1px solid var(--border-light, #e5e7eb);
+          border: 1px solid var(--color-border);
           padding: 16px;
         }
         .hp-card-title {
           font-size: 0.8rem;
           font-weight: 600;
-          color: #6b7280;
+          color: var(--color-text-secondary);
           text-transform: uppercase;
           letter-spacing: 0.4px;
           margin: 0 0 10px 0;
         }
         .hp-insight-text {
           font-size: 0.85rem;
-          color: #374151;
+          color: var(--color-text);
           margin: 0 0 6px 0;
           line-height: 1.5;
           padding-left: 16px;

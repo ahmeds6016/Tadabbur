@@ -86,20 +86,20 @@ export default function HeartNoteComposer({ onSave, disabled = false }) {
       <style jsx>{`
         .heart-note-composer {
           padding: 16px;
-          background: var(--cream, #faf6f0);
+          background: var(--color-surface-muted);
           border-radius: 12px;
-          border: 1px solid var(--border-light, #e5e7eb);
+          border: 1px solid var(--color-border);
         }
         .heart-note-title {
           margin: 0 0 4px 0;
           font-size: 0.95rem;
           font-weight: 600;
-          color: var(--deep-blue, #1e293b);
+          color: var(--color-text);
         }
         .heart-note-subtitle {
           margin: 0 0 12px 0;
           font-size: 0.8rem;
-          color: #6b7280;
+          color: var(--color-text-secondary);
         }
         .type-pills {
           display: flex;
@@ -110,12 +110,12 @@ export default function HeartNoteComposer({ onSave, disabled = false }) {
         .type-pill {
           padding: 6px 14px;
           border-radius: 20px;
-          border: 1px solid var(--border-light, #e5e7eb);
-          background: white;
+          border: 1px solid var(--color-border);
+          background: var(--color-surface);
           font-size: 0.8rem;
           cursor: pointer;
           transition: all 0.15s ease;
-          color: #374151;
+          color: var(--color-text);
         }
         .type-pill:hover:not(:disabled) {
           border-color: var(--primary-teal, #0d9488);
@@ -135,14 +135,14 @@ export default function HeartNoteComposer({ onSave, disabled = false }) {
         .note-textarea {
           width: 100%;
           padding: 10px 12px;
-          border: 1px solid var(--border-light, #e5e7eb);
+          border: 1px solid var(--color-border);
           border-radius: 8px;
           font-size: 0.9rem;
           font-family: inherit;
           resize: vertical;
           min-height: 72px;
-          background: white;
-          color: var(--deep-blue, #1e293b);
+          background: var(--color-surface);
+          color: var(--color-text);
         }
         .note-textarea:focus {
           outline: none;
@@ -157,7 +157,7 @@ export default function HeartNoteComposer({ onSave, disabled = false }) {
         }
         .char-count {
           font-size: 0.75rem;
-          color: #9ca3af;
+          color: var(--color-text-muted);
         }
         .char-count.warning {
           color: #d97706;

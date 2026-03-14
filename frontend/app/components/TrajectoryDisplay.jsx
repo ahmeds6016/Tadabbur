@@ -264,7 +264,7 @@ export default function TrajectoryDisplay({ trajectory, categories = [] }) {
         .trajectory-display {
           padding: 16px;
           border-radius: 12px;
-          border: 1px solid var(--border-light, #e5e7eb);
+          border: 1px solid var(--color-border);
         }
         .state-row {
           display: flex;
@@ -286,50 +286,50 @@ export default function TrajectoryDisplay({ trajectory, categories = [] }) {
         }
         .state-sub {
           font-size: 0.8rem;
-          color: #6b7280;
+          color: var(--color-text-secondary);
         }
         .mirror-note {
           font-size: 0.7rem;
-          color: #9ca3af;
+          color: var(--color-text-muted);
           font-style: italic;
           margin-top: 2px;
         }
         .comfort-section {
           margin-top: 14px;
           padding: 12px;
-          background: rgba(255, 255, 255, 0.6);
+          background: var(--color-surface-muted);
           border-radius: 8px;
           text-align: center;
         }
         .comfort-verse {
           font-size: 0.95rem;
           font-style: italic;
-          color: var(--deep-blue, #1e293b);
+          color: var(--color-text);
           margin: 0 0 8px 0;
           line-height: 1.5;
         }
         .comfort-ref {
           display: block;
           font-size: 0.75rem;
-          color: #6b7280;
+          color: var(--color-text-secondary);
           font-style: normal;
           margin-top: 4px;
         }
         .comfort-message {
           font-size: 0.8rem;
-          color: #6b7280;
+          color: var(--color-text-secondary);
           margin: 0;
         }
         .calibration-bar {
           margin-top: 12px;
           height: 6px;
-          background: rgba(0, 0, 0, 0.06);
+          background: var(--color-border-light);
           border-radius: 3px;
           overflow: hidden;
         }
         .calibration-fill {
           height: 100%;
-          background: var(--primary-teal, #0d9488);
+          background: var(--color-secondary, #0d9488);
           border-radius: 3px;
           transition: width 0.3s ease;
         }
@@ -349,7 +349,7 @@ export default function TrajectoryDisplay({ trajectory, categories = [] }) {
         }
         .cat-label {
           font-size: 0.75rem;
-          color: #6b7280;
+          color: var(--color-text-secondary);
           width: 110px;
           flex-shrink: 0;
           text-align: right;
@@ -357,7 +357,7 @@ export default function TrajectoryDisplay({ trajectory, categories = [] }) {
         .cat-bar-track {
           flex: 1;
           height: 8px;
-          background: rgba(0, 0, 0, 0.06);
+          background: var(--color-border-light);
           border-radius: 4px;
           overflow: hidden;
         }
@@ -382,7 +382,7 @@ export default function TrajectoryDisplay({ trajectory, categories = [] }) {
         }
         .sparkline-label {
           font-size: 0.65rem;
-          color: #9ca3af;
+          color: var(--color-text-muted);
           text-transform: uppercase;
           letter-spacing: 0.3px;
           width: 70px;
@@ -451,7 +451,7 @@ export default function TrajectoryDisplay({ trajectory, categories = [] }) {
         .sr-section {
           margin-top: 14px;
           padding-top: 10px;
-          border-top: 1px solid rgba(0, 0, 0, 0.06);
+          border-top: 1px solid var(--color-border-light);
         }
         .sr-bar-row {
           display: flex;
@@ -461,7 +461,7 @@ export default function TrajectoryDisplay({ trajectory, categories = [] }) {
         }
         .sr-label {
           font-size: 0.7rem;
-          color: #6b7280;
+          color: var(--color-text-secondary);
           width: 60px;
           flex-shrink: 0;
           text-align: right;
@@ -471,7 +471,7 @@ export default function TrajectoryDisplay({ trajectory, categories = [] }) {
         .sr-bar-track {
           flex: 1;
           height: 6px;
-          background: rgba(0, 0, 0, 0.06);
+          background: var(--color-border-light);
           border-radius: 3px;
           overflow: hidden;
         }
@@ -489,7 +489,7 @@ export default function TrajectoryDisplay({ trajectory, categories = [] }) {
         }
         .sr-status-msg {
           font-size: 0.75rem;
-          color: #6b7280;
+          color: var(--color-text-secondary);
           margin: 4px 0 0 0;
           font-style: italic;
           text-align: center;
