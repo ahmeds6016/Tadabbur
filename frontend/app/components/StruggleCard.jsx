@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { BACKEND_URL } from '../lib/config';
+import ConfirmDialog from './ConfirmDialog';
 
 const BEHAVIOR_LABELS = {
   fajr_prayer: 'Fajr', dhuhr_prayer: 'Dhuhr', asr_prayer: 'Asr',
@@ -27,6 +28,8 @@ export default function StruggleCard({ struggle, user, onResolved }) {
   const [guidance, setGuidance] = useState(null);
   const [loadingGuidance, setLoadingGuidance] = useState(false);
   const [resolving, setResolving] = useState(false);
+  const [expandedExcerpts, setExpandedExcerpts] = useState({});
+  const [showResolveConfirm, setShowResolveConfirm] = useState(false);
 
   const progress = struggle.progress || {};
   const phases = ['Acknowledge', 'Anchor', 'Expand', 'Sustain'];
@@ -164,12 +167,27 @@ export default function StruggleCard({ struggle, user, onResolved }) {
         </button>
         <button
           className="sc-btn resolve"
-          onClick={handleResolve}
+          onClick={() => setShowResolveConfirm(true)}
           disabled={resolving}
         >
           {resolving ? '...' : 'Mark Resolved'}
         </button>
       </div>
+
+      <ConfirmDialog
+        isOpen={showResolveConfirm}
+        title="Resolve this struggle?"
+        message={
+          currentPhase < 3
+            ? `You're in ${phases[currentPhase]} (Week ${(progress.weeks_active || 0) + 1}). Resolving now means you won't continue through the remaining phases. Are you sure?`
+            : `You've reached the Sustain phase — well done. Ready to mark this resolved?`
+        }
+        confirmText={resolving ? '...' : 'Yes, resolve'}
+        cancelText="Keep going"
+        confirmStyle="warning"
+        onConfirm={() => { setShowResolveConfirm(false); handleResolve(); }}
+        onCancel={() => setShowResolveConfirm(false)}
+      />
 
       {/* Expanded guidance */}
       {showGuidance && guidance && (
@@ -177,7 +195,17 @@ export default function StruggleCard({ struggle, user, onResolved }) {
           {guidance.guidance_excerpts?.map((g, i) => (
             <div key={i} className="sc-excerpt">
               <span className="sc-source">{g.source}: {g.title}</span>
-              <p className="sc-text">{g.text?.slice(0, 500)}{g.text?.length > 500 ? '...' : ''}</p>
+              <p className="sc-text">
+                {expandedExcerpts[i] ? g.text : g.text?.slice(0, 500)}
+                {g.text?.length > 500 && (
+                  <button
+                    className="sc-expand-btn"
+                    onClick={() => setExpandedExcerpts(prev => ({ ...prev, [i]: !prev[i] }))}
+                  >
+                    {expandedExcerpts[i] ? 'Show less' : '...Show more'}
+                  </button>
+                )}
+              </p>
             </div>
           ))}
           {guidance.comfort_verses?.length > 1 && (
@@ -337,6 +365,19 @@ export default function StruggleCard({ struggle, user, onResolved }) {
           color: var(--color-text);
           margin: 4px 0 0 0;
           line-height: 1.5;
+        }
+        .sc-expand-btn {
+          background: none;
+          border: none;
+          color: var(--color-info, #0284c7);
+          font-size: 0.78rem;
+          cursor: pointer;
+          padding: 0;
+          margin-left: 2px;
+          font-weight: 500;
+        }
+        .sc-expand-btn:hover {
+          text-decoration: underline;
         }
         .sc-more-verses {
           margin-top: 8px;
