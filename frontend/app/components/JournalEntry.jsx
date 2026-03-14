@@ -295,6 +295,12 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate, onSaved }
     const fetchData = async () => {
       setLoading(true);
       setError(null);
+      // Reset values for the new date — don't carry over previous day's data
+      setValues({});
+      setHeartState(null);
+      setStruggleReflections({});
+      setHeartResponse(null);
+      setSaved(false);
       try {
         const token = await user.getIdToken();
         const headers = { Authorization: `Bearer ${token}` };

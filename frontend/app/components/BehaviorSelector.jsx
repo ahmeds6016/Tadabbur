@@ -44,7 +44,7 @@ export default function BehaviorSelector({
   behaviors = [],
   selectedIds = [],
   onChange,
-  maxSelections = 15,
+  maxSelections = 10,
   minSelections = 3,
 }) {
   const [expandedCats, setExpandedCats] = useState(() => {

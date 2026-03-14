@@ -121,8 +121,9 @@ class TestCatalogData:
     def test_default_behaviors_at_least_3(self):
         assert len(DEFAULT_BEHAVIORS) >= 3
 
-    def test_default_behaviors_at_most_max(self):
-        assert len(DEFAULT_BEHAVIORS) <= MAX_TRACKED_BEHAVIORS
+    def test_default_behaviors_catalog_exists(self):
+        # DEFAULT_BEHAVIORS is a reference catalog; users choose their own subset
+        assert len(DEFAULT_BEHAVIORS) >= 3
 
 
 # ==========================================================================
@@ -135,11 +136,13 @@ class TestBuildDefaultConfig:
         config = build_default_config()
         assert config.get("onboarding_complete") is True
 
-    def test_default_config_with_no_args_uses_defaults(self):
+    def test_default_config_with_no_args_uses_minimal_defaults(self):
+        """With no args, build_default_config uses minimal set (5 daily prayers)."""
         config = build_default_config()
         tracked_ids = {b["id"] for b in config["tracked_behaviors"]}
-        default_ids = {b["id"] for b in DEFAULT_BEHAVIORS}
-        assert tracked_ids == default_ids
+        assert "fajr_prayer" in tracked_ids
+        assert "isha_prayer" in tracked_ids
+        assert len(tracked_ids) == 5
 
     def test_default_config_with_custom_behaviors(self):
         custom = ["fajr_prayer", "quran_minutes", "dhikr_minutes"]
@@ -191,12 +194,12 @@ class TestSetupValidation:
         if len(ids) > MAX_TRACKED_BEHAVIORS:
             assert ok is False
 
-    def test_empty_behavior_ids_uses_defaults(self):
-        """When behavior_ids is None, build_default_config uses DEFAULT_BEHAVIORS."""
+    def test_empty_behavior_ids_uses_minimal_defaults(self):
+        """When behavior_ids is None, build_default_config uses minimal prayer defaults."""
         config = build_default_config(None)
         tracked_ids = {b["id"] for b in config["tracked_behaviors"]}
-        default_ids = {b["id"] for b in DEFAULT_BEHAVIORS}
-        assert tracked_ids == default_ids
+        assert len(tracked_ids) == 5
+        assert "fajr_prayer" in tracked_ids
 
     def test_invalid_behavior_id_raises_error(self):
         """build_default_config raises ValueError for unknown IDs."""

@@ -161,7 +161,9 @@ def build_default_config(behavior_ids: Optional[List[str]] = None) -> dict:
             raise ValueError(f"Unknown behavior IDs: {invalid}")
         behaviors = [BEHAVIOR_MAP[bid] for bid in behavior_ids]
     else:
-        behaviors = DEFAULT_BEHAVIORS
+        # Minimal default: just the 5 daily prayers — user picks the rest
+        MINIMAL_DEFAULTS = ["fajr_prayer", "dhuhr_prayer", "asr_prayer", "maghrib_prayer", "isha_prayer"]
+        behaviors = [BEHAVIOR_MAP[bid] for bid in MINIMAL_DEFAULTS if bid in BEHAVIOR_MAP]
 
     tracked = []
     now = datetime.now(timezone.utc).isoformat()
@@ -1117,7 +1119,7 @@ def recompute_trajectory(
 # Safeguards
 # ---------------------------------------------------------------------------
 
-MAX_TRACKED_BEHAVIORS = 15
+MAX_TRACKED_BEHAVIORS = 10
 
 
 def check_behavior_cap(tracked_ids: List[str]) -> Tuple[bool, str]:

@@ -8077,7 +8077,7 @@ def iman_get_catalog():
             "struggles": struggles,
             "defaults": {
                 "max_tracked": MAX_TRACKED_BEHAVIORS,
-                "default_behavior_ids": [b["id"] for b in DEFAULT_BEHAVIORS],
+                "default_behavior_ids": [],
                 "recommended_range": {"min": 3, "max": 10},
             },
         }), 200
@@ -8104,6 +8104,7 @@ def iman_delete_all_data():
         subcollections = [
             "iman_config", "iman_daily_logs", "iman_baselines",
             "iman_trajectory", "iman_struggles", "iman_weekly_digests",
+            "iman_daily_insights",
         ]
 
         deleted_counts = {}
@@ -8125,6 +8126,25 @@ def iman_delete_all_data():
 
     except Exception as e:
         print(f"ERROR in DELETE /iman/data: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/iman/clear-digest-cache", methods=["POST"])
+@firebase_auth_required
+def iman_clear_digest_cache():
+    """Clear all cached daily insights and weekly digests for the user."""
+    uid = request.user["uid"]
+    try:
+        user_ref = users_db.collection("users").document(uid)
+        cleared = 0
+        for sub in ["iman_daily_insights", "iman_weekly_digests"]:
+            for doc in user_ref.collection(sub).stream():
+                doc.reference.delete()
+                cleared += 1
+        print(f"[IMAN] Cleared {cleared} cached digest docs for {uid[:8]}...")
+        return jsonify({"message": f"Cleared {cleared} cached digests", "cleared": cleared}), 200
+    except Exception as e:
+        print(f"ERROR in POST /iman/clear-digest-cache: {e}")
         return jsonify({"error": str(e)}), 500
 
 
@@ -8272,6 +8292,18 @@ def iman_submit_log():
         sr_data = compute_strain_recovery(all_logs, tracked_ids)
         safeguards = compute_safeguard_status(all_logs, trajectory, sr_data, uid)
         strain_trend = compute_strain_trend(all_logs, tracked_ids)
+
+        # Invalidate cached daily insight for this date
+        try:
+            insight_ref = (
+                users_db.collection("users").document(uid)
+                .collection("iman_daily_insights").document(date_str)
+            )
+            if insight_ref.get().exists:
+                insight_ref.delete()
+                print(f"[IMAN] Invalidated daily insight for {date_str} for {uid[:8]}... (log updated)")
+        except Exception as di_err:
+            print(f"[IMAN] Non-critical: failed to invalidate daily insight: {di_err}")
 
         # Invalidate cached weekly digest so next view reflects new data
         try:
