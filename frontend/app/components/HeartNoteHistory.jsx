@@ -169,7 +169,7 @@ export default function HeartNoteHistory({ user }) {
         </span>
         <ChevronDown
           size={18}
-          color="#6b7280"
+          color="var(--color-text-secondary, #6b7280)"
           style={{
             transition: 'transform 0.2s ease',
             transform: expanded ? 'rotate(180deg)' : 'none',
@@ -303,7 +303,7 @@ export default function HeartNoteHistory({ user }) {
                           {!isSameDay && (
                             <span style={{
                               fontSize: '0.58rem',
-                              color: '#c4c8cd',
+                              color: 'var(--color-text-secondary, #c4c8cd)',
                               fontStyle: 'italic',
                             }}>
                               Editable today only
@@ -321,7 +321,7 @@ export default function HeartNoteHistory({ user }) {
                                   border: 'none',
                                   cursor: 'pointer',
                                   padding: 2,
-                                  color: '#9ca3af',
+                                  color: 'var(--color-text-secondary, #9ca3af)',
                                 }}
                               >
                                 <Pencil size={13} />
@@ -334,7 +334,7 @@ export default function HeartNoteHistory({ user }) {
                                   border: 'none',
                                   cursor: 'pointer',
                                   padding: 2,
-                                  color: '#9ca3af',
+                                  color: 'var(--color-text-secondary, #9ca3af)',
                                 }}
                               >
                                 <Trash2 size={13} />

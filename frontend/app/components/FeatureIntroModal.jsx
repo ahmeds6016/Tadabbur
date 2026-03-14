@@ -26,7 +26,7 @@ const FEATURE_STEPS = [
   },
   {
     title: 'Your Iman Journal',
-    description: 'A private, intelligent journal that addresses you by name and learns your spiritual rhythms. Track daily behaviors, write heart notes, set struggle goals, and receive deeply personalized digests, trajectory insights, and AI-powered correlation analysis — a mirror for your heart, not a scorecard.',
+    description: 'A private, intelligent journal that addresses you by name and learns your spiritual rhythms. Track daily behaviors, write heart notes, set struggle goals, and receive deeply personalized digests, trajectory insights, and correlation analysis — a mirror for your heart, not a scorecard.',
     iconLabel: 'J',
   }
 ];

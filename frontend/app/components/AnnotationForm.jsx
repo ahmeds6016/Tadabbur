@@ -311,14 +311,14 @@ export default function AnnotationForm({
         /* Header */
         .form-header {
           padding-bottom: 20px;
-          border-bottom: 1px solid #e5e7eb;
+          border-bottom: 1px solid var(--color-border, #e5e7eb);
           margin-bottom: 20px;
         }
 
         .form-header h2 {
           margin: 0 0 8px 0;
           font-size: 1.5rem;
-          color: #111827;
+          color: var(--foreground, #111827);
         }
 
         .verse-info {
@@ -329,7 +329,7 @@ export default function AnnotationForm({
 
         /* Context Display */
         .context-display {
-          background: #f9fafb;
+          background: var(--color-surface-muted, #f9fafb);
           padding: 12px;
           border-radius: 8px;
           margin-bottom: 16px;
@@ -339,7 +339,7 @@ export default function AnnotationForm({
           display: block;
           font-size: 0.75rem;
           text-transform: uppercase;
-          color: #6b7280;
+          color: var(--color-text-secondary, #6b7280);
           margin-bottom: 4px;
         }
 
@@ -347,7 +347,7 @@ export default function AnnotationForm({
         .verse-text {
           margin: 0;
           font-style: italic;
-          color: #374151;
+          color: var(--foreground, #374151);
         }
 
         /* Form Body */
@@ -365,7 +365,7 @@ export default function AnnotationForm({
           display: block;
           margin-bottom: 8px;
           font-weight: 500;
-          color: #374151;
+          color: var(--foreground, #374151);
         }
 
         /* Type Buttons - All visible */
@@ -406,13 +406,15 @@ export default function AnnotationForm({
         .content-textarea {
           width: 100%;
           padding: 12px;
-          border: 2px solid #e5e7eb;
+          border: 2px solid var(--color-border, #e5e7eb);
           border-radius: 8px;
           font-size: 1rem;
           font-family: inherit;
           resize: vertical;
           min-height: 120px;
           transition: border-color 0.2s;
+          background: var(--color-surface, white);
+          color: var(--foreground);
         }
 
         .content-textarea:focus {
@@ -426,9 +428,10 @@ export default function AnnotationForm({
           flex-wrap: wrap;
           gap: 8px;
           padding: 8px;
-          border: 2px solid #e5e7eb;
+          border: 2px solid var(--color-border, #e5e7eb);
           border-radius: 8px;
           min-height: 44px;
+          background: var(--color-surface, white);
         }
 
         .tag {
@@ -462,6 +465,8 @@ export default function AnnotationForm({
           border: none;
           outline: none;
           font-size: 16px; /* Prevent iOS zoom - must be 16px or larger */
+          background: transparent;
+          color: var(--foreground);
         }
 
         /* Privacy Notice */
@@ -470,10 +475,10 @@ export default function AnnotationForm({
           align-items: center;
           gap: 6px;
           padding: 8px 12px;
-          background: #f0fdf4;
+          background: rgba(5, 150, 105, 0.08);
           border-radius: 6px;
           font-size: 0.75rem;
-          color: #15803d;
+          color: var(--color-secondary-light, #15803d);
           margin-bottom: 20px;
         }
 
@@ -497,7 +502,7 @@ export default function AnnotationForm({
           gap: 12px;
           justify-content: flex-end;
           padding-top: 20px;
-          border-top: 1px solid #e5e7eb;
+          border-top: 1px solid var(--color-border, #e5e7eb);
           margin-top: 20px;
         }
 
@@ -513,13 +518,13 @@ export default function AnnotationForm({
         }
 
         .btn-cancel {
-          background: white;
-          border: 2px solid #e5e7eb;
-          color: #6b7280;
+          background: var(--color-surface, white);
+          border: 2px solid var(--color-border, #e5e7eb);
+          color: var(--color-text-secondary, #6b7280);
         }
 
         .btn-cancel:hover:not(:disabled) {
-          background: #f9fafb;
+          background: var(--color-surface-muted, #f9fafb);
         }
 
         .btn-save {
@@ -549,7 +554,7 @@ export default function AnnotationForm({
           .form-footer {
             position: sticky;
             bottom: 0;
-            background: white;
+            background: var(--color-surface, white);
             padding: 16px;
             margin: -16px -16px 0;
             box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1);

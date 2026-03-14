@@ -389,15 +389,15 @@ export default function MyReflectionsPage() {
         .reflections-title {
           font-size: 1.5rem;
           font-weight: 700;
-          color: #1a1a1a;
+          color: var(--foreground, #1a1a1a);
           margin: 0;
         }
 
         .reflections-count {
           font-size: 0.8rem;
           font-weight: 600;
-          color: #6b7280;
-          background: #f3f4f6;
+          color: var(--color-text-secondary, #6b7280);
+          background: var(--color-surface-muted, #f3f4f6);
           padding: 4px 10px;
           border-radius: 12px;
         }
@@ -419,18 +419,19 @@ export default function MyReflectionsPage() {
         .search-input {
           width: 100%;
           padding: 10px 36px 10px 36px;
-          border: 1px solid #e5e7eb;
+          border: 1px solid var(--color-border, #e5e7eb);
           border-radius: 10px;
           font-size: 0.9rem;
-          background: #f9fafb;
+          background: var(--color-surface-muted, #f9fafb);
+          color: var(--foreground);
           outline: none;
           transition: border-color 0.15s;
           box-sizing: border-box;
         }
 
         .search-input:focus {
-          border-color: #d1d5db;
-          background: white;
+          border-color: var(--primary-teal, #0d9488);
+          background: var(--color-surface, white);
         }
 
         .search-clear {
@@ -464,12 +465,12 @@ export default function MyReflectionsPage() {
         .filter-chip {
           flex-shrink: 0;
           padding: 6px 14px;
-          border: 1px solid #e5e7eb;
+          border: 1px solid var(--color-border, #e5e7eb);
           border-radius: 20px;
-          background: white;
+          background: var(--color-surface, white);
           font-size: 0.78rem;
           font-weight: 500;
-          color: #374151;
+          color: var(--foreground, #374151);
           cursor: pointer;
           transition: all 0.15s;
           white-space: nowrap;
@@ -501,10 +502,10 @@ export default function MyReflectionsPage() {
           padding: 4px 10px;
           border: none;
           border-radius: 12px;
-          background: #f3f4f6;
+          background: var(--color-surface-muted, #f3f4f6);
           font-size: 0.72rem;
           font-weight: 500;
-          color: #6b7280;
+          color: var(--color-text-secondary, #6b7280);
           cursor: pointer;
           transition: all 0.15s;
           white-space: nowrap;
@@ -543,7 +544,7 @@ export default function MyReflectionsPage() {
         .empty-title {
           font-size: 1rem;
           font-weight: 600;
-          color: #374151;
+          color: var(--foreground, #374151);
           margin: 12px 0 4px;
         }
 
@@ -559,20 +560,20 @@ export default function MyReflectionsPage() {
           display: flex;
           flex-direction: column;
           gap: 1px;
-          background: #e5e7eb;
+          background: var(--color-border, #e5e7eb);
           border-radius: 12px;
           overflow: hidden;
         }
 
         .annotation-card {
           padding: 14px 16px;
-          background: white;
+          background: var(--color-surface, white);
           cursor: pointer;
           transition: background 0.1s;
         }
 
         .annotation-card:active {
-          background: #f9fafb;
+          background: var(--color-surface-muted, #f9fafb);
         }
 
         .card-top {
@@ -600,7 +601,7 @@ export default function MyReflectionsPage() {
         .card-context {
           font-size: 0.85rem;
           font-weight: 600;
-          color: #1a1a1a;
+          color: var(--foreground, #1a1a1a);
           margin-bottom: 4px;
         }
 
@@ -617,7 +618,7 @@ export default function MyReflectionsPage() {
 
         .card-content {
           font-size: 0.88rem;
-          color: #4b5563;
+          color: var(--color-text-secondary, #4b5563);
           line-height: 1.5;
           margin: 0;
           display: -webkit-box;
@@ -655,7 +656,7 @@ export default function MyReflectionsPage() {
           }
 
           .annotation-card:hover {
-            background: #fafafa;
+            background: var(--color-surface-muted, #fafafa);
           }
         }
       `}</style>

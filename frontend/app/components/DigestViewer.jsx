@@ -2,17 +2,17 @@
 import { useState, useEffect } from 'react';
 import { BACKEND_URL } from '../lib/config';
 
-export default function DigestViewer({ user, onDigestGenerated }) {
+export default function DigestViewer({ user, onDigestGenerated, refreshKey = 0 }) {
   const [digest, setDigest] = useState(null);
   const [weekId, setWeekId] = useState('');
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState('');
 
-  // Fetch latest digest on mount
+  // Fetch latest digest on mount and when refreshKey changes (e.g. after new log)
   useEffect(() => {
     if (user) fetchLatest();
-  }, [user]);
+  }, [user, refreshKey]);
 
   const fetchLatest = async () => {
     setLoading(true);

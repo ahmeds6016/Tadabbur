@@ -84,6 +84,7 @@
     --shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.4);
     --shadow-strong: 0 8px 32px rgba(0, 0, 0, 0.5);
     --gradient-manuscript: linear-gradient(180deg, #0F1419 0%, #1A1F2E 100%);
+    --color-overlay: rgba(0, 0, 0, 0.85);
   }
 }
 
@@ -155,6 +156,359 @@
   ::-webkit-scrollbar-thumb {
     background: var(--color-border);
     border-radius: 3px;
+  }
+
+  /* ====================================================================
+     COMPREHENSIVE DARK MODE OVERRIDES
+     Catches all components using hardcoded white/light backgrounds
+     ==================================================================== */
+
+  /* Dialog/Modal backgrounds */
+  .dialog-content,
+  .confirm-dialog,
+  .help-panel,
+  .reflection-panel {
+    background: var(--color-surface) !important;
+    color: var(--foreground) !important;
+  }
+
+  /* Annotation form dark mode */
+  .annotation-form .form-header {
+    border-bottom-color: var(--color-border) !important;
+  }
+
+  .annotation-form .form-header h2 {
+    color: var(--foreground) !important;
+  }
+
+  .annotation-form .context-display {
+    background: var(--color-surface-muted) !important;
+  }
+
+  .annotation-form .context-display label,
+  .annotation-form .form-group label {
+    color: var(--color-text-secondary) !important;
+  }
+
+  .annotation-form .selected-text,
+  .annotation-form .verse-text {
+    color: var(--foreground) !important;
+  }
+
+  .annotation-form .content-textarea {
+    background: var(--color-surface) !important;
+    border-color: var(--color-border) !important;
+    color: var(--foreground) !important;
+  }
+
+  .annotation-form .tags-container {
+    border-color: var(--color-border) !important;
+    background: var(--color-surface) !important;
+  }
+
+  .annotation-form .tag-input {
+    background: transparent !important;
+    color: var(--foreground) !important;
+  }
+
+  .annotation-form .privacy-notice {
+    background: rgba(5, 150, 105, 0.1) !important;
+    color: var(--color-secondary-light) !important;
+  }
+
+  .annotation-form .form-footer {
+    border-top-color: var(--color-border) !important;
+    background: var(--color-surface) !important;
+  }
+
+  .annotation-form .btn-cancel {
+    background: var(--color-surface) !important;
+    border-color: var(--color-border) !important;
+    color: var(--color-text-secondary) !important;
+  }
+
+  /* Confirm dialog */
+  .confirm-dialog .confirm-content {
+    color: var(--foreground) !important;
+  }
+
+  .confirm-dialog #confirm-message {
+    color: var(--color-text-secondary) !important;
+  }
+
+  .confirm-dialog .cancel-btn {
+    background: var(--color-surface) !important;
+    border-color: var(--color-border) !important;
+    color: var(--color-text-secondary) !important;
+  }
+
+  .confirm-dialog .cancel-btn:hover {
+    background: var(--color-surface-muted) !important;
+  }
+
+  /* Badge display */
+  .badge-card {
+    background: var(--color-surface) !important;
+    border-color: var(--color-border) !important;
+  }
+
+  .badge-card--earned {
+    border-color: var(--gold, #d4a017) !important;
+  }
+
+  .badge-popup {
+    background: var(--color-surface) !important;
+  }
+
+  .badge-error button {
+    background: var(--color-surface) !important;
+  }
+
+  /* Help menu panel */
+  .help-panel .help-close {
+    background: var(--color-surface-muted) !important;
+    border-color: var(--color-border) !important;
+    color: var(--foreground) !important;
+  }
+
+  .help-panel .help-tab.active {
+    background: var(--color-surface) !important;
+  }
+
+  .help-panel .help-tab:hover {
+    background: var(--color-surface-muted) !important;
+  }
+
+  .help-panel .item-content p,
+  .help-panel .shortcut-action,
+  .help-panel .faq-item p,
+  .help-panel .feedback-description,
+  .help-panel .feedback-success-subtitle,
+  .help-panel .no-shortcuts,
+  .help-panel #confirm-message {
+    color: var(--color-text-secondary) !important;
+  }
+
+  .help-panel .shortcut-keys kbd {
+    background: var(--color-surface-muted) !important;
+    border-color: var(--color-border) !important;
+    color: var(--foreground) !important;
+  }
+
+  .help-panel .feedback-type-btn {
+    background: var(--color-surface) !important;
+    border-color: var(--color-border) !important;
+    color: var(--color-text-secondary) !important;
+  }
+
+  .help-panel .feedback-type-btn.active {
+    background: rgba(13, 148, 136, 0.15) !important;
+    color: var(--primary-teal) !important;
+    border-color: var(--primary-teal) !important;
+  }
+
+  .help-panel .feedback-textarea {
+    background: var(--color-surface) !important;
+    border-color: var(--color-border) !important;
+    color: var(--foreground) !important;
+  }
+
+  .help-panel .feedback-another-btn {
+    background: var(--color-surface) !important;
+    border-color: var(--color-border) !important;
+    color: var(--foreground) !important;
+  }
+
+  .help-panel .help-bottom-nav {
+    background: var(--color-surface) !important;
+    border-top-color: var(--color-border) !important;
+  }
+
+  /* Behavior selector (journal onboarding) */
+  .behavior-selector {
+    background: var(--color-surface) !important;
+    border-color: var(--color-border) !important;
+  }
+
+  .behavior-selector .bs-cat-header {
+    background: var(--color-surface-muted) !important;
+  }
+
+  .behavior-selector .bs-cat-label {
+    color: var(--foreground) !important;
+  }
+
+  .behavior-selector .bs-behavior:hover:not(.disabled) {
+    background: var(--color-surface-muted) !important;
+  }
+
+  .behavior-selector .bs-b-label {
+    color: var(--foreground) !important;
+  }
+
+  .behavior-selector .bs-b-type {
+    background: var(--color-surface-muted) !important;
+    color: var(--color-text-secondary) !important;
+  }
+
+  .behavior-selector .bs-footer {
+    background: var(--color-surface-muted) !important;
+    border-top-color: var(--color-border) !important;
+  }
+
+  /* Saved page items */
+  .saved-item {
+    background: var(--color-surface) !important;
+    border-color: var(--color-border) !important;
+  }
+
+  .saved-title {
+    color: var(--foreground) !important;
+  }
+
+  .saved-count {
+    background: var(--color-surface-muted) !important;
+    color: var(--color-text-secondary) !important;
+  }
+
+  /* Reflections/Annotations page */
+  .reflections-title {
+    color: var(--foreground) !important;
+  }
+
+  .reflections-count {
+    background: var(--color-surface-muted) !important;
+    color: var(--color-text-secondary) !important;
+  }
+
+  .search-input {
+    background: var(--color-surface) !important;
+    border-color: var(--color-border) !important;
+    color: var(--foreground) !important;
+  }
+
+  .search-input:focus {
+    background: var(--color-surface) !important;
+  }
+
+  .filter-chip {
+    background: var(--color-surface) !important;
+    border-color: var(--color-border) !important;
+    color: var(--foreground) !important;
+  }
+
+  .filter-chip.active {
+    background: var(--chip-color) !important;
+    color: white !important;
+    border-color: var(--chip-color) !important;
+  }
+
+  .tag-chip {
+    background: var(--color-surface-muted) !important;
+    color: var(--color-text-secondary) !important;
+  }
+
+  .annotations-list {
+    background: var(--color-border) !important;
+  }
+
+  .annotation-card {
+    background: var(--color-surface) !important;
+  }
+
+  .annotation-card:active {
+    background: var(--color-surface-muted) !important;
+  }
+
+  .card-context {
+    color: var(--foreground) !important;
+  }
+
+  .card-content {
+    color: var(--color-text-secondary) !important;
+  }
+
+  /* Reflection detail panel */
+  .reflection-panel > div {
+    border-color: var(--color-border) !important;
+  }
+
+  /* Lesson cards in tafsir results */
+  .lessons-section .lesson-card {
+    background: var(--color-surface) !important;
+    border-color: var(--color-border) !important;
+  }
+
+  /* Iman onboarding */
+  .iman-onboarding {
+    background: var(--color-bg) !important;
+  }
+
+  .ob-struggle-card {
+    background: var(--color-surface) !important;
+    border-color: var(--color-border) !important;
+  }
+
+  .ob-struggle-card.selected {
+    background: rgba(5, 150, 105, 0.1) !important;
+  }
+
+  .ob-s-label {
+    color: var(--foreground) !important;
+  }
+
+  .ob-title {
+    color: var(--foreground) !important;
+  }
+
+  .ob-body {
+    color: var(--color-text-secondary) !important;
+  }
+
+  .ob-feature-title {
+    color: var(--foreground) !important;
+  }
+
+  .ob-tip {
+    color: var(--color-text-secondary) !important;
+  }
+
+  .ob-hint {
+    background: rgba(5, 150, 105, 0.1) !important;
+    border-color: rgba(5, 150, 105, 0.2) !important;
+  }
+
+  .ob-hint-text {
+    color: var(--color-secondary-light) !important;
+  }
+
+  .ob-btn.secondary {
+    background: var(--color-surface) !important;
+    color: var(--foreground) !important;
+    border-color: var(--color-border) !important;
+  }
+
+  .ob-medallion {
+    background: rgba(13, 148, 136, 0.1) !important;
+  }
+
+  /* Plans page */
+  .plan-card,
+  .plan-item {
+    background: var(--color-surface) !important;
+    border-color: var(--color-border) !important;
+  }
+
+  /* Progress page surah tiles */
+  .surah-tile {
+    background: var(--color-surface) !important;
+    border-color: var(--color-border) !important;
+  }
+
+  /* Desktop nav */
+  .desktop-nav {
+    background: var(--color-surface) !important;
+    border-color: var(--color-border) !important;
   }
 }
 

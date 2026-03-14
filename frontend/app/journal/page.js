@@ -47,6 +47,7 @@ export default function JournalPage() {
   const [showDailyInsight, setShowDailyInsight] = useState(false);
   const [strainTrend, setStrainTrend] = useState(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [digestRefreshKey, setDigestRefreshKey] = useState(0);
 
   // Auth
   useEffect(() => {
@@ -165,6 +166,10 @@ export default function JournalPage() {
     setShowDailyInsight(true);
     if (data?.strain_trend) {
       setStrainTrend(data.strain_trend);
+    }
+    // Digest cache was invalidated on the backend — trigger re-fetch
+    if (data?.digest_invalidated) {
+      setDigestRefreshKey((k) => k + 1);
     }
   };
 
@@ -294,7 +299,7 @@ export default function JournalPage() {
         <CorrelationCard correlations={correlations} weeklyInsight={correlationInsight} narrative={correlationNarrative} />
 
         {/* Weekly digest */}
-        <DigestViewer user={user} onDigestGenerated={() => fetchCorrelations(user)} />
+        <DigestViewer user={user} onDigestGenerated={() => fetchCorrelations(user)} refreshKey={digestRefreshKey} />
 
         {/* Heart note patterns */}
         <HeartPatterns user={user} />
@@ -374,7 +379,7 @@ export default function JournalPage() {
           align-items: center;
           justify-content: center;
           min-height: 60vh;
-          color: #6b7280;
+          color: var(--color-text-secondary, #6b7280);
         }
         .auth-gate {
           display: flex;
@@ -391,7 +396,7 @@ export default function JournalPage() {
           color: var(--deep-blue, #1e293b);
         }
         .auth-gate p {
-          color: #6b7280;
+          color: var(--color-text-secondary, #6b7280);
           font-size: 0.95rem;
         }
         .go-home-btn {
@@ -419,7 +424,7 @@ export default function JournalPage() {
         .header-sub {
           margin: 4px 0 0;
           font-size: 0.85rem;
-          color: #6b7280;
+          color: var(--color-text-secondary, #6b7280);
         }
         .settings-link {
           position: absolute;
@@ -502,29 +507,29 @@ export default function JournalPage() {
 
         /* Strain warning */
         .strain-warning {
-          background: #fffbeb;
-          border: 1px solid #fde68a;
+          background: rgba(217, 119, 6, 0.08);
+          border: 1px solid rgba(217, 119, 6, 0.25);
           border-radius: 10px;
           padding: 12px 16px;
           border-left: 3px solid #d97706;
         }
         .strain-warning p {
           font-size: 0.85rem;
-          color: #92400e;
+          color: var(--foreground, #92400e);
           margin: 0;
           line-height: 1.5;
         }
 
         /* Gentleness banner (scrupulosity safeguard) */
         .gentleness-banner {
-          background: #fefce8;
-          border: 1px solid #fde68a;
+          background: rgba(234, 179, 8, 0.08);
+          border: 1px solid rgba(234, 179, 8, 0.25);
           border-radius: 10px;
           padding: 12px 16px;
         }
         .gentleness-banner p {
           font-size: 0.85rem;
-          color: #92400e;
+          color: var(--foreground, #92400e);
           margin: 0;
           line-height: 1.5;
           text-align: center;

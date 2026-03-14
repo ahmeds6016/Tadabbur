@@ -122,7 +122,7 @@ export default function DailyInsightCard({ user, date, visible }) {
       {insight.encouragement && (
         <p style={{
           fontSize: '0.85rem',
-          color: '#374151',
+          color: 'var(--foreground, #374151)',
           margin: '0 0 8px 0',
           lineHeight: 1.5,
         }}>

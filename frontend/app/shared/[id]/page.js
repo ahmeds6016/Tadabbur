@@ -193,9 +193,10 @@ export default function SharedPage() {
                 {lessons_practical_applications.map((lesson, index) => (
                   <div
                     key={index}
+                    className="lesson-card"
                     style={{
-                      background: 'white',
-                      border: '1px solid #e2e8f0',
+                      background: 'var(--color-surface)',
+                      border: '1px solid var(--color-border-light)',
                       borderRadius: '12px',
                       padding: '16px',
                       boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
@@ -213,12 +214,12 @@ export default function SharedPage() {
                     {/* Synthesis type: single narrative body */}
                     {lesson.type === 'synthesis' && lesson.body && (
                       <div style={{
-                        background: '#f0f9ff',
+                        background: 'rgba(14, 165, 233, 0.08)',
                         borderLeft: '3px solid #0ea5e9',
                         padding: '12px 14px',
                         borderRadius: '4px',
                         fontSize: '0.95rem',
-                        color: '#0c4a6e',
+                        color: 'var(--foreground)',
                         lineHeight: '1.7'
                       }}>
                         {lesson.body}
@@ -230,45 +231,45 @@ export default function SharedPage() {
                       <div style={{ display: 'grid', gap: '10px' }}>
                         {lesson.core_principle && (
                           <div style={{
-                            background: '#f0fdf4',
+                            background: 'rgba(16, 185, 129, 0.08)',
                             borderLeft: '3px solid #10b981',
                             padding: '10px 12px',
                             borderRadius: '4px'
                           }}>
-                            <div style={{ fontSize: '0.7rem', fontWeight: '700', color: '#059669', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            <div style={{ fontSize: '0.7rem', fontWeight: '700', color: '#10b981', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                               Core Principle
                             </div>
-                            <div style={{ fontSize: '0.95rem', color: '#065f46', lineHeight: '1.6' }}>
+                            <div style={{ fontSize: '0.95rem', color: 'var(--foreground)', lineHeight: '1.6' }}>
                               {lesson.core_principle}
                             </div>
                           </div>
                         )}
                         {lesson.contemplation && (
                           <div style={{
-                            background: '#faf5ff',
+                            background: 'rgba(168, 85, 247, 0.08)',
                             borderLeft: '3px solid #a855f7',
                             padding: '10px 12px',
                             borderRadius: '4px'
                           }}>
-                            <div style={{ fontSize: '0.7rem', fontWeight: '700', color: '#7c3aed', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            <div style={{ fontSize: '0.7rem', fontWeight: '700', color: '#a855f7', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                               Contemplation
                             </div>
-                            <div style={{ fontSize: '0.95rem', color: '#4c1d95', lineHeight: '1.6', fontStyle: 'italic' }}>
+                            <div style={{ fontSize: '0.95rem', color: 'var(--foreground)', lineHeight: '1.6', fontStyle: 'italic' }}>
                               {lesson.contemplation}
                             </div>
                           </div>
                         )}
                         {lesson.prophetic_anchor && (
                           <div style={{
-                            background: '#fefce8',
+                            background: 'rgba(234, 179, 8, 0.08)',
                             borderLeft: '3px solid #eab308',
                             padding: '10px 12px',
                             borderRadius: '4px'
                           }}>
-                            <div style={{ fontSize: '0.7rem', fontWeight: '700', color: '#ca8a04', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            <div style={{ fontSize: '0.7rem', fontWeight: '700', color: '#eab308', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                               Prophetic Anchor
                             </div>
-                            <div style={{ fontSize: '0.95rem', color: '#713f12', lineHeight: '1.6' }}>
+                            <div style={{ fontSize: '0.95rem', color: 'var(--foreground)', lineHeight: '1.6' }}>
                               {lesson.prophetic_anchor}
                             </div>
                           </div>
@@ -281,45 +282,45 @@ export default function SharedPage() {
                       <div style={{ display: 'grid', gap: '10px' }}>
                         {lesson.baseline && (
                           <div style={{
-                            background: '#f8fafc',
+                            background: 'rgba(148, 163, 184, 0.08)',
                             borderLeft: '3px solid #94a3b8',
                             padding: '10px 12px',
                             borderRadius: '4px'
                           }}>
-                            <div style={{ fontSize: '0.7rem', fontWeight: '700', color: '#64748b', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            <div style={{ fontSize: '0.7rem', fontWeight: '700', color: '#94a3b8', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                               The Baseline
                             </div>
-                            <div style={{ fontSize: '0.95rem', color: '#334155', lineHeight: '1.6' }}>
+                            <div style={{ fontSize: '0.95rem', color: 'var(--foreground)', lineHeight: '1.6' }}>
                               {lesson.baseline}
                             </div>
                           </div>
                         )}
                         {lesson.ascent && (
                           <div style={{
-                            background: '#eff6ff',
+                            background: 'rgba(59, 130, 246, 0.08)',
                             borderLeft: '3px solid #3b82f6',
                             padding: '10px 12px',
                             borderRadius: '4px'
                           }}>
-                            <div style={{ fontSize: '0.7rem', fontWeight: '700', color: '#2563eb', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            <div style={{ fontSize: '0.7rem', fontWeight: '700', color: '#3b82f6', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                               The Ascent
                             </div>
-                            <div style={{ fontSize: '0.95rem', color: '#1e3a5f', lineHeight: '1.6' }}>
+                            <div style={{ fontSize: '0.95rem', color: 'var(--foreground)', lineHeight: '1.6' }}>
                               {lesson.ascent}
                             </div>
                           </div>
                         )}
                         {lesson.peak && (
                           <div style={{
-                            background: '#fdf4ff',
+                            background: 'rgba(217, 70, 239, 0.08)',
                             borderLeft: '3px solid #d946ef',
                             padding: '10px 12px',
                             borderRadius: '4px'
                           }}>
-                            <div style={{ fontSize: '0.7rem', fontWeight: '700', color: '#c026d3', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            <div style={{ fontSize: '0.7rem', fontWeight: '700', color: '#d946ef', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                               The Peak
                             </div>
-                            <div style={{ fontSize: '0.95rem', color: '#701a75', lineHeight: '1.6' }}>
+                            <div style={{ fontSize: '0.95rem', color: 'var(--foreground)', lineHeight: '1.6' }}>
                               {lesson.peak}
                             </div>
                           </div>
@@ -332,25 +333,25 @@ export default function SharedPage() {
                       <>
                         {lesson.example && (
                           <div style={{
-                            background: '#f0fdf4',
+                            background: 'rgba(16, 185, 129, 0.08)',
                             borderLeft: '3px solid #10b981',
                             padding: '10px 12px',
                             marginBottom: '12px',
                             borderRadius: '4px'
                           }}>
-                            <div style={{ fontSize: '0.9rem', color: '#065f46', lineHeight: '1.6' }}>
+                            <div style={{ fontSize: '0.9rem', color: 'var(--foreground)', lineHeight: '1.6' }}>
                               {lesson.example}
                             </div>
                           </div>
                         )}
                         {lesson.action && (
                           <div style={{
-                            background: '#fefce8',
+                            background: 'rgba(234, 179, 8, 0.08)',
                             borderLeft: '3px solid #eab308',
                             padding: '10px 12px',
                             borderRadius: '4px'
                           }}>
-                            <div style={{ fontSize: '0.9rem', color: '#713f12', lineHeight: '1.6' }}>
+                            <div style={{ fontSize: '0.9rem', color: 'var(--foreground)', lineHeight: '1.6' }}>
                               {lesson.action}
                             </div>
                           </div>
@@ -358,7 +359,7 @@ export default function SharedPage() {
                         {lesson.body && (
                           <div style={{
                             fontSize: '0.95rem',
-                            color: '#374151',
+                            color: 'var(--foreground)',
                             lineHeight: '1.7'
                           }}>
                             {lesson.body}
@@ -410,7 +411,7 @@ export default function SharedPage() {
         left: '50%',
         transform: 'translateX(-50%)',
         width: 'min(1200px, 100%)',
-        background: 'rgba(255, 255, 255, 0.98)',
+        background: 'var(--color-surface, rgba(255, 255, 255, 0.98))',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
         borderTop: '1px solid var(--border-light, #e5e7eb)',

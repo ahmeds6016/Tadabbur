@@ -235,7 +235,7 @@ export default function StruggleGoals({ user, struggleId, struggleColor, struggl
               <div style={{ flex: 1 }}>
                 <span style={{
                   fontSize: '0.82rem',
-                  color: weeklyGoal.completed_this_week ? '#9ca3af' : '#374151',
+                  color: weeklyGoal.completed_this_week ? 'var(--color-text-secondary, #9ca3af)' : 'var(--foreground, #374151)',
                   textDecoration: weeklyGoal.completed_this_week ? 'line-through' : 'none',
                   lineHeight: 1.4,
                 }}>

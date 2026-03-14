@@ -31,7 +31,7 @@ export default function MilestoneCelebration({ struggle, milestone }) {
 
   return (
     <div style={{
-      background: 'white',
+      background: 'var(--color-surface, white)',
       borderRadius: 14,
       border: `2px solid ${color}`,
       padding: '16px',
@@ -50,7 +50,7 @@ export default function MilestoneCelebration({ struggle, milestone }) {
           border: 'none',
           cursor: 'pointer',
           padding: 4,
-          color: '#9ca3af',
+          color: 'var(--color-text-secondary, #9ca3af)',
         }}
       >
         <X size={16} />
@@ -87,7 +87,7 @@ export default function MilestoneCelebration({ struggle, milestone }) {
           <div style={{
             fontSize: '0.92rem',
             fontWeight: 600,
-            color: '#1e293b',
+            color: 'var(--foreground, #1e293b)',
           }}>
             {struggle.label}
           </div>
@@ -98,7 +98,7 @@ export default function MilestoneCelebration({ struggle, milestone }) {
       {milestone.previous_phase_label && (
         <p style={{
           fontSize: '0.78rem',
-          color: '#9ca3af',
+          color: 'var(--color-text-secondary, #9ca3af)',
           margin: '0 0 6px 0',
           lineHeight: 1.4,
           textDecoration: 'line-through',
@@ -112,7 +112,7 @@ export default function MilestoneCelebration({ struggle, milestone }) {
       {milestone.phase_label && (
         <p style={{
           fontSize: '0.85rem',
-          color: '#1e293b',
+          color: 'var(--foreground, #1e293b)',
           margin: '0 0 12px 0',
           lineHeight: 1.5,
           fontWeight: 500,
@@ -125,7 +125,7 @@ export default function MilestoneCelebration({ struggle, milestone }) {
       {comfortVerse && (
         <div style={{
           padding: '10px 12px',
-          background: '#f0fdf4',
+          background: 'rgba(16, 185, 129, 0.08)',
           borderRadius: 10,
           borderLeft: `3px solid ${color}`,
           textAlign: 'center',
@@ -133,7 +133,7 @@ export default function MilestoneCelebration({ struggle, milestone }) {
           <p style={{
             fontSize: '0.82rem',
             fontStyle: 'italic',
-            color: '#1e293b',
+            color: 'var(--foreground, #1e293b)',
             margin: '0 0 4px 0',
             lineHeight: 1.5,
           }}>
@@ -141,7 +141,7 @@ export default function MilestoneCelebration({ struggle, milestone }) {
           </p>
           <span style={{
             fontSize: '0.65rem',
-            color: '#6b7280',
+            color: 'var(--color-text-secondary, #6b7280)',
           }}>
             — Surah {comfortVerse.surah}:{comfortVerse.verse}
           </span>

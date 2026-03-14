@@ -97,7 +97,7 @@ export default function ConfirmDialog({
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: white;
+            background: var(--color-surface, white);
             border-radius: 16px;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
             z-index: 10000;
@@ -128,13 +128,13 @@ export default function ConfirmDialog({
 
           #confirm-title {
             margin: 0 0 12px 0;
-            color: var(--deep-blue);
+            color: var(--foreground);
             font-size: 1.25rem;
           }
 
           #confirm-message {
             margin: 0 0 24px 0;
-            color: #666;
+            color: var(--color-text-secondary, #666);
             line-height: 1.5;
           }
 
@@ -155,12 +155,12 @@ export default function ConfirmDialog({
 
           .cancel-btn {
             background: transparent;
-            color: #666;
-            border: 1px solid #ddd;
+            color: var(--color-text-secondary, #666);
+            border: 1px solid var(--color-border, #ddd);
           }
 
           .cancel-btn:hover {
-            background: #f5f5f5;
+            background: var(--color-surface-muted, #f5f5f5);
           }
 
           .confirm-btn-primary {

@@ -1,11 +1,11 @@
 'use client';
 
 const STATE_CONFIG = {
-  ascending:      { arrow: '↑', label: 'Ascending',      bg: '#ecfdf5' },
-  gently_rising:  { arrow: '↗', label: 'Gently Rising',  bg: '#f0fdf4' },
-  steady:         { arrow: '→', label: 'Steady',          bg: '#fffbeb' },
-  recalibrating:  { arrow: '↻', label: 'Recalibrating',  bg: '#fef3c7' },
-  calibrating:    { arrow: '◎', label: 'Calibrating',     bg: '#f0f9ff' },
+  ascending:      { arrow: '↑', label: 'Ascending',      bg: 'rgba(5, 150, 105, 0.08)' },
+  gently_rising:  { arrow: '↗', label: 'Gently Rising',  bg: 'rgba(16, 185, 129, 0.08)' },
+  steady:         { arrow: '→', label: 'Steady',          bg: 'rgba(234, 179, 8, 0.08)' },
+  recalibrating:  { arrow: '↻', label: 'Recalibrating',  bg: 'rgba(217, 119, 6, 0.08)' },
+  calibrating:    { arrow: '◎', label: 'Calibrating',     bg: 'rgba(14, 165, 233, 0.08)' },
 };
 
 const VOL_LABELS = {
@@ -16,7 +16,7 @@ const VOL_LABELS = {
 
 const TREND_ARROWS = {
   improving: { symbol: '↑', color: '#059669' },
-  stable: { symbol: '→', color: '#6b7280' },
+  stable: { symbol: '→', color: 'var(--color-text-secondary, #6b7280)' },
   declining: { symbol: '↓', color: '#d97706' },
 };
 
@@ -98,13 +98,13 @@ export default function TrajectoryDisplay({ trajectory, categories = [] }) {
           }
           .emergency-ref {
             font-size: 0.75rem;
-            color: #6b7280;
+            color: var(--color-text-secondary, #6b7280);
             display: block;
             margin-bottom: 12px;
           }
           .emergency-message {
             font-size: 0.85rem;
-            color: #6b7280;
+            color: var(--color-text-secondary, #6b7280);
             margin: 0;
             line-height: 1.5;
           }
@@ -423,27 +423,27 @@ export default function TrajectoryDisplay({ trajectory, categories = [] }) {
         .humility-overlay {
           margin-top: 14px;
           padding: 16px;
-          background: #fffbeb;
+          background: rgba(234, 179, 8, 0.08);
           border-radius: 10px;
           text-align: center;
-          border: 1px solid #fde68a;
+          border: 1px solid rgba(234, 179, 8, 0.25);
         }
         .humility-title {
           font-size: 1.1rem;
           font-weight: 600;
-          color: #92400e;
+          color: var(--foreground, #92400e);
           margin: 0 0 8px 0;
         }
         .humility-hadith {
           font-size: 0.85rem;
           font-style: italic;
-          color: #78350f;
+          color: var(--foreground, #78350f);
           margin: 0 0 8px 0;
           line-height: 1.5;
         }
         .humility-instruction {
           font-size: 0.8rem;
-          color: #92400e;
+          color: var(--foreground, #92400e);
           margin: 0;
         }
 

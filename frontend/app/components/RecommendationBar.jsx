@@ -86,7 +86,7 @@ export default function RecommendationBar({ recommendations, onStudyVerse }) {
         }
 
         .recommendation-pill:active {
-          background: #f0ebe3;
+          background: var(--color-surface-muted, #f0ebe3);
         }
 
         .pill-verse {
@@ -98,7 +98,7 @@ export default function RecommendationBar({ recommendations, onStudyVerse }) {
 
         .pill-reason {
           font-size: 0.72rem;
-          color: #6b7280;
+          color: var(--color-text-secondary, #6b7280);
           line-height: 1.3;
           display: -webkit-box;
           -webkit-line-clamp: 2;

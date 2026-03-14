@@ -100,7 +100,7 @@ export function BadgePopup({ badge, onClose }) {
           align-items: center;
           gap: 12px;
           padding: 14px 18px;
-          background: white;
+          background: var(--color-surface, white);
           border: 1px solid var(--gold, #d4a017);
           border-radius: 12px;
           box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
@@ -223,7 +223,7 @@ export default function BadgeDisplay({ user, compact = false }) {
             padding: 6px 14px;
             border: 1px solid var(--border-light, #e5e7eb);
             border-radius: 6px;
-            background: white;
+            background: var(--color-surface, white);
             cursor: pointer;
             font-size: 0.8rem;
           }
@@ -337,7 +337,7 @@ export default function BadgeDisplay({ user, compact = false }) {
           padding: 14px 10px;
           border-radius: 10px;
           border: 1px solid var(--border-light, #e5e7eb);
-          background: white;
+          background: var(--color-surface, white);
         }
         .badge-card--earned {
           border-color: var(--gold, #d4a017);

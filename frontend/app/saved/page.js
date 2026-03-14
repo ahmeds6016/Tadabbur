@@ -196,8 +196,8 @@ export default function SavedSearchesPage() {
         {deleteError && (
           <div style={{
             padding: '12px 16px',
-            background: '#fef2f2',
-            color: '#dc2626',
+            background: 'rgba(220, 38, 38, 0.1)',
+            color: 'var(--error-color, #dc2626)',
             borderRadius: 8,
             fontSize: '0.9rem',
             marginBottom: 16,
@@ -223,9 +223,9 @@ export default function SavedSearchesPage() {
                 key={item.id}
                 style={{
                   padding: '16px',
-                  background: 'white',
+                  background: 'var(--color-surface)',
                   borderRadius: '12px',
-                  border: '1px solid var(--border-light)',
+                  border: '1px solid var(--color-border-light)',
                   position: 'relative'
                 }}
                 className="saved-item"
@@ -235,11 +235,11 @@ export default function SavedSearchesPage() {
                     <div style={{ fontWeight: '700', fontSize: '1.2rem', marginBottom: '8px', color: 'var(--primary-teal)' }}>
                       {item.title}
                     </div>
-                    <div style={{ fontSize: '0.9rem', color: '#666', marginBottom: '8px' }}>
+                    <div style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)', marginBottom: '8px' }}>
                       <span style={{ background: 'var(--cream)', padding: '4px 12px', borderRadius: '12px', fontWeight: '600', marginRight: '8px' }}>
                         {item.folder}
                       </span>
-                      <span style={{ color: '#999' }}>{formatTimestamp(item.savedAt)}</span>
+                      <span style={{ color: 'var(--color-text-muted)' }}>{formatTimestamp(item.savedAt)}</span>
                     </div>
                   </div>
                   <button
@@ -261,7 +261,7 @@ export default function SavedSearchesPage() {
                   </button>
                 </div>
 
-                <div style={{ fontSize: '0.95rem', color: '#555', marginBottom: '8px' }}>
+                <div style={{ fontSize: '0.95rem', color: 'var(--color-text-secondary)', marginBottom: '8px' }}>
                   {item.responseSnippet}...
                 </div>
 
@@ -311,15 +311,15 @@ export default function SavedSearchesPage() {
         .saved-title {
           font-size: 1.5rem;
           font-weight: 700;
-          color: #1a1a1a;
+          color: var(--foreground, #1a1a1a);
           margin: 0;
         }
 
         .saved-count {
           font-size: 0.8rem;
           font-weight: 600;
-          color: #6b7280;
-          background: #f3f4f6;
+          color: var(--color-text-secondary, #6b7280);
+          background: var(--color-surface-muted, #f3f4f6);
           padding: 4px 10px;
           border-radius: 12px;
         }

@@ -166,10 +166,10 @@ export default function BehaviorSelector({
           display: flex;
           flex-direction: column;
           gap: 0;
-          border: 1px solid var(--border-light, #e5e7eb);
+          border: 1px solid var(--color-border, #e5e7eb);
           border-radius: 12px;
           overflow: hidden;
-          background: white;
+          background: var(--color-surface, white);
         }
         .bs-category {
           border-bottom: 1px solid var(--border-light, #e5e7eb);
@@ -183,7 +183,7 @@ export default function BehaviorSelector({
           justify-content: space-between;
           align-items: center;
           padding: 12px 14px;
-          background: #fafaf8;
+          background: var(--color-surface-muted, #fafaf8);
           border: none;
           cursor: pointer;
         }
@@ -195,7 +195,7 @@ export default function BehaviorSelector({
         .bs-cat-label {
           font-size: 0.85rem;
           font-weight: 600;
-          color: var(--deep-blue, #1e293b);
+          color: var(--foreground, #1e293b);
         }
         .bs-cat-count {
           font-size: 0.7rem;
@@ -237,7 +237,7 @@ export default function BehaviorSelector({
           user-select: none;
         }
         .bs-behavior:hover:not(.disabled) {
-          background: #f8fafc;
+          background: var(--color-surface-muted, #f8fafc);
         }
         .bs-behavior.disabled {
           opacity: 0.4;
@@ -253,17 +253,17 @@ export default function BehaviorSelector({
         .bs-b-label {
           flex: 1;
           font-size: 0.85rem;
-          color: #374151;
+          color: var(--foreground, #374151);
         }
         .bs-behavior.checked .bs-b-label {
-          color: var(--deep-blue, #1e293b);
+          color: var(--foreground, #1e293b);
           font-weight: 500;
         }
         .bs-b-type {
           font-size: 0.65rem;
-          color: #9ca3af;
+          color: var(--color-text-secondary, #9ca3af);
           padding: 2px 6px;
-          background: #f3f4f6;
+          background: var(--color-surface-muted, #f3f4f6);
           border-radius: 4px;
           flex-shrink: 0;
         }
@@ -272,8 +272,8 @@ export default function BehaviorSelector({
           display: flex;
           flex-direction: column;
           gap: 2px;
-          background: #fafaf8;
-          border-top: 1px solid var(--border-light, #e5e7eb);
+          background: var(--color-surface-muted, #fafaf8);
+          border-top: 1px solid var(--color-border, #e5e7eb);
         }
         .bs-total {
           font-size: 0.8rem;

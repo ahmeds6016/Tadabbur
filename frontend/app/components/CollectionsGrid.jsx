@@ -130,7 +130,7 @@ export default function CollectionsGrid({ user, onStudyVerse, maxDisplay = 3 }) 
           .loading-shimmer {
             height: 180px;
             border-radius: 12px;
-            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background: linear-gradient(90deg, var(--color-surface-muted, #f0f0f0) 25%, var(--color-border, #e0e0e0) 50%, var(--color-surface-muted, #f0f0f0) 75%);
             background-size: 200% 100%;
             animation: shimmer 1.5s infinite;
           }
@@ -157,7 +157,7 @@ export default function CollectionsGrid({ user, onStudyVerse, maxDisplay = 3 }) 
           .collections-error {
             text-align: center;
             padding: 32px 16px;
-            color: #6b7280;
+            color: var(--color-text-secondary, #6b7280);
             font-size: 0.9rem;
           }
         `}</style>
@@ -264,7 +264,7 @@ export default function CollectionsGrid({ user, onStudyVerse, maxDisplay = 3 }) 
         }
 
         .collection-card {
-          background: white;
+          background: var(--color-surface, white);
           border: 1px solid var(--border-light, #e5e7eb);
           border-radius: 12px;
           padding: 14px 16px;
@@ -277,7 +277,7 @@ export default function CollectionsGrid({ user, onStudyVerse, maxDisplay = 3 }) 
         }
 
         .collection-card:active {
-          background: #f9fafb;
+          background: var(--color-surface-muted, #f9fafb);
         }
 
         .collection-card.expanded {
@@ -295,7 +295,7 @@ export default function CollectionsGrid({ user, onStudyVerse, maxDisplay = 3 }) 
         .card-pct {
           font-size: 0.7rem;
           font-weight: 600;
-          color: #9ca3af;
+          color: var(--color-text-secondary, #9ca3af);
           flex-shrink: 0;
           margin-left: auto;
         }
@@ -330,13 +330,13 @@ export default function CollectionsGrid({ user, onStudyVerse, maxDisplay = 3 }) 
 
         .card-meta {
           font-size: 0.78rem;
-          color: #6b7280;
+          color: var(--color-text-secondary, #6b7280);
         }
 
         .card-description {
           margin: 0;
           font-size: 0.85rem;
-          color: #4b5563;
+          color: var(--color-text-secondary, #4b5563);
           line-height: 1.5;
         }
 
@@ -364,7 +364,7 @@ export default function CollectionsGrid({ user, onStudyVerse, maxDisplay = 3 }) 
 
         .progress-label {
           font-size: 0.72rem;
-          color: #6b7280;
+          color: var(--color-text-secondary, #6b7280);
           white-space: nowrap;
           flex-shrink: 0;
         }
@@ -383,7 +383,7 @@ export default function CollectionsGrid({ user, onStudyVerse, maxDisplay = 3 }) 
         .verse-loading {
           text-align: center;
           padding: 16px;
-          color: #6b7280;
+          color: var(--color-text-secondary, #6b7280);
           font-size: 0.85rem;
         }
 
@@ -436,7 +436,7 @@ export default function CollectionsGrid({ user, onStudyVerse, maxDisplay = 3 }) 
         .verse-preview {
           margin: 0;
           font-size: 0.8rem;
-          color: #4b5563;
+          color: var(--color-text-secondary, #4b5563);
           line-height: 1.4;
           display: -webkit-box;
           -webkit-line-clamp: 2;

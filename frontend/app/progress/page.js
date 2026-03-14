@@ -109,7 +109,7 @@ export default function ProgressPage() {
             {error}
             <button
               onClick={() => { setError(null); fetchProgress(user); }}
-              style={{ display: 'block', margin: '12px auto 0', padding: '8px 16px', border: '1px solid var(--border-light)', borderRadius: '8px', background: 'white', cursor: 'pointer' }}
+              style={{ display: 'block', margin: '12px auto 0', padding: '8px 16px', border: '1px solid var(--border-light)', borderRadius: '8px', background: 'var(--color-surface, white)', cursor: 'pointer', color: 'var(--foreground)' }}
             >
               Retry
             </button>
@@ -198,7 +198,7 @@ export default function ProgressPage() {
           font-size: 1.3rem;
         }
         .progress-total {
-          color: #666;
+          color: var(--color-text-secondary, #666);
           font-weight: 600;
         }
         .progress-pct {
@@ -268,7 +268,7 @@ export default function ProgressPage() {
         .surah-tile__number {
           font-size: 0.65rem;
           font-weight: 600;
-          color: #888;
+          color: var(--color-text-secondary, #888);
           line-height: 1;
         }
         .surah-tile__name {
@@ -283,7 +283,7 @@ export default function ProgressPage() {
         .surah-tile__bar-track {
           width: 80%;
           height: 4px;
-          background: rgba(0, 0, 0, 0.1);
+          background: var(--color-border, rgba(0, 0, 0, 0.1));
           border-radius: 2px;
           overflow: hidden;
           margin-top: 2px;
@@ -302,7 +302,7 @@ export default function ProgressPage() {
           gap: 16px;
           padding: 16px 0 8px;
           font-size: 0.8rem;
-          color: #666;
+          color: var(--color-text-secondary, #666);
         }
         .legend-item {
           display: flex;
@@ -313,7 +313,7 @@ export default function ProgressPage() {
           width: 16px;
           height: 16px;
           border-radius: 4px;
-          border: 1px solid #d1d5db;
+          border: 1px solid var(--color-border, #d1d5db);
           flex-shrink: 0;
         }
         .legend-swatch--glow {

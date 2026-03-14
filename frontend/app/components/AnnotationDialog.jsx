@@ -171,7 +171,7 @@ export default function AnnotationDialog({
         /* Content container */
         .dialog-content {
           position: relative;
-          background: white;
+          background: var(--color-surface, white);
           border-radius: 16px;
           width: 100%;
           max-width: 600px;
@@ -217,8 +217,8 @@ export default function AnnotationDialog({
           height: 40px;
           border-radius: 50%;
           border: none;
-          background: rgba(0, 0, 0, 0.05);
-          color: #666;
+          background: var(--color-surface-muted, rgba(0, 0, 0, 0.05));
+          color: var(--color-text-secondary, #666);
           font-size: 24px;
           cursor: pointer;
           display: flex;

@@ -28,7 +28,7 @@ export default function SettingsPage() {
           .settings-page { min-height: 100vh; background: var(--cream, #faf6f0); }
           .loading-state {
             display: flex; align-items: center; justify-content: center;
-            min-height: 60vh; color: #6b7280;
+            min-height: 60vh; color: var(--color-text-secondary, #6b7280);
           }
         `}</style>
       </div>
@@ -49,7 +49,7 @@ export default function SettingsPage() {
             display: flex; flex-direction: column; align-items: center;
             justify-content: center; min-height: 60vh; gap: 12px;
           }
-          .auth-gate p { color: #6b7280; font-size: 0.95rem; }
+          .auth-gate p { color: var(--color-text-secondary, #6b7280); font-size: 0.95rem; }
           .go-home-btn {
             padding: 10px 24px; border-radius: 8px; border: none;
             background: var(--primary-teal, #0d9488); color: white;
@@ -92,7 +92,7 @@ export default function SettingsPage() {
           padding: 8px 0 16px;
         }
         .back-link {
-          color: #6b7280;
+          color: var(--color-text-secondary, #6b7280);
           display: flex;
           align-items: center;
           transition: color 0.15s ease;

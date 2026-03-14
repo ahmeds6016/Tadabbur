@@ -98,6 +98,14 @@ const helpContent = {
           {
             label: 'Share a Response',
             description: 'Tap the share icon to copy a public link. The shared page shows the full scholarly commentary but excludes your private reflections.'
+          },
+          {
+            label: 'Journal Your Journey',
+            description: 'Track daily spiritual practices, write heart notes, declare struggles, and receive a personalized weekly digest — all from the Journal tab.'
+          },
+          {
+            label: 'Track Your Progress',
+            description: 'View your Quran exploration across all 114 surahs, earn badges, and follow reading plans from the Plans tab.'
           }
         ]
       }
@@ -389,7 +397,7 @@ export default function HelpMenu({ currentPage = 'home', isOpen, onClose, onRepl
 
               <div className="faq-item">
                 <h4>What is Tadabbur?</h4>
-                <p>Tadabbur helps you reflect deeply on any verse of the Quran through the lens of classical scholarship. Advanced language modeling synthesizes authenticated scholarly sources — including Ibn Kathir, Al-Qurtubi, and five additional works — into clear, personalized commentary shaped by your chosen learning persona.</p>
+                <p>Tadabbur helps you reflect deeply on any verse of the Quran through the lens of classical scholarship. It synthesizes authenticated scholarly sources — including Ibn Kathir, Al-Qurtubi, and five additional classical works — into clear, personalized commentary shaped by your chosen learning persona.</p>
               </div>
 
               <div className="faq-item">
@@ -423,8 +431,28 @@ export default function HelpMenu({ currentPage = 'home', isOpen, onClose, onRepl
               </div>
 
               <div className="faq-item">
+                <h4>What is the Iman Journal?</h4>
+                <p>A private spiritual journal where you track daily practices (salah, Quran, dhikr, and more), write heart notes, and declare struggles. After a 14-day calibration period, you receive a personalized trajectory showing your spiritual rhythm — not as a score, but as a mirror. Weekly digests synthesize your week into a meaningful narrative with a verse to carry forward.</p>
+              </div>
+
+              <div className="faq-item">
+                <h4>How do weekly digests work?</h4>
+                <p>Log at least 4 days in a week, then generate your digest on Monday. It reflects on your week — highlighting strengths, patterns, and a Quranic verse chosen specifically for where you are. Each time you update your log, the digest refreshes to reflect your latest entries.</p>
+              </div>
+
+              <div className="faq-item">
+                <h4>What are struggles?</h4>
+                <p>Struggles let you privately declare an area you want to work on — like consistency in prayer or reducing screen time. Each struggle comes with comfort verses, phased guidance from classical scholars, and daily/weekly goals. You can resolve a struggle at any time.</p>
+              </div>
+
+              <div className="faq-item">
+                <h4>How do badges work?</h4>
+                <p>Badges are earned automatically as you explore the Quran, maintain streaks, write reflections, and complete reading plans. There are 13 badges total — visible on your Progress page. They celebrate milestones without turning your journey into a competition.</p>
+              </div>
+
+              <div className="faq-item">
                 <h4>Are my reflections private?</h4>
-                <p>Yes — your personal reflections are encrypted and stored securely. They are only accessible to you when signed in. No one else — including us — can read your private reflections. When you share a response, only the scholarly commentary is shared, never your personal notes.</p>
+                <p>Yes — your personal reflections and journal entries are encrypted and stored securely. They are only accessible to you when signed in. No one else — including us — can read your private data. When you share a response, only the scholarly commentary is shared, never your personal notes or journal data.</p>
               </div>
             </div>
           )}
@@ -929,6 +957,96 @@ export default function HelpMenu({ currentPage = 'home', isOpen, onClose, onRepl
           @media (min-width: 769px) {
             .help-panel {
               max-width: 450px;
+            }
+          }
+
+          @media (prefers-color-scheme: dark) {
+            .help-panel {
+              background: var(--color-surface, #1A1F2E);
+            }
+            .help-header {
+              background: var(--color-surface-muted, #1A1F2E);
+            }
+            .help-close {
+              background: var(--color-surface-muted, #252B3A);
+              border-color: var(--color-border, #374151);
+              color: var(--foreground, #E8E6E3);
+            }
+            .help-tabs {
+              background: var(--color-surface-muted, #1A1F2E);
+              border-bottom-color: var(--color-border, #374151);
+            }
+            .help-tab {
+              color: var(--foreground, #E8E6E3);
+            }
+            .help-tab:hover {
+              background: var(--color-surface, #1A1F2E);
+            }
+            .help-tab.active {
+              background: var(--color-surface, #1A1F2E);
+            }
+            .section-title {
+              background: var(--color-surface-muted, #1A1F2E);
+              color: var(--foreground, #E8E6E3);
+            }
+            .section-title:hover {
+              background: var(--color-surface-elevated, #252B3A);
+            }
+            .item-content strong {
+              color: var(--foreground, #E8E6E3);
+            }
+            .item-content p {
+              color: var(--color-text-secondary, #9CA3AF);
+            }
+            .help-item:hover {
+              background: var(--color-surface-muted, #1A1F2E);
+            }
+            .shortcut-item {
+              background: var(--color-surface-muted, #1A1F2E);
+            }
+            .shortcut-keys kbd {
+              background: var(--color-surface, #1A1F2E);
+              border-color: var(--color-border, #374151);
+              color: var(--foreground, #E8E6E3);
+            }
+            .shortcut-action {
+              color: var(--color-text-secondary, #9CA3AF);
+            }
+            .faq-item h4 {
+              color: var(--primary-teal);
+            }
+            .faq-item p {
+              color: var(--color-text-secondary, #9CA3AF);
+            }
+            .faq-item {
+              border-bottom-color: var(--color-border, #374151);
+            }
+            .feedback-description {
+              color: var(--color-text-secondary, #9CA3AF);
+            }
+            .feedback-type-btn {
+              background: var(--color-surface, #1A1F2E);
+              border-color: var(--color-border, #374151);
+              color: var(--color-text-secondary, #9CA3AF);
+            }
+            .feedback-type-btn.active {
+              background: rgba(13, 148, 136, 0.15);
+              color: var(--primary-teal);
+              border-color: var(--primary-teal);
+            }
+            .feedback-textarea {
+              background: var(--color-surface, #1A1F2E);
+              border-color: var(--color-border, #374151);
+              color: var(--foreground, #E8E6E3);
+            }
+            .feedback-another-btn {
+              background: var(--color-surface, #1A1F2E);
+              border-color: var(--color-border, #374151);
+              color: var(--foreground, #E8E6E3);
+            }
+            .help-bottom-nav {
+              background: var(--color-surface, #1A1F2E);
+              border-top-color: var(--color-border, #374151);
             }
           }
         `}</style>

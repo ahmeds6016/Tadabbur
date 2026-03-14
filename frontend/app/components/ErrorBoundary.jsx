@@ -63,14 +63,14 @@ class ErrorBoundary extends React.Component {
               display: flex;
               align-items: center;
               justify-content: center;
-              background: rgba(255, 255, 255, 0.95);
+              background: var(--color-overlay, rgba(255, 255, 255, 0.95));
               z-index: 10000;
               padding: 20px;
             }
 
             .error-container {
               max-width: 500px;
-              background: white;
+              background: var(--color-surface, white);
               border-radius: 16px;
               padding: 32px;
               box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
@@ -89,13 +89,13 @@ class ErrorBoundary extends React.Component {
             }
 
             .error-message {
-              color: #666;
+              color: var(--color-text-secondary, #666);
               margin-bottom: 24px;
               line-height: 1.5;
             }
 
             .error-details {
-              background: #f5f5f5;
+              background: var(--color-surface-muted, #f5f5f5);
               border-radius: 8px;
               padding: 12px;
               margin-bottom: 20px;
@@ -106,14 +106,14 @@ class ErrorBoundary extends React.Component {
 
             .error-details summary {
               cursor: pointer;
-              color: #999;
+              color: var(--color-text-secondary, #999);
               font-size: 0.85rem;
               margin-bottom: 8px;
             }
 
             .error-details pre {
               font-size: 0.75rem;
-              color: #666;
+              color: var(--color-text-secondary, #666);
               white-space: pre-wrap;
               word-break: break-word;
               margin: 4px 0;

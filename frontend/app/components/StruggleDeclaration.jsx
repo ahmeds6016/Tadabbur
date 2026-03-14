@@ -133,7 +133,7 @@ export default function StruggleDeclaration({ user, activeStruggleIds = [], onDe
         }
         .sd-subtitle {
           font-size: 0.8rem;
-          color: #6b7280;
+          color: var(--color-text-secondary, #6b7280);
           margin: 0 0 14px 0;
         }
         .sd-grid {
@@ -147,8 +147,8 @@ export default function StruggleDeclaration({ user, activeStruggleIds = [], onDe
           align-items: center;
           gap: 4px;
           padding: 12px 8px;
-          background: white;
-          border: 1.5px solid #e5e7eb;
+          background: var(--color-surface, white);
+          border: 1.5px solid var(--color-border, #e5e7eb);
           border-radius: 10px;
           cursor: pointer;
           transition: all 0.15s ease;
@@ -175,12 +175,12 @@ export default function StruggleDeclaration({ user, activeStruggleIds = [], onDe
         }
         .sd-desc {
           font-size: 0.7rem;
-          color: #9ca3af;
+          color: var(--color-text-secondary, #9ca3af);
           line-height: 1.3;
         }
         .sd-loading {
           font-size: 0.65rem;
-          color: #6b7280;
+          color: var(--color-text-secondary, #6b7280);
           font-style: italic;
           margin-top: 2px;
         }
@@ -192,7 +192,7 @@ export default function StruggleDeclaration({ user, activeStruggleIds = [], onDe
         .sd-result {
           margin-top: 16px;
           padding: 16px;
-          background: #f8fafc;
+          background: var(--color-surface-muted, #f8fafc);
           border-radius: 12px;
           border-left: 3px solid;
         }
@@ -212,13 +212,13 @@ export default function StruggleDeclaration({ user, activeStruggleIds = [], onDe
         .sd-ref {
           display: block;
           font-size: 0.7rem;
-          color: #6b7280;
+          color: var(--color-text-secondary, #6b7280);
           font-style: normal;
           margin-top: 4px;
         }
         .sd-phase-intro {
           font-size: 0.8rem;
-          color: #374151;
+          color: var(--foreground, #374151);
           margin: 8px 0;
           line-height: 1.4;
         }
@@ -228,7 +228,7 @@ export default function StruggleDeclaration({ user, activeStruggleIds = [], onDe
         .sd-guidance-label {
           font-size: 0.75rem;
           font-weight: 600;
-          color: #6b7280;
+          color: var(--color-text-secondary, #6b7280);
           margin: 0 0 8px 0;
           text-transform: uppercase;
           letter-spacing: 0.5px;
@@ -236,18 +236,18 @@ export default function StruggleDeclaration({ user, activeStruggleIds = [], onDe
         .sd-excerpt {
           margin-bottom: 10px;
           padding: 10px;
-          background: white;
+          background: var(--color-surface, white);
           border-radius: 8px;
         }
         .sd-source {
           font-size: 0.7rem;
           font-weight: 600;
-          color: #9ca3af;
+          color: var(--color-text-secondary, #9ca3af);
           text-transform: uppercase;
         }
         .sd-text {
           font-size: 0.8rem;
-          color: #374151;
+          color: var(--foreground, #374151);
           margin: 4px 0 0 0;
           line-height: 1.5;
         }

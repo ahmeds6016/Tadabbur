@@ -278,10 +278,10 @@ export default function ImanOnboarding({ user, onComplete }) {
               <div className="ob-feature-row">
                 <div className="ob-feature-dot" style={{ background: '#2563eb' }} />
                 <div className="ob-feature-content">
-                  <span className="ob-feature-title">AI-Powered Pattern Analysis</span>
+                  <span className="ob-feature-title">Personalized Pattern Insights</span>
                   <span className="ob-feature-desc">
-                    The journal synthesizes your behavior clusters into meaningful
-                    narratives — surfacing key insights grounded in your actual data.
+                    The journal synthesizes your daily practices into meaningful
+                    narratives — surfacing key insights grounded in your actual spiritual data.
                   </span>
                 </div>
               </div>
@@ -435,27 +435,28 @@ export default function ImanOnboarding({ user, onComplete }) {
           text-align: center;
         }
         .ob-medallion {
-          width: 80px;
-          height: 80px;
+          width: 100px;
+          height: 100px;
           border-radius: 50%;
-          background: linear-gradient(135deg, #f0fdf4, #ecfdf5);
+          background: linear-gradient(135deg, rgba(13, 148, 136, 0.12), rgba(13, 148, 136, 0.06));
           display: flex;
           align-items: center;
           justify-content: center;
-          margin-bottom: 20px;
-          border: 2px solid var(--primary-teal, #0d9488);
+          margin-bottom: 24px;
+          border: 3px solid var(--primary-teal, #0d9488);
           overflow: hidden;
+          box-shadow: 0 4px 20px rgba(13, 148, 136, 0.15);
         }
         .ob-medallion-icon {
-          font-size: 1.8rem;
+          font-size: 2.2rem;
           color: var(--primary-teal, #0d9488);
           max-width: 100%;
         }
         .ob-title {
-          font-size: 1.4rem;
+          font-size: 1.5rem;
           font-weight: 700;
           color: var(--deep-blue, #1e293b);
-          margin: 0 0 12px 0;
+          margin: 0 0 14px 0;
         }
         .ob-subtitle {
           font-size: 0.85rem;
@@ -586,9 +587,10 @@ export default function ImanOnboarding({ user, onComplete }) {
           background: #0f766e;
         }
         .ob-btn.primary.large {
-          padding: 14px 24px;
-          font-size: 1rem;
-          font-weight: 600;
+          padding: 16px 28px;
+          font-size: 1.05rem;
+          font-weight: 700;
+          box-shadow: 0 4px 14px rgba(13, 148, 136, 0.3);
         }
         .ob-btn.secondary {
           background: white;
@@ -692,6 +694,83 @@ export default function ImanOnboarding({ user, onComplete }) {
           color: #dc2626;
           font-size: 0.8rem;
           margin: 8px 0 0 0;
+        }
+
+        /* Dark mode overrides */
+        @media (prefers-color-scheme: dark) {
+          .iman-onboarding {
+            background: var(--color-bg, #0F1419);
+          }
+          .ob-title {
+            color: var(--foreground, #E8E6E3);
+          }
+          .ob-body {
+            color: var(--color-text-secondary, #9CA3AF);
+          }
+          .ob-subtitle {
+            color: var(--color-text-secondary, #9CA3AF);
+          }
+          .ob-verse {
+            color: var(--foreground, #E8E6E3);
+          }
+          .ob-feature-title {
+            color: var(--foreground, #E8E6E3);
+          }
+          .ob-feature-desc {
+            color: var(--color-text-secondary, #9CA3AF);
+          }
+          .ob-tip {
+            color: var(--color-text-secondary, #9CA3AF);
+          }
+          .ob-closing {
+            color: var(--color-text-secondary, #9CA3AF);
+          }
+          .ob-ref {
+            color: var(--color-text-secondary, #9CA3AF);
+          }
+          .ob-cal-label {
+            color: var(--color-text-secondary, #9CA3AF);
+          }
+          .ob-cal-bar {
+            background: rgba(255, 255, 255, 0.1);
+          }
+          .ob-dot {
+            background: var(--color-border, #374151);
+          }
+          .ob-skip:hover {
+            color: var(--foreground, #E8E6E3);
+          }
+          .ob-medallion {
+            background: rgba(13, 148, 136, 0.15) !important;
+          }
+          .ob-hint {
+            background: rgba(5, 150, 105, 0.1);
+            border-color: rgba(5, 150, 105, 0.2);
+          }
+          .ob-hint-text {
+            color: var(--color-secondary-light, #2DD4BF);
+          }
+          .ob-btn.secondary {
+            background: var(--color-surface, #1A1F2E);
+            color: var(--foreground, #E8E6E3);
+            border-color: var(--color-border, #374151);
+          }
+          .ob-struggle-card {
+            background: var(--color-surface, #1A1F2E);
+            border-color: var(--color-border, #374151);
+          }
+          .ob-struggle-card.selected {
+            background: rgba(5, 150, 105, 0.1);
+          }
+          .ob-s-label {
+            color: var(--foreground, #E8E6E3);
+          }
+          .ob-s-desc {
+            color: var(--color-text-secondary, #9CA3AF);
+          }
+          .ob-struggle-count {
+            color: var(--color-text-secondary, #9CA3AF);
+          }
         }
       `}</style>
     </div>

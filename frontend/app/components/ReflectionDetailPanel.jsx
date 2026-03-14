@@ -147,7 +147,7 @@ export default function ReflectionDetailPanel({ annotation, isOpen, onClose, onE
           style={{
             padding: '20px 24px',
             borderBottom: '1px solid var(--border-light, #E5E7EB)',
-            background: 'white',
+            background: 'var(--color-surface, white)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -279,7 +279,7 @@ export default function ReflectionDetailPanel({ annotation, isOpen, onClose, onE
           style={{
             padding: '16px 24px',
             borderTop: '1px solid var(--border-light, #E5E7EB)',
-            background: 'white',
+            background: 'var(--color-surface, white)',
             flexShrink: 0
           }}
         >
@@ -327,7 +327,7 @@ export default function ReflectionDetailPanel({ annotation, isOpen, onClose, onE
           style={{
             padding: '16px 24px',
             borderTop: '1px solid var(--border-light, #E5E7EB)',
-            background: 'white',
+            background: 'var(--color-surface, white)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',

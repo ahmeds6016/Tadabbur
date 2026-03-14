@@ -11,12 +11,12 @@ const FEATURES = [
   {
     color: '#0d9488',
     title: 'Refined Trajectory',
-    desc: 'After your 14-day calibration, see weekly sparklines, category trend arrows, and milestone badges — a richer picture of your spiritual rhythm.',
+    desc: 'After your first two weeks, see weekly sparklines, category trends, and milestone badges — a richer picture of your spiritual rhythm.',
   },
   {
     color: '#2563eb',
     title: 'Intelligent Correlation Insights',
-    desc: 'Patterns are no longer template-based. An AI-powered narrative synthesizes your behavior clusters and surfaces a key insight grounded in your actual data.',
+    desc: 'Your weekly patterns are now synthesized into a personalized narrative — surfacing key insights grounded in your actual spiritual data.',
   },
   {
     color: '#d97706',

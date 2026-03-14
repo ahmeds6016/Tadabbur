@@ -479,14 +479,14 @@ export default function PlansPage() {
         .plans-title {
           font-size: 1.5rem;
           font-weight: 700;
-          color: #1a1a1a;
+          color: var(--foreground, #1a1a1a);
           margin: 0;
         }
 
         /* ===== Segmented control ===== */
         .segmented-control {
           display: flex;
-          background: #f3f4f6;
+          background: var(--color-surface-muted, #f3f4f6);
           border-radius: 10px;
           padding: 3px;
           margin-bottom: 16px;
@@ -501,7 +501,7 @@ export default function PlansPage() {
           background: transparent;
           font-size: 0.78rem;
           font-weight: 500;
-          color: #6b7280;
+          color: var(--color-text-secondary, #6b7280);
           cursor: pointer;
           transition: all 0.15s ease;
           text-align: center;
@@ -509,8 +509,8 @@ export default function PlansPage() {
         }
 
         .segment.active {
-          background: white;
-          color: #1a1a1a;
+          background: var(--color-surface, white);
+          color: var(--foreground, #1a1a1a);
           font-weight: 600;
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
         }
@@ -518,8 +518,8 @@ export default function PlansPage() {
         /* ===== Error banner ===== */
         .error-banner {
           padding: 10px 14px;
-          background: #fef2f2;
-          color: #dc2626;
+          background: rgba(220, 38, 38, 0.1);
+          color: var(--error-color, #dc2626);
           border-radius: 8px;
           font-size: 0.85rem;
           margin-bottom: 12px;
@@ -530,14 +530,14 @@ export default function PlansPage() {
           display: flex;
           flex-direction: column;
           gap: 1px;
-          background: #e5e7eb;
+          background: var(--color-border, #e5e7eb);
           border-radius: 12px;
           overflow: hidden;
         }
 
         /* ===== Plan row (accordion) ===== */
         .plan-row {
-          background: white;
+          background: var(--color-surface, white);
         }
 
         .plan-row.is-active {
@@ -556,7 +556,7 @@ export default function PlansPage() {
         }
 
         .plan-row-header:active {
-          background: #f9fafb;
+          background: var(--color-surface-muted, #f9fafb);
         }
 
         .plan-row-left {
@@ -567,7 +567,7 @@ export default function PlansPage() {
         .plan-row-title {
           font-size: 0.9rem;
           font-weight: 600;
-          color: #1a1a1a;
+          color: var(--foreground, #1a1a1a);
           line-height: 1.3;
         }
 
@@ -594,7 +594,7 @@ export default function PlansPage() {
         .mini-bar {
           width: 40px;
           height: 4px;
-          background: #e5e7eb;
+          background: var(--color-border, #e5e7eb);
           border-radius: 2px;
           overflow: hidden;
         }
@@ -646,12 +646,12 @@ export default function PlansPage() {
           flex-direction: column;
           gap: 10px;
           padding: 0 14px 14px;
-          border-top: 1px solid #f3f4f6;
+          border-top: 1px solid var(--color-border-light, #f3f4f6);
         }
 
         .plan-desc {
           font-size: 0.82rem;
-          color: #6b7280;
+          color: var(--color-text-secondary, #6b7280);
           line-height: 1.5;
           margin: 0;
           padding-top: 10px;
@@ -659,15 +659,15 @@ export default function PlansPage() {
 
         .today-verse {
           padding: 10px 12px;
-          background: #faf8f5;
+          background: var(--color-surface-muted, #faf8f5);
           border-radius: 8px;
-          border: 1px solid #f0ebe3;
+          border: 1px solid var(--color-border-light, #f0ebe3);
         }
 
         .today-label {
           font-size: 0.8rem;
           font-weight: 600;
-          color: #1a1a1a;
+          color: var(--foreground, #1a1a1a);
           margin-bottom: 4px;
         }
 
@@ -682,7 +682,7 @@ export default function PlansPage() {
 
         .today-prompt {
           font-size: 0.75rem;
-          color: #6b7280;
+          color: var(--color-text-secondary, #6b7280);
           font-style: italic;
           line-height: 1.4;
         }
@@ -712,9 +712,9 @@ export default function PlansPage() {
         .btn-secondary {
           flex: 1;
           padding: 8px 14px;
-          background: #f9fafb;
-          color: #374151;
-          border: 1px solid #e5e7eb;
+          background: var(--color-surface-muted, #f9fafb);
+          color: var(--foreground, #374151);
+          border: 1px solid var(--color-border, #e5e7eb);
           border-radius: 8px;
           font-size: 0.82rem;
           font-weight: 600;
@@ -739,9 +739,9 @@ export default function PlansPage() {
           border-radius: 16px;
           font-size: 0.75rem;
           font-weight: 600;
-          border: 1px solid #e5e7eb;
-          background: white;
-          color: #6b7280;
+          border: 1px solid var(--color-border, #e5e7eb);
+          background: var(--color-surface, white);
+          color: var(--color-text-secondary, #6b7280);
           cursor: pointer;
           transition: all 0.15s;
         }
@@ -761,13 +761,13 @@ export default function PlansPage() {
         .empty-title {
           font-size: 1rem;
           font-weight: 600;
-          color: #374151;
+          color: var(--foreground, #374151);
           margin: 0 0 4px;
         }
 
         .empty-desc {
           font-size: 0.85rem;
-          color: #9ca3af;
+          color: var(--color-text-secondary, #9ca3af);
           margin: 0 0 16px;
         }
 
@@ -802,7 +802,7 @@ export default function PlansPage() {
         .surah-tile-plans__number {
           font-size: 0.6rem;
           font-weight: 600;
-          color: #888;
+          color: var(--color-text-secondary, #888);
           line-height: 1;
         }
         .surah-tile-plans__name {
@@ -817,7 +817,7 @@ export default function PlansPage() {
         .surah-tile-plans__bar {
           width: 80%;
           height: 3px;
-          background: rgba(0, 0, 0, 0.08);
+          background: var(--color-border, rgba(0, 0, 0, 0.08));
           border-radius: 2px;
           overflow: hidden;
           margin-top: 2px;

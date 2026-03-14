@@ -506,7 +506,7 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate, onSaved }
             background: quickLog ? '#0d948815' : 'var(--color-surface)',
             fontSize: '0.75rem',
             fontWeight: 600,
-            color: quickLog ? '#0d9488' : '#6b7280',
+            color: quickLog ? '#0d9488' : 'var(--color-text-secondary, #6b7280)',
             cursor: 'pointer',
             transition: 'all 0.15s ease',
           }}
@@ -516,8 +516,8 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate, onSaved }
         <span style={{
           fontSize: '0.75rem',
           fontWeight: 600,
-          color: filledCount === totalTracked ? '#059669' : '#9ca3af',
-          background: filledCount === totalTracked ? '#ecfdf5' : 'var(--color-surface-muted)',
+          color: filledCount === totalTracked ? '#059669' : 'var(--color-text-secondary, #9ca3af)',
+          background: filledCount === totalTracked ? 'rgba(5, 150, 105, 0.08)' : 'var(--color-surface-muted)',
           padding: '4px 10px',
           borderRadius: 12,
           fontVariantNumeric: 'tabular-nums',
@@ -653,10 +653,10 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate, onSaved }
         }
         .welcome-back-banner {
           padding: 14px 18px;
-          background: linear-gradient(135deg, #ecfdf5, #f0fdf4);
+          background: rgba(5, 150, 105, 0.08);
           border-radius: 14px;
-          border: 1px solid #a7f3d0;
-          color: #065f46;
+          border: 1px solid rgba(5, 150, 105, 0.2);
+          color: var(--foreground, #065f46);
           font-size: 0.9rem;
           text-align: center;
           font-weight: 500;
@@ -664,10 +664,10 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate, onSaved }
         }
         .riya-reminder {
           padding: 14px 18px;
-          background: linear-gradient(135deg, #faf6f0, #fef3c7);
+          background: rgba(234, 179, 8, 0.08);
           border-radius: 14px;
-          border: 1px solid #fde68a;
-          color: #92400e;
+          border: 1px solid rgba(234, 179, 8, 0.25);
+          color: var(--foreground, #92400e);
           font-size: 0.85rem;
           text-align: center;
           font-style: italic;
@@ -729,7 +729,7 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate, onSaved }
         .behavior-list :global(.minutes-label),
         .behavior-list :global(.hours-label) {
           font-size: 0.8rem;
-          color: #64748b;
+          color: var(--color-text-secondary, #64748b);
           font-weight: 500;
           width: 32px;
           text-align: right;

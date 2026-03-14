@@ -27,7 +27,7 @@ export default function CorrelationCard({ correlations, weeklyInsight, narrative
         Patterns Observed
       </div>
 
-      {/* AI-powered narrative (primary display when available) */}
+      {/* Synthesized narrative (primary display when available) */}
       {hasNarrative && (
         <div style={{ marginBottom: 12 }}>
           {/* Main narrative */}

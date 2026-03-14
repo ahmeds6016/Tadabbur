@@ -8236,6 +8236,21 @@ def iman_submit_log():
         safeguards = compute_safeguard_status(all_logs, trajectory, sr_data, uid)
         strain_trend = compute_strain_trend(all_logs, tracked_ids)
 
+        # Invalidate cached weekly digest so next view reflects new data
+        try:
+            log_date = datetime.strptime(date_str, "%Y-%m-%d")
+            iso_cal = log_date.isocalendar()
+            digest_week_id = f"{iso_cal[0]}-W{iso_cal[1]:02d}"
+            digest_ref = (
+                users_db.collection("users").document(uid)
+                .collection("iman_weekly_digests").document(digest_week_id)
+            )
+            if digest_ref.get().exists:
+                digest_ref.delete()
+                print(f"[IMAN] Invalidated digest {digest_week_id} for {uid[:8]}... (new log saved)")
+        except Exception as digest_err:
+            print(f"[IMAN] Non-critical: failed to invalidate digest: {digest_err}")
+
         print(f"[IMAN] Log saved for {uid[:8]}... date={date_str} — state={trajectory.get('current_state')}")
         return jsonify({
             "message": "Log saved",
@@ -8246,6 +8261,7 @@ def iman_submit_log():
             "strain_trend": strain_trend,
             "anti_riya_reminder": should_show_anti_riya_reminder(),
             "welcome_back": welcome_back,
+            "digest_invalidated": True,
         }), 200
 
     except Exception as e:
