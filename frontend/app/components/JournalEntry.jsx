@@ -21,145 +21,259 @@ function BinaryInput({ value, onChange, label }) {
       onClick={() => onChange(value ? 0 : 1)}
       aria-label={`${label}: ${isOn ? 'Done' : 'Not done'}`}
       style={{
-        width: 40,
-        height: 40,
-        minWidth: 40,
-        borderRadius: '50%',
-        border: isOn ? '2px solid #0d9488' : '2px solid #d1d5db',
-        background: isOn ? '#0d9488' : 'var(--color-surface-muted)',
-        color: isOn ? 'white' : '#cbd5e1',
-        padding: 0,
-        fontSize: '1.1rem',
-        fontWeight: 700,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        padding: '5px 12px',
+        borderRadius: 8,
+        border: isOn ? '1.5px solid #0d9488' : '1.5px solid var(--color-border, #d1d5db)',
+        background: isOn ? 'rgba(13, 148, 136, 0.1)' : 'var(--color-surface-muted)',
         cursor: 'pointer',
+        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+        boxShadow: isOn ? '0 1px 4px rgba(13, 148, 136, 0.15)' : 'none',
+      }}
+    >
+      <span style={{
+        width: 18,
+        height: 18,
+        minWidth: 18,
+        borderRadius: 4,
+        border: isOn ? '1.5px solid #0d9488' : '1.5px solid var(--color-border, #cbd5e1)',
+        background: isOn ? '#0d9488' : 'transparent',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        boxSizing: 'border-box',
-        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-        transform: isOn ? 'scale(1.05)' : 'none',
-        boxShadow: isOn
-          ? '0 2px 8px rgba(13, 148, 136, 0.3)'
-          : 'inset 0 1px 2px rgba(0, 0, 0, 0.06)',
-      }}
-    >
-      {isOn ? '\u2713' : ''}
+        transition: 'all 0.15s ease',
+        color: 'white',
+        fontSize: '0.7rem',
+        fontWeight: 700,
+      }}>
+        {isOn ? '\u2713' : ''}
+      </span>
+      <span style={{
+        fontSize: '0.76rem',
+        fontWeight: 600,
+        color: isOn ? '#0d9488' : 'var(--color-text-secondary, #9ca3af)',
+        transition: 'color 0.15s ease',
+        userSelect: 'none',
+      }}>
+        {isOn ? 'Done' : 'Mark'}
+      </span>
     </button>
   );
 }
 
 function Scale5Input({ value, onChange, scaleLabels }) {
-  const filled = value || 0;
-  const [showLabel, setShowLabel] = useState(null);
+  const current = value || 0;
 
-  const handleTap = (n) => {
-    const newVal = value === n ? 0 : n;
-    onChange(newVal);
-    if (newVal > 0 && scaleLabels?.[String(newVal)]) {
-      setShowLabel(scaleLabels[String(newVal)]);
-      setTimeout(() => setShowLabel(null), 1500);
-    }
+  // Build labels: use scale_labels if available, otherwise defaults
+  const segmentLabels = [
+    scaleLabels?.['1'] || '1',
+    scaleLabels?.['2'] || '2',
+    scaleLabels?.['3'] || '3',
+    scaleLabels?.['4'] || '4',
+    scaleLabels?.['5'] || '5',
+  ];
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, width: '100%' }}>
+      <div style={{
+        display: 'flex',
+        borderRadius: 8,
+        overflow: 'hidden',
+        border: '1px solid var(--color-border, #e2e8f0)',
+      }}>
+        {[1, 2, 3, 4, 5].map((n) => {
+          const isSelected = current === n;
+          return (
+            <button
+              key={n}
+              onClick={() => onChange(current === n ? 0 : n)}
+              aria-label={scaleLabels?.[String(n)] || `${n} of 5`}
+              style={{
+                flex: 1,
+                padding: '6px 2px',
+                border: 'none',
+                borderRight: n < 5 ? '1px solid var(--color-border, #e2e8f0)' : 'none',
+                background: isSelected ? '#0d9488' : 'var(--color-surface-muted, #f5f5f5)',
+                color: isSelected ? 'white' : 'var(--color-text-secondary, #6b7280)',
+                fontSize: '0.62rem',
+                fontWeight: isSelected ? 700 : 500,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+                lineHeight: 1.2,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {segmentLabels[n - 1]}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function formatDuration(totalMinutes) {
+  if (!totalMinutes) return '0m';
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  if (h > 0 && m > 0) return `${h}h ${m}m`;
+  if (h > 0) return `${h}h`;
+  return `${m}m`;
+}
+
+function TimeInput({ value, onChange }) {
+  const totalMins = value || 0;
+  const hours = Math.floor(totalMins / 60);
+  const mins = totalMins % 60;
+
+  const presets = [15, 30, 60];
+
+  const updateTime = (h, m) => {
+    const clamped = Math.max(0, Math.min(h * 60 + m, 960)); // 16h max
+    onChange(clamped);
   };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%' }}>
-      <div style={{ display: 'flex', gap: 10, position: 'relative' }}>
-        {[1, 2, 3, 4, 5].map((n) => {
-          const isFilled = filled >= n;
-          const isCurrent = value === n;
-          return (
-            <button
-              key={n}
-              onClick={() => handleTap(n)}
-              aria-label={scaleLabels?.[String(n)] || `${n} of 5`}
-              style={{
-                width: 32,
-                height: 32,
-                minWidth: 32,
-                borderRadius: '50%',
-                border: 'none',
-                background: isFilled ? '#0d9488' : '#e8ecf1',
-                cursor: 'pointer',
-                padding: 0,
-                boxSizing: 'border-box',
-                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                transform: isCurrent ? 'scale(1.12)' : 'none',
-                boxShadow: isCurrent
-                  ? '0 0 0 3px rgba(13, 148, 136, 0.25), 0 2px 8px rgba(13, 148, 136, 0.2)'
-                  : isFilled
-                    ? '0 1px 3px rgba(13, 148, 136, 0.15)'
-                    : 'inset 0 1px 2px rgba(0, 0, 0, 0.06)',
-              }}
-            />
-          );
-        })}
-      </div>
-      {/* Tap label tooltip */}
-      {showLabel && (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        {/* Hours field */}
         <div style={{
-          fontSize: '0.72rem',
-          color: '#0d9488',
-          fontWeight: 600,
-          textAlign: 'center',
-          transition: 'opacity 0.3s ease',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 4,
+          background: 'var(--color-surface-muted, #f5f5f5)',
+          borderRadius: 8,
+          border: '1px solid var(--color-border, #e2e8f0)',
+          padding: '4px 8px',
         }}>
-          {showLabel}
+          <input
+            type="number"
+            min="0"
+            max="16"
+            value={hours}
+            onChange={(e) => {
+              const h = Math.max(0, Math.min(16, parseInt(e.target.value) || 0));
+              updateTime(h, mins);
+            }}
+            style={{
+              width: 28,
+              border: 'none',
+              background: 'transparent',
+              fontSize: '0.9rem',
+              fontWeight: 600,
+              textAlign: 'center',
+              color: 'var(--color-text)',
+              outline: 'none',
+              padding: 0,
+              fontVariantNumeric: 'tabular-nums',
+            }}
+          />
+          <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted, #9ca3af)', fontWeight: 500 }}>h</span>
         </div>
-      )}
-      <div style={{ display: 'flex', justifyContent: 'space-between', maxWidth: 200 }}>
-        <span style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 500 }}>
-          {scaleLabels?.['1'] || 'Low'}
-        </span>
-        <span style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 500 }}>
-          {scaleLabels?.['5'] || 'High'}
-        </span>
+        {/* Minutes field */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 4,
+          background: 'var(--color-surface-muted, #f5f5f5)',
+          borderRadius: 8,
+          border: '1px solid var(--color-border, #e2e8f0)',
+          padding: '4px 8px',
+        }}>
+          <input
+            type="number"
+            min="0"
+            max="59"
+            step="5"
+            value={mins}
+            onChange={(e) => {
+              const m = Math.max(0, Math.min(59, parseInt(e.target.value) || 0));
+              updateTime(hours, m);
+            }}
+            style={{
+              width: 28,
+              border: 'none',
+              background: 'transparent',
+              fontSize: '0.9rem',
+              fontWeight: 600,
+              textAlign: 'center',
+              color: 'var(--color-text)',
+              outline: 'none',
+              padding: 0,
+              fontVariantNumeric: 'tabular-nums',
+            }}
+          />
+          <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted, #9ca3af)', fontWeight: 500 }}>m</span>
+        </div>
+        {/* Formatted total */}
+        {totalMins > 0 && (
+          <span style={{
+            fontSize: '0.75rem',
+            fontWeight: 600,
+            color: '#0d9488',
+            whiteSpace: 'nowrap',
+            marginLeft: 2,
+          }}>
+            {formatDuration(totalMins)}
+          </span>
+        )}
+      </div>
+      {/* Quick presets */}
+      <div style={{ display: 'flex', gap: 6 }}>
+        {presets.map((p) => (
+          <button
+            key={p}
+            type="button"
+            onClick={() => onChange(totalMins === p ? 0 : p)}
+            style={{
+              padding: '2px 8px',
+              borderRadius: 6,
+              border: totalMins === p
+                ? '1px solid #0d9488'
+                : '1px solid var(--color-border, #e2e8f0)',
+              background: totalMins === p ? 'rgba(13, 148, 136, 0.1)' : 'transparent',
+              color: totalMins === p ? '#0d9488' : 'var(--color-text-muted, #9ca3af)',
+              fontSize: '0.68rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            {formatDuration(p)}
+          </button>
+        ))}
       </div>
     </div>
   );
 }
 
 function MinutesInput({ value, onChange }) {
-  return (
-    <div className="minutes-input">
-      <input
-        type="range"
-        min="0"
-        max="120"
-        step="5"
-        value={value || 0}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="range-slider"
-      />
-      <span className="minutes-label">{value || 0}m</span>
-    </div>
-  );
+  return <TimeInput value={value} onChange={onChange} />;
 }
 
 function HoursInput({ value, onChange }) {
+  // HoursInput stores value in hours (float), convert to/from minutes for TimeInput
+  const totalMins = Math.round((value || 0) * 60);
   return (
-    <div className="hours-input">
-      <input
-        type="range"
-        min="0"
-        max="14"
-        step="0.5"
-        value={value || 0}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="range-slider"
-      />
-      <span className="hours-label">{value || 0}h</span>
-    </div>
+    <TimeInput
+      value={totalMins}
+      onChange={(newMins) => onChange(Math.round(newMins / 30) * 0.5)} // round to 0.5h
+    />
   );
 }
 
 const stepperBtnStyle = {
-  width: 34,
-  height: 34,
-  minWidth: 34,
-  borderRadius: '50%',
-  border: '1.5px solid #e2e8f0',
+  width: 30,
+  height: 30,
+  minWidth: 30,
+  borderRadius: 6,
+  border: '1.5px solid var(--color-border, #e2e8f0)',
   background: 'var(--color-surface-muted)',
-  fontSize: '1.1rem',
+  fontSize: '1rem',
   fontWeight: 500,
   cursor: 'pointer',
   padding: 0,
@@ -202,7 +316,7 @@ function CountInput({ value, onChange }) {
 }
 
 function BehaviorRow({ behavior, value, onChange, struggleInfo }) {
-  const isScale = behavior.input_type === 'scale_5';
+  const isWide = ['scale_5', 'minutes', 'hours'].includes(behavior.input_type);
 
   const renderInput = () => {
     switch (behavior.input_type) {
@@ -225,16 +339,16 @@ function BehaviorRow({ behavior, value, onChange, struggleInfo }) {
   return (
     <div style={{
       display: 'flex',
-      flexDirection: isScale ? 'column' : 'row',
-      justifyContent: isScale ? 'flex-start' : 'space-between',
-      alignItems: isScale ? 'stretch' : 'center',
-      gap: isScale ? 6 : 0,
+      flexDirection: isWide ? 'column' : 'row',
+      justifyContent: isWide ? 'flex-start' : 'space-between',
+      alignItems: isWide ? 'stretch' : 'center',
+      gap: isWide ? 6 : 0,
       padding: '6px 0',
     }}>
       <span style={{
         fontSize: '0.9rem',
         color: 'var(--color-text)',
-        flex: isScale ? 'none' : 1,
+        flex: isWide ? 'none' : 1,
         display: 'flex',
         alignItems: 'center',
         gap: 6,
@@ -255,8 +369,8 @@ function BehaviorRow({ behavior, value, onChange, struggleInfo }) {
         )}
       </span>
       <div style={{
-        flexShrink: 0,
-        marginLeft: isScale ? 0 : 12,
+        flexShrink: isWide ? 1 : 0,
+        marginLeft: isWide ? 0 : 12,
       }}>
         {renderInput()}
       </div>
@@ -774,40 +888,14 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate, onSaved }
           padding-bottom: 2px;
         }
 
-        /* Minutes / Hours slider */
-        .behavior-list :global(.minutes-input),
-        .behavior-list :global(.hours-input) {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          width: 150px;
-        }
-        .behavior-list :global(.range-slider) {
-          flex: 1;
-          height: 4px;
+        /* Time input — hide browser number spinners */
+        .behavior-list input[type="number"]::-webkit-inner-spin-button,
+        .behavior-list input[type="number"]::-webkit-outer-spin-button {
           -webkit-appearance: none;
-          appearance: none;
-          background: #e2e8f0;
-          border-radius: 2px;
-          outline: none;
+          margin: 0;
         }
-        .behavior-list :global(.range-slider::-webkit-slider-thumb) {
-          -webkit-appearance: none;
-          width: 20px;
-          height: 20px;
-          border-radius: 50%;
-          background: #0d9488;
-          cursor: pointer;
-          box-shadow: 0 1px 4px rgba(13, 148, 136, 0.3);
-        }
-        .behavior-list :global(.minutes-label),
-        .behavior-list :global(.hours-label) {
-          font-size: 0.8rem;
-          color: var(--color-text-secondary, #64748b);
-          font-weight: 500;
-          width: 32px;
-          text-align: right;
-          font-variant-numeric: tabular-nums;
+        .behavior-list input[type="number"] {
+          -moz-appearance: textfield;
         }
 
         /* Heart state */
