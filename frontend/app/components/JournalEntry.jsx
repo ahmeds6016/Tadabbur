@@ -14,6 +14,7 @@ const HEART_STATES = [
   { id: 'remorseful', label: 'Remorseful', arabic: 'Nadam', color: '#8b5cf6' },
 ];
 
+/* ── Binary toggle: compact square checkbox ── */
 function BinaryInput({ value, onChange, label }) {
   const isOn = !!value;
   return (
@@ -23,66 +24,57 @@ function BinaryInput({ value, onChange, label }) {
       style={{
         display: 'flex',
         alignItems: 'center',
-        gap: 6,
-        padding: '5px 12px',
-        borderRadius: 8,
+        gap: 5,
+        padding: '3px 8px 3px 4px',
+        borderRadius: 6,
         border: isOn ? '1.5px solid #0d9488' : '1.5px solid var(--color-border, #d1d5db)',
-        background: isOn ? 'rgba(13, 148, 136, 0.1)' : 'var(--color-surface-muted)',
+        background: isOn ? 'rgba(13, 148, 136, 0.08)' : 'transparent',
         cursor: 'pointer',
-        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-        boxShadow: isOn ? '0 1px 4px rgba(13, 148, 136, 0.15)' : 'none',
+        transition: 'all 0.15s ease',
       }}
     >
       <span style={{
-        width: 18,
-        height: 18,
-        minWidth: 18,
-        borderRadius: 4,
+        width: 16,
+        height: 16,
+        minWidth: 16,
+        borderRadius: 3,
         border: isOn ? '1.5px solid #0d9488' : '1.5px solid var(--color-border, #cbd5e1)',
         background: isOn ? '#0d9488' : 'transparent',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        transition: 'all 0.15s ease',
+        transition: 'all 0.12s ease',
         color: 'white',
-        fontSize: '0.7rem',
+        fontSize: '0.6rem',
         fontWeight: 700,
       }}>
         {isOn ? '\u2713' : ''}
       </span>
       <span style={{
-        fontSize: '0.76rem',
+        fontSize: '0.7rem',
         fontWeight: 600,
-        color: isOn ? '#0d9488' : 'var(--color-text-secondary, #9ca3af)',
-        transition: 'color 0.15s ease',
+        color: isOn ? '#0d9488' : 'var(--color-text-muted, #9ca3af)',
+        transition: 'color 0.12s ease',
         userSelect: 'none',
+        lineHeight: 1,
       }}>
-        {isOn ? 'Done' : 'Mark'}
+        {isOn ? 'Completed' : 'Mark'}
       </span>
     </button>
   );
 }
 
+/* ── Scale 1-5: numbered steps with anchor labels ── */
 function Scale5Input({ value, onChange, scaleLabels }) {
   const current = value || 0;
-
-  // Build labels: use scale_labels if available, otherwise defaults
-  const segmentLabels = [
-    scaleLabels?.['1'] || '1',
-    scaleLabels?.['2'] || '2',
-    scaleLabels?.['3'] || '3',
-    scaleLabels?.['4'] || '4',
-    scaleLabels?.['5'] || '5',
-  ];
+  const lowLabel = scaleLabels?.['1'] || 'Low';
+  const highLabel = scaleLabels?.['5'] || 'High';
+  const selectedLabel = current > 0 ? (scaleLabels?.[String(current)] || `${current}/5`) : null;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, width: '100%' }}>
-      <div style={{
-        display: 'flex',
-        borderRadius: 8,
-        overflow: 'hidden',
-        border: '1px solid var(--color-border, #e2e8f0)',
-      }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 3, width: '100%' }}>
+      {/* Numbered step buttons */}
+      <div style={{ display: 'flex', gap: 6 }}>
         {[1, 2, 3, 4, 5].map((n) => {
           const isSelected = current === n;
           return (
@@ -91,31 +83,55 @@ function Scale5Input({ value, onChange, scaleLabels }) {
               onClick={() => onChange(current === n ? 0 : n)}
               aria-label={scaleLabels?.[String(n)] || `${n} of 5`}
               style={{
-                flex: 1,
-                padding: '6px 2px',
-                border: 'none',
-                borderRight: n < 5 ? '1px solid var(--color-border, #e2e8f0)' : 'none',
+                width: 36,
+                height: 32,
+                minWidth: 36,
+                borderRadius: 6,
+                border: isSelected
+                  ? '1.5px solid #0d9488'
+                  : '1px solid var(--color-border, #e2e8f0)',
                 background: isSelected ? '#0d9488' : 'var(--color-surface-muted, #f5f5f5)',
                 color: isSelected ? 'white' : 'var(--color-text-secondary, #6b7280)',
-                fontSize: '0.62rem',
+                fontSize: '0.82rem',
                 fontWeight: isSelected ? 700 : 500,
                 cursor: 'pointer',
-                transition: 'all 0.15s ease',
-                lineHeight: 1.2,
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
+                transition: 'all 0.12s ease',
+                padding: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: isSelected ? '0 1px 4px rgba(13, 148, 136, 0.2)' : 'none',
               }}
             >
-              {segmentLabels[n - 1]}
+              {n}
             </button>
           );
         })}
+      </div>
+      {/* Anchor labels + selected meaning */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'baseline',
+        maxWidth: 36 * 5 + 6 * 4,
+      }}>
+        <span style={{ fontSize: '0.6rem', color: 'var(--color-text-muted, #94a3b8)', fontWeight: 500 }}>
+          {lowLabel}
+        </span>
+        {selectedLabel && (
+          <span style={{ fontSize: '0.6rem', color: '#0d9488', fontWeight: 600 }}>
+            {selectedLabel}
+          </span>
+        )}
+        <span style={{ fontSize: '0.6rem', color: 'var(--color-text-muted, #94a3b8)', fontWeight: 500 }}>
+          {highLabel}
+        </span>
       </div>
     </div>
   );
 }
 
+/* ── Duration helper ── */
 function formatDuration(totalMinutes) {
   if (!totalMinutes) return '0m';
   const h = Math.floor(totalMinutes / 60);
@@ -125,45 +141,45 @@ function formatDuration(totalMinutes) {
   return `${m}m`;
 }
 
+/* ── Time entry: compact h/m fields + increment chips ── */
 function TimeInput({ value, onChange }) {
   const totalMins = value || 0;
   const hours = Math.floor(totalMins / 60);
   const mins = totalMins % 60;
 
-  const presets = [15, 30, 60];
-
   const updateTime = (h, m) => {
-    const clamped = Math.max(0, Math.min(h * 60 + m, 960)); // 16h max
+    const clamped = Math.max(0, Math.min(h * 60 + m, 960));
     onChange(clamped);
   };
 
+  const addMinutes = (delta) => {
+    onChange(Math.max(0, Math.min(totalMins + delta, 960)));
+  };
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        {/* Hours field */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      {/* Entry row */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          gap: 4,
+          gap: 3,
           background: 'var(--color-surface-muted, #f5f5f5)',
-          borderRadius: 8,
+          borderRadius: 6,
           border: '1px solid var(--color-border, #e2e8f0)',
-          padding: '4px 8px',
+          padding: '3px 6px',
         }}>
           <input
             type="number"
             min="0"
             max="16"
             value={hours}
-            onChange={(e) => {
-              const h = Math.max(0, Math.min(16, parseInt(e.target.value) || 0));
-              updateTime(h, mins);
-            }}
+            onChange={(e) => updateTime(Math.max(0, Math.min(16, parseInt(e.target.value) || 0)), mins)}
             style={{
-              width: 28,
+              width: 22,
               border: 'none',
               background: 'transparent',
-              fontSize: '0.9rem',
+              fontSize: '0.85rem',
               fontWeight: 600,
               textAlign: 'center',
               color: 'var(--color-text)',
@@ -172,17 +188,16 @@ function TimeInput({ value, onChange }) {
               fontVariantNumeric: 'tabular-nums',
             }}
           />
-          <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted, #9ca3af)', fontWeight: 500 }}>h</span>
+          <span style={{ fontSize: '0.65rem', color: 'var(--color-text-muted, #9ca3af)', fontWeight: 500 }}>h</span>
         </div>
-        {/* Minutes field */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          gap: 4,
+          gap: 3,
           background: 'var(--color-surface-muted, #f5f5f5)',
-          borderRadius: 8,
+          borderRadius: 6,
           border: '1px solid var(--color-border, #e2e8f0)',
-          padding: '4px 8px',
+          padding: '3px 6px',
         }}>
           <input
             type="number"
@@ -190,15 +205,12 @@ function TimeInput({ value, onChange }) {
             max="59"
             step="5"
             value={mins}
-            onChange={(e) => {
-              const m = Math.max(0, Math.min(59, parseInt(e.target.value) || 0));
-              updateTime(hours, m);
-            }}
+            onChange={(e) => updateTime(hours, Math.max(0, Math.min(59, parseInt(e.target.value) || 0)))}
             style={{
-              width: 28,
+              width: 22,
               border: 'none',
               background: 'transparent',
-              fontSize: '0.9rem',
+              fontSize: '0.85rem',
               fontWeight: 600,
               textAlign: 'center',
               color: 'var(--color-text)',
@@ -207,46 +219,41 @@ function TimeInput({ value, onChange }) {
               fontVariantNumeric: 'tabular-nums',
             }}
           />
-          <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted, #9ca3af)', fontWeight: 500 }}>m</span>
+          <span style={{ fontSize: '0.65rem', color: 'var(--color-text-muted, #9ca3af)', fontWeight: 500 }}>m</span>
         </div>
-        {/* Formatted total */}
-        {totalMins > 0 && (
-          <span style={{
-            fontSize: '0.75rem',
-            fontWeight: 600,
-            color: '#0d9488',
-            whiteSpace: 'nowrap',
-            marginLeft: 2,
-          }}>
-            {formatDuration(totalMins)}
-          </span>
-        )}
-      </div>
-      {/* Quick presets */}
-      <div style={{ display: 'flex', gap: 6 }}>
-        {presets.map((p) => (
+        {/* Increment chips */}
+        {[15, 30, 60].map((d) => (
           <button
-            key={p}
+            key={d}
             type="button"
-            onClick={() => onChange(totalMins === p ? 0 : p)}
+            onClick={() => addMinutes(d)}
             style={{
-              padding: '2px 8px',
-              borderRadius: 6,
-              border: totalMins === p
-                ? '1px solid #0d9488'
-                : '1px solid var(--color-border, #e2e8f0)',
-              background: totalMins === p ? 'rgba(13, 148, 136, 0.1)' : 'transparent',
-              color: totalMins === p ? '#0d9488' : 'var(--color-text-muted, #9ca3af)',
-              fontSize: '0.68rem',
+              padding: '3px 7px',
+              borderRadius: 5,
+              border: '1px solid var(--color-border, #e2e8f0)',
+              background: 'transparent',
+              color: 'var(--color-text-muted, #9ca3af)',
+              fontSize: '0.62rem',
               fontWeight: 600,
               cursor: 'pointer',
-              transition: 'all 0.15s ease',
+              transition: 'all 0.12s ease',
+              lineHeight: 1,
             }}
           >
-            {formatDuration(p)}
+            +{formatDuration(d)}
           </button>
         ))}
       </div>
+      {/* Total summary — secondary */}
+      {totalMins > 0 && (
+        <span style={{
+          fontSize: '0.62rem',
+          fontWeight: 500,
+          color: 'var(--color-text-muted, #9ca3af)',
+        }}>
+          Total: {formatDuration(totalMins)}
+        </span>
+      )}
     </div>
   );
 }
@@ -256,24 +263,24 @@ function MinutesInput({ value, onChange }) {
 }
 
 function HoursInput({ value, onChange }) {
-  // HoursInput stores value in hours (float), convert to/from minutes for TimeInput
   const totalMins = Math.round((value || 0) * 60);
   return (
     <TimeInput
       value={totalMins}
-      onChange={(newMins) => onChange(Math.round(newMins / 30) * 0.5)} // round to 0.5h
+      onChange={(newMins) => onChange(Math.round(newMins / 30) * 0.5)}
     />
   );
 }
 
+/* ── Count stepper ── */
 const stepperBtnStyle = {
-  width: 30,
-  height: 30,
-  minWidth: 30,
+  width: 28,
+  height: 28,
+  minWidth: 28,
   borderRadius: 6,
   border: '1.5px solid var(--color-border, #e2e8f0)',
   background: 'var(--color-surface-muted)',
-  fontSize: '1rem',
+  fontSize: '0.9rem',
   fontWeight: 500,
   cursor: 'pointer',
   padding: 0,
@@ -282,12 +289,12 @@ const stepperBtnStyle = {
   justifyContent: 'center',
   color: 'var(--color-text-secondary)',
   boxSizing: 'border-box',
-  transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
+  transition: 'all 0.12s ease',
 };
 
 function CountInput({ value, onChange }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
       <button
         style={{
           ...stepperBtnStyle,
@@ -298,9 +305,9 @@ function CountInput({ value, onChange }) {
         disabled={!value}
       >{'\u2212'}</button>
       <span style={{
-        fontSize: '1.1rem',
+        fontSize: '0.95rem',
         fontWeight: 700,
-        minWidth: 24,
+        minWidth: 20,
         textAlign: 'center',
         color: 'var(--color-text)',
         fontVariantNumeric: 'tabular-nums',
@@ -315,6 +322,7 @@ function CountInput({ value, onChange }) {
   );
 }
 
+/* ── Behavior row ── */
 function BehaviorRow({ behavior, value, onChange, struggleInfo }) {
   const isWide = ['scale_5', 'minutes', 'hours'].includes(behavior.input_type);
 
@@ -342,25 +350,26 @@ function BehaviorRow({ behavior, value, onChange, struggleInfo }) {
       flexDirection: isWide ? 'column' : 'row',
       justifyContent: isWide ? 'flex-start' : 'space-between',
       alignItems: isWide ? 'stretch' : 'center',
-      gap: isWide ? 6 : 0,
-      padding: '6px 0',
+      gap: isWide ? 4 : 0,
+      padding: '5px 0',
     }}>
       <span style={{
-        fontSize: '0.9rem',
+        fontSize: '0.85rem',
         color: 'var(--color-text)',
         flex: isWide ? 'none' : 1,
         display: 'flex',
         alignItems: 'center',
-        gap: 6,
+        gap: 5,
+        lineHeight: 1.3,
       }}>
         {behavior.label}
         {struggleInfo && (
           <span style={{
-            fontSize: '0.6rem',
+            fontSize: '0.55rem',
             fontWeight: 600,
-            padding: '1px 6px',
-            borderRadius: 8,
-            background: `${struggleInfo.color}18`,
+            padding: '1px 5px',
+            borderRadius: 6,
+            background: `${struggleInfo.color}15`,
             color: struggleInfo.color,
             whiteSpace: 'nowrap',
           }}>
@@ -370,7 +379,7 @@ function BehaviorRow({ behavior, value, onChange, struggleInfo }) {
       </span>
       <div style={{
         flexShrink: isWide ? 1 : 0,
-        marginLeft: isWide ? 0 : 12,
+        marginLeft: isWide ? 0 : 8,
       }}>
         {renderInput()}
       </div>
@@ -828,7 +837,7 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate, onSaved }
         .journal-entry {
           display: flex;
           flex-direction: column;
-          gap: 16px;
+          gap: 14px;
         }
         .journal-loading, .journal-error {
           text-align: center;
@@ -840,20 +849,19 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate, onSaved }
           color: var(--color-error);
         }
         .welcome-back-banner {
-          padding: 14px 18px;
+          padding: 12px 16px;
           background: rgba(5, 150, 105, 0.08);
-          border-radius: 14px;
+          border-radius: 12px;
           border: 1px solid rgba(5, 150, 105, 0.2);
           color: var(--foreground, #065f46);
           font-size: 0.9rem;
           text-align: center;
           font-weight: 500;
-          box-shadow: 0 1px 4px rgba(5, 150, 105, 0.08);
-        }
+          }
         .riya-reminder {
-          padding: 14px 18px;
+          padding: 12px 16px;
           background: rgba(234, 179, 8, 0.08);
-          border-radius: 14px;
+          border-radius: 12px;
           border: 1px solid rgba(234, 179, 8, 0.25);
           color: var(--foreground, #92400e);
           font-size: 0.85rem;
@@ -867,25 +875,25 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate, onSaved }
         .behavior-list {
           display: flex;
           flex-direction: column;
-          gap: 4px;
+          gap: 2px;
         }
         .behavior-list :global(.practice-group) {
           display: flex;
           flex-direction: column;
-          gap: 4px;
+          gap: 2px;
         }
         .behavior-list :global(.practice-group + .practice-group) {
-          margin-top: 12px;
-          padding-top: 12px;
+          margin-top: 8px;
+          padding-top: 8px;
           border-top: 1px solid var(--color-border-light);
         }
         .behavior-list :global(.pg-label) {
-          font-size: 0.7rem;
+          font-size: 0.65rem;
           font-weight: 600;
           color: var(--color-text-muted);
           text-transform: uppercase;
           letter-spacing: 0.5px;
-          padding-bottom: 2px;
+          padding-bottom: 1px;
         }
 
         /* Time input — hide browser number spinners */
@@ -900,30 +908,30 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate, onSaved }
 
         /* Heart state */
         .heart-state-section {
-          padding: 20px;
+          padding: 16px;
           background: var(--color-surface-muted);
-          border-radius: 14px;
+          border-radius: 12px;
           border: 1px solid var(--color-border);
         }
         .section-title {
-          margin: 0 0 14px 0;
-          font-size: 1rem;
+          margin: 0 0 12px 0;
+          font-size: 0.95rem;
           font-weight: 600;
           color: var(--color-text);
         }
         .heart-state-pills {
           display: flex;
           flex-wrap: wrap;
-          gap: 8px;
+          gap: 7px;
         }
         .heart-pill {
-          padding: 8px 16px;
-          border-radius: 24px;
+          padding: 7px 14px;
+          border-radius: 20px;
           border: 1.5px solid var(--color-border);
           background: var(--color-surface);
-          font-size: 0.8rem;
+          font-size: 0.78rem;
           cursor: pointer;
-          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          transition: all 0.15s ease;
           color: var(--color-text-secondary);
           display: flex;
           flex-direction: column;
@@ -964,7 +972,7 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate, onSaved }
         }
         .hr-ref {
           display: block;
-          font-size: 0.7rem;
+          font-size: 0.65rem;
           color: var(--color-text-secondary);
           font-style: normal;
           margin-top: 4px;
@@ -997,7 +1005,7 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate, onSaved }
           border-radius: 6px;
         }
         .hr-source {
-          font-size: 0.7rem;
+          font-size: 0.65rem;
           font-weight: 600;
           color: var(--color-text-muted);
           display: block;
@@ -1088,15 +1096,15 @@ export default function JournalEntry({ user, date, onTrajectoryUpdate, onSaved }
         }
         .save-btn {
           width: 100%;
-          padding: 16px;
-          border-radius: 14px;
+          padding: 14px;
+          border-radius: 12px;
           border: none;
           background: #0d9488;
           color: white;
-          font-size: 1rem;
+          font-size: 0.95rem;
           font-weight: 600;
           cursor: pointer;
-          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          transition: all 0.15s ease;
           box-shadow: 0 2px 8px rgba(13, 148, 136, 0.25);
         }
         .save-btn:hover:not(:disabled) {

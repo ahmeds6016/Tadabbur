@@ -369,7 +369,7 @@ export default function JournalPage() {
         .journal-container {
           max-width: 600px;
           margin: 0 auto;
-          padding: 16px 16px 80px;
+          padding: calc(16px + env(safe-area-inset-top, 0px)) 16px 80px;
           display: flex;
           flex-direction: column;
           gap: 16px;

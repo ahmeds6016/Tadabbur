@@ -85,6 +85,7 @@ export default function BottomNav({ user }) {
             justify-content: space-around;
             align-items: stretch;
             height: 52px;
+            padding: 0 4px;
           }
 
           .nav-item {
@@ -93,26 +94,31 @@ export default function BottomNav({ user }) {
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 2px;
+            gap: 3px;
             background: none;
             border: none;
-            padding: 0;
+            padding: 4px 2px;
             cursor: pointer;
             color: #8e8e93;
             transition: color 0.15s ease;
             user-select: none;
             touch-action: manipulation;
             -webkit-tap-highlight-color: transparent;
+            min-width: 0;
           }
 
           .nav-item.active {
-            color: #1a1a1a;
+            color: #0d9488;
           }
 
           .nav-label {
             font-size: 10px;
             font-weight: 500;
             line-height: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
           }
 
           .nav-item.active .nav-label {
@@ -121,16 +127,16 @@ export default function BottomNav({ user }) {
 
           @media (prefers-color-scheme: dark) {
             .bottom-nav {
-              background: rgba(0, 0, 0, 0.95);
-              border-top-color: rgba(255, 255, 255, 0.1);
+              background: rgba(10, 10, 15, 0.96);
+              border-top-color: rgba(255, 255, 255, 0.08);
             }
 
             .nav-item {
-              color: #636366;
+              color: #5a5a5e;
             }
 
             .nav-item.active {
-              color: #ffffff;
+              color: #2dd4bf;
             }
           }
 
