@@ -12,11 +12,11 @@ An AI-powered Qur'anic reflection app that brings classical tafsir scholarship t
 - **Tabbed response view** — Verses (Arabic + English), Tafsir Explanations, Cross-References, Lessons & Practical Applications, Summary, and Hadith references
 
 ### Daily Verse & Streaks
-- **Daily Verse** — Curated pool of 69 verses, one per day, displayed on the homepage
+- **Daily Verse** — Curated pool of verses, one per day, displayed on the homepage
 - **Streaks** — Track daily engagement with current and longest streak
 
 ### Reading Plans
-- **5 Reading Plans** — Structured journeys through the Qur'an with daily verse assignments
+- **Reading Plans** — Structured journeys through the Qur'an with daily verse assignments
 - **Progress tracking** — Day-by-day completion with "Study Verse" and "Complete Day" actions
 - **Browse & start** — Filter plans by category, view descriptions, and activate
 
@@ -30,7 +30,7 @@ An AI-powered Qur'anic reflection app that brings classical tafsir scholarship t
 ### Progress & Badges
 - **114-Surah Progress Map** — Visual grid showing exploration progress across the entire Qur'an (6,236 verses)
 - **Color-coded tiles** — Gray (unexplored) through gold (100% complete) with glow effects
-- **13 Badges** — Awarded automatically as milestones are reached
+- **Badges** — Awarded automatically as milestones are reached
 
 ### Iman Journal
 - **Daily journal entries** — Log spiritual states, behaviors, and reflections
@@ -51,12 +51,6 @@ An AI-powered Qur'anic reflection app that brings classical tafsir scholarship t
 - **Explore without signing up** — Guest users can search tafsir and view daily verse
 - **Soft sign-up nudge** — After 3 queries, a gentle prompt to create an account
 - **Full access on sign-up** — Journal, reflections, saved answers, and progress tracking require authentication
-
-### Muslim Name Dictionary
-- **Browse names** — Filter by gender (Male/Female)
-- **Search** — By name or meaning
-- **Quranic names filter** — Toggle to show only names mentioned in the Qur'an
-- **Details** — Arabic script, meaning, origin, and Qur'an references
 
 ### Navigation & Accessibility
 - **Responsive layout** — Bottom nav on mobile, collapsible sidebar on desktop
