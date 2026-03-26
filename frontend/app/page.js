@@ -30,7 +30,7 @@ import ConfirmDialog from './components/ConfirmDialog';
 import ErrorBoundary from './components/ErrorBoundary';
 import TadabburLogo from './components/Logo';
 import SurahVersePicker from './components/SurahVersePicker';
-import CollectionsGrid from './components/CollectionsGrid';
+// CollectionsGrid removed for minimalist homepage
 import BadgeDisplay, { BadgePopup } from './components/BadgeDisplay';
 import { ToastContainer } from './components/ui/Toast';
 import { TafsirSkeleton, Skeleton } from './components/ui/SkeletonLoader';
@@ -1015,15 +1015,6 @@ function MainApp({ user, userProfile, onResetProfile, isGuest = false, onGuestSi
   }, [user]);
 
   // Helper to navigate to a verse (used by collections, recommendations, reading plans)
-  const handleStudyVerse = useCallback((surah, verse) => {
-    setPickerSurah(surah);
-    setPickerVerse(verse);
-    setQuery(`${surah}:${verse}`);
-    setTimeout(() => {
-      document.querySelector('.tafsir-form')?.requestSubmit();
-    }, 100);
-  }, []);
-
   // Load saved search state on mount (survives page refresh)
   useEffect(() => {
     const savedState = loadSearchState();
@@ -1812,9 +1803,6 @@ function MainApp({ user, userProfile, onResetProfile, isGuest = false, onGuestSi
                 <span className="daily-verse-explore-hint">Tap to explore →</span>
               </button>
             )}
-
-            {/* Themed Collections Grid */}
-            <CollectionsGrid user={user} onStudyVerse={handleStudyVerse} />
 
             <style jsx>{`
               .homepage-dashboard {
