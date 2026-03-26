@@ -1,19 +1,57 @@
 # Node.js dependencies
-/frontend/node_modules
+node_modules/
 /frontend/.next
-/frontend/npm-debug.log*
-/frontend/yarn-debug.log*
-/frontend/yarn-error.log*
 /frontend/out
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
 
 # Python cache
 __pycache__/
 *.pyc
+*.pyo
+.venv/
+venv/
 
 # Local environment files
 .env
 .env.local
+.env.*.local
 
 # Build artifacts
 /backend.zip
+*.zip
+
+# Logs and temp data
+*.log
+*.har
 downloaded-logs-*.json
+log_analysis.txt
+
+# PDFs and large binary files
+*.pdf
+
+# Images (keep only app assets in frontend/public)
+*.png
+*.jpg
+*.jpeg
+!frontend/public/**
+
+# IDE and editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Devcontainer (codespaces)
+.devcontainer/
+
+# Test output and scratch files
+*.test.log
+route_test_results_*.json
+comprehensive_test_output.*
