@@ -94,7 +94,8 @@ app = Flask(__name__)
 CORS(app, resources={r"/*": {
     "origins": [
         "http://localhost:3000",
-        "https://tafsir-frontend-612616741510.us-central1.run.app"
+        "https://tafsir-frontend-612616741510.us-central1.run.app",
+        "https://tafsir-simplified-app.vercel.app"
     ]
 }}, supports_credentials=True, max_age=86400)
 
