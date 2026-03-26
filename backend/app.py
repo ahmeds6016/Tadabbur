@@ -96,7 +96,9 @@ CORS(app, resources={r"/*": {
         "http://localhost:3000",
         "https://tafsir-frontend-612616741510.us-central1.run.app",
         "https://tafsir-simplified-app.vercel.app"
-    ]
+    ],
+    "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    "allow_headers": ["Content-Type", "Authorization"],
 }}, supports_credentials=True, max_age=86400)
 
 # --- Configuration (UPDATED for new sliding window vector index) ---
@@ -6032,13 +6034,9 @@ def get_folders():
 # VERSE-LEVEL ANNOTATIONS ENDPOINTS
 # ============================================================================
 
-@app.route("/annotations/verse/<path:surah>/<verse>", methods=["GET", "OPTIONS"])
+@app.route("/annotations/verse/<path:surah>/<verse>", methods=["GET"])
 def get_verse_annotations(surah, verse):
     """Get all annotations for a specific verse"""
-    # Handle CORS preflight request
-    if request.method == "OPTIONS":
-        return "", 200
-
     # Apply authentication for GET requests
     @firebase_auth_required
     def handle_get():
