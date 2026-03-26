@@ -6670,7 +6670,7 @@ def get_verse_metadata_endpoint(surah, verse):
 # REPLACED: ENHANCED /tafsir ENDPOINT WITH HYBRID ROUTING
 # ============================================================================
 @app.route("/tafsir", methods=["POST"])
-@firebase_auth_required
+@firebase_auth_optional
 @handle_errors
 def tafsir_handler_enhanced():
     """
@@ -6720,7 +6720,8 @@ def tafsir_handler_enhanced():
         data = request.get_json()
         query = data.get('query', '').strip()
         approach = data.get('approach', 'tafsir').strip()  # NEW: Get approach parameter
-        user_id = request.user.get('uid')
+        user_id = request.user.get('uid') if request.user else None
+        is_guest = user_id is None
         perf_metrics['stages']['request_parsing'] = (time.time() - stage_start) * 1000
 
         if not query:
@@ -6832,8 +6833,10 @@ def tafsir_handler_enhanced():
                         ]
                     }), 400
 
-        # Rate limiting
-        if is_rate_limited(user_id):
+        # Rate limiting — guests use IP with stricter limits
+        rate_limit_id = user_id or f"guest_{request.remote_addr}"
+        guest_limit = 10 if is_guest else 150
+        if is_rate_limited(rate_limit_id, limit=guest_limit):
             resp = jsonify({'error': 'You have reached your query limit. Please wait a moment before trying again.'})
             resp.headers['Retry-After'] = '60'
             return resp, 429
@@ -6841,9 +6844,15 @@ def tafsir_handler_enhanced():
         # Analytics
         ANALYTICS[query] += 1
 
-        # Get user profile for caching
+        # Get user profile for caching — guests get default profile
         stage_start = time.time()
-        user_profile = get_user_profile(user_id)
+        if is_guest:
+            user_profile = {
+                'persona': 'curious_explorer',
+                'knowledge_level': 'beginner',
+            }
+        else:
+            user_profile = get_user_profile(user_id)
         perf_metrics['stages']['user_profile'] = (time.time() - stage_start) * 1000
 
         # Check cache BEFORE any processing (applies to ALL routes)

@@ -76,6 +76,7 @@ export default function HomePage() {
   const [userProfile, setUserProfile] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [isGuest, setIsGuest] = useState(false);
 
   const fetchUserProfile = async (currentUser) => {
     if (!currentUser) return;
@@ -130,11 +131,14 @@ export default function HomePage() {
     );
   }
 
-  if (!user) {
-    return <AuthComponent />;
+  if (!user && !isGuest) {
+    return <AuthComponent onGuestBrowse={() => {
+      setIsGuest(true);
+      setUserProfile({ persona: 'curious_explorer', knowledge_level: 'beginner' });
+    }} />;
   }
 
-  if (user && !userProfile) {
+  if (user && !isGuest && !userProfile) {
     return <OnboardingComponent user={user} onProfileComplete={setUserProfile} />;
   }
 
@@ -143,6 +147,11 @@ export default function HomePage() {
       user={user}
       userProfile={userProfile}
       onResetProfile={() => setUserProfile(null)}
+      isGuest={isGuest}
+      onGuestSignUp={() => {
+        setIsGuest(false);
+        setUserProfile(null);
+      }}
     />
   );
 }
@@ -151,7 +160,7 @@ export default function HomePage() {
 // AUTHENTICATION COMPONENT
 // ============================================================================
 
-function AuthComponent() {
+function AuthComponent({ onGuestBrowse }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [firstName, setFirstName] = useState('');
@@ -317,6 +326,33 @@ function AuthComponent() {
             <button onClick={() => switchMode('signIn')} className="toggle-auth">
               Already have an account? Sign In
             </button>
+            <div style={{ textAlign: 'center', margin: '16px 0 0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '0 0 12px' }}>
+                <div style={{ flex: 1, height: '1px', background: 'var(--color-border, #ddd)' }} />
+                <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted, #999)' }}>or</span>
+                <div style={{ flex: 1, height: '1px', background: 'var(--color-border, #ddd)' }} />
+              </div>
+              <button
+                type="button"
+                onClick={onGuestBrowse}
+                style={{
+                  width: '100%',
+                  background: 'transparent',
+                  border: '2px solid var(--primary-teal)',
+                  color: 'var(--primary-teal)',
+                  padding: '12px',
+                  borderRadius: '8px',
+                  fontSize: '1rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                }}
+              >
+                Browse as Guest
+              </button>
+              <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted, #999)', marginTop: '8px' }}>
+                Explore tafsir without an account
+              </p>
+            </div>
           </>
         )}
 
@@ -371,6 +407,33 @@ function AuthComponent() {
             <button onClick={() => switchMode('signUp')} className="toggle-auth">
               Need an account? Sign Up
             </button>
+            <div style={{ textAlign: 'center', margin: '16px 0 0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '0 0 12px' }}>
+                <div style={{ flex: 1, height: '1px', background: 'var(--color-border, #ddd)' }} />
+                <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted, #999)' }}>or</span>
+                <div style={{ flex: 1, height: '1px', background: 'var(--color-border, #ddd)' }} />
+              </div>
+              <button
+                type="button"
+                onClick={onGuestBrowse}
+                style={{
+                  width: '100%',
+                  background: 'transparent',
+                  border: '2px solid var(--primary-teal)',
+                  color: 'var(--primary-teal)',
+                  padding: '12px',
+                  borderRadius: '8px',
+                  fontSize: '1rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                }}
+              >
+                Browse as Guest
+              </button>
+              <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted, #999)', marginTop: '8px' }}>
+                Explore tafsir without an account
+              </p>
+            </div>
           </>
         )}
 
@@ -812,7 +875,7 @@ function OnboardingComponent({ user, onProfileComplete }) {
 // MAIN APPLICATION COMPONENT - ENHANCED
 // ============================================================================
 
-function MainApp({ user, userProfile, onResetProfile }) {
+function MainApp({ user, userProfile, onResetProfile, isGuest = false, onGuestSignUp }) {
   const searchParams = useSearchParams();
   // Deep Tafsir mode only - Explore is disabled for now
   const approach = 'tafsir';
@@ -1210,21 +1273,24 @@ function MainApp({ user, userProfile, onResetProfile }) {
     setRateLimitWarning('');
 
     try {
-      const token = await user.getIdToken();
+      const headers = { 'Content-Type': 'application/json' };
+      if (user && !isGuest) {
+        const token = await user.getIdToken();
+        headers.Authorization = `Bearer ${token}`;
+      }
       const res = await fetch(`${BACKEND_URL}/tafsir`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
+        headers,
         body: JSON.stringify({ approach, query }),
         signal: abortControllerRef.current.signal
       });
-      
+
       const data = await res.json();
 
       if (res.status === 429) {
-        setRateLimitWarning('You have reached your query limit. Please try again later.');
+        setRateLimitWarning(isGuest
+          ? 'Guest limit reached. Create a free account for more queries!'
+          : 'You have reached your query limit. Please try again later.');
         return;
       }
 
@@ -1237,15 +1303,22 @@ function MainApp({ user, userProfile, onResetProfile }) {
       }
 
       setResponse(data);
-      if (!onboardingState.hasSearched) {
-        markStepComplete('hasSearched');
+
+      // Guest query counter for soft sign-up prompt
+      if (isGuest) {
+        const count = parseInt(sessionStorage.getItem('guest_query_count') || '0', 10) + 1;
+        sessionStorage.setItem('guest_query_count', String(count));
       }
 
-      // Update streak on successful search
-      updateStreak();
-
-      // Save to query history
-      await saveQueryToHistory(query, approach, userProfile?.persona || '', true);
+      if (!isGuest) {
+        if (!onboardingState.hasSearched) {
+          markStepComplete('hasSearched');
+        }
+        // Update streak on successful search
+        updateStreak();
+        // Save to query history
+        await saveQueryToHistory(query, approach, userProfile?.persona || '', true);
+      }
     } catch (err) {
       // Don't show error for user-initiated cancellations (but show for timeouts)
       if (err.name === 'AbortError') {
@@ -1262,8 +1335,10 @@ function MainApp({ user, userProfile, onResetProfile }) {
         ? 'The server encountered an issue. Please try again in a moment.'
         : err.message;
       setError(errorMessage);
-      // Save failed query to history too
-      await saveQueryToHistory(query, approach, userProfile?.persona || '', false);
+      // Save failed query to history too (authenticated users only)
+      if (!isGuest) {
+        await saveQueryToHistory(query, approach, userProfile?.persona || '', false);
+      }
     } finally {
       // Clear the timeout when request completes
       if (searchTimeoutRef.current) {
@@ -1619,8 +1694,8 @@ function MainApp({ user, userProfile, onResetProfile }) {
         onCancel={() => setShowPersonaConfirm(false)}
       />
 
-      {/* Desktop Navigation Sidebar */}
-      {!isMobile && (
+      {/* Desktop Navigation Sidebar — hide for guests */}
+      {!isMobile && !isGuest && (
         <DesktopNav
           user={user}
           stats={desktopStats}
@@ -1637,23 +1712,46 @@ function MainApp({ user, userProfile, onResetProfile }) {
             <h1>Tadabbur</h1>
           </div>
           <div className="user-info" data-persona-icon={personaIcon}>
-            <span>{user.displayName || user.email?.split('@')[0] || 'User'}</span>
-            <button
-              className="persona-badge clickable"
-              onClick={() => setShowPersonaConfirm(true)}
-              title="Click to change persona"
-              type="button"
-            >
-              {getProfileDisplay()}
-            </button>
-            <button onClick={() => signOut(auth)} className="logout-button">
-              Sign Out
-            </button>
+            {isGuest ? (
+              <>
+                <span style={{ color: 'var(--color-text-muted, #999)', fontSize: '0.9rem' }}>Guest</span>
+                <button
+                  onClick={onGuestSignUp}
+                  style={{
+                    background: 'var(--primary-teal)',
+                    color: '#fff',
+                    border: 'none',
+                    padding: '6px 16px',
+                    borderRadius: '6px',
+                    fontSize: '0.85rem',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Sign Up Free
+                </button>
+              </>
+            ) : (
+              <>
+                <span>{user.displayName || user.email?.split('@')[0] || 'User'}</span>
+                <button
+                  className="persona-badge clickable"
+                  onClick={() => setShowPersonaConfirm(true)}
+                  title="Click to change persona"
+                  type="button"
+                >
+                  {getProfileDisplay()}
+                </button>
+                <button onClick={() => signOut(auth)} className="logout-button">
+                  Sign Out
+                </button>
+              </>
+            )}
           </div>
         </div>
 
-        {/* Navigation Links - Desktop Only (compact) */}
-        {!isMobile && (
+        {/* Navigation Links - Desktop Only (compact) — hide for guests */}
+        {!isMobile && !isGuest && (
           <div style={{
             display: 'flex',
             gap: '8px',
@@ -1947,6 +2045,7 @@ function MainApp({ user, userProfile, onResetProfile }) {
 
               {/* Right: Save & Share actions */}
               <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                {!isGuest && (
                 <button onClick={handleSaveSearch} style={{
                   padding: '6px 12px',
                   background: 'var(--cream, #faf6f0)',
@@ -1967,6 +2066,7 @@ function MainApp({ user, userProfile, onResetProfile }) {
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                   Save
                 </button>
+                )}
                 <button onClick={handleShareLink} style={{
                   padding: '6px 12px',
                   background: 'var(--cream, #faf6f0)',
@@ -2038,26 +2138,62 @@ function MainApp({ user, userProfile, onResetProfile }) {
               onGeneralReflection={handleGeneralReflection}
             />
             </ErrorBoundary>
+
+            {/* Guest sign-up nudge after 3+ queries */}
+            {isGuest && parseInt(sessionStorage.getItem('guest_query_count') || '0', 10) >= 3 && (
+              <div style={{
+                margin: '24px 0',
+                padding: '20px',
+                background: 'linear-gradient(135deg, #f0f9f4 0%, #e8f5e9 100%)',
+                borderRadius: '12px',
+                border: '1px solid var(--primary-teal)',
+                textAlign: 'center',
+              }}>
+                <p style={{ fontSize: '1.05rem', fontWeight: '600', color: 'var(--primary-teal)', margin: '0 0 8px' }}>
+                  Enjoying Tadabbur?
+                </p>
+                <p style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary, #555)', margin: '0 0 16px', lineHeight: '1.5' }}>
+                  Create a free account to save your progress, track streaks, journal reflections, and unlock reading plans.
+                </p>
+                <button
+                  onClick={onGuestSignUp}
+                  style={{
+                    background: 'var(--primary-teal)',
+                    color: '#fff',
+                    border: 'none',
+                    padding: '10px 28px',
+                    borderRadius: '8px',
+                    fontSize: '0.95rem',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Create Free Account
+                </button>
+              </div>
+            )}
           </>
         )}
       </div>
 
 
-        {/* Bottom Navigation for PWA */}
-        <BottomNav user={user} />
+        {/* Bottom Navigation for PWA — hide for guests */}
+        {!isGuest && <BottomNav user={user} />}
 
-        {/* Feature Intro Modal (first-time users) */}
-        <FeatureIntroModal
-          isOpen={showFeatureIntro}
-          onComplete={() => {
-            setShowFeatureIntro(false);
-            markFeatureIntroSeen();
-          }}
-          userName={user.displayName || null}
-        />
+        {/* Feature Intro Modal (first-time users, not guests) */}
+        {!isGuest && (
+          <FeatureIntroModal
+            isOpen={showFeatureIntro}
+            onComplete={() => {
+              setShowFeatureIntro(false);
+              markFeatureIntroSeen();
+            }}
+            userName={user?.displayName || null}
+          />
+        )}
 
         {/* Journal Announcement (one-time for existing users who already completed onboarding) */}
-        {onboardingLoaded && onboardingState.hasSeenFeatureIntro && !showFeatureIntro && (
+        {!isGuest && onboardingLoaded && onboardingState.hasSeenFeatureIntro && !showFeatureIntro && (
           <JournalAnnouncementModal user={user} />
         )}
 
