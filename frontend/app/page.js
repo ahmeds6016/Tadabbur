@@ -23,8 +23,6 @@ import DesktopNav from './components/DesktopNav';
 import Tooltip from './components/Tooltip';
 import HelpMenu, { FloatingHelpButton } from './components/HelpMenu';
 import FeatureIntroModal from './components/FeatureIntroModal';
-import JournalAnnouncementModal from './components/JournalAnnouncementModal';
-import Phase6AnnouncementModal from './components/Phase6AnnouncementModal';
 import FloatingAnnotateButton from './components/FloatingAnnotateButton';
 import ConfirmDialog from './components/ConfirmDialog';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -2141,7 +2139,7 @@ function MainApp({ user, userProfile, onResetProfile, isGuest = false, onGuestSi
                   Enjoying Tadabbur?
                 </p>
                 <p style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary, #555)', margin: '0 0 16px', lineHeight: '1.5' }}>
-                  Create a free account to save your progress, track streaks, journal reflections, and unlock reading plans.
+                  Create a free account to save your progress, track streaks, write reflections, and unlock reading plans.
                 </p>
                 <button
                   onClick={onGuestSignUp}
@@ -2180,15 +2178,6 @@ function MainApp({ user, userProfile, onResetProfile, isGuest = false, onGuestSi
           />
         )}
 
-        {/* Journal Announcement (one-time for existing users who already completed onboarding) */}
-        {!isGuest && onboardingLoaded && onboardingState.hasSeenFeatureIntro && !showFeatureIntro && (
-          <JournalAnnouncementModal user={user} />
-        )}
-
-        {/* Phase 6 Announcement (deep personalization, dark mode, feedback) */}
-        {onboardingLoaded && onboardingState.hasSeenFeatureIntro && !showFeatureIntro && (
-          <Phase6AnnouncementModal user={user} />
-        )}
 
         {/* Help Menu */}
         <HelpMenu

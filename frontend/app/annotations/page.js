@@ -294,7 +294,7 @@ export default function MyReflectionsPage() {
           <p className="empty-desc">
             {hasActiveFilters
               ? 'Try different filters.'
-              : 'Reflect on verses as you study to build your journal.'}
+              : 'Reflect on verses as you study to build your library of reflections.'}
           </p>
         </div>
       ) : (

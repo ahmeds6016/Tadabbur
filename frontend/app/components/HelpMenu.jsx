@@ -80,7 +80,7 @@ const helpContent = {
           },
           {
             label: 'Reflection Prompt',
-            description: 'A personalized question at the end of each response designed to deepen your connection with the verses. Use it as a journaling prompt or discussion starter.'
+            description: 'A personalized question at the end of each response designed to deepen your connection with the verses. Use it as a reflection prompt or discussion starter.'
           }
         ]
       },
@@ -98,10 +98,6 @@ const helpContent = {
           {
             label: 'Share a Response',
             description: 'Tap the share icon to copy a public link. The shared page shows the full scholarly commentary but excludes your private reflections.'
-          },
-          {
-            label: 'Journal Your Journey',
-            description: 'Track daily spiritual practices, write heart notes, declare struggles, and receive a personalized weekly digest — all from the Journal tab.'
           },
           {
             label: 'Track Your Progress',
@@ -431,28 +427,13 @@ export default function HelpMenu({ currentPage = 'home', isOpen, onClose, onRepl
               </div>
 
               <div className="faq-item">
-                <h4>What is the Iman Journal?</h4>
-                <p>A private spiritual journal where you track daily practices (salah, Quran, dhikr, and more), write heart notes, and declare struggles. After a 14-day calibration period, you receive a personalized trajectory showing your spiritual rhythm — not as a score, but as a mirror. Weekly digests synthesize your week into a meaningful narrative with a verse to carry forward.</p>
-              </div>
-
-              <div className="faq-item">
-                <h4>How do weekly digests work?</h4>
-                <p>Log at least 4 days in a week, then generate your digest on Monday. It reflects on your week — highlighting strengths, patterns, and a Quranic verse chosen specifically for where you are. Each time you update your log, the digest refreshes to reflect your latest entries.</p>
-              </div>
-
-              <div className="faq-item">
-                <h4>What are struggles?</h4>
-                <p>Struggles let you privately declare an area you want to work on — like consistency in prayer or reducing screen time. Each struggle comes with comfort verses, phased guidance from classical scholars, and daily/weekly goals. You can resolve a struggle at any time.</p>
-              </div>
-
-              <div className="faq-item">
                 <h4>How do badges work?</h4>
                 <p>Badges are earned automatically as you explore the Quran, maintain streaks, write reflections, and complete reading plans. There are 13 badges total — visible on your Progress page. They celebrate milestones without turning your journey into a competition.</p>
               </div>
 
               <div className="faq-item">
                 <h4>Are my reflections private?</h4>
-                <p>Yes — your personal reflections and journal entries are encrypted and stored securely. They are only accessible to you when signed in. No one else — including us — can read your private data. When you share a response, only the scholarly commentary is shared, never your personal notes or journal data.</p>
+                <p>Yes — your personal reflections and annotations are encrypted and stored securely. They are only accessible to you when signed in. No one else — including us — can read your private data. When you share a response, only the scholarly commentary is shared, never your personal notes.</p>
               </div>
             </div>
           )}

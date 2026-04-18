@@ -24,11 +24,6 @@ const FEATURE_STEPS = [
     description: 'Save answers, write reflections, follow reading plans, track your progress across the Quran, and earn badges as you grow. Your reflections are encrypted and private — only you can see them. Need help or have feedback? Tap the help button on any page.',
     iconLabel: 'R',
   },
-  {
-    title: 'Your Iman Journal',
-    description: 'A private, intelligent journal that addresses you by name and learns your spiritual rhythms. Track daily behaviors, write heart notes, set struggle goals, and receive deeply personalized digests, trajectory insights, and correlation analysis — a mirror for your heart, not a scorecard.',
-    iconLabel: 'J',
-  }
 ];
 
 export default function FeatureIntroModal({ isOpen, onComplete, userName }) {

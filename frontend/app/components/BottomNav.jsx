@@ -1,6 +1,6 @@
 'use client';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, BookOpen, Star, FileText, BookHeart } from 'lucide-react';
+import { Home, BookOpen, Star, FileText } from 'lucide-react';
 
 export default function BottomNav({ user }) {
   const pathname = usePathname();
@@ -24,12 +24,6 @@ export default function BottomNav({ user }) {
       icon: Star,
       path: '/saved',
       active: pathname === '/saved'
-    },
-    user && {
-      label: 'Journal',
-      icon: BookHeart,
-      path: '/journal',
-      active: pathname === '/journal'
     },
     user && {
       label: 'Reflections',

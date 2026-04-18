@@ -32,16 +32,6 @@ An AI-powered Qur'anic reflection app that brings classical tafsir scholarship t
 - **Color-coded tiles** — Gray (unexplored) through gold (100% complete) with glow effects
 - **Badges** — Awarded automatically as milestones are reached
 
-### Iman Journal
-- **Daily journal entries** — Log spiritual states, behaviors, and reflections
-- **Heart states** — Quick emotional check-ins with AI-generated responses
-- **Heart notes** — Short-form spiritual journaling with history view
-- **Struggles tracking** — Declare personal challenges and receive Qur'anic guidance, set goals, track progress
-- **Weekly digests** — AI-summarized patterns from journal entries
-- **Correlations & insights** — Connections between struggles and daily factors
-- **Heart patterns** — Visual trends in emotional/spiritual data
-- **Scrupulosity safeguards** — Gentle messaging for users showing signs of spiritual anxiety
-
 ### Save & Share
 - **Save tafsir responses** — Bookmark answers and organize into custom folders
 - **Share links** — Generate public shareable links for any tafsir response with view counts
@@ -50,11 +40,11 @@ An AI-powered Qur'anic reflection app that brings classical tafsir scholarship t
 ### Guest Browsing
 - **Explore without signing up** — Guest users can search tafsir and view daily verse
 - **Soft sign-up nudge** — After 3 queries, a gentle prompt to create an account
-- **Full access on sign-up** — Journal, reflections, saved answers, and progress tracking require authentication
+- **Full access on sign-up** — Reflections, saved answers, and progress tracking require authentication
 
 ### Navigation & Accessibility
 - **Responsive layout** — Bottom nav on mobile, collapsible sidebar on desktop
-- **Keyboard shortcuts** — Alt+H (Home), Alt+R (Plans), Alt+S (Saved), Alt+J (Journal), Alt+N (Reflections), Alt+P (Progress)
+- **Keyboard shortcuts** — Alt+H (Home), Alt+R (Plans), Alt+S (Saved), Alt+N (Reflections), Alt+P (Progress)
 - **Dark mode** — System-aware theme support
 - **iOS support** — Native wrapper via Capacitor
 
@@ -73,7 +63,7 @@ An AI-powered Qur'anic reflection app that brings classical tafsir scholarship t
 
 ```
 ├── frontend/          # Next.js app
-│   ├── app/           # Pages (home, progress, journal, plans, saved, etc.)
+│   ├── app/           # Pages (home, progress, plans, saved, etc.)
 │   ├── app/components/# React components
 │   └── ios/           # Capacitor iOS project
 ├── backend/

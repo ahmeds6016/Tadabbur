@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, BookOpen as PlansIcon, Star, FileText, BarChart3, BookOpen, BookHeart, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Home, BookOpen as PlansIcon, Star, FileText, BarChart3, BookOpen, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export default function DesktopNav({ user, stats = {}, collapsed = false, onToggleCollapse }) {
   const pathname = usePathname();
@@ -33,14 +33,6 @@ export default function DesktopNav({ user, stats = {}, collapsed = false, onTogg
       shortcut: 'Alt+S',
       description: `${stats.savedCount || 0} saved answers`,
       badge: stats.savedCount
-    },
-    {
-      id: 'journal',
-      label: 'Journal',
-      icon: BookHeart,
-      href: '/journal',
-      shortcut: 'Alt+J',
-      description: 'Spiritual journal & Iman Index'
     },
     {
       id: 'notes',
@@ -77,10 +69,6 @@ export default function DesktopNav({ user, stats = {}, collapsed = false, onTogg
           case 's':
             e.preventDefault();
             window.location.href = '/saved';
-            break;
-          case 'j':
-            e.preventDefault();
-            window.location.href = '/journal';
             break;
           case 'n':
             e.preventDefault();
