@@ -147,6 +147,10 @@ unused project (candidates: synapse-demo-471205, vertical-karma-471205-j1).
   made. No dependencies were added or upgraded in the PR.
 - **Not run:** browser-level forced 502/503/network-disconnect tests. No deploy or GCP
   access performed. P1.5 requires a manual frontend deploy by Claude/Ahmed after merge.
+- **Residual timeout mismatch (not changed):** the frontend abort timer remains 180
+  seconds (page.js:1248), while P1.4's bounded backend worst case is 242 seconds. The UI
+  can therefore abort before the backend's terminal retry response. Aligning that timer
+  was outside both scoped fixes and should be explicitly prioritized or accepted.
 - **P1.4:** draft PR #32 is open separately. **Next:** publish the P1.5 draft PR for
   Claude review.
 
