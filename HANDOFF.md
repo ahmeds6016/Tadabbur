@@ -122,6 +122,25 @@ unused project (candidates: synapse-demo-471205, vertical-karma-471205-j1).
 
 ## Session log
 
+### 2026-08-01 (late) — Claude: P1.2 + P1.3 reviewed, merged, deployed
+- Reviewed PRs #30/#31: both minimal and correctly placed. Verified GPT's audit
+  correction is accurate (Firestore default-profile fallback read exists at
+  app.py:4269-4303 — so pre-fix guest queries could hit stale wrong-persona docs
+  rather than always paying for an LLM call). Approved both.
+- Merged to `main` (85bf12d; HANDOFF session-log conflict resolved keeping both
+  entries), built image sha256:30046f62…, deployed revision
+  **tafsir-backend-00259-zj6**.
+- Verified live: guest double-query on uncached 30:54 → first 200 in 23.1s (fresh
+  generation), second 200 in 0.10s (cache hit) on the new revision. Confirmed via
+  direct Firestore query: exactly one cache doc for 30:54, profile
+  `curious_explorer/beginner` (the guest key), created at the exact completion
+  time of the first test request → guest writes and reads are now symmetric.
+  P1.2 is code-trace-verified only (cannot trigger malformed Gemini output on
+  demand).
+- Log-reading gotcha recorded: Cloud Run stdout logs lag ingestion by minutes —
+  match request timestamps (httpRequest logs) before attributing stdout lines to
+  a test.
+
 ### 2026-08-01 — GPT 5.6: P1.2 malformed-response cache guard
 - **Branch/commit:** `codex/p1-2-extraction-guard` / `85c0b72`
   (`Reject malformed tafsir responses`), branched from updated `main` after P1.1 was
