@@ -66,7 +66,9 @@ unused project (candidates: synapse-demo-471205, vertical-karma-471205-j1).
    - Suggested: require a shared admin secret header (env `ADMIN_SECRET` via Secret
      Manager) or `@firebase_auth_required` + owner-UID allowlist; return 404 for
      debug routes when env `DEBUG_ROUTES != "1"`.
-2. **Fix silent cache poisoning on malformed LLM output** (app.py:7122): the fallback
+2. **Fix silent cache poisoning on malformed LLM output** — **CODE COMPLETE
+   2026-08-01 on `codex/p1-2-extraction-guard` (`85c0b72`); awaiting review/deploy**:
+   the fallback
    dict from `extract_json_from_response` (:3026-3034) is always truthy, so the
    `if not final_json` guard never fires and garbage gets cached forever (memory +
    Firestore). Check `metadata.extraction_error` instead (the `/debug/test` handler
@@ -115,6 +117,26 @@ unused project (candidates: synapse-demo-471205, vertical-karma-471205-j1).
     repo (fallback path always taken) — either ship it or delete the load path.
 
 ## Session log
+
+### 2026-08-01 — GPT 5.6: P1.2 malformed-response cache guard
+- **Branch/commit:** `codex/p1-2-extraction-guard` / `85c0b72`
+  (`Reject malformed tafsir responses`), branched from updated `main` after P1.1 was
+  merged and deployed.
+- **Changed:** `backend/app.py` only for application code — `/tafsir` now checks
+  `metadata.extraction_error` immediately after extraction and returns a clean 502
+  before post-processing or either cache write. The existing falsy-result guard remains.
+- **MAX_TOKENS trace:** `MAX_TOKENS` is accepted at app.py:7153, then generated text is
+  extracted at :7161 and parsed at :7164. A truncated response that reaches the
+  extraction fallback now returns at :7173-7177, before memory caching at :7212,
+  Firestore caching at :7219, and progress side effects at :7221. Prompt line numbers
+  had drifted from the audit; behavior matched the report.
+- **Verified:** `py -3 -m py_compile backend/app.py` and `git diff --check` pass; the
+  handler path was traced directly as described above. **Not run:** full local backend
+  or HTTP tests, because runtime dependencies and GCP-backed startup configuration are
+  unavailable locally. No deploy or GCP access performed.
+- No `SCHOLARLY_PIPELINE_VERSION` bump: successful response shape/pipeline is unchanged.
+- **Next:** publish the P1.2 draft PR, then branch P1.3 from updated `main` and preserve
+  the guest default profile through prompt construction and cache writes.
 
 ### 2026-08-01 (evening) — Claude: P1.1 merged, deployed, verified
 - Merged `codex/p1-1-admin-endpoints` → `main` (66db496); pushed all branches.
