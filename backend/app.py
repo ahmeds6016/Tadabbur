@@ -4,6 +4,7 @@ import re
 import traceback
 import time
 import hashlib
+import hmac
 import base64
 import threading
 import logging
@@ -110,6 +111,8 @@ LOCATION = os.environ.get("GCP_LOCATION", "us-central1")
 GEMINI_MODEL_ID = os.environ.get("GEMINI_MODEL_ID", "gemini-2.5-flash")  # Upgraded: 65K output tokens (vs 8K in 2.0) - eliminates truncation-based malformed JSON
 FIREBASE_SECRET_FULL_PATH = os.environ.get("FIREBASE_SECRET_FULL_PATH")
 REFLECTION_ENCRYPTION_SECRET = os.environ.get("REFLECTION_ENCRYPTION_SECRET", "")
+ADMIN_SECRET = os.environ.get("ADMIN_SECRET", "")
+DEBUG_ROUTES_ENABLED = os.environ.get("DEBUG_ROUTES", "") == "1"
 
 GCS_BUCKET_NAME = os.environ.get("GCS_BUCKET_NAME", "tafsir-simplified-sources")
 
@@ -2686,6 +2689,44 @@ def firebase_auth_optional(f):
         return f(*args, **kwargs)
     return decorated_function
 
+def _verify_admin_secret():
+    """Return an error response unless the request has the configured admin secret."""
+    if not ADMIN_SECRET:
+        logger.error("ADMIN_SECRET is not configured; refusing admin endpoint access")
+        return jsonify({"error": "Admin access is not configured"}), 503
+
+    provided_secret = request.headers.get("X-Admin-Secret", "")
+    if not provided_secret or not hmac.compare_digest(
+        provided_secret.encode("utf-8"),
+        ADMIN_SECRET.encode("utf-8")
+    ):
+        return jsonify({"error": "Unauthorized"}), 403
+
+    return None
+
+def admin_secret_required(f):
+    """Require X-Admin-Secret to match the ADMIN_SECRET environment variable."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        auth_error = _verify_admin_secret()
+        if auth_error:
+            return auth_error
+        return f(*args, **kwargs)
+    return decorated_function
+
+def debug_route_required(f):
+    """Hide debug routes unless explicitly enabled, then require admin access."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not DEBUG_ROUTES_ENABLED:
+            return jsonify({"error": "Not found"}), 404
+
+        auth_error = _verify_admin_secret()
+        if auth_error:
+            return auth_error
+        return f(*args, **kwargs)
+    return decorated_function
+
 # --- Comprehensive Error Handler Decorator ---
 def handle_errors(f):
     """
@@ -3922,6 +3963,7 @@ def cache_lookup():
         return jsonify({'error': str(e)}), 500
 
 @app.route("/cache/store", methods=["POST"])
+@admin_secret_required
 def cache_store():
     """
     Store a tafsir response in cache.
@@ -4005,6 +4047,7 @@ def get_popular_queries():
         return jsonify({'error': str(e)}), 500
 
 @app.route("/cache/prewarm", methods=["POST"])
+@admin_secret_required
 def prewarm_cache():
     """
     Pre-generate cache for popular or specified queries.
@@ -4056,6 +4099,7 @@ def prewarm_cache():
         return jsonify({'error': str(e)}), 500
 
 @app.route("/cache/invalidate", methods=["POST"])
+@admin_secret_required
 def invalidate_cache():
     """
     Invalidate cache entries based on criteria.
@@ -7212,6 +7256,7 @@ def health_check_enhanced():
 
 
 @app.route("/debug/range-map", methods=["GET"])
+@debug_route_required
 def debug_range_map():
     """View the static verse range map info and optionally re-export it."""
     from services.token_budget_service import get_range_map_info, export_range_map
@@ -7227,6 +7272,7 @@ def debug_range_map():
 
 
 @app.route("/debug/test/<path:query>", methods=["GET"])
+@debug_route_required
 def debug_query(query):
     """
     REAL EXECUTION with step-by-step logging
@@ -7433,6 +7479,7 @@ def debug_query(query):
         return jsonify(trace), 500
 
 @app.route("/debug/verse-metadata/<surah>/<verse>", methods=["GET"])
+@debug_route_required
 def check_verse_metadata(surah, verse):
     """
     Check what metadata exists for a specific verse
