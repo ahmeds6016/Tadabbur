@@ -66,15 +66,15 @@ unused project (candidates: synapse-demo-471205, vertical-karma-471205-j1).
    - Suggested: require a shared admin secret header (env `ADMIN_SECRET` via Secret
      Manager) or `@firebase_auth_required` + owner-UID allowlist; return 404 for
      debug routes when env `DEBUG_ROUTES != "1"`.
-2. **Fix silent cache poisoning on malformed LLM output** — **CODE COMPLETE
-   2026-08-01 on `codex/p1-2-extraction-guard` (`85c0b72`); awaiting review/deploy**:
+2. **Fix silent cache poisoning on malformed LLM output** — **✅ DEPLOYED 2026-08-01
+   in revision `tafsir-backend-00259-zj6`; code-path verified**:
    the fallback
    dict from `extract_json_from_response` (:3026-3034) is always truthy, so the
    `if not final_json` guard never fires and garbage gets cached forever (memory +
    Firestore). Check `metadata.extraction_error` instead (the `/debug/test` handler
    at :7406 already does this correctly) and return 502 without caching.
-3. **Fix guest cache key mismatch** — **CODE COMPLETE 2026-08-01 on
-   `codex/p1-3-guest-profile` (`53634e9`); awaiting review/deploy**:
+3. **Fix guest cache key mismatch** — **✅ DEPLOYED & VERIFIED 2026-08-01 in revision
+   `tafsir-backend-00259-zj6`**:
    `user_profile = get_user_profile(None)` returned `{}` for guests, overwriting the
    guest default profile before prompt construction and the Firestore cache write.
    Fixed by refreshing the profile only when `user_id` is truthy.
@@ -83,9 +83,11 @@ unused project (candidates: synapse-demo-471205, vertical-karma-471205-j1).
    after a guest-key miss (app.py:4269-4303). Therefore old mis-keyed documents can be
    served via fallback, and not every repeated guest query necessarily incurred an LLM
    call. No old documents were migrated or deleted.
-4. **Gunicorn/Cloud Run timeout mismatch**: gunicorn `--timeout 120` (Dockerfile) <
-   worst-case Gemini call w/ retries (app.py:7064-7103). Raise gunicorn to 300 to match
-   Cloud Run `--timeout 300`, and cap retries so worst case fits.
+4. **Gunicorn/Cloud Run timeout mismatch** — **CODE COMPLETE 2026-08-01 on
+   `codex/p1-4-timeout-stack` (`2f0c4a3`); awaiting review/image rebuild/deploy**:
+   Gunicorn now uses timeout 300 and `${PORT:-8080}`; the main Gemini call permits two
+   total attempts. Worst network budget is `120s + 2s + 120s = 242s`, leaving about
+   58 seconds inside the Gunicorn/Cloud Run limit for application overhead.
 5. **Frontend: `res.json()` before `res.ok`** (frontend/app/page.js:1277 vs :1286) —
    users see raw `Unexpected token '<' …` / `Failed to fetch` when backend errors.
    Parse defensively and show one friendly message. Also add a global backend-down
@@ -104,8 +106,8 @@ unused project (candidates: synapse-demo-471205, vertical-karma-471205-j1).
    `/logo-demo`. One PR, pure deletion, no behavior change.
 8. **Add `cryptography` to requirements.txt** (imported at app.py:14, currently only a
    transitive dep — a resolver change breaks startup).
-9. **Fix Dockerfile PORT** (binds hardcoded 8080, ignores `$PORT`) and consider
-   `--workers 2` to use the second CPU.
+9. **Dockerfile PORT — promoted into P1.4**. The separate option to use `--workers 2`
+   on the second CPU remains unimplemented and must be evaluated independently.
 10. **Frontend build risk**: `useSearchParams()` without a `<Suspense>` boundary
     (app/page.js:877) — breaks/deopts `next build` on Next 15. Wrap it.
 11. **Vercel/Capacitor cleanup**: `tafsir-simplified-app.vercel.app` is 404 (dead), but
@@ -121,6 +123,24 @@ unused project (candidates: synapse-demo-471205, vertical-karma-471205-j1).
     repo (fallback path always taken) — either ship it or delete the load path.
 
 ## Session log
+
+### 2026-08-01 — GPT 5.6: P1.4 timeout-stack alignment
+- **Branch/commit:** `codex/p1-4-timeout-stack` / `2f0c4a3`
+  (`Align backend timeout budget`), branched directly from updated `main`.
+- **Changed:** `backend/Dockerfile` — Gunicorn timeout 120 → 300; bind now expands
+  `${PORT:-8080}` through `sh -c`, with `exec` preserving direct signal delivery.
+  Worker/thread counts remain exactly 1/8. `backend/app.py` — main Gemini attempts
+  reduced from four to two without restructuring the existing timeout/429/503 paths.
+- **Budget:** two 120-second request attempts plus the only intervening backoff of
+  2 seconds = 242 seconds worst case, leaving about 58 seconds under both 300-second
+  Gunicorn and Cloud Run limits for retrieval, prompt construction, parsing, and response.
+- **Verified:** `py -3 -m py_compile backend/app.py` and `git diff --check` pass; traced
+  timeout, 429, and 503 branches to confirm their existing terminal behavior remains.
+  **Not run:** Docker image build/container startup (Docker and local `sh` unavailable),
+  full backend startup, or HTTP tests. No deploy or GCP access performed.
+- No `SCHOLARLY_PIPELINE_VERSION` bump: response shape/pipeline is unchanged.
+- **Deployment:** requires a backend image rebuild and manual deploy by Claude/Ahmed.
+  **Next:** publish the P1.4 draft PR, then branch P1.5 directly from updated `main`.
 
 ### 2026-08-01 (late) — Claude: P1.2 + P1.3 reviewed, merged, deployed
 - Reviewed PRs #30/#31: both minimal and correctly placed. Verified GPT's audit
