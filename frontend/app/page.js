@@ -1274,16 +1274,25 @@ function MainApp({ user, userProfile, onResetProfile, isGuest = false, onGuestSi
         signal: abortControllerRef.current.signal
       });
 
-      const data = await res.json();
+      if (!res.ok) {
+        if (res.status === 429) {
+          setRateLimitWarning(isGuest
+            ? 'Guest limit reached. Create a free account for more queries!'
+            : 'You have reached your query limit. Please try again later.');
+          return;
+        }
 
-      if (res.status === 429) {
-        setRateLimitWarning(isGuest
-          ? 'Guest limit reached. Create a free account for more queries!'
-          : 'You have reached your query limit. Please try again later.');
-        return;
+        let errorMessage = `The server had a problem (${res.status}). Please try again in a moment.`;
+        try {
+          const errorData = await res.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch {
+          // Response body was not JSON — use the status-based message
+        }
+        throw new Error(errorMessage);
       }
 
-      if (!res.ok) throw new Error(data.error || 'Unknown error fetching Tafsir.');
+      const data = await res.json();
 
       // Check if backend needs clarification (fuzzy match suggestions)
       if (data.needs_clarification) {
@@ -1320,9 +1329,11 @@ function MainApp({ user, userProfile, onResetProfile, isGuest = false, onGuestSi
         return;
       }
       // Improve error message for user
-      const errorMessage = err.message.includes('Internal server error')
-        ? 'The server encountered an issue. Please try again in a moment.'
-        : err.message;
+      const errorMessage = err instanceof TypeError
+        ? "Can't reach the server — check your connection and try again."
+        : err.message.includes('Internal server error')
+          ? 'The server encountered an issue. Please try again in a moment.'
+          : err.message;
       setError(errorMessage);
       // Save failed query to history too (authenticated users only)
       if (!isGuest) {

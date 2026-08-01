@@ -88,10 +88,12 @@ unused project (candidates: synapse-demo-471205, vertical-karma-471205-j1).
    Gunicorn now uses timeout 300 and `${PORT:-8080}`; the main Gemini call permits two
    total attempts. Worst network budget is `120s + 2s + 120s = 242s`, leaving about
    58 seconds inside the Gunicorn/Cloud Run limit for application overhead.
-5. **Frontend: `res.json()` before `res.ok`** (frontend/app/page.js:1277 vs :1286) —
-   users see raw `Unexpected token '<' …` / `Failed to fetch` when backend errors.
-   Parse defensively and show one friendly message. Also add a global backend-down
-   banner instead of 31 empty catch blocks rendering empty states.
+5. **Frontend: defensive `/tafsir` error handling** — **CODE COMPLETE 2026-08-01 on
+   `codex/p1-5-tafsir-errors` (`58df38d`); awaiting review/frontend deploy**:
+   non-success responses are checked before parsing, JSON backend errors (including
+   P1.2's 502) are preserved, non-JSON failures get a status-based message, and fetch
+   `TypeError` failures get a friendly connection message. Existing 429 and timeout
+   messages are unchanged. The global backend-down banner remains a separate future task.
 
 ### P2 — planned work
 6. **Gemini migration (deadline mid-Oct 2026)**: `gemini-2.5-flash` → `gemini-3.6-flash`,
@@ -141,6 +143,36 @@ unused project (candidates: synapse-demo-471205, vertical-karma-471205-j1).
 - No `SCHOLARLY_PIPELINE_VERSION` bump: response shape/pipeline is unchanged.
 - **Deployment:** requires a backend image rebuild and manual deploy by Claude/Ahmed.
   **Next:** publish the P1.4 draft PR, then branch P1.5 directly from updated `main`.
+
+### 2026-08-01 — GPT 5.6: P1.5 `/tafsir` frontend errors
+- **Branch/commit:** `codex/p1-5-tafsir-errors` / `58df38d`
+  (`Handle tafsir request failures`), branched directly from updated `main`, independently
+  of P1.4.
+- **Changed:** `frontend/app/page.js` only for application code — the main `/tafsir`
+  handler now checks `res.ok` before JSON parsing. On failure it preserves the existing
+  429 warning, otherwise parses a backend `error` inside a guarded block and falls back
+  to `The server had a problem (<status>). Please try again in a moment.` Network
+  `TypeError` failures map to `Can't reach the server — check your connection and try
+  again.` Existing abort/timeout handling and failed-query history behavior remain.
+- **Code trace:** P1.2's JSON 502 message flows through the guarded error parse and is
+  shown verbatim; HTML/non-JSON 502/503/504 bodies use the status fallback; fetch
+  rejection uses the connection message; successful responses parse exactly once.
+- **Verified:** full `npm run lint` passes. `npm run build` exits 0 after compiling,
+  type-checking, and generating all 15 pages, but prints a trailing
+  `ReferenceError: window is not defined` after the route summary; left untouched as an
+  unrelated existing issue. `git diff --check` passes.
+- **Dependency caveat:** initial `npm ci` failed because the checked-in lockfile is
+  already missing optional Sharp/resolver packages required by `package.json`.
+  Verification used `npm install --no-package-lock`; no package or lockfile changes were
+  made. No dependencies were added or upgraded in the PR.
+- **Not run:** browser-level forced 502/503/network-disconnect tests. No deploy or GCP
+  access performed. P1.5 requires a manual frontend deploy by Claude/Ahmed after merge.
+- **Residual timeout mismatch (not changed):** the frontend abort timer remains 180
+  seconds (page.js:1248), while P1.4's bounded backend worst case is 242 seconds. The UI
+  can therefore abort before the backend's terminal retry response. Aligning that timer
+  was outside both scoped fixes and should be explicitly prioritized or accepted.
+- **P1.4:** draft PR #32 is open separately. **Next:** publish the P1.5 draft PR for
+  Claude review.
 
 ### 2026-08-01 (late) — Claude: P1.2 + P1.3 reviewed, merged, deployed
 - Reviewed PRs #30/#31: both minimal and correctly placed. Verified GPT's audit
