@@ -1,5 +1,74 @@
 # Prompts for GPT 5.6
 
+## Session 3 prompt (2026-08-01, after P1.2/P1.3) — copy the block below
+
+---
+
+You are GPT 5.6, main coder for Tadabbur (Claude = architect/reviewer, Ahmed =
+owner). Continuation session. First: `git pull` and read `HANDOFF.md` — P1.2 (#30)
+and P1.3 (#31) were both approved with no changes, merged to `main`, and deployed
+as revision `tafsir-backend-00259-zj6`. P1.3 was verified end-to-end in production
+(guest cache doc confirmed under `curious_explorer/beginner` via direct Firestore
+query; repeat guest query now hits in ~0.1s). Your audit correction was
+independently verified and accepted. P1.2 and P1.3 are closed.
+
+This session: **P1.4 and P1.5** — one branch + PR each.
+
+**P1.4 — timeout stack fix** (branch `codex/p1-4-timeout-stack`, backend only):
+- Bug: `backend/Dockerfile` runs gunicorn with `--timeout 120`, but a single main
+  Gemini call already has `timeout=120` (requests) and the retry loop (~app.py
+  7100-7140 — find `for attempt in range` near the main generateContent call)
+  allows 4 attempts with 2/4/8/16s sleeps → worst case far exceeds both gunicorn
+  120s and Cloud Run's 300s. Requests that hit even one retry die at the worker
+  and the client sees a connection reset instead of the app's 503.
+- Fix, two parts:
+  1. Dockerfile: `--timeout 300` (match Cloud Run), and while you're in the CMD
+     line, bind to `${PORT}` with an 8080 default instead of hardcoded 8080 —
+     note the CMD is currently exec-form JSON, which does NOT expand env vars;
+     switch to shell form (`CMD gunicorn --bind 0.0.0.0:${PORT:-8080} ...`) or
+     keep exec form via `sh -c`. This PORT fix is explicitly authorized here
+     (promoted from P2.9); do NOT also change worker/thread counts.
+  2. Retry budget: cap the main-call retry loop so worst case fits inside 300s
+     with margin — e.g. 2 attempts max (120 + backoff + 120 ≈ 245s) or lower the
+     per-attempt `timeout=` so 3 attempts fit. State the arithmetic for your
+     chosen budget in the PR/HANDOFF. Keep the existing 429/503 handling
+     behavior; do not restructure the loop.
+- No response-shape change → no pipeline-version bump.
+
+**P1.5 — frontend /tafsir error handling** (branch `codex/p1-5-tafsir-errors`,
+frontend only):
+- Bug: `frontend/app/page.js` — in the main search submit handler, `const data =
+  await res.json()` runs BEFORE the `res.ok` check (~:1277 vs ~:1286). When the
+  backend returns a non-JSON body (Cloud Run 502/503/504 HTML, cold start, error
+  pages), users see the raw parser error rendered in the UI, e.g.
+  `Unexpected token '<', "<!DOCTYPE"... is not valid JSON`. When the network is
+  down they see literally `Failed to fetch`.
+- Fix, scoped to the /tafsir call path only:
+  1. Check `res.ok` FIRST. On failure, attempt `await res.json()` inside its own
+     try/catch to extract a server-provided `error` message; if parsing fails,
+     fall back to a friendly generic message keyed off status ("The server had a
+     problem (503). Please try again in a moment.").
+  2. In the outer catch, map `TypeError` / fetch-rejection to a friendly
+     "Can't reach the server — check your connection and try again." Keep the
+     existing 429 message and the existing timeout/abort message exactly as is.
+  3. Handle the new backend 502 from P1.2 (`{"error": "AI returned a malformed
+     response. Please try again."}`) by showing that message.
+- Do NOT attempt the global backend-down banner or touch the other ~30 catch
+  blocks — that's a separate future task. No new dependencies, no refactor of the
+  3,000-line page.js beyond this handler.
+- Verification: try `npm run build` in frontend/ if Node is available. KNOWN
+  ISSUE: the build may fail on a pre-existing `useSearchParams()`-without-
+  Suspense problem (queued as P2.10) — if it does, report that honestly and do
+  not fix it in this PR; verify by lint + code trace instead.
+
+For each fix: state your plan in 2-3 sentences first, implement, then list exactly
+what you verified vs could not run. Update `HANDOFF.md` (status + Session log with
+branches/commits). Do not deploy; do not touch gcloud (deploys are Claude/Ahmed's
+step — note P1.4 needs an image rebuild and P1.5 a frontend deploy). No drive-by
+refactors; match existing code style. Line numbers drift — trust the code.
+
+---
+
 ## Session 2 prompt (2026-08-01, after P1.1) — copy the block below
 
 ---
