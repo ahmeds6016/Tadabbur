@@ -7054,7 +7054,8 @@ def tafsir_handler_enhanced():
                 context_by_source[source_name] = ["\n\n".join(context_parts)] if context_parts else []
 
         # Get user profile for persona
-        user_profile = get_user_profile(user_id)
+        if user_id:
+            user_profile = get_user_profile(user_id)
 
         # Build prompt for AI formatting
         arabic_text = get_arabic_text_from_verse_data(verse_data)

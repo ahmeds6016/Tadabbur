@@ -73,12 +73,16 @@ unused project (candidates: synapse-demo-471205, vertical-karma-471205-j1).
    `if not final_json` guard never fires and garbage gets cached forever (memory +
    Firestore). Check `metadata.extraction_error` instead (the `/debug/test` handler
    at :7406 already does this correctly) and return 502 without caching.
-3. **Fix guest cache key mismatch** (app.py:7013): `user_profile = get_user_profile(None)`
-   returns `{}` for guests, overwriting the guest default profile set at :6849. Result:
-   guest cache is written under `practicing_muslim/intermediate` but read under
-   `curious_explorer/beginner` → guests never hit cache, every query pays a full LLM
-   call, and orphan cache docs pile up in Firestore. Guard: only overwrite when
-   `user_id` is truthy.
+3. **Fix guest cache key mismatch** — **CODE COMPLETE 2026-08-01 on
+   `codex/p1-3-guest-profile` (`53634e9`); awaiting review/deploy**:
+   `user_profile = get_user_profile(None)` returned `{}` for guests, overwriting the
+   guest default profile before prompt construction and the Firestore cache write.
+   Fixed by refreshing the profile only when `user_id` is truthy.
+   **Audit correction:** the in-memory cache key is computed before the overwrite, and
+   Firestore lookup retries with the default `practicing_muslim/intermediate` profile
+   after a guest-key miss (app.py:4269-4303). Therefore old mis-keyed documents can be
+   served via fallback, and not every repeated guest query necessarily incurred an LLM
+   call. No old documents were migrated or deleted.
 4. **Gunicorn/Cloud Run timeout mismatch**: gunicorn `--timeout 120` (Dockerfile) <
    worst-case Gemini call w/ retries (app.py:7064-7103). Raise gunicorn to 300 to match
    Cloud Run `--timeout 300`, and cap retries so worst case fits.
@@ -137,6 +141,30 @@ unused project (candidates: synapse-demo-471205, vertical-karma-471205-j1).
 - No `SCHOLARLY_PIPELINE_VERSION` bump: successful response shape/pipeline is unchanged.
 - **Next:** publish the P1.2 draft PR, then branch P1.3 from updated `main` and preserve
   the guest default profile through prompt construction and cache writes.
+
+### 2026-08-01 — GPT 5.6: P1.3 guest profile preservation
+- **Branch/commit:** `codex/p1-3-guest-profile` / `53634e9`
+  (`Preserve guest tafsir profile`), branched directly from updated `main` as a separate
+  PR from P1.2.
+- **Changed:** `backend/app.py` only for application code — the later profile refresh is
+  now guarded by `if user_id`, so guests retain `curious_explorer` / `beginner` for the
+  prompt, persona limits, and new Firestore cache writes. Signed-in behavior is unchanged.
+- **Path trace:** guest defaults are set at app.py:6892-6896 and used for Firestore read
+  at :6906 and the memory key at :6927; the new guard at :7057 preserves them through
+  prompt construction at :7080, persona handling at :7188, memory storage under the
+  already-computed key at :7207, and Firestore storage at :7214.
+- **Audit correction:** the memory cache was already symmetric because its key was
+  computed before the clobber. Firestore also has a default-profile fallback at
+  app.py:4269-4303, so old mis-keyed documents are not guaranteed to be unread and can
+  prevent some repeat LLM calls. The scoped fix still corrects persona selection and all
+  newly generated Firestore keys. No cache migration/deletion was performed.
+- **Verified:** `py -3 -m py_compile backend/app.py` and `git diff --check` pass; the
+  guest and signed-in paths were traced directly as described above. **Not run:** full
+  local backend or HTTP tests, because runtime dependencies and GCP-backed startup
+  configuration are unavailable locally. No deploy or GCP access performed.
+- No `SCHOLARLY_PIPELINE_VERSION` bump: response shape is unchanged.
+- **P1.2:** draft PR #30 is open separately. **Next:** publish the P1.3 draft PR for
+  Claude review; deployment remains Ahmed's manual step after approval/merge.
 
 ### 2026-08-01 (evening) — Claude: P1.1 merged, deployed, verified
 - Merged `codex/p1-1-admin-endpoints` → `main` (66db496); pushed all branches.
