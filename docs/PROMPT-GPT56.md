@@ -1,4 +1,62 @@
-# Kickoff prompt for GPT 5.6 — copy everything below the line into a new session
+# Prompts for GPT 5.6
+
+## Session 2 prompt (2026-08-01, after P1.1) — copy the block below
+
+---
+
+You are GPT 5.6, main coder for Tadabbur (Claude = architect/reviewer, Ahmed =
+owner). Continuation session. First: `git pull` and read `HANDOFF.md` — your P1.1
+work was reviewed (approved, no changes), merged to `main` (66db496), deployed as
+Cloud Run revision `tafsir-backend-00258-q55`, and verified live: 403 without
+secret, 404 debug routes, `/tafsir` unaffected. P1.1 is closed.
+
+This session: **P1.2 and P1.3** — two small backend fixes, one branch + PR each,
+in `backend/app.py` only. Branch each from updated `main`.
+
+**P1.2 — stop caching malformed LLM output** (branch `codex/p1-2-extraction-guard`):
+- Bug: `extract_json_from_response` (~app.py:2879) can never return a falsy value
+  for non-empty model text — on total parse failure it returns a fallback dict
+  `{"response": text[:500], "sources": [], "verses": [], "metadata":
+  {"extraction_error": True, "fallback_used": True}}`. The guard in the /tafsir
+  handler (`if not final_json:` ~app.py:7122) is therefore dead, and the fallback
+  garbage flows through post-processing and gets written to BOTH caches (in-memory
+  ~:7162 and Firestore ~:7169) permanently.
+- Fix: in the /tafsir handler, after extraction, check
+  `final_json.get('metadata', {}).get('extraction_error')` (the `/debug/test`
+  handler ~:7406 already does this — copy that pattern). If set: log it, return
+  HTTP 502 with a clean JSON error (`{"error": "AI returned a malformed response.
+  Please try again."}`), and do NOT write either cache. Keep the existing
+  `if not final_json` check as a belt-and-braces guard.
+- Also cover the `MAX_TOKENS` path: finish reason MAX_TOKENS (~:7109) currently
+  counts as success and produces truncated JSON that lands in the same fallback.
+  Treating extraction_error as fatal covers it — just confirm by tracing the path.
+- Response shape unchanged on success → NO pipeline-version bump.
+
+**P1.3 — guest cache key mismatch** (branch `codex/p1-3-guest-profile`):
+- Bug: ~app.py:7013 `user_profile = get_user_profile(user_id)` runs for everyone;
+  for guests `user_id` is None and `get_user_profile(None)` returns `{}` (~:3735),
+  clobbering the guest default profile set earlier (~:6849,
+  persona=curious_explorer / knowledge_level=beginner). Consequence: cache READ
+  (~:6862) uses the guest defaults but cache WRITE (~:7169) uses `{}` → Firestore
+  key defaults (~:4163) to practicing_muslim/intermediate. Guests can never hit
+  their own cache; every guest query is a full paid LLM call; prompt persona also
+  silently changes.
+- Fix: only call `get_user_profile` when `user_id` is truthy — otherwise keep the
+  already-set guest profile. One-line guard; touch nothing else.
+- After this fix, cached guest entries will be written under the guest-default
+  keys. Old orphan docs stay harmlessly unread; do not migrate them.
+
+For each fix: state your plan in 2-3 sentences first, implement, then list exactly
+what you verified (at minimum: file compiles; trace the code path by reading it;
+you cannot run the backend locally — say so honestly rather than claiming tests
+ran). Update `HANDOFF.md` (mark task status, add a Session log entry naming your
+branches/commits). Do not deploy; do not touch gcloud; no drive-by refactors; match
+existing code style. If anything in the code contradicts the line numbers above
+(they can drift), trust the code and note the correction.
+
+---
+
+## Kickoff prompt (2026-08-01, initial) — P1.1
 
 ---
 
