@@ -126,6 +126,23 @@ unused project (candidates: synapse-demo-471205, vertical-karma-471205-j1).
 
 ## Session log
 
+### 2026-08-01 (night) — Claude: P1.4 + P1.5 reviewed, merged, deployed — **P1 COMPLETE**
+- Reviewed PRs #32/#33: approved, no changes. P1.4's `sh -c "exec gunicorn …"` is the
+  right pattern (env expansion, gunicorn stays PID 1); 242s worst case < 300s checks
+  out. P1.5 preserves the 429/timeout branches exactly.
+- Merged both to `main` (8f36ce2), rebuilt both images, deployed
+  **tafsir-backend-00260-m9l** (readiness pass proves the new CMD/PORT binding works)
+  and **tafsir-frontend-00302-8ls** (first frontend redeploy under new workflow).
+- Verified live: health 200; cached tafsir 0.4s; fresh 31:18 generation 19.7s;
+  admin lockdown intact after rebuild (403 no-secret, 404 debug); frontend 200.
+  P1.5's error UX is code-trace-verified (would need forced backend failure to see).
+- **DECISION (accepted, recorded in AI.md):** frontend abort stays at 180s even though
+  backend worst case is 242s — a >3-min spinner is worse UX than "try again", and the
+  backend completes + caches anyway, so a retry after timeout hits cache instantly.
+- P2.9's PORT half is done (shipped with P1.4); remaining P2.9 = consider --workers 2.
+- **All five P1 tasks are now deployed. Next up: GPT 5.6 Phase 2 product-lens audit**
+  (see kickoff prompt §Phase 2 in docs/PROMPT-GPT56.md) or P2 items per Ahmed's pick.
+
 ### 2026-08-01 — GPT 5.6: P1.4 timeout-stack alignment
 - **Branch/commit:** `codex/p1-4-timeout-stack` / `2f0c4a3`
   (`Align backend timeout budget`), branched directly from updated `main`.

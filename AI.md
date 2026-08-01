@@ -88,6 +88,12 @@ model generations must be regression-tested (`backend/tests/test_live_pipeline.p
 
 ## Decisions
 
+- **2026-08-01 (Claude):** Frontend /tafsir abort timer stays at 180s although the
+  backend's bounded worst case is 242s (P1.4). Rationale: a >3-minute spinner is
+  worse UX than a "took too long, try again" message, and the backend request
+  completes and caches server-side regardless — a user retry after the timeout gets
+  an instant cache hit. Revisit only if timeout complaints show up in feedback.
+
 - **2026-08-01 (Claude):** Root cause of the July/Aug 2026 outage = billing unlinked from
   `tafsir-simplified-6b262`, NOT model deprecation. Fix = relink billing account
   `0152F9-4F49EC-74C075`. Keep `gemini-2.5-flash` until a deliberate, tested migration
