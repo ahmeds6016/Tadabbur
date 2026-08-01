@@ -7170,6 +7170,12 @@ def tafsir_handler_enhanced():
                     "error_type": "json_parse_error"
                 }), 500
 
+            if final_json.get('metadata', {}).get('extraction_error'):
+                print(f"❌ Gemini returned malformed JSON; refusing to cache fallback response")
+                return jsonify({
+                    "error": "AI returned a malformed response. Please try again."
+                }), 502
+
             final_json["query_type"] = "direct_verse"
             final_json["verse_reference"] = f"{surah}:{verse}"
 
