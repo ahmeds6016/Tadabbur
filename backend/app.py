@@ -7104,7 +7104,7 @@ def tafsir_handler_enhanced():
         }
 
         # Retry with exponential backoff
-        max_retries = 4
+        max_retries = 2
 
         for attempt in range(max_retries):
             retry_delay = 2 ** (attempt + 1)
