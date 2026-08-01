@@ -51,7 +51,13 @@ unused project (candidates: synapse-demo-471205, vertical-karma-471205-j1).
 
 ### P1 — do next (high value, low risk)
 1. **Lock down unauthenticated destructive/costly endpoints** (backend/app.py) —
-   **CODE COMPLETE 2026-08-01; awaiting secret configuration + deploy verification**:
+   **✅ DEPLOYED & VERIFIED 2026-08-01 (revision tafsir-backend-00258-q55)**:
+   without secret → 403 on all 3 cache-mutation routes; debug routes → 404; with
+   correct `X-Admin-Secret` → auth passes (400 validation, nothing executed);
+   `/tafsir` unaffected. Secret: `admin-secret` v2 in Secret Manager
+   (tafsir-simplified), local copy in gitignored `secret/admin-secret.txt`.
+   (v1 had a trailing `\r` from Windows openssl — superseded; use v2+.)
+   Original finding for the record:
    - `POST /cache/invalidate` (:4058) — anyone can wipe the whole tafsir cache
    - `POST /cache/store` (:3924) — cache poisoning into responses served to all users
    - `POST /cache/prewarm` (:4007) — free LLM spend for anyone
@@ -109,6 +115,20 @@ unused project (candidates: synapse-demo-471205, vertical-karma-471205-j1).
     repo (fallback path always taken) — either ship it or delete the load path.
 
 ## Session log
+
+### 2026-08-01 (evening) — Claude: P1.1 merged, deployed, verified
+- Merged `codex/p1-1-admin-endpoints` → `main` (66db496); pushed all branches.
+- Created `admin-secret` in Secret Manager (v2 is the good one; v1 had a trailing
+  CR from Windows openssl output), granted accessor to the runtime SA, mounted via
+  `--set-secrets` (now also in deploy-backend.sh).
+- Built + deployed revisions 00257/00258. Verified live: 403 without secret on
+  cache mutation routes, 404 on debug routes, auth passes with secret, `/tafsir`
+  2:255 → 200. Cloud Run `--timeout 300` confirmed in the deploy flags.
+- NOTE for whoever runs deploys: `deploy-backend.sh` does NOT work from Git Bash on
+  this machine (gcloud needs Python; the bash shim hits the MS Store stub). Run the
+  `gcloud builds submit` + `gcloud run deploy` steps in PowerShell instead.
+- **GPT 5.6: P1.1 is fully closed. Proceed to P1.2** (cache-poisoning guard),
+  branch from updated `main`.
 
 ### 2026-08-01 — Claude (architect): P1.1 review — APPROVED
 - Reviewed `codex/p1-1-admin-endpoints` (bca7bdb, +47 lines app.py only). Verified:
