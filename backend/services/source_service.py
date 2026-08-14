@@ -1571,6 +1571,10 @@ def plan_scholarly_retrieval_deterministic(surah_number, verse_start, verse_end,
         # Start with pre-computed pointers as primary
         pointers = list(precomputed["pointers"])
         existing = set(pointers)
+        pointer_methods = {
+            pointer: "surah_overview" if pointer.startswith("thematic:") else "verse_plan"
+            for pointer in pointers
+        }
         reasoning = f"precomputed: {precomputed.get('reasoning', '')}"
 
         # Ensure asbab + thematic are always present
@@ -1580,6 +1584,9 @@ def plan_scholarly_retrieval_deterministic(surah_number, verse_start, verse_end,
             if must_have not in existing and len(pointers) < MAX_POINTERS:
                 pointers.insert(0, must_have)
                 existing.add(must_have)
+                pointer_methods[must_have] = (
+                    "surah_overview" if must_have.startswith("thematic:") else "verse_plan"
+                )
 
         # --- Fallback merge: add unique keyword matches not in pre-computed ---
         search_text = f"{verse_text} {ibn_kathir_summary}".lower()
@@ -1595,6 +1602,7 @@ def plan_scholarly_retrieval_deterministic(surah_number, verse_start, verse_end,
                     if kw in search_text:
                         pointers.append(pointer)
                         existing.add(pointer)
+                        pointer_methods[pointer] = "keyword"
                         kw_additions += 1
                         break
 
@@ -1605,12 +1613,18 @@ def plan_scholarly_retrieval_deterministic(surah_number, verse_start, verse_end,
             if vp not in existing and len(pointers) < MAX_POINTERS:
                 pointers.append(vp)
                 existing.add(vp)
+                pointer_methods[vp] = "verse_plan"
                 vm_added += 1
 
         if kw_additions or vm_added:
             reasoning += f" + {kw_additions} keyword, {vm_added} verse-map additions"
 
-        return {"pointers": pointers[:MAX_POINTERS], "reasoning": reasoning}
+        final_pointers = pointers[:MAX_POINTERS]
+        return {
+            "pointers": final_pointers,
+            "reasoning": reasoning,
+            "pointer_methods": {p: pointer_methods[p] for p in final_pointers},
+        }
 
     # --- Stage 1: Keyword matching (no pre-computed plan available) ---
     # Always include asbab + thematic
@@ -1618,6 +1632,10 @@ def plan_scholarly_retrieval_deterministic(surah_number, verse_start, verse_end,
         f"asbab:surah={surah_number}:verse={verse_start}",
         f"thematic:surah={surah_number}:section=0",
     ]
+    pointer_methods = {
+        pointers[0]: "verse_plan",
+        pointers[1]: "surah_overview",
+    }
 
     # Build combined search text (lowercase)
     search_text = f"{verse_text} {ibn_kathir_summary}".lower()
@@ -1640,6 +1658,7 @@ def plan_scholarly_retrieval_deterministic(surah_number, verse_start, verse_end,
             if kw in search_text:
                 pointers.append(pointer)
                 ihya_added.add(pointer)
+                pointer_methods[pointer] = "keyword"
                 matched_keywords.append(kw)
                 break
 
@@ -1655,6 +1674,7 @@ def plan_scholarly_retrieval_deterministic(surah_number, verse_start, verse_end,
             if kw in search_text:
                 pointers.append(pointer)
                 madarij_added.add(pointer)
+                pointer_methods[pointer] = "keyword"
                 matched_keywords.append(kw)
                 break
 
@@ -1670,6 +1690,7 @@ def plan_scholarly_retrieval_deterministic(surah_number, verse_start, verse_end,
             if kw in search_text:
                 pointers.append(pointer)
                 riyad_added.add(pointer)
+                pointer_methods[pointer] = "keyword"
                 matched_keywords.append(kw)
                 break
 
@@ -1687,9 +1708,67 @@ def plan_scholarly_retrieval_deterministic(surah_number, verse_start, verse_end,
         if vp not in existing and len(pointers) < MAX_POINTERS:
             pointers.append(vp)
             existing.add(vp)
+            pointer_methods[vp] = "verse_plan"
             vm_added += 1
 
     if vm_added:
         reasoning += f" + {vm_added} verse-map refs"
 
-    return {"pointers": pointers, "reasoning": reasoning}
+    return {
+        "pointers": pointers,
+        "reasoning": reasoning,
+        "pointer_methods": pointer_methods,
+    }
+
+
+def build_source_coverage(surah_number, verse_start, verse_end, sources_used,
+                          pointer_methods=None):
+    """Build deterministic user-facing coverage from the resolved retrieval plan."""
+    qurtubi_available = (
+        surah_number < 4
+        or (surah_number == 4 and (verse_end or verse_start) <= 22)
+    )
+
+    if pointer_methods is None:
+        pointer_methods = {}
+        precomputed = get_precomputed_plan(surah_number, verse_start)
+        for pointer in (precomputed or {}).get("pointers", []):
+            pointer_methods[pointer] = (
+                "surah_overview" if pointer.startswith("thematic:") else "verse_plan"
+            )
+        for pointer in _get_verse_map_pointers(surah_number, verse_start):
+            pointer_methods.setdefault(pointer, "verse_plan")
+
+    additional_sources = []
+    method_priority = ("verse_plan", "keyword", "surah_overview")
+    for source in sources_used or []:
+        if not isinstance(source, dict):
+            continue
+        source_key = source.get("key")
+        source_name = source.get("name")
+        if not source_key or not source_name:
+            continue
+
+        methods = {
+            method
+            for pointer, method in pointer_methods.items()
+            if pointer.startswith(f"{source_key}:")
+        }
+        if source_key == "thematic":
+            method = "surah_overview"
+        else:
+            method = next((item for item in method_priority if item in methods), "keyword")
+        additional_sources.append({"name": source_name, "method": method})
+
+    notices = []
+    if not qurtubi_available:
+        notices.append("Al-Qurtubi is not available in this corpus for this verse.")
+
+    return {
+        "classical": {
+            "ibn_kathir": True,
+            "al_qurtubi": qurtubi_available,
+        },
+        "additional_sources": additional_sources,
+        "notices": notices,
+    }

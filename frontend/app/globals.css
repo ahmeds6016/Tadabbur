@@ -1131,6 +1131,18 @@ button:hover:not(:disabled) {
   letter-spacing: 0.01em;
 }
 
+.source-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 9px;
+  border: 1px solid var(--color-border-light);
+  border-radius: 999px;
+  background: var(--color-surface-alt, #f8fafc);
+  color: var(--color-text, #374151);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
 /* ============================================================================
    VERSE CARDS
    ============================================================================ */
