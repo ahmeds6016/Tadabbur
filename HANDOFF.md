@@ -133,7 +133,10 @@ Q9. **CODE COMPLETE 2026-08-13 — Persona learning contracts**
     (`codex/s6-personas`; awaiting review/backend deploy). All five personas now
     receive distinct learning behavior plus shared meaning-first and verse-specific
     reflection requirements. Pipeline version is `14.0`.
-Q10+ Remaining findings (10-11, 13) stay in the review doc; promote after the above.
+Q10. **CODE COMPLETE 2026-08-13 — Curated theme entry point**
+    (`codex/s6-themes`; awaiting review/frontend deploy). The home search surface now
+    offers eight editorial themes that lead directly into ordinary verse queries.
+Q11+ Remaining findings (11, 13) stay in the review doc; promote after the above.
 Q12. **CODE COMPLETE 2026-08-13 — Study-centered streaks and progress**
     (`codex/s6-streaks`; awaiting review/frontend deploy). Reflection saves and
     completed reading-plan days now count as daily learning activity; the progress
@@ -179,6 +182,20 @@ Q14. **CODE COMPLETE 2026-08-13 — Reliability quick wins**
     load branch; startup now directly precomputes from the already-loaded tafsir chunks.
 
 ## Session log
+
+### 2026-08-13 — GPT 5.6: Session 6 Unit 8 — Explore a theme
+- **Branch/commit:** `codex/s6-themes` / `Add curated theme exploration`.
+- **Catalog:** exported eight curated themes from the picker’s quick-select catalog:
+  Patience, Gratitude, Forgiveness, Grief & Hope, Trust in Allah, Prayer, Family,
+  and Justice. Added four missing singular quick-select references (`93:3`, `21:83`,
+  `20:14`, `29:45`) so grief/hope and prayer have clear editorial entry points.
+- **Experience:** choosing a theme reveals three or four verse cards under the
+  explicit “Editorial suggestions” label. Each card has a one-line description and
+  selection runs the same hidden-form tafsir query path as the existing picker.
+- **Scope/verified:** no free-text semantic search, backend, model, or pipeline change.
+  Verified all eight catalog IDs and absence of model/semantic additions by grep,
+  `git diff --check`, and `npm run build` (exit 0). The known trailing `window is not
+  defined` diagnostic remains. No browser interaction test or deploy was performed.
 
 ### 2026-08-13 — GPT 5.6: Session 6 Unit 7 — Persona learning contracts
 - **Branch/commit:** `codex/s6-personas` / `Define testable persona learning contracts`.
