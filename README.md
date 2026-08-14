@@ -1,111 +1,108 @@
 # Tadabbur (تدبّر)
 
-An AI-powered Qur'anic reflection app that brings classical tafsir scholarship to life through personalized, accessible explanations. Named after the Qur'anic concept of deep reflection (4:82, 47:24).
+Tadabbur is an AI-assisted Qur'an study app that helps readers understand verses
+through classical tafsir and turn that understanding into personal reflection. Its name
+comes from the Qur'anic call to deep reflection (4:82, 47:24).
 
-## Features
+## What readers can do
 
-### Core Tafsir Engine
-- **Verse-by-verse tafsir** — Select any verse or verse range via surah/verse dropdown and receive AI-generated tafsir explanations
-- **Multi-source scholarly content** — Ibn Kathir, Al-Qurtubi, Asbab Al-Nuzul, Thematic Commentary, Ihya Ulum Al-Din, Madarij Al-Salikin, and Riyad Al-Saliheen
-- **Adaptive personas** — Choose from 6 learning personas (Curious Explorer, Practicing Muslim, Scholar, Parent/Educator, Spiritual Seeker, New Muslim) that tailor explanation depth and tone
-- **Deterministic scholarly pipeline** — Pure keyword matching for reliable source retrieval (no LLM routing)
-- **Tabbed response view** — Verses (Arabic + English), Tafsir Explanations, Cross-References, Lessons & Practical Applications, Summary, and Hadith references
+- Study any verse or supported range with Arabic, translation, and commentary grounded
+  in Ibn Kathir, al-Qurtubi (through 4:22), Asbab al-Nuzul, thematic commentary, Ihya
+  Ulum al-Din, Madarij al-Salikin, and Riyad al-Salihin.
+- See a deterministic "Sources used for this answer" panel, including a neutral notice
+  when al-Qurtubi is unavailable in the local corpus.
+- Choose one of five learning approaches: New Revert, Curious Explorer, Practicing
+  Muslim, Student, or Advanced Learner.
+- Read verse-specific reflection questions as a guest; signing in is required only to
+  save a reflection.
+- Start from eight curated theme chips and continue through up to three related-verse
+  recommendations after each answer.
+- Save answers, organize them into folders, and create public share links. Shared pages
+  are server snapshots of version-matched cached answers—not caller-supplied content.
+- Follow reading plans, mark days complete, track verses studied and reflections, and
+  earn gentle activity streaks and badges.
+- Use the responsive mobile/desktop UI, system dark mode, keyboard navigation, and the
+  Capacitor iOS wrapper.
 
-### Daily Verse & Streaks
-- **Daily Verse** — Curated pool of verses, one per day, displayed on the homepage
-- **Streaks** — Track daily engagement with current and longest streak
+Hadith text is validated against the supplied source excerpts before an answer can be
+cached or displayed. The Iman Journal backend remains in the repository, but its
+frontend experience is suspended and is not part of the shipped navigation.
 
-### Reading Plans
-- **Reading Plans** — Structured journeys through the Qur'an with daily verse assignments
-- **Progress tracking** — Day-by-day completion with "Study Verse" and "Complete Day" actions
-- **Browse & start** — Filter plans by category, view descriptions, and activate
-
-### Reflections (Annotations)
-- **5 reflection types** — Insight, Question, Application, Dua/Prayer, and Connection
-- **Inline capture** — Add reflections while viewing tafsir via floating button
-- **Tags** — Organize reflections with custom tags
-- **Search & filter** — Filter by type, tag, or keyword across all reflections
-- **Dedicated reflections page** — Browse, search, and manage all saved reflections
-
-### Progress & Badges
-- **114-Surah Progress Map** — Visual grid showing exploration progress across the entire Qur'an (6,236 verses)
-- **Color-coded tiles** — Gray (unexplored) through gold (100% complete) with glow effects
-- **Badges** — Awarded automatically as milestones are reached
-
-### Save & Share
-- **Save tafsir responses** — Bookmark answers and organize into custom folders
-- **Share links** — Generate public shareable links for any tafsir response with view counts
-- **Query history** — Browse and re-run past searches (up to 50 recent)
-
-### Guest Browsing
-- **Explore without signing up** — Guest users can search tafsir and view daily verse
-- **Soft sign-up nudge** — After 3 queries, a gentle prompt to create an account
-- **Full access on sign-up** — Reflections, saved answers, and progress tracking require authentication
-
-### Navigation & Accessibility
-- **Responsive layout** — Bottom nav on mobile, collapsible sidebar on desktop
-- **Keyboard shortcuts** — Alt+H (Home), Alt+R (Plans), Alt+S (Saved), Alt+N (Reflections), Alt+P (Progress)
-- **Dark mode** — System-aware theme support
-- **iOS support** — Native wrapper via Capacitor
-
-## Tech Stack
+## Tech stack
 
 | Layer | Technology |
-|-------|-----------|
+|---|---|
 | Frontend | Next.js 15, React 19, Capacitor 8 |
-| Backend | Flask 3.0, Python 3.11, Gunicorn |
-| AI | Google Gemini 2.5 Flash (Vertex AI) |
-| Database | Cloud Firestore (7-day response cache) |
-| Auth | Firebase Authentication |
-| Infra | Google Cloud Run, Cloud Build, Cloud Storage, Secret Manager |
+| Backend | Flask 3, Python 3.11, Gunicorn |
+| AI | Gemini 3.6 Flash + Gemini 3.5 Flash Lite on Vertex AI's global endpoint (**canary-gated; not merged/deployed until validation passes**) |
+| Data | Firebase Auth; two Firestore databases; Cloud Storage source corpus |
+| Cache | Firestore tafsir cache, 90-day TTL, invalidated by scholarly pipeline version |
+| Infra | Google Cloud Run, Cloud Build, Secret Manager, Cloud Monitoring |
 
-## Project Structure
+Production is currently on pipeline `14.0`. The canary-gated model branch changes the
+generated-content pipeline to `15.0`; see [AI.md](AI.md) and [HANDOFF.md](HANDOFF.md)
+for the current merge/deploy gate.
 
-```
-├── frontend/          # Next.js app
-│   ├── app/           # Pages (home, progress, plans, saved, etc.)
-│   ├── app/components/# React components
-│   └── ios/           # Capacitor iOS project
-├── backend/
-│   ├── app.py         # Flask app + API endpoints
-│   ├── services/      # Scholarly source service, deterministic planner
-│   ├── data/
-│   │   ├── indexes/   # Precomputed scholarly indexes (~560 files)
-│   │   └── tafsir_sources/ # Source JSON data
-│   └── Dockerfile     # Python 3.11-slim container
-└── cloudbuild.yaml    # GCP Cloud Build config
-```
+## Repository map
 
-## Getting Started
-
-### Prerequisites
-- Node.js 20+
-- Python 3.11+
-- Google Cloud project with Vertex AI, Firestore, and Firebase enabled
-
-### Backend
-```bash
-cd backend
-pip install -r requirements.txt
-python app.py
+```text
+frontend/
+  app/                         Next.js routes and local-state UI
+  app/components/              Shared UI, source coverage, themes, recommendations
+  ios/                         Capacitor iOS wrapper
+backend/
+  app.py                       Flask application and API routes
+  services/source_service.py   Deterministic scholarly planning and coverage
+  services/hadith_validation.py Source-grounded hadith validation
+  services/persona_prompt_service.py Persona learning contracts
+  data/indexes/                Precomputed plans and local scholarly indexes
+deploy-backend.sh              Backend Cloud Build + Cloud Run flags
+deploy-frontend.sh             Frontend Cloud Build + Cloud Run flags
 ```
 
-### Frontend
-```bash
-cd frontend
+Architecture, GCP project ownership, cache rules, and model configuration are documented
+in [AI.md](AI.md). Current work and production revisions live in
+[HANDOFF.md](HANDOFF.md).
+
+## Local development
+
+Prerequisites: Node.js 20+, Python 3.11+, and npm. Full backend startup also requires
+Google Cloud application credentials plus the configured Firestore, Storage, and Secret
+Manager resources; the offline tests do not.
+
+```powershell
+py -3 -m pip install -r backend/requirements.txt
+py -3 -m pip install pytest
+py -3 -m pytest backend/tests -q
+```
+
+For frontend development, explicitly point Next.js at the intended backend so local work
+does not use the production fallback:
+
+```powershell
+Set-Content frontend/.env.local 'NEXT_PUBLIC_BACKEND_URL=http://localhost:8080'
+Set-Location frontend
 npm install
 npm run dev
 ```
 
-The frontend runs on `http://localhost:3000` and the backend on `http://localhost:8080`.
+Run `npm run build` before handing off frontend changes.
 
 ## Deployment
 
-The app deploys to Google Cloud Run via Cloud Build:
+Deployments are manual and owner-approved. The canonical build and Cloud Run flags are
+in `deploy-backend.sh` and `deploy-frontend.sh`:
 
 ```bash
-gcloud builds submit --config cloudbuild.yaml
+./deploy-backend.sh
+./deploy-frontend.sh
 ```
+
+On the current Windows workstation, the `gcloud` shim fails when these scripts are run
+from Git Bash because it resolves the Microsoft Store Python stub. Use the scripts as the
+source of truth, but run their `gcloud builds submit` and `gcloud run deploy` commands
+from PowerShell. Never deploy a model flip until the canary procedure in [AI.md](AI.md)
+passes.
 
 ## License
 

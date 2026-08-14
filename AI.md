@@ -15,24 +15,25 @@ AI-powered Qur'anic reflection app: user picks a verse (or range), backend assem
 classical tafsir excerpts (Ibn Kathir complete; al-Qurtubi through 4:22; Ihya, Madarij,
 Riyad al-Salihin via keyword routing) and has Gemini generate a persona-tailored
 explanation. Plus: daily verse, streaks, reading plans, reflections/annotations,
-progress map, badges, save/share, guest mode.
+progress map, badges, save/share, guest mode, curated themes, and follow-on verse
+recommendations. Hadith items are source-grounded before caching/display.
 
-## Architecture (verified 2026-08-01)
+## Architecture (verified 2026-08-13)
 
 ```
 Next.js 15 frontend (Cloud Run: tafsir-frontend, us-central1)
         │  fetch ${BACKEND_URL}/...  (frontend/app/lib/config.js:7)
         ▼
-Flask backend — backend/app.py, ~10,200 lines, 83 routes
+Flask backend — backend/app.py, ~9,800 lines, 83 routes
 (Cloud Run: tafsir-backend, project tafsir-simplified, us-central1)
         │
         ├── Firestore project tafsir-simplified-6b262  ← Firebase Auth + user data
-        │     ├── DB "(default)": users/*, annotations, shared_content, feedback
-        │     └── DB "tafsir-db": quran_texts (verse text!), tafsir_cache, popular_queries
+        │     ├── DB "(default)": users/*, annotations, saved searches, feedback
+        │     └── DB "tafsir-db": quran_texts, tafsir_cache, popular_queries, shared_content
         ├── GCS bucket tafsir-simplified-sources — 8 tafsir JSON blobs loaded at startup
         ├── Secret Manager — firebase-sa-key (service account for the 6b262 project)
-        └── Vertex AI (project tafsir-simplified) — Gemini via RAW REST calls
-              (no SDK at runtime; hand-rolled requests.post per call site)
+        └── Vertex AI (project tafsir-simplified) — Gemini via raw REST calls
+              (global endpoint on the canary-gated Gemini 3 branch)
 ```
 
 **Two GCP projects — do not confuse them:**
@@ -41,50 +42,97 @@ Flask backend — backend/app.py, ~10,200 lines, 83 routes
   linked** or every verse lookup 403s and the app reports "Verse not found".
 
 **Retrieval is deterministic, no vector search.** `_precomputed_scholarly_plans.json`
-(offline Gemini-generated plans, ~61% verse coverage) + keyword routing tables in
-`backend/services/source_service.py` + in-memory dict `VERSE_METADATA["{source}:{s}:{v}"]`.
-The vector-search env vars and docstrings are legacy; the index is not called anywhere.
+contains all 6,236 verse keys (6,170 Gemini-origin plans and 66 deterministic-only
+fallbacks). Keyword routing in `backend/services/source_service.py` remains the fallback;
+the same service constructs the additive `source_coverage` contract shown by the UI.
 
-### The hot path: POST /tafsir (app.py:6671)
+**Trust boundaries:** `backend/services/hadith_validation.py` drops hadith text that is
+not grounded in the supplied corpus excerpts. `POST /share` accepts only query/approach
+and snapshots a current-version server cache record; public pages never store or render a
+caller-provided tafsir response.
 
-parse → verse-ref extraction (app.py:1000) → rate limit (in-memory) → cache check
-(memory + Firestore) → verse text from Firestore `tafsir-db` (app.py:1264) → tafsir from
-in-memory dicts (app.py:2321) → scholarly excerpts (source_service.py) → prompt build
-(app.py:3376) → **Gemini REST call (app.py:7044-7103)** → JSON extraction (app.py:2879)
-→ post-filters → cache write + gamification.
+### The hot path: POST /tafsir
+
+parse → verse-ref extraction → in-memory rate limit → memory/Firestore cache → verse text
+from Firestore `tafsir-db` → local tafsir/scholarly retrieval → deterministic coverage →
+persona prompt → Gemini REST generation → JSON extraction → hadith grounding → post-filters
+→ 90-day/versioned cache write → progress/badge side effects.
 
 ### Gemini model configuration — single source of truth
 
 | Where | Value | Status |
 |---|---|---|
-| Cloud Run env `GEMINI_MODEL_ID` | `gemini-2.5-flash` | **what production runs** |
-| `app.py:110` default | `gemini-2.5-flash` | matches |
-| `deploy-backend.sh` | `gemini-2.5-flash` | fixed 2026-08-01 (was retired `gemini-2.0-flash`) |
-| `app.py:8811`, `app.py:9970` | `gemini-2.5-flash-lite` **hardcoded** | make env-configurable when migrating |
-| `config/settings.py:44` | `gemini-2.0-pro` | DEAD CODE — ignore |
+| Current production revision | `gemini-2.5-flash` / `gemini-2.5-flash-lite`, pipeline `14.0` | deployed and verified 2026-08-13 |
+| `codex/s7-model-flip` app defaults | `gemini-3.6-flash` / `gemini-3.5-flash-lite` | **pending canary validation** |
+| `codex/s7-model-flip` Vertex location | `GEMINI_API_LOCATION=global` | **pending canary validation; required for 3.6** |
+| `codex/s7-model-flip` deploy script | same model/location values, pipeline `15.0` | merge/deploy only after Claude approval |
 
-**Model deadline: `gemini-2.5-flash` retires Oct 16–20, 2026.** Migration target:
-`gemini-3.6-flash` (GA on Vertex) and `gemini-3.5-flash-lite` for the two -lite call
-sites. This is a planned, tested migration — see HANDOFF.md P1. Do not bump the model
-string casually: the tafsir prompt demands strict JSON and output-format drift between
-model generations must be regression-tested (`backend/tests/test_live_pipeline.py`).
+The model flip is canary-gated because 3.6 requires the global endpoint and thinking
+tokens change small-output behavior. Validate strict JSON and content with
+`backend/tests/golden_regression.py`; do not merge, deploy, or shift traffic from docs
+alone.
 
 ## Conventions & constraints
 
-- **Backend is a monolith on purpose (for now).** Don't start an incremental rewrite
-  inside `app.py`'s dead siblings (`app_optimized.py`, `config/settings.py`,
-  `services/cache_service.py`, etc. are an abandoned rewrite — treat as deletable, not
-  as a foundation).
-- **Frontend state = local useState + raw fetch.** `app/context/AppContext.jsx` and
-  `app/services/tafsirApi.{js,ts}` are dead (never mounted/imported). Either adopt them
-  deliberately in one PR or delete them — don't half-use.
+- **Backend is a monolith on purpose (for now).** The abandoned optimized-backend tree
+  was purged in Session 6; do not recreate an incremental sibling architecture without
+  an approved decision.
+- **Frontend state = local useState + raw fetch.** The unused AppContext/duplicate API
+  clients were purged. Add a shared state layer only through a deliberate architecture
+  decision, not one call site at a time.
 - Personas (backend keys): `new_revert, curious_explorer, practicing_muslim, student,
   advanced_learner`.
-- Cache invalidation: bump `SCHOLARLY_PIPELINE_VERSION` (app.py:159) when the response
-  shape or pipeline changes; Firestore cache entries have NO TTL.
+- Cache invalidation: bump `SCHOLARLY_PIPELINE_VERSION` when generated content or the
+  response pipeline materially changes. New Firestore cache documents set `expires_at`
+  to creation + 90 days; the Firestore TTL policy deletes them server-side.
 - Deploys: `./deploy-backend.sh` / `./deploy-frontend.sh` (gcloud builds submit + run
   deploy). No CI/CD; deploys are manual from a workstation with gcloud auth.
 - Windows dev machine; repo path `c:\Users\us88832\Desktop\tadabbur`.
+
+## Testing
+
+Run the complete offline backend suite from the repository root:
+
+```powershell
+py -3 -m pytest backend/tests -q
+```
+
+`codex/s7-green-tests` establishes the clean local signal: 378 passed, 0 skipped, with
+10 known `datetime.utcnow()` deprecation warnings. Frontend changes must pass:
+
+```powershell
+Set-Location frontend
+npm run build
+```
+
+The Gemini migration harness is intentionally live and paid. Claude's canary procedure:
+
+1. Run `backend/tests/golden_regression.py` against the current production URL for a
+   timestamped baseline.
+2. Deploy a **no-traffic** revision with `GEMINI_API_LOCATION=global`,
+   `GEMINI_MODEL_ID=gemini-3.6-flash`, and
+   `GEMINI_LITE_MODEL_ID=gemini-3.5-flash-lite`.
+3. Run the harness against the canary URL with bearer tokens for users configured as
+   `curious_explorer` and `student`:
+
+   ```powershell
+   py -3 backend/tests/golden_regression.py --base-url https://CANARY_URL `
+     --persona-token curious_explorer=TOKEN_ONE `
+     --persona-token student=TOKEN_TWO
+   ```
+
+4. Compare the saved raw baseline/canary folders and structural table. Shift traffic
+   only after content review and approval. The harness makes 12 paid requests; never run
+   it casually or without the rate-limit/credential plan.
+
+## Operations and monitoring
+
+- Firestore TTL is enabled on `tafsir_cache.expires_at` in database `tafsir-db`.
+- Cloud Monitoring alerts exist for backend 5xx bursts (>5 in five minutes) and any
+  logged backend `PermissionDenied`, with Ahmed's email channel configured.
+- Deploys remain manual through `deploy-backend.sh` / `deploy-frontend.sh`. On the
+  current Windows workstation, run the scripts' underlying gcloud commands in PowerShell;
+  the Git Bash gcloud shim resolves a broken Microsoft Store Python stub.
 
 ## Decisions
 

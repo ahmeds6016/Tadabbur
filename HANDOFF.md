@@ -248,6 +248,25 @@ Q14. **CODE COMPLETE 2026-08-13 — Reliability quick wins**
 - **Not verified:** deployed outage/devtools-offline behavior and visual interaction.
   No backend changes, live calls, deploy, GCP access, credentials, or secrets were used.
 
+### 2026-08-13 — GPT 5.6: Session 7 Unit 5 — documentation truth-up
+- **Branch/commit:** `codex/s7-docs-truth` / `Refresh documentation after Sessions 5–7`.
+- `README.md` now describes the five live personas, guest-visible reflection prompts,
+  recommendations, editorial themes, source coverage, suspended Iman UI, and safe shares.
+- Its stack/deployment sections now distinguish production pipeline 14.0 from the
+  canary-gated Gemini 3/global-endpoint pipeline 15.0 and document the 90-day TTL.
+- `AI.md` now maps hadith validation, cache-backed shares, coverage, TTL, alerts, the
+  offline suites, and Claude's paid no-traffic golden-canary procedure.
+- `docs/AUDIT-2026-08-01.md` remains historical, with a preamble marking P1, Q1–Q7,
+  and the Session 6 purge resolved so those findings are not reopened from stale lines.
+- **Corrected stale claims:** six personas → five; seven-day cache → 90-day TTL;
+  approximately 61% planned coverage → 6,236 plans (6,170 Gemini + 66 deterministic).
+- **Code cross-check:** main has 83 Flask routes, pipeline 14.0, TTL writes, coverage,
+  grounded hadith validation, cache-backed shares, eight themes, and recommendations.
+- Unit 1's branch was separately inspected for 3.6/3.5/global/pipeline-15 values; docs
+  explicitly preserve the canary gate rather than presenting those values as deployed.
+- **Verified:** docs-only diff, local Markdown links, and every changed factual claim
+  against code/config or the precomputed-plan metadata. No code, tests, live calls, or deploy.
+
 ### 2026-08-13 — Claude: Session 6 (all 10 units) reviewed, merged, DEPLOYED & VERIFIED
 - **Live: backend `tafsir-backend-00263-5wb` + frontend `tafsir-frontend-00304-9qr`.**
   Pipeline 14.0 flushed the 13.0 cache on deploy.
