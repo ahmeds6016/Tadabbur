@@ -111,6 +111,7 @@ FIREBASE_PROJECT = os.environ.get("FIREBASE_PROJECT", "tafsir-simplified-6b262")
 GCP_INFRASTRUCTURE_PROJECT = os.environ.get("GCP_INFRASTRUCTURE_PROJECT", "tafsir-simplified")
 LOCATION = os.environ.get("GCP_LOCATION", "us-central1")
 GEMINI_MODEL_ID = os.environ.get("GEMINI_MODEL_ID", "gemini-2.5-flash")  # Upgraded: 65K output tokens (vs 8K in 2.0) - eliminates truncation-based malformed JSON
+GEMINI_LITE_MODEL_ID = os.environ.get("GEMINI_LITE_MODEL_ID", "gemini-2.5-flash-lite")
 FIREBASE_SECRET_FULL_PATH = os.environ.get("FIREBASE_SECRET_FULL_PATH")
 REFLECTION_ENCRYPTION_SECRET = os.environ.get("REFLECTION_ENCRYPTION_SECRET", "")
 ADMIN_SECRET = os.environ.get("ADMIN_SECRET", "")
@@ -8943,7 +8944,7 @@ Return ONLY the JSON array, no markdown fences."""
         vertex_endpoint = (
             f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/"
             f"{GCP_INFRASTRUCTURE_PROJECT}/locations/{LOCATION}/"
-            f"publishers/google/models/gemini-2.5-flash-lite:generateContent"
+            f"publishers/google/models/{GEMINI_LITE_MODEL_ID}:generateContent"
         )
 
         body = {
@@ -10102,7 +10103,7 @@ def _enrich_feedback_with_gemini(feedback_type, raw_message):
         endpoint = (
             f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/"
             f"{GCP_INFRASTRUCTURE_PROJECT}/locations/{LOCATION}/"
-            f"publishers/google/models/gemini-2.5-flash-lite:generateContent"
+            f"publishers/google/models/{GEMINI_LITE_MODEL_ID}:generateContent"
         )
 
         type_labels = {"feature": "feature request", "bug": "bug report", "general": "general feedback"}
