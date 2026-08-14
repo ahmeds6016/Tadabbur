@@ -119,7 +119,11 @@ Q6. **Source-coverage contract** (finding 5): deterministic coverage object +
     "Sources used" UI panel; regenerate stale plan metadata in CI.
 Q7. **Verse-first progressive loading** (finding 8): show Arabic+translation
     immediately, skeleton for commentary. After Q4 measurements.
-Q8+ Remaining findings (6, 9-14) stay in the review doc; promote after the above.
+Q8+ Remaining findings (6, 9-11, 13-14) stay in the review doc; promote after the above.
+Q12. **CODE COMPLETE 2026-08-13 — Study-centered streaks and progress**
+    (`codex/s6-streaks`; awaiting review/frontend deploy). Reflection saves and
+    completed reading-plan days now count as daily learning activity; the progress
+    page leads with verses studied and reflections written.
 
 ### P2 — planned work
 6. **Gemini migration (deadline mid-Oct 2026)**: `gemini-2.5-flash` → `gemini-3.6-flash`,
@@ -156,6 +160,19 @@ Q8+ Remaining findings (6, 9-14) stay in the review doc; promote after the above
     load branch; startup now directly precomputes from the already-loaded tafsir chunks.
 
 ## Session log
+
+### 2026-08-13 — GPT 5.6: Session 6 Unit 6 — Study-centered streaks
+- **Branch/commit:** `codex/s6-streaks` / `Reward study in learning streaks`.
+- **Activity paths:** the existing idempotent streak update runs after the shared
+  annotation-save success callback and after a reading-plan `complete_day` response
+  succeeds. A streak failure remains non-blocking and cannot undo saved study work.
+- **Progress copy:** “Your Quran Learning” now leads with verses studied and
+  reflections written from the existing `/progress` and `/annotations/user` data;
+  percentage context remains visible and the existing `/streak` count is secondary.
+  No spiritual score, quality judgment, or new backend metric was introduced.
+- **Verified:** success-path trace for all annotation modes and plan-day completion,
+  `git diff --check`, and `npm run build` (exit 0). The known trailing `window is not
+  defined` diagnostic remains. No browser interaction test or deploy was performed.
 
 ### 2026-08-13 — Claude: gcloud-side P2 items done; session 6 prompt issued
 - **Firestore TTL enabled** on `tafsir_cache.expires_at` (DB `tafsir-db`, project

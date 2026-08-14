@@ -90,6 +90,22 @@ export default function PlansPage() {
   }, [tab, fetchQuranProgress]);
 
   // --- Plan actions ---
+  const updateStreak = useCallback(async () => {
+    if (!user) return;
+    try {
+      const token = await user.getIdToken();
+      await fetch(`${BACKEND_URL}/streak`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        }
+      });
+    } catch {
+      // Streak updates are non-critical to plan completion.
+    }
+  }, [user]);
+
   const handleStart = async (planId) => {
     if (!user) return;
     setActionLoading(true);
@@ -122,6 +138,7 @@ export default function PlansPage() {
         body: JSON.stringify({ action: 'complete_day', day })
       });
       if (!res.ok) throw new Error('Failed to complete day');
+      await updateStreak();
       const active = await fetchActivePlans();
       setActivePlans(active);
     } catch {
