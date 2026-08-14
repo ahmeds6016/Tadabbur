@@ -95,6 +95,29 @@ unused project (candidates: synapse-demo-471205, vertical-karma-471205-j1).
    `TypeError` failures get a friendly connection message. Existing 429 and timeout
    messages are unchanged. The global backend-down banner remains a separate future task.
 
+### P1-Q — product quality (promoted from docs/QUALITY-REVIEW-2026-08-03.md; Claude-verified)
+Q1. **P0 — hadith citation integrity** (review finding 1; **verified live by Claude**:
+    cached 2:255 attributes the Ahmad-version "tongue and two lips" wording to Sahih
+    Muslim; Muslim 810 ends at the congratulation). Fix: structured hadith fields
+    (collection, canonical ID, grade, exact excerpt, source pointer), containment
+    validation against the supplied source excerpts before render/cache, drop+log on
+    failure, golden test for 2:255. Requires `SCHOLARLY_PIPELINE_VERSION` bump —
+    which auto-invalidates ALL old cached responses, including the bad one.
+Q2. **Guest reflection visibility** (finding 2; verified: page.js:3081 gates
+    `reflection_prompt` on `user`). Show to guests; CTA = "save your reflection".
+Q3. **Cache hits don't count toward progress/badges** (finding 3). Idempotent
+    per-user/verse/day study event on every successful authenticated response.
+Q4. **Timing + cache-status headers** (finding 7; verified: perf_metrics never
+    attached). `Server-Timing` + `X-Cache-Status` on every path. Enabler for
+    latency work — do before any perf tuning.
+Q5. **/share validation** (finding 4): server-side shares only from verified
+    response/cache records; schema+sanitize if client snapshots stay.
+Q6. **Source-coverage contract** (finding 5): deterministic coverage object +
+    "Sources used" UI panel; regenerate stale plan metadata in CI.
+Q7. **Verse-first progressive loading** (finding 8): show Arabic+translation
+    immediately, skeleton for commentary. After Q4 measurements.
+Q8+ Remaining findings (6, 9-14) stay in the review doc; promote after the above.
+
 ### P2 — planned work
 6. **Gemini migration (deadline mid-Oct 2026)**: `gemini-2.5-flash` → `gemini-3.6-flash`,
    and the two hardcoded `gemini-2.5-flash-lite` sites (app.py:8811, :9970) →
@@ -125,6 +148,24 @@ unused project (candidates: synapse-demo-471205, vertical-karma-471205-j1).
     repo (fallback path always taken) — either ship it or delete the load path.
 
 ## Session log
+
+### 2026-08-03 — Claude: Phase 2 review validated; P0 confirmed; findings promoted
+- Independently verified the P0: fetched live cached 2:255 — first hadith reads
+  "Sahih Muslim, narrated by Ubayy bin Ka'b" and includes the "tongue and two lips"
+  clause; external sources confirm Muslim 810 ends at the congratulation (the longer
+  wording is Ahmad's, exactly as Ibn Kathir distinguishes). Finding stands.
+- Spot-verified findings 2 (page.js:3081 guest gating) and 7 (perf_metrics never
+  attached). Review quality is high; corrections to my kickoff assumptions (plan
+  file now covers all 6,236 verse keys; perf_metrics absent from responses) accepted
+  — docs/AUDIT-2026-08-01.md §retrieval numbers are superseded on those points.
+- Merged `codex/phase2-quality-review` → main (63b1d33), pushed. Promoted findings
+  into new **P1-Q** queue section above (Q1 hadith integrity first; its pipeline-
+  version bump conveniently flushes every previously cached response).
+- Decision: do NOT hand-purge the bad 2:255 cache doc now — regeneration without the
+  validation layer could reproduce the same mislabeling; Q1 + version bump is the
+  correct remediation and invalidates everything at once.
+- Next: GPT session 4B (P2-A..D engineering batch, already scripted) can run
+  anytime; Q1 needs a dedicated session prompt (Claude to write when Ahmed says go).
 
 ### 2026-08-13 — GPT 5.6: Phase 2 product-lens quality review
 - **Branch:** `codex/phase2-quality-review`; analysis/docs only, with no product code, deploy, gcloud, Firestore, billing, or secrets changes.
