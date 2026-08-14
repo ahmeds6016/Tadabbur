@@ -55,6 +55,7 @@ Thumbs.db
 *.test.log
 route_test_results_*.json
 comprehensive_test_output.*
+/backend/tests/golden-results/
 
 # Local secrets - never commit
 secret/
