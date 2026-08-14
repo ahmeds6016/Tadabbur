@@ -129,7 +129,11 @@ Q8. **CODE COMPLETE 2026-08-13 — Continue reflecting recommendations**
     (`codex/s6-recommendations`; awaiting review/backend + frontend deploy).
     Deterministic follow-on verses now reach fresh and cached answers and render as
     a three-card continuation path.
-Q9+ Remaining findings (9-11, 13) stay in the review doc; promote after the above.
+Q9. **CODE COMPLETE 2026-08-13 — Persona learning contracts**
+    (`codex/s6-personas`; awaiting review/backend deploy). All five personas now
+    receive distinct learning behavior plus shared meaning-first and verse-specific
+    reflection requirements. Pipeline version is `14.0`.
+Q10+ Remaining findings (10-11, 13) stay in the review doc; promote after the above.
 Q12. **CODE COMPLETE 2026-08-13 — Study-centered streaks and progress**
     (`codex/s6-streaks`; awaiting review/frontend deploy). Reflection saves and
     completed reading-plan days now count as daily learning activity; the progress
@@ -175,6 +179,22 @@ Q14. **CODE COMPLETE 2026-08-13 — Reliability quick wins**
     load branch; startup now directly precomputes from the already-loaded tafsir chunks.
 
 ## Session log
+
+### 2026-08-13 — GPT 5.6: Session 6 Unit 7 — Persona learning contracts
+- **Branch/commit:** `codex/s6-personas` / `Define testable persona learning contracts`.
+- **Prompt behavior:** `build_enhanced_prompt` now embeds a pure, testable contract:
+  revert terminology/action simplicity; explorer context and inquiry; practicing
+  worship/character application; student attributed comparison with verse locators;
+  advanced rhetoric, disagreements, evidence strength, and uncertainty.
+- **Universal quality bar:** every persona must answer the verse’s meaning in the
+  first two explanation sentences and derive its reflection question from a concrete
+  verse-specific tension, image, contrast, or command. JSON shape is unchanged.
+- **Cache/version:** `SCHOLARLY_PIPELINE_VERSION` changed exactly once from `13.0`
+  to `14.0`, intentionally invalidating generated-content caches on deploy. No model
+  values or hadith instructions changed.
+- **Verified:** `py -3 -m py_compile` for app/service/test, version grep, `git diff
+  --check`, and `py -3 -m pytest tests/test_persona_prompts.py
+  tests/test_hadith_integrity.py -q` (7 passed). Offline only; no generation or deploy.
 
 ### 2026-08-13 — GPT 5.6: Session 6 Unit 6 — Study-centered streaks
 - **Branch/commit:** `codex/s6-streaks` / `Reward study in learning streaks`.
