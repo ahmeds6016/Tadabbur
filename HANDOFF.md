@@ -157,6 +157,25 @@ Q8+ Remaining findings (6, 9-14) stay in the review doc; promote after the above
 
 ## Session log
 
+### 2026-08-13 — Claude: gcloud-side P2 items done; session 6 prompt issued
+- **Firestore TTL enabled** on `tafsir_cache.expires_at` (DB `tafsir-db`, project
+  tafsir-simplified-6b262). No-op until Session 6 Unit 2 ships the `expires_at`
+  field (created_at + 90d); then old docs age out server-side.
+- **Idle vector-search check: CLEAN** — zero Vertex AI indexes and zero index
+  endpoints exist in tafsir-simplified/us-central1. No idle billing; the old env
+  IDs were pure leftovers (already removed from deploy script on 2026-08-01).
+- **Monitoring alerts live** (project tafsir-simplified, email channel →
+  ahmedsheik123@gmail.com, channel 12754084532587087780):
+  1. "Tadabbur backend 5xx errors" — >5 5xx responses in 5 min (policy
+     9839969195041220396).
+  2. "Tadabbur backend PermissionDenied (billing/IAM breakage)" — any occurrence
+     of the log-based metric `backend_permission_denied` (policy
+     5263098835948754037). This alarm would have caught the July billing outage
+     within minutes instead of a week.
+  P2.13 remaining scope (logger cleanup, request metrics) stays queued.
+- Session 6 mega prompt (Q5-Q7, findings 6/9-14, model-flip harness, purge) added
+  to docs/PROMPT-GPT56.md and pushed.
+
 ### 2026-08-13 — Claude: all six units reviewed, merged, DEPLOYED & VERIFIED
 - **Backend `tafsir-backend-00262-82w` + frontend `tafsir-frontend-00303-9b6` are
   live with Q1–Q4 and P2-A/B/C/D.** Q1–Q4 and P2 items 10/11 above: treat status
