@@ -1,18 +1,25 @@
 'use client';
 
 export default function RecommendationBar({ recommendations, onStudyVerse }) {
-  if (!recommendations || recommendations.length === 0) return null;
+  const visibleRecommendations = Array.isArray(recommendations)
+    ? recommendations
+        .filter(rec => rec?.surah && rec?.verse)
+        .slice(0, 3)
+    : [];
+
+  if (visibleRecommendations.length === 0) return null;
 
   return (
     <div className="recommendation-bar">
-      <h3 className="recommendation-header">You might also explore...</h3>
+      <h3 className="recommendation-header">Continue reflecting</h3>
       <div className="recommendation-scroll">
-        {recommendations.map((rec, index) => (
+        {visibleRecommendations.map((rec, index) => (
           <button
             key={`${rec.surah}-${rec.verse}`}
             className="recommendation-pill"
             style={{ animationDelay: `${index * 80}ms` }}
             onClick={() => onStudyVerse(rec.surah, rec.verse)}
+            aria-label={`Study ${rec.surah_name || `Surah ${rec.surah}`} ${rec.surah}:${rec.verse}${rec.reason ? `: ${rec.reason}` : ''}`}
           >
             <span className="pill-verse">
               {rec.surah_name} {rec.surah}:{rec.verse}
@@ -101,7 +108,7 @@ export default function RecommendationBar({ recommendations, onStudyVerse }) {
           color: var(--color-text-secondary, #6b7280);
           line-height: 1.3;
           display: -webkit-box;
-          -webkit-line-clamp: 2;
+          -webkit-line-clamp: 1;
           -webkit-box-orient: vertical;
           overflow: hidden;
         }

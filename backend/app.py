@@ -5554,7 +5554,7 @@ def get_badges():
 # PERSONALIZED RECOMMENDATIONS
 # ============================================================================
 
-def _generate_recommendations(surah, verse, final_json, user_id=None):
+def _generate_recommendations(surah, verse, final_json):
     """Generate deterministic verse recommendations based on cross-refs and themes."""
     recs = []
     seen = {f"{surah}:{verse}"}
@@ -6932,6 +6932,32 @@ def tafsir_handler_enhanced():
             _track_explored_verse(user_id, cached_surah, cached_start, cached_end)
             _check_and_award_badges(user_id)
 
+        def attach_recommendations(response_data):
+            """Attach deterministic follow-on verses to fresh and cached responses."""
+            if not isinstance(response_data, dict):
+                return response_data
+
+            response_data["recommendations"] = []
+            response_range = extract_verse_range(query)
+            if response_range:
+                response_surah, response_verse, _ = response_range
+            else:
+                response_ref = extract_verse_reference_enhanced(query)
+                if response_ref:
+                    response_surah, response_verse = response_ref
+                else:
+                    first_verse = next(iter(response_data.get("verses", [])), {})
+                    response_surah = first_verse.get("surah")
+                    response_verse = first_verse.get("verse_number")
+
+            if response_surah and response_verse:
+                response_data["recommendations"] = _generate_recommendations(
+                    response_surah,
+                    response_verse,
+                    response_data,
+                )
+            return response_data
+
         # Check cache BEFORE any processing (applies to ALL routes)
         stage_start = time.time()
 
@@ -6944,6 +6970,7 @@ def tafsir_handler_enhanced():
                 print(f"   ⏱️  PERFORMANCE: Firestore cache hit in {perf_metrics['stages']['cache_check']:.0f}ms")
                 # Apply sanitization to cached responses (ensures line breaks in headings)
                 firestore_cached = filter_unavailable_sources(firestore_cached)
+                attach_recommendations(firestore_cached)
                 track_authenticated_cache_hit()
                 return tafsir_response(firestore_cached, cache_status="hit-firestore")
 
@@ -6956,6 +6983,7 @@ def tafsir_handler_enhanced():
                 print(f"   ⏱️  PERFORMANCE: Firestore cache hit in {perf_metrics['stages']['cache_check']:.0f}ms")
                 # Apply sanitization to cached responses (ensures line breaks in headings)
                 firestore_cached = filter_unavailable_sources(firestore_cached)
+                attach_recommendations(firestore_cached)
                 track_authenticated_cache_hit()
                 return tafsir_response(firestore_cached, cache_status="hit-firestore")
 
@@ -6970,6 +6998,7 @@ def tafsir_handler_enhanced():
                 # Apply sanitization to cached responses (ensures line breaks in headings)
                 cached_response = filter_unavailable_sources(RESPONSE_CACHE[cache_key].copy())
         if cached_response is not None:
+            attach_recommendations(cached_response)
             track_authenticated_cache_hit()
             return tafsir_response(cached_response, cache_status="hit-memory")
         perf_metrics['stages']['cache_check'] = (time.time() - stage_start) * 1000
@@ -7282,6 +7311,8 @@ def tafsir_handler_enhanced():
             else:
                 print(f"   ✅ Verse count: {verse_count}/{dynamic_verse_limit}")
 
+            attach_recommendations(final_json)
+
             # Cache the response
             with cache_lock:
                 RESPONSE_CACHE[cache_key] = final_json
@@ -7296,13 +7327,13 @@ def tafsir_handler_enhanced():
             if user_id:
                 _track_explored_verse(user_id, surah, start_verse, end_verse)
                 _check_and_award_badges(user_id)
-            final_json["recommendations"] = _generate_recommendations(surah, start_verse, final_json, user_id)
 
             print(f"✅ Formatted by AI from {len(verse_metadata_list)} source(s)")
             perf_metrics['stages']['post_processing'] = (time.time() - stage_start) * 1000
             return tafsir_response(final_json)
         else:
             response = build_direct_verse_response(verse_data, verse_metadata_list)
+            attach_recommendations(response)
             perf_metrics['stages']['post_processing'] = (time.time() - stage_start) * 1000
             return tafsir_response(response)
 

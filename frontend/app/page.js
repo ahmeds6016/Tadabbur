@@ -28,6 +28,7 @@ import ConfirmDialog from './components/ConfirmDialog';
 import ErrorBoundary from './components/ErrorBoundary';
 import TadabburLogo from './components/Logo';
 import SurahVersePicker from './components/SurahVersePicker';
+import RecommendationBar from './components/RecommendationBar';
 // CollectionsGrid removed for minimalist homepage
 import BadgeDisplay, { BadgePopup } from './components/BadgeDisplay';
 import { ToastContainer } from './components/ui/Toast';
@@ -2813,6 +2814,7 @@ function EnhancedResultsDisplay({
     lessons_practical_applications = [],
     summary = '',
     scholarly_sources = [],
+    recommendations = [],
   } = data || {};
 
   // Fetch annotations for all verses when component mounts (batch)
@@ -3365,6 +3367,10 @@ function EnhancedResultsDisplay({
           setAnnotationDialogOpen(true);
           ensureShareId().catch(() => {});
         } : null}
+      />
+      <RecommendationBar
+        recommendations={Array.isArray(recommendations) ? recommendations : []}
+        onStudyVerse={(surah, verse) => onQueryChange?.(`${surah}:${verse}`)}
       />
       </div>
 
