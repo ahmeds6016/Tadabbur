@@ -4,7 +4,6 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
 import remarkBreaks from 'remark-breaks';
-import rehypeRaw from 'rehype-raw';
 import { BACKEND_URL } from '../../lib/config';
 
 export default function SharedPage() {
@@ -164,7 +163,7 @@ export default function SharedPage() {
                     <strong>{tafsir.source}</strong>
                   </summary>
                   <div className="explanation-content markdown-content">
-                    <ReactMarkdown remarkPlugins={[remarkBreaks]} rehypePlugins={[rehypeRaw]}>
+                    <ReactMarkdown remarkPlugins={[remarkBreaks]}>
                       {tafsir.explanation}
                     </ReactMarkdown>
                   </div>

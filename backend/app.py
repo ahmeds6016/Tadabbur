@@ -7625,28 +7625,58 @@ def check_verse_metadata(surah, verse):
 # ============================================================================
 
 @app.route('/share', methods=['POST'])
+@firebase_auth_optional
 def create_share():
     """
-    Create a shareable link for a tafsir response.
+    Create a shareable link from a server-generated cached tafsir response.
     Request body: {
         "query": str,
-        "approach": str,
-        "response": dict (the tafsir response data)
+        "approach": str
     }
     Returns: { "share_id": str, "share_url": str }
     """
     try:
-        data = request.get_json()
-        query = data.get('query', '')
-        approach = data.get('approach', 'tafsir')
-        response = data.get('response', {})
+        data = request.get_json(silent=True) or {}
+        query = str(data.get('query', '')).strip()
+        approach = str(data.get('approach', 'tafsir')).strip()
 
-        if not query or not response:
-            return jsonify({"error": "Query and response are required"}), 400
+        if not query:
+            return jsonify({"error": "Query is required"}), 400
+
+        # Match /tafsir's current routing contract: all public approaches are
+        # normalized to the direct tafsir pipeline before cache lookup.
+        if approach != 'tafsir':
+            approach = 'tafsir'
+
+        user_id = request.user.get('uid') if request.user else None
+        rate_limit_id = f"share_{user_id or request.remote_addr}"
+        if is_rate_limited(rate_limit_id, limit=20, window_hours=1):
+            response = jsonify({"error": "Share creation limit reached. Please try again later."})
+            response.status_code = 429
+            response.headers['Retry-After'] = '3600'
+            return response
+
+        if user_id:
+            user_profile = get_user_profile(user_id)
+        else:
+            user_profile = {
+                'persona': 'curious_explorer',
+                'knowledge_level': 'beginner',
+            }
+
+        # This helper applies the same versioned cache key and default-profile
+        # fallback read as /tafsir. Never accept a caller-provided response body.
+        cached_response = get_cached_tafsir_response(query, user_profile, approach)
+        if not cached_response:
+            return jsonify({"error": "View the verse first, then share it."}), 409
+
+        cache_info = get_firestore_cache_key(query, user_profile, approach)
 
         # Generate a unique share ID using timestamp and hash
         timestamp = int(time.time() * 1000)
-        content_hash = hashlib.sha256(f"{query}{json.dumps(response)}".encode()).hexdigest()[:8]
+        content_hash = hashlib.sha256(
+            f"{cache_info['cache_key']}{json.dumps(cached_response, sort_keys=True, default=str)}".encode()
+        ).hexdigest()[:8]
         share_id = f"{timestamp}_{content_hash}"
 
         # Create the shared content document
@@ -7654,7 +7684,9 @@ def create_share():
             "share_id": share_id,
             "query": query,
             "approach": approach,
-            "response": response,
+            "response": cached_response,
+            "pipeline_version": SCHOLARLY_PIPELINE_VERSION,
+            "query_normalized": cache_info['query_normalized'],
             "created_at": firestore.SERVER_TIMESTAMP,
             "view_count": 0
         }

@@ -1391,17 +1391,16 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
 
     try {
       const sharePromise = (async () => {
-        const token = await user.getIdToken();
+        const token = user ? await user.getIdToken() : null;
         const res = await fetch(`${BACKEND_URL}/share`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
           },
           body: JSON.stringify({
             query,
-            approach,
-            response: response
+            approach
           })
         });
 
@@ -1421,7 +1420,7 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
       pendingShareRequest.current = null;
       return null;
     }
-  }, [currentShareId, query, approach, response, user]);
+  }, [currentShareId, query, approach, user]);
 
   // Annotation handlers (centralized in MainApp) - CORRECTED
   const handleAnnotateClick = useCallback(() => {
@@ -1538,17 +1537,16 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
 
     try {
       // Create shareable link via backend
-      const token = await user.getIdToken();
+      const token = user ? await user.getIdToken() : null;
       const res = await fetch(`${BACKEND_URL}/share`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
         },
         body: JSON.stringify({
           query: query,
-          approach: approach,
-          response: response
+          approach: approach
         })
       });
 

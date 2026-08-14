@@ -113,8 +113,10 @@ Q3. **✅ CODE COMPLETE 2026-08-13 — Cache-hit progress/badges**
 Q4. **✅ CODE COMPLETE 2026-08-13 — Timing + cache-status headers**
     (`codex/q2-4-quick-wins`; awaiting review/backend deploy). `Server-Timing` and
     `X-Cache-Status` now cover every handler path without changing response bodies.
-Q5. **/share validation** (finding 4): server-side shares only from verified
-    response/cache records; schema+sanitize if client snapshots stay.
+Q5. **✅ CODE COMPLETE 2026-08-13 — `/share` integrity**
+    (`codex/s6-share`; awaiting review/backend + frontend deploy). Share creation
+    now snapshots only a current-version server cache record, rate-limits creation,
+    and the public shared page no longer renders raw HTML.
 Q6. **Source-coverage contract** (finding 5): deterministic coverage object +
     "Sources used" UI panel; regenerate stale plan metadata in CI.
 Q7. **Verse-first progressive loading** (finding 8): show Arabic+translation
@@ -156,6 +158,25 @@ Q8+ Remaining findings (6, 9-14) stay in the review doc; promote after the above
     load branch; startup now directly precomputes from the already-loaded tafsir chunks.
 
 ## Session log
+
+### 2026-08-13 — GPT 5.6: Session 6 Unit 1 — `/share` integrity
+- **Branch/commit:** `codex/s6-share` / `Secure shared tafsir snapshots`.
+- **Backend:** `POST /share` accepts only query/approach, applies optional auth,
+  mirrors `/tafsir` profile and approach handling, and reads through the existing
+  versioned cache helper including its default-profile fallback. A miss returns the
+  requested 409; stored snapshots add pipeline version and normalized query metadata.
+- **Abuse boundary:** share creation is limited to 20/hour per authenticated user or
+  guest IP using the existing process-local limiter; arbitrary client response data
+  is never stored.
+- **Frontend:** both call sites send only query/approach and support optional guest
+  authorization. The public shared route no longer enables `rehype-raw`.
+- **Scope trace:** the main results view still uses `rehype-raw` for generated tafsir
+  markup and was deliberately left unchanged; GET `/share/<id>` keeps its old shape.
+- **Verified:** `py -3 -m py_compile backend/app.py`, `npm run build`, call-site
+  searches, and `git diff --check` pass. The known trailing non-fatal
+  `ReferenceError: window is not defined` remains after the successful build.
+- **Not run:** Firestore/auth HTTP tests or live probes; no deploy, GCP, secrets, or
+  guest-rate-limit calls were made. Claude should deploy backend and frontend after merge.
 
 ### 2026-08-13 — Claude: gcloud-side P2 items done; session 6 prompt issued
 - **Firestore TTL enabled** on `tafsir_cache.expires_at` (DB `tafsir-db`, project
