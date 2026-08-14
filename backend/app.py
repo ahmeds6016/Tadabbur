@@ -222,7 +222,7 @@ quran_db = None      # Google Cloud client -> tafsir-db database for Quran texts
 TAFSIR_CHUNKS = {}   # Flattened text for direct verse lookup
 VERSE_METADATA = {}  # Structured metadata for direct queries
 RESPONSE_CACHE = {}  # In-memory cache
-SCHOLARLY_PIPELINE_VERSION = "15.0"  # Bump: Gemini 3 model migration changes generated content
+SCHOLARLY_PIPELINE_VERSION = "15.1"  # Bump: Gemini 3 migration + hadith collection downgrade-not-drop (15.0 canary docs lacked hadith)
 USER_RATE_LIMITS = defaultdict(list)  # Rate limiting
 ANALYTICS = defaultdict(int)  # Usage analytics
 
@@ -6815,6 +6815,15 @@ def tafsir_handler_enhanced():
                 hadith_source_context,
             )
             final_json["hadith"] = kept_hadith
+            for kept_item in kept_hadith:
+                downgraded = kept_item.pop("_downgraded_collection", None)
+                if downgraded:
+                    logger.warning(
+                        "HADITH_COLLECTION_DOWNGRADE verse=%s collection=%r narrator=%r",
+                        f"{surah}:{start_verse}" + (f"-{end_verse}" if end_verse != start_verse else ""),
+                        downgraded,
+                        kept_item.get("narrator", ""),
+                    )
             for rejected in dropped_hadith:
                 logger.warning(
                     "HADITH_INTEGRITY_DROP verse=%s reference=%r reason=%s",

@@ -33,9 +33,36 @@ def test_composite_ayat_al_kursi_wording_is_not_attributed_to_muslim():
 
     kept, dropped = validate_hadith_items([item], context)
 
-    assert kept == []
-    assert len(dropped) == 1
-    assert dropped[0]["_validation_reason"] == "collection_not_attributed_to_wording"
+    # Downgrade-not-drop: the wording is genuine Ibn Kathir content (Ahmad's
+    # version), so the item survives — but the unverifiable "Sahih Muslim"
+    # label must be stripped and surfaced only via the private downgrade key.
+    assert dropped == []
+    assert len(kept) == 1
+    assert kept[0]["collection"] == ""
+    assert kept[0]["_downgraded_collection"] == "Sahih Muslim"
+    assert "Muslim" not in kept[0]["reference"]
+    assert kept[0]["text"] == AHMAD_WORDING
+
+
+def test_wholly_unsupported_collection_is_downgraded_not_shown():
+    text = "Whoever recites this verse after every prayer will be under protection."
+    context = f"One of the transmitted reports states: {text} Scholars mention its virtue."
+    item = {
+        "reference": {
+            "collection": "Sahih al-Bukhari",
+            "narrator": "Someone",
+            "attribution": "As cited in Ibn Kathir's tafsir",
+        },
+        "text": text,
+        "relevance": "Virtue of recitation.",
+    }
+
+    kept, dropped = validate_hadith_items([item], context)
+
+    assert dropped == []
+    assert len(kept) == 1
+    assert kept[0]["collection"] == ""
+    assert "Bukhari" not in kept[0]["reference"]
 
 
 def test_legitimate_verbatim_item_is_kept_with_display_reference():

@@ -153,7 +153,10 @@ def validate_hadith_items(hadith_list, source_context_text):
     Returns ``(kept, dropped)``. Kept items retain the frontend's display-string
     ``reference`` and add ``collection``, ``narrator``, and ``attribution`` fields.
     Dropped item copies include a private ``_validation_reason`` for server logs;
-    callers must not return them to clients.
+    callers must not return them to clients. Kept items whose verified wording
+    could not be tied to the claimed collection carry the stripped label in a
+    private ``_downgraded_collection`` key — callers should log and pop it
+    before caching or serving.
     """
     if not hadith_list:
         return [], []
@@ -185,9 +188,12 @@ def validate_hadith_items(hadith_list, source_context_text):
 
         collection, narrator, attribution = _reference_parts(item)
         if collection and not _collection_is_supported(collection, source_tokens, matched_start):
-            item["_validation_reason"] = "collection_not_attributed_to_wording"
-            dropped.append(item)
-            continue
+            # The wording itself is verified verbatim against the supplied
+            # sources — only the collection label could not be tied to this
+            # wording. Keep the hadith but strip the unverified label rather
+            # than losing grounded content (downgrade, not drop).
+            item["_downgraded_collection"] = collection
+            collection = ""
 
         if not attribution:
             attribution = "As cited in the supplied source excerpts"
