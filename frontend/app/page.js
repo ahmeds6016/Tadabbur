@@ -2,7 +2,7 @@
 import ReactMarkdown from 'react-markdown';
 import remarkBreaks from 'remark-breaks';
 import rehypeRaw from 'rehype-raw';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { Suspense, useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
   onAuthStateChanged,
@@ -873,7 +873,15 @@ function OnboardingComponent({ user, onProfileComplete }) {
 // MAIN APPLICATION COMPONENT - ENHANCED
 // ============================================================================
 
-function MainApp({ user, userProfile, onResetProfile, isGuest = false, onGuestSignUp }) {
+function MainApp(props) {
+  return (
+    <Suspense fallback={<TafsirSkeleton />}>
+      <MainAppContent {...props} />
+    </Suspense>
+  );
+}
+
+function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, onGuestSignUp }) {
   const searchParams = useSearchParams();
   // Deep Tafsir mode only - Explore is disabled for now
   const approach = 'tafsir';
