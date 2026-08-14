@@ -16,6 +16,31 @@ and Claude merges it ONLY after the canary passes, so keep it exactly scoped.
 
 ### Unit 1 — the Gemini 3.6 flip PR (branch `codex/s7-model-flip`)
 Code-side changes only; NO deploys, and Claude decides when this merges:
+
+**CANARY FINDING (Claude, 2026-08-13 late): the endpoint must change too.**
+Claude's no-traffic canary proved `gemini-3.6-flash` returns 404 on the regional
+endpoint (`us-central1-aiplatform.googleapis.com/...locations/us-central1/...`)
+but WORKS on the global endpoint
+(`aiplatform.googleapis.com/...locations/global/...`) — verified with a live
+generateContent call. Therefore Unit 1 must ALSO:
+- Introduce `GEMINI_API_LOCATION` env (default `"global"`). Build every live
+  Gemini endpoint URL from it: host = `aiplatform.googleapis.com` when value is
+  `global`, else `{value}-aiplatform.googleapis.com`; path location segment =
+  the value. Apply to ALL live call sites (main tafsir, correlations, guidance
+  summarizer, digest, daily insight, feedback enricher) — a small shared helper
+  `vertex_generate_url(model_id)` is warranted; do not otherwise touch the call
+  sites. Firestore/GCS/`GCP_LOCATION` usage stays untouched.
+- Gemini 3.x are THINKING models: thoughts consume `maxOutputTokens`. Claude's
+  probe with maxOutputTokens=10 returned empty parts. The main call (65536) is
+  safe; the small-budget sites are not — raise correlations 1024→4096,
+  feedback enricher 1024→4096, guidance summarizer 2048→8192, weekly digest
+  4096→8192, daily insight 2048→8192. Also make response-text extraction
+  tolerant of multi-part candidates (concatenate `parts[].text`, skipping
+  thought parts) wherever it currently assumes `parts[0].text` — Claude's probe
+  showed parts can carry `thoughtSignature` metadata.
+- Optional, allowed: loosen `golden_regression.py`'s "verse-linked token"
+  reflection heuristic — it false-positived on a good 2:255 prompt anchored in
+  the verse's meaning ("does not tire Him") rather than a literal token.
 - `backend/app.py`: `GEMINI_MODEL_ID` default `"gemini-2.5-flash"` →
   `"gemini-3.6-flash"`; `GEMINI_LITE_MODEL_ID` default `"gemini-2.5-flash-lite"`
   → `"gemini-3.5-flash-lite"`. Update the stale comment on the GEMINI_MODEL_ID
