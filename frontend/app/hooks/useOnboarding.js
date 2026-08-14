@@ -1,27 +1,29 @@
 'use client';
 import { useState, useEffect } from 'react';
 
+const createInitialOnboardingState = () => ({
+  hasSeenWelcome: false,
+  hasSeenFeatureIntro: false,
+  hasSearched: false,
+  hasUsedAnnotations: false,
+  hasViewedSaved: false,
+  hasExploredQuestions: false,
+  hasSharedContent: false,
+  hasViewedHistory: false,
+  completedAt: null,
+  currentStep: 'welcome',
+  tutorialActive: false,
+  featureTours: {
+    search: false,
+    annotations: false,
+    explore: false,
+    saved: false,
+    sharing: false
+  }
+});
+
 export function useOnboarding(userId) {
-  const [onboardingState, setOnboardingState] = useState({
-    hasSeenWelcome: false,
-    hasSeenFeatureIntro: false,
-    hasSearched: false,
-    hasUsedAnnotations: false,
-    hasViewedSaved: false,
-    hasExploredQuestions: false,
-    hasSharedContent: false,
-    hasViewedHistory: false,
-    completedAt: null,
-    currentStep: 'welcome',
-    tutorialActive: false,
-    featureTours: {
-      search: false,
-      annotations: false,
-      explore: false,
-      saved: false,
-      sharing: false
-    }
-  });
+  const [onboardingState, setOnboardingState] = useState(createInitialOnboardingState);
 
   const [showTour, setShowTour] = useState(false);
   const [currentTourStep, setCurrentTourStep] = useState(0);
@@ -32,10 +34,16 @@ export function useOnboarding(userId) {
   useEffect(() => {
     if (!userId) return;
 
-    const savedState = localStorage.getItem(`onboarding-${userId}`);
+    const storageKey = `onboarding-${userId}`;
+    const savedState = localStorage.getItem(storageKey);
     if (savedState) {
-      const parsed = JSON.parse(savedState);
-      setOnboardingState(parsed);
+      try {
+        const parsed = JSON.parse(savedState);
+        setOnboardingState(parsed);
+      } catch {
+        localStorage.removeItem(storageKey);
+        setOnboardingState(createInitialOnboardingState());
+      }
     }
     // No auto-start of TourOverlay — FeatureIntroModal handles first-time intro
     setIsLoaded(true); // Mark as loaded after processing
@@ -103,26 +111,7 @@ export function useOnboarding(userId) {
   };
 
   const resetOnboarding = () => {
-    const initialState = {
-      hasSeenWelcome: false,
-      hasSeenFeatureIntro: false,
-      hasSearched: false,
-      hasUsedAnnotations: false,
-      hasViewedSaved: false,
-      hasExploredQuestions: false,
-      hasSharedContent: false,
-      hasViewedHistory: false,
-      completedAt: null,
-      currentStep: 'welcome',
-      tutorialActive: false,
-      featureTours: {
-        search: false,
-        annotations: false,
-        explore: false,
-        saved: false,
-        sharing: false
-      }
-    };
+    const initialState = createInitialOnboardingState();
     setOnboardingState(initialState);
     if (userId) {
       localStorage.setItem(`onboarding-${userId}`, JSON.stringify(initialState));

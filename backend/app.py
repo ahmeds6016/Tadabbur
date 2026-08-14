@@ -10246,12 +10246,18 @@ def feedback_daily_summary():
     Intended to be called by Cloud Scheduler (no auth — use IAM or a shared secret).
     """
     try:
-        # Verify Cloud Scheduler secret (optional, set FEEDBACK_CRON_SECRET env var)
+        # Verify Cloud Scheduler secret; fail closed when it is not configured.
         cron_secret = os.environ.get("FEEDBACK_CRON_SECRET", "")
-        if cron_secret:
-            provided = request.headers.get("X-Cron-Secret", "")
-            if provided != cron_secret:
-                return jsonify({"error": "Unauthorized"}), 403
+        if not cron_secret:
+            logger.error("FEEDBACK_CRON_SECRET is not configured; refusing daily summary access")
+            return jsonify({"error": "Feedback summary access is not configured"}), 503
+
+        provided = request.headers.get("X-Cron-Secret", "")
+        if not provided or not hmac.compare_digest(
+            provided.encode("utf-8"),
+            cron_secret.encode("utf-8")
+        ):
+            return jsonify({"error": "Unauthorized"}), 403
 
         if not FEEDBACK_SUMMARY_EMAIL:
             return jsonify({"error": "FEEDBACK_SUMMARY_EMAIL not configured"}), 500
