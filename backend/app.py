@@ -141,8 +141,9 @@ FIREBASE_PROJECT = os.environ.get("FIREBASE_PROJECT", "tafsir-simplified-6b262")
 # GCP infrastructure project (Vertex AI, GCS, Cloud Run)
 GCP_INFRASTRUCTURE_PROJECT = os.environ.get("GCP_INFRASTRUCTURE_PROJECT", "tafsir-simplified")
 LOCATION = os.environ.get("GCP_LOCATION", "us-central1")
-GEMINI_MODEL_ID = os.environ.get("GEMINI_MODEL_ID", "gemini-2.5-flash")  # Upgraded: 65K output tokens (vs 8K in 2.0) - eliminates truncation-based malformed JSON
-GEMINI_LITE_MODEL_ID = os.environ.get("GEMINI_LITE_MODEL_ID", "gemini-2.5-flash-lite")
+GEMINI_API_LOCATION = os.environ.get("GEMINI_API_LOCATION", "global")
+GEMINI_MODEL_ID = os.environ.get("GEMINI_MODEL_ID", "gemini-3.6-flash")  # Canary-gated Gemini 3 migration; main call retains the 65K output budget
+GEMINI_LITE_MODEL_ID = os.environ.get("GEMINI_LITE_MODEL_ID", "gemini-3.5-flash-lite")
 FIREBASE_SECRET_FULL_PATH = os.environ.get("FIREBASE_SECRET_FULL_PATH")
 REFLECTION_ENCRYPTION_SECRET = os.environ.get("REFLECTION_ENCRYPTION_SECRET", "")
 ADMIN_SECRET = os.environ.get("ADMIN_SECRET", "")
@@ -187,13 +188,41 @@ def safe_get_nested(data: Dict[str, Any], *keys: str, default: Any = None) -> An
             return default
     return current
 
+
+def vertex_generate_url(model_id: str) -> str:
+    """Build a Vertex generateContent URL for the configured Gemini location."""
+    location = GEMINI_API_LOCATION.strip() or "global"
+    host = (
+        "aiplatform.googleapis.com"
+        if location == "global"
+        else f"{location}-aiplatform.googleapis.com"
+    )
+    return (
+        f"https://{host}/v1/projects/{GCP_INFRASTRUCTURE_PROJECT}/locations/{location}/"
+        f"publishers/google/models/{model_id}:generateContent"
+    )
+
+
+def extract_gemini_text(response: Dict[str, Any]) -> str:
+    """Concatenate non-thought text parts from the first Gemini candidate."""
+    parts = safe_get_nested(response, "candidates", 0, "content", "parts", default=[])
+    if not isinstance(parts, list):
+        return ""
+    return "".join(
+        part.get("text", "")
+        for part in parts
+        if isinstance(part, dict)
+        and not part.get("thought", False)
+        and isinstance(part.get("text"), str)
+    )
+
 # Global variables - UPDATED for dual database setup
 users_db = None      # Firebase Admin SDK -> (default) database for users/auth
 quran_db = None      # Google Cloud client -> tafsir-db database for Quran texts
 TAFSIR_CHUNKS = {}   # Flattened text for direct verse lookup
 VERSE_METADATA = {}  # Structured metadata for direct queries
 RESPONSE_CACHE = {}  # In-memory cache
-SCHOLARLY_PIPELINE_VERSION = "14.0"  # Bump: persona learning contracts change generated content
+SCHOLARLY_PIPELINE_VERSION = "15.0"  # Bump: Gemini 3 model migration changes generated content
 USER_RATE_LIMITS = defaultdict(list)  # Rate limiting
 ANALYTICS = defaultdict(int)  # Usage analytics
 
@@ -6678,7 +6707,7 @@ def tafsir_handler_enhanced():
         credentials.refresh(auth_req)
         token = credentials.token
 
-        VERTEX_ENDPOINT = f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/{GCP_INFRASTRUCTURE_PROJECT}/locations/{LOCATION}/publishers/google/models/{GEMINI_MODEL_ID}:generateContent"
+        VERTEX_ENDPOINT = vertex_generate_url(GEMINI_MODEL_ID)
 
         body = {
             "contents": [{"role": "user", "parts": [{"text": prompt}]}],
@@ -6761,7 +6790,7 @@ def tafsir_handler_enhanced():
                     "error_type": "content_blocked"
                 }, 400)
 
-        generated_text = safe_get_nested(raw_response, "candidates", 0, "content", "parts", 0, "text")
+        generated_text = extract_gemini_text(raw_response)
 
         if generated_text:
             final_json = extract_json_from_response(generated_text)
@@ -7056,7 +7085,7 @@ def debug_query(query):
         credentials, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
         credentials.refresh(google.auth.transport.requests.Request())
 
-        gemini_url = f"https://us-central1-aiplatform.googleapis.com/v1/projects/{GCP_INFRASTRUCTURE_PROJECT}/locations/us-central1/publishers/google/models/{GEMINI_MODEL_ID}:generateContent"
+        gemini_url = vertex_generate_url(GEMINI_MODEL_ID)
 
         body = {
             "contents": [{"role": "user", "parts": [{"text": prompt}]}],
@@ -7076,7 +7105,7 @@ def debug_query(query):
 
         if response.ok:
             result = response.json()
-            generated_text = result['candidates'][0]['content']['parts'][0]['text']
+            generated_text = extract_gemini_text(result)
 
             logger.info("=== COMPLETE GEMINI RESPONSE ===")
             logger.info("%s", _single_line_log(generated_text))
@@ -8395,17 +8424,13 @@ def iman_get_correlations():
                         auth_req = GoogleRequest()
                         credentials.refresh(auth_req)
 
-                        vertex_endpoint = (
-                            f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/"
-                            f"{GCP_INFRASTRUCTURE_PROJECT}/locations/{LOCATION}/"
-                            f"publishers/google/models/{GEMINI_MODEL_ID}:generateContent"
-                        )
+                        vertex_endpoint = vertex_generate_url(GEMINI_MODEL_ID)
                         body = {
                             "contents": [{"role": "user", "parts": [{"text": narrative_prompt}]}],
                             "generation_config": {
                                 "response_mime_type": "application/json",
                                 "temperature": 0.6,
-                                "maxOutputTokens": 1024,
+                                "maxOutputTokens": 4096,
                             },
                         }
                         resp = requests.post(
@@ -8416,7 +8441,7 @@ def iman_get_correlations():
                         )
                         if resp.ok:
                             raw = resp.json()
-                            gen_text = safe_get_nested(raw, "candidates", 0, "content", "parts", 0, "text")
+                            gen_text = extract_gemini_text(raw)
                             if gen_text:
                                 narrative_data = extract_json_from_response(gen_text)
                                 if narrative_data:
@@ -8520,18 +8545,14 @@ Return valid JSON — an array of objects, one per source, in the same order:
 
 Return ONLY the JSON array, no markdown fences."""
 
-        vertex_endpoint = (
-            f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/"
-            f"{GCP_INFRASTRUCTURE_PROJECT}/locations/{LOCATION}/"
-            f"publishers/google/models/{GEMINI_LITE_MODEL_ID}:generateContent"
-        )
+        vertex_endpoint = vertex_generate_url(GEMINI_LITE_MODEL_ID)
 
         body = {
             "contents": [{"role": "user", "parts": [{"text": prompt}]}],
             "generation_config": {
                 "response_mime_type": "application/json",
                 "temperature": 0.3,
-                "maxOutputTokens": 2048,
+                "maxOutputTokens": 8192,
             },
         }
 
@@ -8550,12 +8571,7 @@ Return ONLY the JSON array, no markdown fences."""
             return excerpts  # Fall back to raw text
 
         result = response.json()
-        text = (
-            result.get("candidates", [{}])[0]
-            .get("content", {})
-            .get("parts", [{}])[0]
-            .get("text", "")
-        )
+        text = extract_gemini_text(result)
 
         summaries = json.loads(text)
         if not isinstance(summaries, list) or len(summaries) != len(excerpts):
@@ -9034,18 +9050,14 @@ def iman_generate_digest():
         credentials.refresh(auth_req)
         gemini_token = credentials.token
 
-        vertex_endpoint = (
-            f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/"
-            f"{GCP_INFRASTRUCTURE_PROJECT}/locations/{LOCATION}/"
-            f"publishers/google/models/{GEMINI_MODEL_ID}:generateContent"
-        )
+        vertex_endpoint = vertex_generate_url(GEMINI_MODEL_ID)
 
         body = {
             "contents": [{"role": "user", "parts": [{"text": prompt}]}],
             "generation_config": {
                 "response_mime_type": "application/json",
                 "temperature": 0.7,
-                "maxOutputTokens": 4096,
+                "maxOutputTokens": 8192,
             },
         }
 
@@ -9074,7 +9086,7 @@ def iman_generate_digest():
                 return jsonify({"error": "AI service error"}), 502
 
         raw_response = response.json()
-        generated_text = safe_get_nested(raw_response, "candidates", 0, "content", "parts", 0, "text")
+        generated_text = extract_gemini_text(raw_response)
 
         if not generated_text:
             return jsonify({"error": "Empty response from AI service"}), 502
@@ -9335,18 +9347,14 @@ def iman_get_daily_insight(date_str):
         credentials.refresh(auth_req)
         gemini_token = credentials.token
 
-        vertex_endpoint = (
-            f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/"
-            f"{GCP_INFRASTRUCTURE_PROJECT}/locations/{LOCATION}/"
-            f"publishers/google/models/{GEMINI_MODEL_ID}:generateContent"
-        )
+        vertex_endpoint = vertex_generate_url(GEMINI_MODEL_ID)
 
         body = {
             "contents": [{"role": "user", "parts": [{"text": prompt}]}],
             "generation_config": {
                 "response_mime_type": "application/json",
                 "temperature": 0.7,
-                "maxOutputTokens": 2048,
+                "maxOutputTokens": 8192,
             },
         }
 
@@ -9375,7 +9383,7 @@ def iman_get_daily_insight(date_str):
                 return jsonify({"error": "AI service error"}), 502
 
         raw_response = response.json()
-        generated_text = safe_get_nested(raw_response, "candidates", 0, "content", "parts", 0, "text")
+        generated_text = extract_gemini_text(raw_response)
         if not generated_text:
             return jsonify({"error": "Empty response from AI service"}), 502
 
@@ -9679,11 +9687,7 @@ def _enrich_feedback_with_gemini(feedback_type, raw_message):
         creds, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
         creds.refresh(GoogleRequest())
 
-        endpoint = (
-            f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/"
-            f"{GCP_INFRASTRUCTURE_PROJECT}/locations/{LOCATION}/"
-            f"publishers/google/models/{GEMINI_LITE_MODEL_ID}:generateContent"
-        )
+        endpoint = vertex_generate_url(GEMINI_LITE_MODEL_ID)
 
         type_labels = {"feature": "feature request", "bug": "bug report", "general": "general feedback"}
         prompt = (
@@ -9704,7 +9708,7 @@ def _enrich_feedback_with_gemini(feedback_type, raw_message):
             "generation_config": {
                 "response_mime_type": "application/json",
                 "temperature": 0.1,
-                "maxOutputTokens": 1024,
+                "maxOutputTokens": 4096,
             },
         }
 
@@ -9716,7 +9720,7 @@ def _enrich_feedback_with_gemini(feedback_type, raw_message):
         )
 
         if resp.status_code == 200:
-            text = resp.json()["candidates"][0]["content"]["parts"][0]["text"]
+            text = extract_gemini_text(resp.json())
             enriched = json.loads(text)
             print(f"[FEEDBACK] Gemini enrichment OK — title: {enriched.get('title', '')[:60]}")
             return enriched

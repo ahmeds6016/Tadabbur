@@ -148,17 +148,11 @@ Q14. **CODE COMPLETE 2026-08-13 — Reliability quick wins**
     and route render failures show a retry boundary.
 
 ### P2 — planned work
-6. **Gemini migration (deadline mid-Oct 2026)**: `gemini-2.5-flash` → `gemini-3.6-flash`,
-   and the two hardcoded `gemini-2.5-flash-lite` sites (app.py:8811, :9970) →
-   `gemini-3.5-flash-lite` via a new env var. Steps: make -lite sites env-driven; run
-   `backend/tests/test_live_pipeline.py` against 3.6-flash; check JSON-format compliance
-   & token limits; deploy with env var flip (no code change needed for the main model);
-   bump `SCHOLARLY_PIPELINE_VERSION` if response quality/shape shifts.
-   **Env prep complete 2026-08-13** on `codex/p2a-model-env-prep`: both lite call
-   sites use `GEMINI_LITE_MODEL_ID`, still defaulted/deployed as 2.5-flash-lite.
-   **Canary harness code complete 2026-08-13** on `codex/s6-golden-harness`
-   (awaiting review; no deploy required): fixed baseline/canary checks cover six
-   verses across curious-explorer and student profiles and persist raw diffs.
+6. **CODE COMPLETE 2026-08-13 — Gemini 3.6 code-side flip**
+   (`codex/s7-model-flip`; merge/deploy gated on Claude's canary): defaults and deploy
+   configuration now use `gemini-3.6-flash`, `gemini-3.5-flash-lite`, and the required
+   global Vertex endpoint. All live call sites share multipart response extraction and
+   thinking-safe output budgets; pipeline version is `15.0`.
 7. **✅ CODE COMPLETE 2026-08-13 — Dead code purge**
    (`codex/s6-purge`, based on local `codex/s6-integration`; awaiting review/backend
    rebuild + frontend deploy): removed the unreachable optimized-backend tree, audited
@@ -192,6 +186,31 @@ Q14. **CODE COMPLETE 2026-08-13 — Reliability quick wins**
     locally with no skips; UTF-8 scholarly loaders and stale test contracts were fixed.
 
 ## Session log
+
+### 2026-08-13 — GPT 5.6: Session 7 Unit 1 — Gemini 3.6 code-side flip
+- **Branch/commit:** `codex/s7-model-flip` / `Prepare Gemini 3.6 global model flip`.
+- **Endpoint/model contract:** added `GEMINI_API_LOCATION=global` and one shared URL
+  builder. Main tafsir, guarded debug generation, correlations, guidance summaries,
+  weekly digests, daily insights, and feedback enrichment all use it; `GCP_LOCATION`
+  remains unchanged for Firestore/GCS. App/deploy defaults now select 3.6 Flash and
+  3.5 Flash Lite, and pipeline `14.0` becomes `15.0`.
+- **Thinking compatibility:** correlations/feedback budgets are now 4,096; guidance,
+  digest, and insight budgets are 8,192; the main 65,536 budget is unchanged. Every
+  Gemini consumer concatenates all non-thought text parts, preserving text parts that
+  also carry `thoughtSignature` metadata.
+- **Scripts/harness:** `test_live_pipeline.py` and `precompute_scholarly_plans.py` use
+  the new model/global defaults and multipart extraction. The golden 2:255 heuristic
+  now recognizes fatigue/tiring language from Claude's valid canary response.
+- **Old-model grep judgment:** no executable/configuration `gemini-2.5` or `gemini-2.0`
+  hits remain. The precomputed-plan `_metadata.model` is immutable generation history;
+  `docs/AUDIT-2026-08-01.md` and `docs/PROMPT-GPT56.md` are historical records; older
+  HANDOFF entries describe their then-current changes; AI.md's 2026-08-01 decision
+  records the pre-migration safety rule. All were deliberately retained.
+- **Verified:** changed Python files compile; URL/extraction harness covers global and
+  regional hosts, thought skipping, `thoughtSignature`, and multipart concatenation;
+  hadith/persona tests pass 7; golden CLI help and `git diff --check` pass. No paid/live
+  generation, deploy, GCP, traffic shift, or secret access was performed.
+- **Gate:** Claude decides merge/deploy only after the separate no-traffic canary passes.
 
 ### 2026-08-13 — GPT 5.6: Session 7 Unit 2 — green backend tests
 - **Branch/commit:** `codex/s7-green-tests` / `Make backend test suite deterministic`.
