@@ -2813,6 +2813,7 @@ function EnhancedResultsDisplay({
     lessons_practical_applications = [],
     summary = '',
     scholarly_sources = [],
+    source_coverage = null,
   } = data || {};
 
   // Fetch annotations for all verses when component mounts (batch)
@@ -2922,6 +2923,41 @@ function EnhancedResultsDisplay({
   return (
     <>
       <div className="results-container">
+
+      {source_coverage && (
+        <section
+          className="result-section"
+          aria-label="Sources used for this answer"
+          style={{ marginBottom: '16px' }}
+        >
+          <h2>Sources used for this answer</h2>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+            {source_coverage.classical?.ibn_kathir && (
+              <span className="source-badge">Ibn Kathir</span>
+            )}
+            {source_coverage.classical?.al_qurtubi && (
+              <span className="source-badge">Al-Qurtubi</span>
+            )}
+            {(source_coverage.additional_sources || []).map((source, index) => (
+              <span
+                key={`${source?.name || 'source'}-${index}`}
+                className="source-badge"
+                title={source?.method ? `Selected by ${source.method.replaceAll('_', ' ')}` : undefined}
+              >
+                {source?.name || 'Additional source'}
+              </span>
+            ))}
+          </div>
+          {(source_coverage.notices || []).map((notice, index) => (
+            <p
+              key={`${notice}-${index}`}
+              style={{ margin: '10px 0 0', color: 'var(--color-text-secondary, #666)', fontSize: '0.85rem' }}
+            >
+              {notice}
+            </p>
+          ))}
+        </section>
+      )}
 
       <TabNavigation
         resetKey={query}  // Reset to first tab (verses) on new query

@@ -115,8 +115,10 @@ Q4. **✅ CODE COMPLETE 2026-08-13 — Timing + cache-status headers**
     `X-Cache-Status` now cover every handler path without changing response bodies.
 Q5. **/share validation** (finding 4): server-side shares only from verified
     response/cache records; schema+sanitize if client snapshots stay.
-Q6. **Source-coverage contract** (finding 5): deterministic coverage object +
-    "Sources used" UI panel; regenerate stale plan metadata in CI.
+Q6. **✅ CODE COMPLETE 2026-08-13 — source-coverage contract**
+    (`codex/s6-coverage`; awaiting review/backend + frontend deploy). Every verse
+    answer now carries deterministic classical/additional-source coverage, including
+    old cache hits; the UI renders a compact source panel and neutral corpus notice.
 Q7. **Verse-first progressive loading** (finding 8): show Arabic+translation
     immediately, skeleton for commentary. After Q4 measurements.
 Q8+ Remaining findings (6, 9-14) stay in the review doc; promote after the above.
@@ -146,8 +148,9 @@ Q8+ Remaining findings (6, 9-14) stay in the review doc; promote after the above
     (`codex/p2d-capacitor-cors`; awaiting review/backend + frontend deploy):
     `capacitor.config.ts` now points the iOS shell at the stable project-number Cloud
     Run frontend URL, and backend CORS no longer permits the dead Vercel origin.
-12. **Firestore cache TTL**: `tafsir_cache` has no TTL and no eviction — enable
-    Firestore TTL policy on a `expires_at` field or accept unbounded growth.
+12. **✅ CODE COMPLETE 2026-08-13 — Firestore cache TTL field**
+    (`codex/s6-coverage`; awaiting backend deploy): new cache documents receive an
+    `expires_at` timestamp 90 days after creation. Claude already enabled the TTL policy.
 13. **Observability**: replace emoji `print()` with the configured `logger`; add basic
     request metrics; set up a Cloud Monitoring alert on 4xx/5xx spikes and on Firestore
     PERMISSION_DENIED (this outage went unnoticed in logs for days).
@@ -156,6 +159,29 @@ Q8+ Remaining findings (6, 9-14) stay in the review doc; promote after the above
     load branch; startup now directly precomputes from the already-loaded tafsir chunks.
 
 ## Session log
+
+### 2026-08-13 — GPT 5.6: Session 6 Unit 2 — coverage, TTL, and usage telemetry
+- **Branch/commit:** `codex/s6-coverage` / `Expose deterministic source coverage`.
+- **Coverage contract:** planner pointers now record `verse_plan`, `keyword`, or
+  `surah_overview` provenance. Resolved badges produce `source_coverage` before
+  generation; current and older cache hits reconstruct it from the same local plan
+  inventory. Al-Qurtubi availability follows the exact 4:22 corpus boundary.
+- **Frontend:** a null-guarded “Sources used for this answer” panel folds in classical
+  and additional source names and shows a neutral Al-Qurtubi limitation notice.
+- **Cache/telemetry:** every newly stored cache document expires 90 days after its
+  creation timestamp. Each successful fresh main Gemini response logs prompt,
+  candidate, and total token counts from `usageMetadata`; maxOutputTokens is unchanged.
+- **Plan inventory:** recount found 6,236 plans: 6,170 with Gemini-origin pointers and
+  66 deterministic-only fallbacks. Only `_metadata` changed; all plan entries compare
+  byte-for-data equal after JSON parsing. The temporary recount script was removed.
+- **Verified:** backend files compile; coverage/boundary assertions pass; frontend
+  `npm run build` succeeds with the known trailing non-fatal `window` diagnostic;
+  `git diff --check` passes. Scholarly tests pass 73 with two unrelated existing
+  assertions deselected (precomputed-plan cap/reasoning expectations).
+- **Environment note:** the first Windows run also hit the existing CP-1252 loader
+  issue; UTF-8 mode matches production and reaches the results above.
+- **Not run:** backend startup, Firestore TTL deletion, HTTP/live, or token-log checks.
+  No deploy, GCP, secrets, or guest API calls. Pipeline remains 13.0 per Session 6 rules.
 
 ### 2026-08-13 — Claude: gcloud-side P2 items done; session 6 prompt issued
 - **Firestore TTL enabled** on `tafsir_cache.expires_at` (DB `tafsir-db`, project

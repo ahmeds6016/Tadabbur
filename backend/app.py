@@ -47,6 +47,7 @@ from services.source_service import (
     resolve_scholarly_pointers,
     format_scholarly_excerpts_for_prompt,
     plan_scholarly_retrieval_deterministic,
+    build_source_coverage,
 )
 from services.hadith_validation import validate_hadith_items
 from data.reading_plans import READING_PLANS
@@ -3330,22 +3331,28 @@ def _get_scholarly_context_two_stage(query, verse_data, context_by_source):
     Uses pre-computed Gemini plans (generated offline with full tafsir context)
     merged with keyword routing and verse-map discovery. No runtime API calls.
 
-    Returns (scholarly_ctx_string, badges_list, pipeline_info).
+    Returns (scholarly_ctx_string, badges_list, pipeline_info, source_coverage).
     """
     start = time.time()
     print(f"\n  [SCHOLARLY] === Starting scholarly retrieval ===")
+
+    surah_number = None
+    verse_start = None
+    verse_end = None
 
     def _fallback(reason):
         print(f"  [SCHOLARLY] FALLBACK: {reason}")
         ctx = _get_scholarly_context_for_prompt(query, verse_data)
         badges = _get_scholarly_sources_metadata(query, verse_data)
-        return ctx, badges, f"fallback: {reason}"
+        coverage = None
+        if surah_number and verse_start:
+            coverage = build_source_coverage(
+                surah_number, verse_start, verse_end, badges
+            )
+        return ctx, badges, f"fallback: {reason}", coverage
 
     try:
         # Extract verse info
-        surah_number = None
-        verse_start = None
-        verse_end = None
         verse_text = ""
 
         if verse_data:
@@ -3397,9 +3404,16 @@ def _get_scholarly_context_two_stage(query, verse_data, context_by_source):
 
         duration = (time.time() - start) * 1000
         pipeline_info = f"precomputed: {len(resolved['excerpts'])} excerpts, {len(badges)} badges in {duration:.0f}ms"
+        source_coverage = build_source_coverage(
+            surah_number,
+            verse_start,
+            verse_end,
+            badges,
+            plan.get("pointer_methods"),
+        )
         print(f"  [SCHOLARLY] SUCCESS: {pipeline_info}")
         print(f"  [SCHOLARLY] Badges: {[b['key'] for b in badges]}")
-        return scholarly_ctx, badges, pipeline_info
+        return scholarly_ctx, badges, pipeline_info, source_coverage
 
     except Exception as e:
         print(f"  [SCHOLARLY] EXCEPTION: {type(e).__name__}: {str(e)[:300]}")
@@ -4333,6 +4347,7 @@ def store_tafsir_cache(query: str, user_profile: dict, response: dict, approach:
             print(f"   Compressed response: {len(response_str)} -> {len(stored_response)} bytes")
 
         # Store in Firestore with metadata
+        cache_created_at = datetime.now(timezone.utc)
         cache_doc = {
             'cache_key': cache_key,
             'query_normalized': cache_info['query_normalized'],
@@ -4341,8 +4356,9 @@ def store_tafsir_cache(query: str, user_profile: dict, response: dict, approach:
             'profile': cache_info['profile_details'],
             'response': stored_response,
             'compressed': compressed,
-            'created_at': datetime.now(timezone.utc),
-            'last_accessed': datetime.now(timezone.utc),
+            'created_at': cache_created_at,
+            'expires_at': cache_created_at + timedelta(days=90),
+            'last_accessed': cache_created_at,
             'hit_count': 0,
             'response_size': len(response_str),
             'version': SCHOLARLY_PIPELINE_VERSION,  # Auto-invalidates old cache on pipeline upgrades
@@ -6916,6 +6932,27 @@ def tafsir_handler_enhanced():
             user_profile = get_user_profile(user_id)
         perf_metrics['stages']['user_profile'] = (time.time() - stage_start) * 1000
 
+        def attach_source_coverage(response_data):
+            """Backfill deterministic coverage for current and older cache documents."""
+            if not isinstance(response_data, dict):
+                return response_data
+            cached_range = extract_verse_range(query)
+            if cached_range:
+                coverage_surah, coverage_start, coverage_end = cached_range
+            else:
+                cached_ref = extract_verse_reference_enhanced(query)
+                if not cached_ref:
+                    return response_data
+                coverage_surah, coverage_start = cached_ref
+                coverage_end = coverage_start
+            response_data["source_coverage"] = build_source_coverage(
+                coverage_surah,
+                coverage_start,
+                coverage_end,
+                response_data.get("scholarly_sources", []),
+            )
+            return response_data
+
         def track_authenticated_cache_hit():
             """Apply the same idempotent progress side effects as a fresh response."""
             if not user_id:
@@ -6944,6 +6981,7 @@ def tafsir_handler_enhanced():
                 print(f"   ⏱️  PERFORMANCE: Firestore cache hit in {perf_metrics['stages']['cache_check']:.0f}ms")
                 # Apply sanitization to cached responses (ensures line breaks in headings)
                 firestore_cached = filter_unavailable_sources(firestore_cached)
+                firestore_cached = attach_source_coverage(firestore_cached)
                 track_authenticated_cache_hit()
                 return tafsir_response(firestore_cached, cache_status="hit-firestore")
 
@@ -6956,6 +6994,7 @@ def tafsir_handler_enhanced():
                 print(f"   ⏱️  PERFORMANCE: Firestore cache hit in {perf_metrics['stages']['cache_check']:.0f}ms")
                 # Apply sanitization to cached responses (ensures line breaks in headings)
                 firestore_cached = filter_unavailable_sources(firestore_cached)
+                firestore_cached = attach_source_coverage(firestore_cached)
                 track_authenticated_cache_hit()
                 return tafsir_response(firestore_cached, cache_status="hit-firestore")
 
@@ -6970,6 +7009,7 @@ def tafsir_handler_enhanced():
                 # Apply sanitization to cached responses (ensures line breaks in headings)
                 cached_response = filter_unavailable_sources(RESPONSE_CACHE[cache_key].copy())
         if cached_response is not None:
+            cached_response = attach_source_coverage(cached_response)
             track_authenticated_cache_hit()
             return tafsir_response(cached_response, cache_status="hit-memory")
         perf_metrics['stages']['cache_check'] = (time.time() - stage_start) * 1000
@@ -7113,7 +7153,7 @@ def tafsir_handler_enhanced():
                 cross_refs = first_item['metadata'].get('cross_references', [])
 
         stage_start = time.time()
-        scholarly_ctx, scholarly_badges, scholarly_pipeline = _get_scholarly_context_two_stage(query, verses_for_ai, context_by_source)
+        scholarly_ctx, scholarly_badges, scholarly_pipeline, source_coverage = _get_scholarly_context_two_stage(query, verses_for_ai, context_by_source)
         perf_metrics['stages']['scholarly_retrieval'] = (time.time() - stage_start) * 1000
         hadith_source_context = "\n\n".join(filter(None, [
             build_structured_context(context_by_source, arabic_text, cross_refs),
@@ -7208,6 +7248,16 @@ def tafsir_handler_enhanced():
         stage_start = time.time()
         raw_response = response.json()
 
+        usage_metadata = raw_response.get("usageMetadata", {})
+        logger.info(
+            "GEMINI_USAGE verse=%s model=%s prompt_tokens=%s candidate_tokens=%s total_tokens=%s",
+            f"{surah}:{start_verse}" + (f"-{end_verse}" if end_verse != start_verse else ""),
+            GEMINI_MODEL_ID,
+            usage_metadata.get("promptTokenCount"),
+            usage_metadata.get("candidatesTokenCount"),
+            usage_metadata.get("totalTokenCount"),
+        )
+
         finish_reason = safe_get_nested(raw_response, "candidates", 0, "finishReason")
         if finish_reason and finish_reason not in ("STOP", "MAX_TOKENS"):
             print(f"⚠️ Gemini finishReason: {finish_reason}")
@@ -7258,6 +7308,7 @@ def tafsir_handler_enhanced():
 
             final_json["scholarly_sources"] = scholarly_badges
             final_json["_scholarly_pipeline"] = scholarly_pipeline
+            final_json["source_coverage"] = source_coverage
 
             final_json = keep_requested_verses_primary(
                 final_json,
@@ -7303,6 +7354,7 @@ def tafsir_handler_enhanced():
             return tafsir_response(final_json)
         else:
             response = build_direct_verse_response(verse_data, verse_metadata_list)
+            response["source_coverage"] = source_coverage
             perf_metrics['stages']['post_processing'] = (time.time() - stage_start) * 1000
             return tafsir_response(response)
 
@@ -7488,7 +7540,7 @@ def debug_query(query):
         # Build prompt
         step_start = time.time()
         arabic_text = get_arabic_text_from_verse_data(verse_data) if verse_data else None
-        scholarly_ctx, scholarly_badges, scholarly_pipeline = _get_scholarly_context_two_stage(query, verse_data, context_by_source)
+        scholarly_ctx, scholarly_badges, scholarly_pipeline, source_coverage = _get_scholarly_context_two_stage(query, verse_data, context_by_source)
         prompt = build_enhanced_prompt(query, context_by_source, user_profile,
                                      arabic_text, None, 'direct_verse', verse_data, approach, scholarly_ctx)
 
@@ -7539,6 +7591,7 @@ def debug_query(query):
             final_json["sources"] = list(context_by_source.keys())
             final_json["scholarly_sources"] = scholarly_badges
             final_json["_scholarly_pipeline"] = scholarly_pipeline
+            final_json["source_coverage"] = source_coverage
 
             with cache_lock:
                 RESPONSE_CACHE[cache_key] = final_json
