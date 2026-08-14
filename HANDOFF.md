@@ -126,6 +126,17 @@ unused project (candidates: synapse-demo-471205, vertical-karma-471205-j1).
 
 ## Session log
 
+### 2026-08-13 — GPT 5.6: Phase 2 product-lens quality review
+- **Branch:** `codex/phase2-quality-review`; analysis/docs only, with no product code, deploy, gcloud, Firestore, billing, or secrets changes.
+- **Deliverable:** added `docs/QUALITY-REVIEW-2026-08-03.md`, ranking 14 findings by impact per effort with evidence and concrete prompt examples.
+- **P0:** live 2:255 combined an Ahmad-only addition into a report labeled Sahih Muslim; priority is canonical hadith retrieval/validation plus cached-answer audit.
+- **Core UX:** guests are currently denied the generated reflection question; showing it is the highest-value small tadabbur improvement.
+- **Coverage:** the plan file now has all 6,236 verse keys, but stale metadata, deterministic fallback, hidden badges, and silently removed al-Qurtubi gaps make coverage opaque.
+- **Performance:** long probes took 16.475–28.183s and warm repeats 0.200–0.491s; production omits the `perf_metrics` that code initializes, so stage attribution is not yet possible.
+- **Learning loop:** cache hits bypass explored-verse/badge tracking, and generated recommendations are added after cache writes and have no mounted frontend consumer.
+- **Verification:** stayed within four conservatively counted potentially uncached generations; traced backend/frontend paths and ran `git diff --check`; browser/device audit was unavailable.
+- **Next:** Claude reviews religious-source and architecture findings; Ahmed prioritizes, then selected items are promoted into the task queue before any implementation.
+
 ### 2026-08-01 (night) — Claude: P1.4 + P1.5 reviewed, merged, deployed — **P1 COMPLETE**
 - Reviewed PRs #32/#33: approved, no changes. P1.4's `sh -c "exec gunicorn …"` is the
   right pattern (env expansion, gunicorn stays PID 1); 242s worst case < 300s checks
