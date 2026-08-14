@@ -135,10 +135,10 @@ Q8+ Remaining findings (6, 9-14) stay in the review doc; promote after the above
    on the second CPU remains unimplemented and must be evaluated independently.
 10. **Frontend build risk**: `useSearchParams()` without a `<Suspense>` boundary
     (app/page.js:877) — breaks/deopts `next build` on Next 15. Wrap it.
-11. **Vercel/Capacitor cleanup**: `tafsir-simplified-app.vercel.app` is 404 (dead), but
-    `capacitor.config.ts:11` points the iOS shell at it → iOS app is broken. Point it at
-    the Cloud Run frontend URL or resurrect the Vercel deploy; remove the dead origin
-    from backend CORS (app.py:98) accordingly.
+11. **Vercel/Capacitor cleanup** — **CODE COMPLETE 2026-08-13 on
+    `codex/p2d-capacitor-cors`; awaiting review/backend + frontend deploy**:
+    `capacitor.config.ts` now points the iOS shell at the stable project-number Cloud
+    Run frontend URL, and backend CORS no longer permits the dead Vercel origin.
 12. **Firestore cache TTL**: `tafsir_cache` has no TTL and no eviction — enable
     Firestore TTL policy on a `expires_at` field or accept unbounded growth.
 13. **Observability**: replace emoji `print()` with the configured `logger`; add basic
@@ -148,6 +148,20 @@ Q8+ Remaining findings (6, 9-14) stay in the review doc; promote after the above
     repo (fallback path always taken) — either ship it or delete the load path.
 
 ## Session log
+
+### 2026-08-13 — GPT 5.6: P2-D iOS/Capacitor and CORS cleanup
+- **Branch/commit:** `codex/p2d-capacitor-cors` /
+  `Point iOS shell at live frontend`, branched directly from updated `main`.
+- **Changed:** `frontend/capacitor.config.ts` now sends the iOS WebView to the stable
+  project-number Cloud Run frontend URL instead of the dead Vercel deployment.
+- **Changed:** removed the dead Vercel origin from `backend/app.py` CORS and documented
+  that the allowlist must contain only currently live frontend origins.
+- **Verified:** `py -3 -m py_compile backend/app.py`, `npm run build`, and
+  `git diff --check` pass; the build still prints the known non-fatal trailing
+  `ReferenceError: window is not defined` after successfully generating all 15 pages.
+- **Scope:** no `ios/` changes, Capacitor sync, device test, deploy, or GCP access.
+- **Deployment:** Claude/Ahmed should deploy backend and frontend after merge; the
+  remote-URL-only Capacitor config change does not require an `ios/` sync in this task.
 
 ### 2026-08-03 — Claude: Phase 2 review validated; P0 confirmed; findings promoted
 - Independently verified the P0: fetched live cached 2:255 — first hadith reads
