@@ -2093,6 +2093,7 @@ function MainApp({ user, userProfile, onResetProfile, isGuest = false, onGuestSi
               user={user}
               query={query}
               approach={approach}
+              onGuestSignUp={onGuestSignUp}
               onQueryChange={(newQuery) => {
                 setQuery(newQuery);
                 // Parse verse ref (e.g., "7:189") and sync the dropdown
@@ -2770,7 +2771,8 @@ function EnhancedResultsDisplay({
   onAnnotateClick,
   onAnnotationSaved,
   onAnnotationClose,
-  onGeneralReflection
+  onGeneralReflection,
+  onGuestSignUp
 }) {
   // All state and hooks now come from MainApp via props
   // Local state and useTextSelection hook removed
@@ -3078,7 +3080,7 @@ function EnhancedResultsDisplay({
                 )}
 
                 {/* Reflection Prompt — once, at end of Tafsir section */}
-                {data.reflection_prompt && user && (
+                {data.reflection_prompt && (
                   <div style={{
                     display: 'flex',
                     gap: '12px',
@@ -3105,6 +3107,10 @@ function EnhancedResultsDisplay({
                       }}>{data.reflection_prompt}</p>
                       <button
                         onClick={() => {
+                          if (!user) {
+                            onGuestSignUp();
+                            return;
+                          }
                           setCurrentVerse({
                             reflectionType: 'general',
                             queryContext: query,
@@ -3124,7 +3130,7 @@ function EnhancedResultsDisplay({
                           cursor: 'pointer',
                         }}
                       >
-                        Reflect
+                        {user ? 'Reflect' : 'Sign in to save your reflection'}
                       </button>
                     </div>
                   </div>
