@@ -1,5 +1,199 @@
 # Prompts for GPT 5.6
 
+## Session 6 prompt (2026-08-13) — MEGA ONE-SHOT: Q5-Q7, findings 6/9-14, model-flip harness, purge
+
+---
+
+You are GPT 5.6, main coder for Tadabbur (Claude = architect/reviewer, Ahmed =
+owner). First: `git pull` and read `HANDOFF.md` (top session entry) and
+`docs/QUALITY-REVIEW-2026-08-03.md`. Session 5 shipped: all six units were
+approved, merged, and DEPLOYED (backend `tafsir-backend-00262-82w`, frontend
+`tafsir-frontend-00303-9b6`). The P0 is verified fixed in production: fresh 2:255
+cites hadith as "As cited in Ibn Kathir's tafsir of this verse", no Muslim
+misattribution, zero validator drops. Two Claude review fixups to learn from:
+(1) your guest CTA referenced `onGuestSignUp` in `EnhancedResultsDisplay` without
+passing it as a prop (runtime ReferenceError — builds don't catch undefined
+identifiers; always trace prop plumbing end-to-end); (2) `cryptography==50.0.0`
+would have failed the image build (pip backtracks to 49.0.0 under pyopenssl) —
+pin what the resolver actually installs, verified from build logs.
+
+This is the LONGEST session yet: TEN units. Units 1-9 branch from `main`. Unit 10
+(the purge) branches from a local integration branch you create by merging your
+own units 1-9 in order (name it `codex/s6-integration`, do not push it as a PR —
+it only exists so the purge diff is computed against post-session code). Work the
+units IN ORDER; finish one (implement → verify → HANDOFF entry) before the next.
+If a unit balloons: stop it, record why, move on. No deploys, no gcloud, no
+secrets. Pipeline version: bump `SCHOLARLY_PIPELINE_VERSION` "13.0" → "14.0"
+EXACTLY ONCE, in Unit 7 (the only unit that changes generated content). All new
+response fields are additive; the frontend must null-guard every one of them
+(old cached docs and error paths won't have them).
+
+### Unit 1 — Q5: /share integrity (branch `codex/s6-share`)
+- Today `POST /share` (unauthenticated) stores the caller's entire `response`
+  dict verbatim and `/shared/[id]` renders it with `rehype-raw` (raw HTML) —
+  anyone can publish fabricated "Tadabbur" scholarship, with an XSS path.
+- Backend: change `POST /share` to accept `{query, approach}` only. Server
+  recomputes the Firestore cache key exactly like /tafsir does for the caller
+  (auth profile or guest default, including the default-profile fallback read)
+  and snapshots the CACHED response into `shared_content` together with
+  `pipeline_version`, `query_normalized`, and `created_at`. If no cache record
+  exists → 409 `{"error": "View the verse first, then share it."}` (the share
+  button lives on a rendered result, so the cache exists in practice). Keep
+  `GET /share/<id>` shape unchanged so old share links keep working.
+- Frontend: update the two `POST /share` call sites in `app/page.js` to send
+  `{query, approach}`; remove `rehype-raw` from `app/shared/[id]/page.js` ONLY
+  (markdown still renders; raw HTML no longer executes). Check whether the main
+  results view relies on raw HTML in backend markdown before touching anything
+  outside the shared page — report what you find.
+- Rate-limit share creation with the existing `is_rate_limited` helper
+  (e.g. 20/hour per user-or-IP).
+
+### Unit 2 — Q6: source-coverage contract + cache TTL field + usage logging
+(branch `codex/s6-coverage`)
+- Backend: build a deterministic `source_coverage` object BEFORE generation and
+  attach it (additive) to every /tafsir response, cached or fresh:
+  `{classical: {ibn_kathir: true, al_qurtubi: <bool per 4:22 boundary>},
+  additional_sources: [{name, method: verse_plan|keyword|surah_overview}],
+  notices: ["Al-Qurtubi is not available in this corpus for this verse."]}` —
+  derive from the actual retrieval plan (`source_service.py`), not the LLM.
+- Frontend: compact "Sources used for this answer" panel rendering that object
+  (names + a neutral notice line when a classical tafsir is unavailable). The
+  orphaned scholarly badge data (`scholarly_sources`) can be folded in here if
+  trivial; do not redesign the results page.
+- `store_tafsir_cache`: add `expires_at` = created_at + 90 days to every new
+  cache doc (Claude will enable the Firestore TTL policy on that field —
+  server-side deletion, no code path needed).
+- Log Gemini `usageMetadata` (prompt/candidates token counts) from the main
+  generation response as one structured log line per fresh generation
+  (finding 13's "measure first" step). Do NOT change maxOutputTokens.
+- Correct `_metadata` inside `_precomputed_scholarly_plans.json` to match the
+  file's real contents (6,236 keys; recount origins with a small throwaway
+  script; commit corrected metadata only, not the script).
+
+### Unit 3 — Q7 + finding 11: verse-first loading + accessibility
+(branch `codex/s6-progressive-a11y`)
+- On search submit, immediately `GET /verse/<surah>/<verse>` (public, fast) and
+  render Arabic + translation + verse reference at once, with the existing
+  `TafsirSkeleton` where commentary will appear, while `/tafsir` runs in
+  parallel. Ranges: fetch the start verse, label "Loading verses …-…". Keep
+  cancel/retry and all existing error handling; if the verse fetch fails, fall
+  back to today's spinner behavior silently.
+- Accessibility (same UI, so same unit): visible labels or `aria-label` on the
+  surah/from/to selects (fieldset+legend for the range pair); loading and
+  results containers become polite live regions ("Verse loaded; gathering
+  classical commentary" → completion announcement); `lang="ar" dir="rtl"` on
+  every Arabic text node (main results + shared page); verify focus lands
+  sensibly after submit and after an error.
+
+### Unit 4 — finding 6: deliver "Continue reflecting" (branch `codex/s6-recommendations`)
+- `_generate_recommendations` exists but runs only on the fresh path AFTER cache
+  writes, so cached responses never carry it. Move/attach it so EVERY successful
+  /tafsir response includes `recommendations` (computing before the cache write
+  is fine; it's deterministic). Guard for guests (user_id may be None — read the
+  function to see what it needs).
+- Frontend: render up to 3 "Continue reflecting" cards (verse ref + one-line
+  reason, click = run that query). Reuse the card look of related verses; the
+  orphaned `RecommendationBar.jsx` may be revived ONLY if it genuinely fits —
+  otherwise build inline and leave the orphan for the purge.
+
+### Unit 5 — finding 14: reliability batch (branch `codex/s6-reliability`)
+- `/feedback/daily-summary`: fail closed — if `FEEDBACK_CRON_SECRET` is unset,
+  return 503 (mirror the ADMIN_SECRET pattern from P1.1).
+- `useOnboarding.js`: wrap the localStorage `JSON.parse` in try/catch; on failure
+  clear the corrupt key and reset to first-run state.
+- Add `frontend/app/error.js` (route error boundary: friendly message + reset
+  button) so a render crash no longer blanks the page.
+
+### Unit 6 — finding 12: streaks reward study, not clicks (branch `codex/s6-streaks`)
+- Keep the gentle daily streak, but also fire the existing streak update on:
+  saving a reflection and completing a reading-plan day (frontend already has
+  both success paths; call the same `updateStreak()` there).
+- Progress page copy: lead with "verses studied" and "reflections" counts
+  (already available from /progress and /annotations data); streak becomes
+  secondary. Copy-level change only — no new metrics engine, no scoring of
+  spiritual quality (hard product rule).
+
+### Unit 7 — finding 9: persona learning contracts (branch `codex/s6-personas`)
+- In `build_enhanced_prompt`, replace the tone/vocabulary-only persona deltas
+  with per-persona learning contracts (depth/section behavior may now differ;
+  the JSON SCHEMA stays identical):
+  * new_revert: meaning first, explain every Arabic term on first use, exactly
+    one concrete action, no scholarly debate.
+  * curious_explorer: context-first narrative + one open question woven in.
+  * practicing_muslim: worship/character application emphasized in lessons.
+  * student: named positions with source locators ("Ibn Kathir states…",
+    "al-Qurtubi holds…"), comparison encouraged.
+  * advanced_learner: Arabic rhetoric notes, scholarly disagreements, evidence
+    strength, explicit uncertainty where sources differ.
+  * All personas: first two sentences of the explanation must answer "what does
+    this verse mean here?" before any scholarly layering; reflection_prompt must
+    be built from a verse-specific tension/image/command (the review's 1:5,
+    2:255, 93:3 before/after table is your quality bar).
+- Do not touch the hadith contract from Q1. **Bump SCHOLARLY_PIPELINE_VERSION
+  "13.0" → "14.0" in this unit** (generated content changes; flushes 13.0 cache
+  on deploy).
+- Add `backend/tests/test_persona_prompts.py` (offline, pure): build prompts for
+  2:255 with fixture context for all 5 personas, assert each contract's
+  distinguishing instruction text is present and others' are absent.
+
+### Unit 8 — finding 10: theme entry point (branch `codex/s6-themes`)
+- Add an "Explore a theme" section to the home/search UI: curated chips
+  (Patience, Gratitude, Forgiveness, Grief & Hope, Trust in Allah, Prayer,
+  Family, Justice — pull verse lists from the existing quick-select catalog in
+  `SurahVersePicker.jsx`; add 2-3 verses per theme where missing, choosing only
+  unambiguous, well-known verses). A chip click shows its 2-4 verses with
+  one-line editorial descriptions ("Editorial suggestions" label), and picking
+  one runs the normal verse query. NO free-text semantic search — that stays a
+  future L project.
+
+### Unit 9 — Gemini 3.6 flip harness, NO flip (branch `codex/s6-golden-harness`)
+- Write `backend/tests/golden_regression.py`: a SCRIPT (not pytest) that takes
+  `--base-url` and hits POST /tafsir for a fixed verse set (1:5, 2:255, 4:23
+  [post-Qurtubi], 6:57 [deterministic-only plan], 93:3, 112:1-4 range) across
+  2 personas, then asserts structural invariants: valid JSON, required keys,
+  exactly 3 lessons, non-empty tafsir_explanations, every hadith item passes
+  `validate_hadith_items` against nothing-empty fields, reflection_prompt
+  non-generic (length + contains a verse-linked token), `source_coverage`
+  present, X-Cache-Status header present. Emits a pass/fail table and saves raw
+  JSON responses to a timestamped folder for side-by-side diffing.
+- Document at the top: Claude's flip procedure = deploy a NO-TRAFFIC canary
+  revision with `GEMINI_MODEL_ID=gemini-3.6-flash` +
+  `GEMINI_LITE_MODEL_ID=gemini-3.5-flash-lite`, run this script against the
+  canary URL, compare against a baseline run, then shift traffic and bump
+  pipeline version if content shifts materially. Do NOT change any model value
+  anywhere in this unit.
+
+### Unit 10 — dead-code purge (branch `codex/s6-purge`, from your local
+`codex/s6-integration` merge of units 1-9)
+- Pure deletion, zero behavior change. Backend: `app_optimized.py`,
+  `migrate_to_optimized.py`, `config/settings.py`, `models/*`,
+  `services/{verse_service,cache_service,rate_limiter,batch_query_service,
+  integration}.py`; dead functions in app.py listed in
+  `docs/AUDIT-2026-08-01.md` §6 (verify each has ZERO references beyond its
+  `def` before deleting — if anything references one, leave it and note it);
+  remove `redis`, `pydantic`, `pydantic-settings` from requirements.txt;
+  remove the vestigial `import vertexai`/`vertexai.init` ONLY if you verify
+  nothing else needs the SDK import side effects (if in doubt, leave it).
+  Frontend: `app/context/AppContext.jsx`, `app/services/tafsirApi.{js,ts}`,
+  the orphaned components list from the audit (RE-VERIFY each is still
+  unimported AFTER your units 1-9 — you may have revived RecommendationBar in
+  Unit 4), `/logo-demo`, the test file with no runner.
+- Verify: py_compile, full pytest run (hadith + persona + token-budget tests),
+  `npm run build` exit 0, and grep-proof of zero references for every deleted
+  symbol, summarized in the PR description.
+
+### Global rules
+- Per unit: 2-3 sentence plan → implement → verify (py_compile / pytest /
+  npm build / trace) → honest verified-vs-not in HANDOFF.md session log with
+  branch + commit. Line numbers drift — trust the code. Match existing style.
+- Frontend null-guards for every new response field. No new dependencies
+  anywhere. Don't spend the guest rate limit on live probes (changes are
+  undeployed; Unit 9's script is run by Claude later, not you).
+- Finish with a summary table: unit | branch | commit | verified | deploy
+  needed (backend/frontend/both), plus anything you skipped and why.
+
+---
+
 ## Session 5 prompt (2026-08-03) — ONE-SHOT: P0 hadith integrity + quality wins + P2 batch
 
 ---
