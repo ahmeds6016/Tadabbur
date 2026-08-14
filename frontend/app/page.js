@@ -2093,6 +2093,7 @@ function MainApp({ user, userProfile, onResetProfile, isGuest = false, onGuestSi
               user={user}
               query={query}
               approach={approach}
+              onGuestSignUp={onGuestSignUp}
               onQueryChange={(newQuery) => {
                 setQuery(newQuery);
                 // Parse verse ref (e.g., "7:189") and sync the dropdown
@@ -2770,7 +2771,8 @@ function EnhancedResultsDisplay({
   onAnnotateClick,
   onAnnotationSaved,
   onAnnotationClose,
-  onGeneralReflection
+  onGeneralReflection,
+  onGuestSignUp
 }) {
   // All state and hooks now come from MainApp via props
   // Local state and useTextSelection hook removed
