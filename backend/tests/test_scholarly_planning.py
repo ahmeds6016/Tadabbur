@@ -559,6 +559,11 @@ class TestDeterministicPlanner:
 # ============================================================================
 
 class TestVerseMapDiscovery:
+    @pytest.fixture(autouse=True)
+    def use_deterministic_fallback(self, monkeypatch):
+        """Exercise verse-map routing without the complete precomputed-plan overlay."""
+        monkeypatch.setattr("services.source_service.get_precomputed_plan", lambda *_: None)
+
     def test_station_name_to_slug(self):
         """Station display names should convert to correct slugs."""
         assert _station_name_to_slug("Repentance") == "repentance"
@@ -638,6 +643,11 @@ class TestVerseMapDiscovery:
 # ============================================================================
 
 class TestExpandedRouting:
+    @pytest.fixture(autouse=True)
+    def use_deterministic_fallback(self, monkeypatch):
+        """Exercise keyword routing without the complete precomputed-plan overlay."""
+        monkeypatch.setattr("services.source_service.get_precomputed_plan", lambda *_: None)
+
     def test_riyad_paradise_routing(self):
         """'paradise' keyword should match expanded riyad routing."""
         plan = plan_scholarly_retrieval_deterministic(

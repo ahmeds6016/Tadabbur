@@ -185,8 +185,30 @@ Q14. **CODE COMPLETE 2026-08-13 — Reliability quick wins**
 14. **✅ CODE COMPLETE 2026-08-13 — Verse-range startup hygiene**
     (`codex/p2b-hygiene`; awaiting review/backend rebuild): removed the missing-file
     load branch; startup now directly precomputes from the already-loaded tafsir chunks.
+15. **CODE COMPLETE 2026-08-13 — Green offline backend suite**
+    (`codex/s7-green-tests`; awaiting review/backend rebuild): all 378 tests pass
+    locally with no skips; UTF-8 scholarly loaders and stale test contracts were fixed.
 
 ## Session log
+
+### 2026-08-13 — GPT 5.6: Session 7 Unit 2 — green backend tests
+- **Branch/commit:** `codex/s7-green-tests` / `Make backend test suite deterministic`.
+- **Reproduction:** untouched main produced the documented 337 passed / 41 failed.
+  Classification found no credential/network, missing-repo-data, or post-purge dead-code
+  failures, so no live-test gates, skips, or test deletions were warranted.
+- **Root causes/fixes:** 35 scholarly failures were Windows CP-1252 reads of present UTF-8
+  JSON, fixed by explicit encoding on all eight loaders. Two routing tests now bypass the
+  complete precomputed-plan overlay so they exercise their claimed deterministic paths.
+  One fixed-date struggle test and the old 14-behavior default assertion were updated to
+  the current clock/minimal-five-prayer contract.
+- **Token constants:** history commit `c7e2511` introduced the 2,500 fixed-output reserve
+  and 10-verse cap. Tests now follow `config/token_budget.py`, the runtime source of truth:
+  input-side components total 27,500 and `ABSOLUTE_MAX_VERSES` is 10; constants were not
+  changed.
+- **Verified:** `py -3 -m pytest backend/tests -q` exits 0 with **378 passed, 0 skipped,
+  10 warnings** in 1.73s; changed Python files compile and `git diff --check` passes.
+  The warnings are pre-existing `datetime.utcnow()` deprecations, not hidden failures.
+- **Not run:** no GCP/network/live tests, deploy, credentials, or secrets were used.
 
 ### 2026-08-13 — Claude: Session 6 (all 10 units) reviewed, merged, DEPLOYED & VERIFIED
 - **Live: backend `tafsir-backend-00263-5wb` + frontend `tafsir-frontend-00304-9qr`.**

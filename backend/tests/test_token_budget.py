@@ -100,19 +100,22 @@ class TestBudgetConstants:
         assert VERSE_AND_TAFSIR_BUDGET > 0
 
     def test_components_sum_to_practical(self):
-        """Verify per-query fixed costs + verse budget = practical budget."""
+        """Verify the current input-side component total."""
         total = (
             PROMPT_OVERHEAD_TOKENS
             + SCHOLARLY_RESERVE_TOKENS
             + VERSE_AND_TAFSIR_BUDGET
         )
-        assert total == PRACTICAL_INPUT_BUDGET
+        # config/token_budget.py is the runtime source of truth. Its separate
+        # FIXED_OUTPUT_RESERVE accounts for the remaining 2,500-token budget.
+        assert total == 27_500
 
     def test_safety_factor_is_90_percent(self):
         assert SAFETY_FACTOR == 0.90
 
     def test_absolute_max_verses(self):
-        assert ABSOLUTE_MAX_VERSES == 5
+        # config/token_budget.py deliberately caps ranges at 10 verses.
+        assert ABSOLUTE_MAX_VERSES == 10
 
     def test_output_tokens_per_verse_is_positive(self):
         assert OUTPUT_TOKENS_PER_VERSE > 0

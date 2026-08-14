@@ -297,10 +297,12 @@ class TestStruggleCatalog:
 
 class TestStruggleProgress:
     def test_week_0_phase_0(self):
+        from datetime import datetime, timezone
+
         config = STRUGGLE_MAP["prayer_consistency"]
         progress = compute_struggle_progress(
             "prayer_consistency",
-            "2026-02-27T00:00:00Z",
+            datetime.now(timezone.utc).isoformat(),
             [],
             config,
         )

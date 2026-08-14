@@ -143,7 +143,13 @@ class TestBuildDefaultConfig:
     def test_default_behaviors(self):
         config = build_default_config()
         tracked = config["tracked_behaviors"]
-        assert len(tracked) == len(DEFAULT_BEHAVIORS)
+        assert {item["id"] for item in tracked} == {
+            "fajr_prayer",
+            "dhuhr_prayer",
+            "asr_prayer",
+            "maghrib_prayer",
+            "isha_prayer",
+        }
         assert config["baseline_established"] is False
         assert config["engine_version"] == "1.0"
 

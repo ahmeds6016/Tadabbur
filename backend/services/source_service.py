@@ -35,7 +35,7 @@ def _load_unified_verse_map():
     """Load the unified verse map (cached in memory)."""
     path = _INDEX_DIR / "_unified_verse_map.json"
     if path.exists():
-        with open(path) as f:
+        with open(path, encoding="utf-8") as f:
             return json.load(f)
     return {}
 
@@ -45,7 +45,7 @@ def _load_precomputed_scholarly_plans():
     """Load pre-computed scholarly plans (cached in memory)."""
     path = _INDEX_DIR / "_precomputed_scholarly_plans.json"
     if path.exists():
-        with open(path) as f:
+        with open(path, encoding="utf-8") as f:
             data = json.load(f)
         # Strip metadata key
         count = sum(1 for k in data if k != "_metadata")
@@ -73,7 +73,7 @@ def _load_topic_map():
     """Load the topic map (cached in memory)."""
     path = _INDEX_DIR / "_topic_map.json"
     if path.exists():
-        with open(path) as f:
+        with open(path, encoding="utf-8") as f:
             return json.load(f)
     return {}
 
@@ -83,7 +83,7 @@ def _load_thematic_surah(surah_number):
     """Load a single surah's thematic commentary data."""
     path = _INDEX_DIR / "thematic_commentary" / f"surah_{surah_number:03d}.json"
     if path.exists():
-        with open(path) as f:
+        with open(path, encoding="utf-8") as f:
             return json.load(f)
     return None
 
@@ -93,7 +93,7 @@ def _load_ihya_volume(vol_num):
     """Load a single Ihya volume's data."""
     path = _INDEX_DIR / "ihya_ulum_al_din" / f"vol_{vol_num}.json"
     if path.exists():
-        with open(path) as f:
+        with open(path, encoding="utf-8") as f:
             return json.load(f)
     return None
 
@@ -103,7 +103,7 @@ def _load_madarij_volume(vol_num):
     """Load a single Madarij volume's data."""
     path = _INDEX_DIR / "madarij_al_salikin" / f"vol_{vol_num}.json"
     if path.exists():
-        with open(path) as f:
+        with open(path, encoding="utf-8") as f:
             return json.load(f)
     return None
 
@@ -113,7 +113,7 @@ def _load_asbab_surah(surah_number):
     """Load a single surah's Asbab al-Nuzul data."""
     path = _INDEX_DIR / "asbab_al_nuzul" / f"surah_{surah_number:03d}.json"
     if path.exists():
-        with open(path) as f:
+        with open(path, encoding="utf-8") as f:
             return json.load(f)
     return None
 
@@ -123,7 +123,7 @@ def _load_riyad_chapter(book_num, ch_num):
     """Load a Riyad al-Saliheen chapter."""
     path = _INDEX_DIR / "riyad_al_saliheen" / f"book_{book_num:02d}_ch_{ch_num:03d}.json"
     if path.exists():
-        with open(path) as f:
+        with open(path, encoding="utf-8") as f:
             return json.load(f)
     return None
 

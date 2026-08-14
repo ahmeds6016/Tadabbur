@@ -152,7 +152,7 @@ def validate_heart_state(state: str) -> Tuple[bool, str]:
 def build_default_config(behavior_ids: Optional[List[str]] = None) -> dict:
     """Build initial iman_config/settings document.
 
-    If behavior_ids provided, use those. Otherwise use DEFAULT_BEHAVIORS.
+    If behavior_ids are provided, use those. Otherwise track the five daily prayers.
     """
     if behavior_ids:
         # Validate all IDs exist
