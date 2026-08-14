@@ -125,7 +125,11 @@ Q7. **✅ CODE COMPLETE 2026-08-13 — verse-first loading + accessibility**
     (`codex/s6-progressive-a11y`; awaiting review/frontend deploy). The canonical
     start verse now renders while commentary loads, with accessible picker labels,
     live status announcements, focus transitions, and Arabic language metadata.
-Q8+ Remaining findings (6, 9-14) stay in the review doc; promote after the above.
+Q8. **CODE COMPLETE 2026-08-13 — Continue reflecting recommendations**
+    (`codex/s6-recommendations`; awaiting review/backend + frontend deploy).
+    Deterministic follow-on verses now reach fresh and cached answers and render as
+    a three-card continuation path.
+Q9+ Remaining findings (9-14) stay in the review doc; promote after the above.
 
 ### P2 — planned work
 6. **Gemini migration (deadline mid-Oct 2026)**: `gemini-2.5-flash` → `gemini-3.6-flash`,
@@ -163,6 +167,20 @@ Q8+ Remaining findings (6, 9-14) stay in the review doc; promote after the above
     load branch; startup now directly precomputes from the already-loaded tafsir chunks.
 
 ## Session log
+
+### 2026-08-13 — GPT 5.6: Session 6 Unit 4 — Continue reflecting
+- **Branch/commit:** `codex/s6-recommendations` / `Deliver continue-reflecting recommendations`.
+- **Backend:** removed the unused user dependency from the deterministic helper,
+  attached recommendations before both fresh cache writes, and computes the field
+  for old Firestore/memory hits plus direct fallback responses. Guest requests are
+  safe because recommendation inputs are response content and local catalogs only.
+- **Frontend:** revived `RecommendationBar.jsx` as a null-guarded, maximum-three
+  “Continue reflecting” card row; each valid verse card shows a one-line reason and
+  runs the normal query flow when selected.
+- **Verified:** `py -3 -m py_compile backend/app.py`, response-path trace for fresh,
+  Firestore, memory, and fallback success paths, `git diff --check`, and `npm run
+  build` (exit 0). The known trailing `window is not defined` diagnostic remains
+  after the successful Next.js build. No live probes or deploys were performed.
 
 ### 2026-08-13 — GPT 5.6: Session 6 Unit 3 — progressive loading and accessibility
 - **Branch/commit:** `codex/s6-progressive-a11y` /
