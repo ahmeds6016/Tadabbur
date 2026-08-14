@@ -3078,7 +3078,7 @@ function EnhancedResultsDisplay({
                 )}
 
                 {/* Reflection Prompt — once, at end of Tafsir section */}
-                {data.reflection_prompt && user && (
+                {data.reflection_prompt && (
                   <div style={{
                     display: 'flex',
                     gap: '12px',
@@ -3105,6 +3105,10 @@ function EnhancedResultsDisplay({
                       }}>{data.reflection_prompt}</p>
                       <button
                         onClick={() => {
+                          if (!user) {
+                            onGuestSignUp();
+                            return;
+                          }
                           setCurrentVerse({
                             reflectionType: 'general',
                             queryContext: query,
@@ -3124,7 +3128,7 @@ function EnhancedResultsDisplay({
                           cursor: 'pointer',
                         }}
                       >
-                        Reflect
+                        {user ? 'Reflect' : 'Sign in to save your reflection'}
                       </button>
                     </div>
                   </div>

@@ -22,7 +22,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, make_response
 from flask_cors import CORS
 
 import requests
@@ -100,6 +100,7 @@ CORS(app, resources={r"/*": {
     ],
     "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     "allow_headers": ["Content-Type", "Authorization"],
+    "expose_headers": ["Server-Timing", "X-Cache-Status"],
 }}, supports_credentials=True, max_age=86400)
 
 # --- Configuration (UPDATED for new sliding window vector index) ---
@@ -6745,18 +6746,34 @@ def tafsir_handler_enhanced():
 
     Routes 1 & 2 skip expensive RAG but keep AI quality & persona adaptation!
     """
+    # Initialize performance tracking before the try so error responses get the
+    # same observability headers as successful responses.
+    perf_start = time.time()
+    perf_metrics = {
+        'total_start': perf_start,
+        'stages': {},
+        'route': None,
+        'approach': None,
+        'chunks_retrieved': 0,
+        'windows_processed': 0,
+        'llm_calls': 0
+    }
+
+    def tafsir_response(payload, status=200, cache_status="miss"):
+        """Build a /tafsir response without adding timing data to its body."""
+        timings = dict(perf_metrics['stages'])
+        timings['total'] = (time.time() - perf_start) * 1000
+        server_timing = []
+        for name, duration in timings.items():
+            metric_name = re.sub(r'[^A-Za-z0-9_-]', '-', name)
+            server_timing.append(f"{metric_name};dur={max(0.0, float(duration)):.1f}")
+
+        response = make_response(jsonify(payload), status)
+        response.headers['X-Cache-Status'] = cache_status
+        response.headers['Server-Timing'] = ', '.join(server_timing)
+        return response
+
     try:
-        # Initialize performance tracking
-        perf_start = time.time()
-        perf_metrics = {
-            'total_start': perf_start,
-            'stages': {},
-            'route': None,
-            'approach': None,
-            'chunks_retrieved': 0,
-            'windows_processed': 0,
-            'llm_calls': 0
-        }
 
         # Request parsing
         stage_start = time.time()
@@ -6768,11 +6785,11 @@ def tafsir_handler_enhanced():
         perf_metrics['stages']['request_parsing'] = (time.time() - stage_start) * 1000
 
         if not query:
-            return jsonify({'error': 'Query is required'}), 400
+            return tafsir_response({'error': 'Query is required'}, 400)
 
         # Input validation: cap query length to prevent abuse
         if len(query) > 500:
-            return jsonify({'error': 'Query too long. Please keep your query under 500 characters.'}), 400
+            return tafsir_response({'error': 'Query too long. Please keep your query under 500 characters.'}, 400)
 
         # Normalize approach — all queries route through direct verse lookup
         if approach != 'tafsir':
@@ -6838,7 +6855,7 @@ def tafsir_handler_enhanced():
                     'help_text': help_text
                 }
 
-                return jsonify(response_data), 200  # Return 200, not error
+                return tafsir_response(response_data)  # Return 200, not error
 
         # VERSE RANGE VALIDATION - Block overly large ranges
         verse_range = extract_verse_range(query)
@@ -6852,7 +6869,7 @@ def tafsir_handler_enhanced():
 
             # Hard cap from budget config (safety net)
             if verse_count > ABSOLUTE_MAX_VERSES:
-                return jsonify({
+                return tafsir_response({
                     'error': 'verse_range_too_large',
                     'message': f'Please narrow your range to {ABSOLUTE_MAX_VERSES} verses or less.\n\nYou requested {verse_count} verses ({surah}:{start_verse}-{end_verse}).',
                     'requested_verses': verse_count,
@@ -6860,13 +6877,13 @@ def tafsir_handler_enhanced():
                     'suggestions': [
                         f'{surah}:{start_verse}-{min(start_verse + ABSOLUTE_MAX_VERSES - 1, end_verse)}'
                     ]
-                }), 400
+                }, 400)
             surah_max = QURAN_METADATA.get(surah, {}).get("verses", 0)
             if surah_max:
                 budget_max_end, _meta = compute_max_end_verse(surah, start_verse, surah_max)
                 if end_verse > budget_max_end:
                     safe_count = budget_max_end - start_verse + 1
-                    return jsonify({
+                    return tafsir_response({
                         'error': 'verse_range_too_large',
                         'message': f'The verses {surah}:{start_verse}-{end_verse} contain extensive commentary that exceeds response limits.\n\nPlease narrow your range to {safe_count} verse{"s" if safe_count != 1 else ""} or fewer from this starting point.\n\nSuggested range:\n- {surah}:{start_verse}-{budget_max_end}',
                         'requested_verses': verse_count,
@@ -6874,15 +6891,15 @@ def tafsir_handler_enhanced():
                         'suggestions': [
                             f'{surah}:{start_verse}-{budget_max_end}'
                         ]
-                    }), 400
+                    }, 400)
 
         # Rate limiting — guests use IP with stricter limits
         rate_limit_id = user_id or f"guest_{request.remote_addr}"
         guest_limit = 10 if is_guest else 150
         if is_rate_limited(rate_limit_id, limit=guest_limit):
-            resp = jsonify({'error': 'You have reached your query limit. Please wait a moment before trying again.'})
+            resp = tafsir_response({'error': 'You have reached your query limit. Please wait a moment before trying again.'}, 429)
             resp.headers['Retry-After'] = '60'
-            return resp, 429
+            return resp
 
         # Analytics
         ANALYTICS[query] += 1
@@ -6898,6 +6915,22 @@ def tafsir_handler_enhanced():
             user_profile = get_user_profile(user_id)
         perf_metrics['stages']['user_profile'] = (time.time() - stage_start) * 1000
 
+        def track_authenticated_cache_hit():
+            """Apply the same idempotent progress side effects as a fresh response."""
+            if not user_id:
+                return
+            cached_range = extract_verse_range(query)
+            if cached_range:
+                cached_surah, cached_start, cached_end = cached_range
+            else:
+                cached_ref = extract_verse_reference_enhanced(query)
+                if not cached_ref:
+                    return
+                cached_surah, cached_start = cached_ref
+                cached_end = cached_start
+            _track_explored_verse(user_id, cached_surah, cached_start, cached_end)
+            _check_and_award_badges(user_id)
+
         # Check cache BEFORE any processing (applies to ALL routes)
         stage_start = time.time()
 
@@ -6910,7 +6943,8 @@ def tafsir_handler_enhanced():
                 print(f"   ⏱️  PERFORMANCE: Firestore cache hit in {perf_metrics['stages']['cache_check']:.0f}ms")
                 # Apply sanitization to cached responses (ensures line breaks in headings)
                 firestore_cached = filter_unavailable_sources(firestore_cached)
-                return jsonify(firestore_cached), 200
+                track_authenticated_cache_hit()
+                return tafsir_response(firestore_cached, cache_status="hit-firestore")
 
         # For semantic/explore queries, also check Firestore cache
         elif approach == 'semantic':  # Remember: explore was normalized to semantic
@@ -6921,10 +6955,12 @@ def tafsir_handler_enhanced():
                 print(f"   ⏱️  PERFORMANCE: Firestore cache hit in {perf_metrics['stages']['cache_check']:.0f}ms")
                 # Apply sanitization to cached responses (ensures line breaks in headings)
                 firestore_cached = filter_unavailable_sources(firestore_cached)
-                return jsonify(firestore_cached), 200
+                track_authenticated_cache_hit()
+                return tafsir_response(firestore_cached, cache_status="hit-firestore")
 
         # Check in-memory cache as fallback
         cache_key = get_cache_key(query, user_profile, approach)
+        cached_response = None
         with cache_lock:
             if cache_key in RESPONSE_CACHE:
                 perf_metrics['stages']['cache_check'] = (time.time() - stage_start) * 1000
@@ -6932,15 +6968,19 @@ def tafsir_handler_enhanced():
                 print(f"   ⏱️  PERFORMANCE: Memory cache hit in {perf_metrics['stages']['cache_check']:.0f}ms")
                 # Apply sanitization to cached responses (ensures line breaks in headings)
                 cached_response = filter_unavailable_sources(RESPONSE_CACHE[cache_key].copy())
-                return jsonify(cached_response), 200
+        if cached_response is not None:
+            track_authenticated_cache_hit()
+            return tafsir_response(cached_response, cache_status="hit-memory")
         perf_metrics['stages']['cache_check'] = (time.time() - stage_start) * 1000
 
         print(f"[TAFSIR] query={query} approach={approach}")
 
         # CLASSIFICATION
+        stage_start = time.time()
         classification = classify_query_enhanced(query)
         verse_ref = classification['verse_ref']
         confidence = classification['confidence']
+        perf_metrics['stages']['classification'] = (time.time() - stage_start) * 1000
 
         if verse_ref:
             print(f"🎯 Verse: {verse_ref[0]}:{verse_ref[1]} (confidence: {confidence:.0%})")
@@ -6952,7 +6992,7 @@ def tafsir_handler_enhanced():
         # DIRECT VERSE QUERY (Direct lookup → AI formatting)
         # ===================================================================
         if not verse_ref:
-            return jsonify({"error": "No verse reference found in query"}), 400
+            return tafsir_response({"error": "No verse reference found in query"}, 400)
 
         # Check if query contains a verse range
         verse_range = extract_verse_range(query)
@@ -6971,11 +7011,12 @@ def tafsir_handler_enhanced():
                 print(f"⚠️  Verse range {surah}:{start_verse}-{end_verse} exceeds surah limit ({max_verse} verses)")
                 end_verse = max_verse
             if start_verse > max_verse:
-                return jsonify({
+                return tafsir_response({
                     "error": f"Invalid verse reference: Surah {surah} only has {max_verse} verses"
-                }), 400
+                }, 400)
 
         # Get verse text(s) from Firestore
+        stage_start = time.time()
         if start_verse != end_verse:
             verses_data_list = get_verses_range_from_firestore(surah, start_verse, end_verse)
             verse_data = verses_data_list[0] if verses_data_list else None
@@ -6986,12 +7027,14 @@ def tafsir_handler_enhanced():
             verses_for_ai = verse_data
 
         if not verse_data:
-            return jsonify({"error": f"Verse {surah}:{start_verse} not found"}), 404
+            perf_metrics['stages']['verse_lookup'] = (time.time() - stage_start) * 1000
+            return tafsir_response({"error": f"Verse {surah}:{start_verse} not found"}, 404)
 
         print(f"✅ Firestore: {verse_data.get('surah_number')}:{verse_data.get('verse_number')} ({verse_data.get('surah_name')})")
 
         # Get metadata via direct lookup (with range support)
         verse_metadata_list = get_verse_metadata_direct(surah, start_verse, end_verse=end_verse if start_verse != end_verse else None)
+        perf_metrics['stages']['verse_lookup'] = (time.time() - stage_start) * 1000
 
         # Build context from direct lookup
         context_by_source = {}
@@ -7068,7 +7111,9 @@ def tafsir_handler_enhanced():
             elif first_item.get('metadata'):
                 cross_refs = first_item['metadata'].get('cross_references', [])
 
+        stage_start = time.time()
         scholarly_ctx, scholarly_badges, scholarly_pipeline = _get_scholarly_context_two_stage(query, verses_for_ai, context_by_source)
+        perf_metrics['stages']['scholarly_retrieval'] = (time.time() - stage_start) * 1000
 
         # Compute dynamic verse limit from token budget
         from services.token_budget_service import compute_max_end_verse as _compute_max_end
@@ -7077,9 +7122,11 @@ def tafsir_handler_enhanced():
         dynamic_verse_limit = dynamic_max_end - start_verse + 1
         print(f"   📊 Dynamic verse limit for {surah}:{start_verse}: {dynamic_verse_limit} verses")
 
+        stage_start = time.time()
         prompt = build_enhanced_prompt(query, context_by_source, user_profile,
                                      arabic_text, cross_refs, 'direct_verse', verses_for_ai, approach, scholarly_ctx,
                                      verse_limit=dynamic_verse_limit)
+        perf_metrics['stages']['prompt_build'] = (time.time() - stage_start) * 1000
 
         if isinstance(verses_for_ai, list):
             print(f"🔍 Calling Gemini with {len(verses_for_ai)} verses: {verses_for_ai[0].get('surah_number')}:{verses_for_ai[0].get('verse_number')}-{verses_for_ai[-1].get('verse_number')}")
@@ -7087,6 +7134,7 @@ def tafsir_handler_enhanced():
             print(f"🔍 Calling Gemini with single verse: {verses_for_ai.get('surah_number')}:{verses_for_ai.get('verse_number')}")
 
         # Get auth token
+        gemini_start = time.time()
         credentials, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
         auth_req = GoogleRequest()
         credentials.refresh(auth_req)
@@ -7119,23 +7167,25 @@ def tafsir_handler_enhanced():
                 break
             except requests.Timeout:
                 if attempt == max_retries - 1:
-                    return jsonify({
+                    perf_metrics['stages']['gemini'] = (time.time() - gemini_start) * 1000
+                    return tafsir_response({
                         "error": "AI service timeout",
                         "retry": True,
                         "error_type": "timeout"
-                    }), 503
+                    }, 503)
                 print(f"⚠️ Retry {attempt + 1}/{max_retries} in {retry_delay}s...")
                 time.sleep(retry_delay)
             except requests.HTTPError as e:
                 status_code = response.status_code if response else 500
                 if status_code == 429:
                     if attempt == max_retries - 1:
-                        return jsonify({
+                        perf_metrics['stages']['gemini'] = (time.time() - gemini_start) * 1000
+                        return tafsir_response({
                             "error": "AI service is busy. Please wait a moment and try again.",
                             "retry": True,
                             "error_type": "rate_limit",
                             "retry_after": 30
-                        }), 429
+                        }, 429)
                     print(f"⚠️ Rate limited (429), retrying in {retry_delay}s...")
                     time.sleep(retry_delay)
                     continue
@@ -7147,17 +7197,21 @@ def tafsir_handler_enhanced():
                     continue
                 raise
 
+        perf_metrics['stages']['gemini'] = (time.time() - gemini_start) * 1000
+
         # Parse response
+        stage_start = time.time()
         raw_response = response.json()
 
         finish_reason = safe_get_nested(raw_response, "candidates", 0, "finishReason")
         if finish_reason and finish_reason not in ("STOP", "MAX_TOKENS"):
             print(f"⚠️ Gemini finishReason: {finish_reason}")
             if finish_reason == "SAFETY":
-                return jsonify({
+                perf_metrics['stages']['post_processing'] = (time.time() - stage_start) * 1000
+                return tafsir_response({
                     "error": "The AI could not generate a response for this query. Please try rephrasing.",
                     "error_type": "content_blocked"
-                }), 400
+                }, 400)
 
         generated_text = safe_get_nested(raw_response, "candidates", 0, "content", "parts", 0, "text")
 
@@ -7166,16 +7220,18 @@ def tafsir_handler_enhanced():
 
             if not final_json:
                 print(f"❌ Failed to extract JSON from Gemini response")
-                return jsonify({
+                perf_metrics['stages']['post_processing'] = (time.time() - stage_start) * 1000
+                return tafsir_response({
                     "error": "AI returned malformed response",
                     "error_type": "json_parse_error"
-                }), 500
+                }, 500)
 
             if final_json.get('metadata', {}).get('extraction_error'):
                 print(f"❌ Gemini returned malformed JSON; refusing to cache fallback response")
-                return jsonify({
+                perf_metrics['stages']['post_processing'] = (time.time() - stage_start) * 1000
+                return tafsir_response({
                     "error": "AI returned a malformed response. Please try again."
-                }), 502
+                }, 502)
 
             final_json["query_type"] = "direct_verse"
             final_json["verse_reference"] = f"{surah}:{verse}"
@@ -7225,17 +7281,19 @@ def tafsir_handler_enhanced():
             final_json["recommendations"] = _generate_recommendations(surah, start_verse, final_json, user_id)
 
             print(f"✅ Formatted by AI from {len(verse_metadata_list)} source(s)")
-            return jsonify(final_json), 200
+            perf_metrics['stages']['post_processing'] = (time.time() - stage_start) * 1000
+            return tafsir_response(final_json)
         else:
             response = build_direct_verse_response(verse_data, verse_metadata_list)
-            return jsonify(response), 200
+            perf_metrics['stages']['post_processing'] = (time.time() - stage_start) * 1000
+            return tafsir_response(response)
 
     except requests.exceptions.Timeout:
-        return jsonify({"error": "AI service timed out"}), 504
+        return tafsir_response({"error": "AI service timed out"}, 504)
     except Exception as e:
         print(f"CRITICAL ERROR: {e}")
         traceback.print_exc()
-        return jsonify({"error": "Internal server error"}), 500
+        return tafsir_response({"error": "Internal server error"}, 500)
 
 
 @app.route("/health", methods=["GET"])

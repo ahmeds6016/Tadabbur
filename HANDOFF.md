@@ -103,13 +103,15 @@ Q1. **P0 — hadith citation integrity** (review finding 1; **verified live by C
     validation against the supplied source excerpts before render/cache, drop+log on
     failure, golden test for 2:255. Requires `SCHOLARLY_PIPELINE_VERSION` bump —
     which auto-invalidates ALL old cached responses, including the bad one.
-Q2. **Guest reflection visibility** (finding 2; verified: page.js:3081 gates
-    `reflection_prompt` on `user`). Show to guests; CTA = "save your reflection".
-Q3. **Cache hits don't count toward progress/badges** (finding 3). Idempotent
-    per-user/verse/day study event on every successful authenticated response.
-Q4. **Timing + cache-status headers** (finding 7; verified: perf_metrics never
-    attached). `Server-Timing` + `X-Cache-Status` on every path. Enabler for
-    latency work — do before any perf tuning.
+Q2. **✅ CODE COMPLETE 2026-08-13 — Guest reflection visibility**
+    (`codex/q2-4-quick-wins`; awaiting review/frontend deploy). Removed the `user`
+    gate; guests see the question and a “Sign in to save your reflection” CTA.
+Q3. **✅ CODE COMPLETE 2026-08-13 — Cache-hit progress/badges**
+    (`codex/q2-4-quick-wins`; awaiting review/backend deploy). Existing idempotent
+    set/merge tracking and badge checks now run on authenticated cache hits.
+Q4. **✅ CODE COMPLETE 2026-08-13 — Timing + cache-status headers**
+    (`codex/q2-4-quick-wins`; awaiting review/backend deploy). `Server-Timing` and
+    `X-Cache-Status` now cover every handler path without changing response bodies.
 Q5. **/share validation** (finding 4): server-side shares only from verified
     response/cache records; schema+sanitize if client snapshots stay.
 Q6. **Source-coverage contract** (finding 5): deterministic coverage object +
@@ -148,6 +150,17 @@ Q8+ Remaining findings (6, 9-14) stay in the review doc; promote after the above
     repo (fallback path always taken) — either ship it or delete the load path.
 
 ## Session log
+
+### 2026-08-13 — GPT 5.6: Q2–Q4 quality quick wins
+- **Branch/commit:** `codex/q2-4-quick-wins` / `Ship product quality quick wins`.
+- **Q2:** guests now see the generated reflection question. The action remains auth-gated: signed-in users open the annotation flow; guests see “Sign in to save your reflection” and return to auth.
+- **Q3:** both Firestore-hit paths and the memory-hit path now run `_track_explored_verse` plus `_check_and_award_badges` for authenticated users. The memory lock is released first. Tracking is sequentially idempotent: stored verses become a set and already-tracked verses return without a write; earned badge IDs are also skipped.
+- **Q4:** all 21 returns inside `/tafsir` use one `make_response` helper with `X-Cache-Status` (`hit-firestore`, `hit-memory`, or `miss`) and `Server-Timing`; the body/cache object remains unchanged. Added measured classification, verse lookup, scholarly retrieval, prompt, Gemini, post-processing, and total durations.
+- **CORS:** `Server-Timing` and `X-Cache-Status` are listed in `expose_headers`, allowing browser JavaScript to inspect them.
+- **Verified:** `py -3 -m py_compile backend/app.py` passes; static handler trace finds 21 wrapped and zero legacy `jsonify` returns; `git diff --check` passes.
+- **Frontend:** `npm run build` exits 0, compiling and generating all 15 pages. The pre-existing trailing `ReferenceError: window is not defined` still prints after the successful route summary.
+- **Not run:** backend startup/HTTP or authenticated Firestore tests because the changes are undeployed and local startup needs GCP-backed configuration. No live API, deploy, gcloud, Firestore, billing, or secrets access performed.
+- No pipeline-version bump: response bodies and cache schema are unchanged. Claude should merge after Q1, then include this backend/frontend work in the final consolidated deploys.
 
 ### 2026-08-03 — Claude: Phase 2 review validated; P0 confirmed; findings promoted
 - Independently verified the P0: fetched live cached 2:255 — first hadith reads
