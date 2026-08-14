@@ -130,6 +130,9 @@ Q8+ Remaining findings (6, 9-14) stay in the review doc; promote after the above
    bump `SCHOLARLY_PIPELINE_VERSION` if response quality/shape shifts.
    **Env prep complete 2026-08-13** on `codex/p2a-model-env-prep`: both lite call
    sites use `GEMINI_LITE_MODEL_ID`, still defaulted/deployed as 2.5-flash-lite.
+   **Canary harness code complete 2026-08-13** on `codex/s6-golden-harness`
+   (awaiting review; no deploy required): fixed baseline/canary checks cover six
+   verses across curious-explorer and student profiles and persist raw diffs.
 7. **Dead code purge** (~2,000 backend + ~4,000 frontend lines): `app_optimized.py` tree
    (+ redis/pydantic deps), dead functions listed in the audit §6, frontend
    `AppContext.jsx`, `tafsirApi.{js,ts}`, 20+ orphaned Iman-journal components,
@@ -156,6 +159,26 @@ Q8+ Remaining findings (6, 9-14) stay in the review doc; promote after the above
     load branch; startup now directly precomputes from the already-loaded tafsir chunks.
 
 ## Session log
+
+### 2026-08-13 — GPT 5.6: Session 6 Unit 9 — Golden canary harness
+- **Branch/commit:** `codex/s6-golden-harness` / `Add live golden regression harness`.
+- **Harness:** `backend/tests/golden_regression.py` sends the fixed six-query set
+  (`1:5`, `2:255`, `4:23`, `6:57`, `93:3`, `112:1-4`) for curious-explorer and
+  student, prints a pass/fail table, and saves timestamped raw JSON envelopes.
+- **Invariants:** valid object JSON; required keys; exactly three lessons; non-empty
+  tafsir explanations; source coverage; cache-status header; length, generic-phrase,
+  and verse-token reflection checks; all returned hadith accepted by the existing
+  validator against the response’s non-empty textual fields.
+- **Persona/rate-limit honesty:** the handler derives authenticated personas from
+  saved profiles and forces guests to curious-explorer, so separate optional
+  `--persona-token` values support a genuine two-persona run and avoid the 10/hour
+  guest ceiling for 12 calls. The script warns clearly when tokens are absent.
+- **Canary procedure:** top-level documentation covers production baseline,
+  no-traffic 3.6/3.5-lite canary, raw comparison, approval, traffic shift, and a
+  conditional pipeline bump. No model configuration was changed.
+- **Verified:** `py -3 -m py_compile backend/tests/golden_regression.py`, `--help`,
+  invariant/call-site trace, and `git diff --check`. Per instruction, the 12 paid
+  live requests were not run; no deploy, secret, or model change occurred.
 
 ### 2026-08-13 — Claude: gcloud-side P2 items done; session 6 prompt issued
 - **Firestore TTL enabled** on `tafsir_cache.expires_at` (DB `tafsir-db`, project
