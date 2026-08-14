@@ -59,8 +59,8 @@ from backend.services.source_service import (
 # ============================================================================
 
 GCP_PROJECT = os.environ.get("GCP_INFRASTRUCTURE_PROJECT", "tafsir-simplified")
-LOCATION = os.environ.get("GCP_LOCATION", "us-central1")
-GEMINI_MODEL_ID = os.environ.get("GEMINI_MODEL_ID", "gemini-2.5-flash")
+GEMINI_API_LOCATION = os.environ.get("GEMINI_API_LOCATION", "global")
+GEMINI_MODEL_ID = os.environ.get("GEMINI_MODEL_ID", "gemini-3.6-flash")
 
 CONCURRENCY = 30         # Parallel Gemini requests (override with --concurrency)
 MAX_RETRIES = 10         # Retries per verse on failure (high for aggressive concurrency)
@@ -637,9 +637,15 @@ OUTPUT (strict JSON, nothing else):
 
 async def call_gemini(session, prompt, token, verse_key=""):
     """Call Gemini API with retry logic. Returns parsed JSON or None."""
+    host = (
+        "aiplatform.googleapis.com"
+        if GEMINI_API_LOCATION == "global"
+        else f"{GEMINI_API_LOCATION}-aiplatform.googleapis.com"
+    )
     endpoint = (
-        f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/{GCP_PROJECT}"
-        f"/locations/{LOCATION}/publishers/google/models/{GEMINI_MODEL_ID}:generateContent"
+        f"https://{host}/v1/projects/{GCP_PROJECT}"
+        f"/locations/{GEMINI_API_LOCATION}/publishers/google/models/"
+        f"{GEMINI_MODEL_ID}:generateContent"
     )
 
     body = {
@@ -690,9 +696,13 @@ async def call_gemini(session, prompt, token, verse_key=""):
                 finish_reason = candidates[0].get("finishReason", "unknown")
                 if finish_reason not in ("STOP", "stop"):
                     print(f"    [{verse_key}] finishReason: {finish_reason}")
-            text = (
-                candidates[0].get("content", {}).get("parts", [{}])[0].get("text", "")
-                if candidates else ""
+            parts = candidates[0].get("content", {}).get("parts", []) if candidates else []
+            text = "".join(
+                part.get("text", "")
+                for part in parts
+                if isinstance(part, dict)
+                and not part.get("thought", False)
+                and isinstance(part.get("text"), str)
             )
 
             if not text:

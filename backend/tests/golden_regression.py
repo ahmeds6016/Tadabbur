@@ -63,7 +63,8 @@ VERSE_CASES = (
         "query": "2:255",
         "label": "Ayat al-Kursi",
         "reflection_tokens": {
-            "ever-living", "sustainer", "slumber", "throne", "knowledge", "intercession"
+            "ever-living", "sustainer", "slumber", "throne", "knowledge", "intercession",
+            "tire", "tired", "fatigue", "weary"
         },
     },
     {

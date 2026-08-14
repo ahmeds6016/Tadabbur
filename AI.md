@@ -57,17 +57,16 @@ in-memory dicts (app.py:2321) → scholarly excerpts (source_service.py) → pro
 
 | Where | Value | Status |
 |---|---|---|
-| Cloud Run env `GEMINI_MODEL_ID` | `gemini-2.5-flash` | **what production runs** |
-| `app.py:110` default | `gemini-2.5-flash` | matches |
-| `deploy-backend.sh` | `gemini-2.5-flash` | fixed 2026-08-01 (was retired `gemini-2.0-flash`) |
-| `app.py:8811`, `app.py:9970` | `gemini-2.5-flash-lite` **hardcoded** | make env-configurable when migrating |
-| `config/settings.py:44` | `gemini-2.0-pro` | DEAD CODE — ignore |
+| Cloud Run env `GEMINI_MODEL_ID` | `gemini-3.6-flash` | pending canary validation (Claude, tonight) |
+| Cloud Run env `GEMINI_LITE_MODEL_ID` | `gemini-3.5-flash-lite` | pending canary validation (Claude, tonight) |
+| Cloud Run env `GEMINI_API_LOCATION` | `global` | required by Gemini 3.6; pending canary validation |
+| `app.py` defaults | same three values | matches deploy configuration |
+| `deploy-backend.sh` | same three values | code-side flip; merge/deploy is canary-gated |
 
-**Model deadline: `gemini-2.5-flash` retires Oct 16–20, 2026.** Migration target:
-`gemini-3.6-flash` (GA on Vertex) and `gemini-3.5-flash-lite` for the two -lite call
-sites. This is a planned, tested migration — see HANDOFF.md P1. Do not bump the model
-string casually: the tafsir prompt demands strict JSON and output-format drift between
-model generations must be regression-tested (`backend/tests/test_live_pipeline.py`).
+**Migration status:** the code-side move to `gemini-3.6-flash` and
+`gemini-3.5-flash-lite` is pending Claude's canary validation. Gemini 3.6 requires the
+global Vertex endpoint, independently of `GCP_LOCATION` used by Firestore/GCS. Do not
+merge or deploy the model change until the strict-JSON/content regression harness passes.
 
 ## Conventions & constraints
 

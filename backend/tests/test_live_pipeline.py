@@ -25,8 +25,8 @@ from services.source_service import (
 
 # --- Config (mirrors app.py) ---
 GCP_PROJECT = os.environ.get("GCP_INFRASTRUCTURE_PROJECT", "tafsir-simplified")
-LOCATION = os.environ.get("GCP_LOCATION", "us-central1")
-MODEL = os.environ.get("GEMINI_MODEL_ID", "gemini-2.5-flash")
+GEMINI_API_LOCATION = os.environ.get("GEMINI_API_LOCATION", "global")
+MODEL = os.environ.get("GEMINI_MODEL_ID", "gemini-3.6-flash")
 
 
 def safe_get_nested(data, *keys, default=None):
@@ -41,13 +41,32 @@ def safe_get_nested(data, *keys, default=None):
     return current
 
 
+def extract_gemini_text(data):
+    parts = safe_get_nested(data, "candidates", 0, "content", "parts", default=[])
+    return "".join(
+        part.get("text", "")
+        for part in parts
+        if isinstance(part, dict)
+        and not part.get("thought", False)
+        and isinstance(part.get("text"), str)
+    ) if isinstance(parts, list) else ""
+
+
 def call_gemini_planning(prompt):
     """Make real Gemini planning call."""
     credentials, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
     auth_req = GoogleRequest()
     credentials.refresh(auth_req)
 
-    endpoint = f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/{GCP_PROJECT}/locations/{LOCATION}/publishers/google/models/{MODEL}:generateContent"
+    host = (
+        "aiplatform.googleapis.com"
+        if GEMINI_API_LOCATION == "global"
+        else f"{GEMINI_API_LOCATION}-aiplatform.googleapis.com"
+    )
+    endpoint = (
+        f"https://{host}/v1/projects/{GCP_PROJECT}/locations/{GEMINI_API_LOCATION}/"
+        f"publishers/google/models/{MODEL}:generateContent"
+    )
 
     body = {
         "contents": [{"role": "user", "parts": [{"text": prompt}]}],
@@ -71,7 +90,7 @@ def call_gemini_planning(prompt):
     response.raise_for_status()
 
     raw = response.json()
-    text = safe_get_nested(raw, "candidates", 0, "content", "parts", 0, "text")
+    text = extract_gemini_text(raw)
     if not text:
         print(f"  RAW RESPONSE: {json.dumps(raw, indent=2)[:2000]}")
         raise ValueError("Empty response from Gemini")
