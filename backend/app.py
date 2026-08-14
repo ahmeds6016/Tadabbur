@@ -2645,15 +2645,9 @@ def initialize_firebase():
 initialize_firebase()
 load_chunks_from_verse_files_enhanced() # UPDATED CALL
 
-# Load the static verse range map (ground-truth validated with full payload:
-# prompt template + verse text + tafsir chunks + scholarly sources + output allocation).
-# Falls back to in-memory precomputation if the static map is missing.
-from services.token_budget_service import load_range_map, precompute_verse_budgets
-if not load_range_map():
-    print("WARNING: Static range map not found — falling back to in-memory precomputation")
-    precompute_verse_budgets(TAFSIR_CHUNKS, QURAN_METADATA)
-else:
-    print("INFO: Loaded ground-truth verse range map from data/verse_range_map.json")
+# Precompute verse range limits from the tafsir chunks loaded at startup.
+from services.token_budget_service import precompute_verse_budgets
+precompute_verse_budgets(TAFSIR_CHUNKS, QURAN_METADATA)
 
 vertexai.init(project=GCP_INFRASTRUCTURE_PROJECT, location=LOCATION)
 

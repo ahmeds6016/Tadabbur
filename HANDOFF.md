@@ -129,8 +129,9 @@ Q8+ Remaining findings (6, 9-14) stay in the review doc; promote after the above
    (+ redis/pydantic deps), dead functions listed in the audit §6, frontend
    `AppContext.jsx`, `tafsirApi.{js,ts}`, 20+ orphaned Iman-journal components,
    `/logo-demo`. One PR, pure deletion, no behavior change.
-8. **Add `cryptography` to requirements.txt** (imported at app.py:14, currently only a
-   transitive dep — a resolver change breaks startup).
+8. **✅ CODE COMPLETE 2026-08-13 — Pin `cryptography`**
+   (`codex/p2b-hygiene`; awaiting review/backend rebuild): explicit `50.0.0` pin
+   matches the current Firebase/PyJWT/Google Auth resolution and Python 3.11 image.
 9. **Dockerfile PORT — promoted into P1.4**. The separate option to use `--workers 2`
    on the second CPU remains unimplemented and must be evaluated independently.
 10. **Frontend build risk**: `useSearchParams()` without a `<Suspense>` boundary
@@ -144,10 +145,21 @@ Q8+ Remaining findings (6, 9-14) stay in the review doc; promote after the above
 13. **Observability**: replace emoji `print()` with the configured `logger`; add basic
     request metrics; set up a Cloud Monitoring alert on 4xx/5xx spikes and on Firestore
     PERMISSION_DENIED (this outage went unnoticed in logs for days).
-14. **Repo hygiene**: `verse_range_map.json` referenced at app.py:2649 doesn't exist in
-    repo (fallback path always taken) — either ship it or delete the load path.
+14. **✅ CODE COMPLETE 2026-08-13 — Verse-range startup hygiene**
+    (`codex/p2b-hygiene`; awaiting review/backend rebuild): removed the missing-file
+    load branch; startup now directly precomputes from the already-loaded tafsir chunks.
 
 ## Session log
+
+### 2026-08-13 — GPT 5.6: P2-B dependency and range-map hygiene
+- **Branch/commit:** `codex/p2b-hygiene` / `Pin crypto and simplify range budget startup`.
+- **Dependency:** added only `cryptography==50.0.0`. A clean dry-run of the existing requirements resolves Firebase Admin 6.5.0 → PyJWT[crypto] and Google Auth's pyOpenSSL extra to cryptography 50.0.0; its Python 3.11 `manylinux_2_34_x86_64` wheel was downloaded successfully.
+- **Range map investigation:** `backend/scripts/generate_range_map.py` and `export_range_map()` exist, but the generator downloads seven authoritative tafsir files from GCS and requires cloud credentials. Local source data is incomplete, so generating a trustworthy artifact is not possible under this session's no-GCP rule.
+- **Changed:** removed `load_range_map()` from app startup plus the inaccurate static “ground-truth” comments. The existing `precompute_verse_budgets(TAFSIR_CHUNKS, QURAN_METADATA)` path is now the sole startup behavior; no fabricated JSON was committed.
+- **Verified:** `py -3 -m py_compile` passes for app, token-budget service, and generator; 25 non-constant token-budget tests pass; `git diff --check` passes.
+- **Known pre-existing tests:** the full token-budget file is 28 passed/2 failed because `TestBudgetConstants` still expects `ABSOLUTE_MAX_VERSES == 5` (runtime is 10) and old component totals of 30,000 (runtime sum is 27,500). This branch does not change those constants or tests.
+- **Not run:** backend startup or GCS generation. No live API, deploy, gcloud, GCS/Firestore, billing, or secrets access performed.
+- **Deployment:** backend image rebuild is required after merge; runtime behavior remains the same fallback computation that already ran on every startup.
 
 ### 2026-08-03 — Claude: Phase 2 review validated; P0 confirmed; findings promoted
 - Independently verified the P0: fetched live cached 2:255 — first hadith reads
