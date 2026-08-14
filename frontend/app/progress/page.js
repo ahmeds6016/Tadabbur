@@ -11,6 +11,8 @@ export default function ProgressPage() {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [progress, setProgress] = useState(null);
+  const [reflectionCount, setReflectionCount] = useState(0);
+  const [streak, setStreak] = useState({ current_streak: 0, longest_streak: 0 });
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -27,12 +29,22 @@ export default function ProgressPage() {
   const fetchProgress = async (currentUser) => {
     try {
       const token = await currentUser.getIdToken();
-      const res = await fetch(`${BACKEND_URL}/progress`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!res.ok) throw new Error(`Failed to load progress (${res.status})`);
-      const data = await res.json();
-      setProgress(data);
+      const headers = { Authorization: `Bearer ${token}` };
+      const [progressRes, annotationsRes, streakRes] = await Promise.all([
+        fetch(`${BACKEND_URL}/progress`, { headers }),
+        fetch(`${BACKEND_URL}/annotations/user?limit=500`, { headers }),
+        fetch(`${BACKEND_URL}/streak`, { headers }),
+      ]);
+      if (!progressRes.ok) throw new Error(`Failed to load progress (${progressRes.status})`);
+      setProgress(await progressRes.json());
+
+      if (annotationsRes.ok) {
+        const annotationData = await annotationsRes.json();
+        setReflectionCount(annotationData.count || 0);
+      }
+      if (streakRes.ok) {
+        setStreak(await streakRes.json());
+      }
     } catch (err) {
       console.error('Failed to fetch progress:', err);
       setError(err.message);
@@ -84,18 +96,29 @@ export default function ProgressPage() {
       <div className="card">
         {/* Header */}
         <div className="progress-header">
-          <h1 className="progress-title">Your Quran Journey</h1>
-          <div className="progress-summary">
-            <span className="progress-count">{totalExplored.toLocaleString()}</span>
-            <span className="progress-total"> / 6,236</span>
-            <span className="progress-pct"> ({percentage}%)</span>
+          <h1 className="progress-title">Your Quran Learning</h1>
+          <div className="learning-summary">
+            <div className="learning-stat">
+              <span className="learning-count">{totalExplored.toLocaleString()}</span>
+              <span className="learning-label">Verses studied</span>
+            </div>
+            <div className="learning-stat">
+              <span className="learning-count">{reflectionCount.toLocaleString()}</span>
+              <span className="learning-label">Reflections written</span>
+            </div>
           </div>
+          <p className="progress-context">
+            {percentage}% of {totalVerses.toLocaleString()} verses explored
+          </p>
           <div className="progress-bar-track">
             <div
               className="progress-bar-fill"
               style={{ width: `${Math.min(percentage, 100)}%` }}
             />
           </div>
+          <p className="streak-secondary">
+            Daily learning streak: {streak.current_streak || 0} day{streak.current_streak === 1 ? '' : 's'}
+          </p>
         </div>
 
         {/* Badges */}
@@ -188,22 +211,40 @@ export default function ProgressPage() {
           color: var(--deep-blue, #1e293b);
           margin: 0 0 12px 0;
         }
-        .progress-summary {
-          margin-bottom: 12px;
-          font-size: 1.05rem;
+        .learning-summary {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 12px;
+          margin-bottom: 10px;
         }
-        .progress-count {
+        .learning-stat {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+          padding: 14px 10px;
+          background: var(--cream, #faf6f0);
+          border: 1px solid var(--border-light, #e5e7eb);
+          border-radius: 12px;
+        }
+        .learning-count {
           font-weight: 800;
           color: var(--primary-teal, #0d9488);
-          font-size: 1.3rem;
+          font-size: 1.5rem;
         }
-        .progress-total {
+        .learning-label {
+          font-size: 0.78rem;
           color: var(--color-text-secondary, #666);
           font-weight: 600;
         }
-        .progress-pct {
-          color: var(--gold, #d4a017);
-          font-weight: 700;
+        .progress-context {
+          margin: 0 0 10px;
+          color: var(--color-text-secondary, #666);
+          font-size: 0.82rem;
+        }
+        .streak-secondary {
+          margin: 10px 0 0;
+          color: var(--color-text-secondary, #777);
+          font-size: 0.78rem;
         }
         .progress-bar-track {
           width: 100%;

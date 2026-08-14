@@ -1499,6 +1499,7 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
   }, [query, ensureShareId]);
 
   const handleAnnotationSaved = useCallback(() => {
+    updateStreak();
     setAnnotationDialogOpen(false);
     setCurrentVerse(null);
     setEditingAnnotation(null);
@@ -1506,7 +1507,7 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
     if (!onboardingState.hasUsedAnnotations) {
       markStepComplete('hasUsedAnnotations');
     }
-  }, [clearSelection, onboardingState.hasUsedAnnotations, markStepComplete]);
+  }, [clearSelection, onboardingState.hasUsedAnnotations, markStepComplete, updateStreak]);
 
   const handleAnnotationClose = useCallback(() => {
     setAnnotationDialogOpen(false);

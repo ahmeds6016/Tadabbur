@@ -129,7 +129,11 @@ Q8. **CODE COMPLETE 2026-08-13 — Continue reflecting recommendations**
     (`codex/s6-recommendations`; awaiting review/backend + frontend deploy).
     Deterministic follow-on verses now reach fresh and cached answers and render as
     a three-card continuation path.
-Q9+ Remaining findings (9-13) stay in the review doc; promote after the above.
+Q9+ Remaining findings (9-11, 13) stay in the review doc; promote after the above.
+Q12. **CODE COMPLETE 2026-08-13 — Study-centered streaks and progress**
+    (`codex/s6-streaks`; awaiting review/frontend deploy). Reflection saves and
+    completed reading-plan days now count as daily learning activity; the progress
+    page leads with verses studied and reflections written.
 Q14. **CODE COMPLETE 2026-08-13 — Reliability quick wins**
     (`codex/s6-reliability`; awaiting review/backend + frontend deploy). The feedback
     cron fails closed without its secret, corrupt onboarding state self-recovers,
@@ -171,6 +175,19 @@ Q14. **CODE COMPLETE 2026-08-13 — Reliability quick wins**
     load branch; startup now directly precomputes from the already-loaded tafsir chunks.
 
 ## Session log
+
+### 2026-08-13 — GPT 5.6: Session 6 Unit 6 — Study-centered streaks
+- **Branch/commit:** `codex/s6-streaks` / `Reward study in learning streaks`.
+- **Activity paths:** the existing idempotent streak update runs after the shared
+  annotation-save success callback and after a reading-plan `complete_day` response
+  succeeds. A streak failure remains non-blocking and cannot undo saved study work.
+- **Progress copy:** “Your Quran Learning” now leads with verses studied and
+  reflections written from the existing `/progress` and `/annotations/user` data;
+  percentage context remains visible and the existing `/streak` count is secondary.
+  No spiritual score, quality judgment, or new backend metric was introduced.
+- **Verified:** success-path trace for all annotation modes and plan-day completion,
+  `git diff --check`, and `npm run build` (exit 0). The known trailing `window is not
+  defined` diagnostic remains. No browser interaction test or deploy was performed.
 
 ### 2026-08-13 — GPT 5.6: Session 6 Unit 5 — Reliability batch
 - **Branch/commit:** `codex/s6-reliability` / `Harden reliability failure paths`.
