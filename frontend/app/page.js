@@ -28,6 +28,7 @@ import ConfirmDialog from './components/ConfirmDialog';
 import ErrorBoundary from './components/ErrorBoundary';
 import TadabburLogo from './components/Logo';
 import SurahVersePicker from './components/SurahVersePicker';
+import ThemeExplorer from './components/ThemeExplorer';
 // CollectionsGrid removed for minimalist homepage
 import BadgeDisplay, { BadgePopup } from './components/BadgeDisplay';
 import { ToastContainer } from './components/ui/Toast';
@@ -1475,6 +1476,13 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
     }
   };
 
+  const handleVerseSelection = (queryStr) => {
+    setQuery(queryStr);
+    setTimeout(() => {
+      document.querySelector('.tafsir-form')?.requestSubmit();
+    }, 100);
+  };
+
   const handleCopyToClipboard = (event) => {
     if (!response) return;
 
@@ -1884,16 +1892,14 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
 
         {/* Surah/Verse Picker */}
         <SurahVersePicker
-          onSelect={(queryStr) => {
-            setQuery(queryStr);
-            // Auto-submit after selection
-            setTimeout(() => {
-              document.querySelector('.tafsir-form')?.requestSubmit();
-            }, 100);
-          }}
+          onSelect={handleVerseSelection}
           externalSurah={pickerSurah}
           externalVerse={pickerVerse}
         />
+
+        {!response && !isTafsirLoading && (
+          <ThemeExplorer onSelect={handleVerseSelection} />
+        )}
 
         {/* Hidden form - auto-submitted by SurahVersePicker */}
         <form onSubmit={handleGetTafsir} className="tafsir-form" style={{ display: 'none' }}>

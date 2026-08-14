@@ -157,6 +157,8 @@ const ALL_QUICK_SELECTS = [
   { query: '3:200', label: 'Steadfastness' },
   { query: '39:10', label: 'Reward of Patience' },
   { query: '12:87', label: 'Hope in Despair' },
+  { query: '93:3', label: 'Not Forsaken in Grief' },
+  { query: '21:83', label: 'Ayyub Names His Suffering' },
   { query: '21:83-84', label: 'Suffering & Healing' },
 
   // Trust & reliance on Allah
@@ -176,6 +178,10 @@ const ALL_QUICK_SELECTS = [
   { query: '58:11', label: 'Knowledge & Rank' },
   { query: '3:7', label: 'Clear & Ambiguous Verses' },
   { query: '16:43', label: 'Asking the Learned' },
+
+  // Prayer
+  { query: '20:14', label: 'Establishing Prayer for Remembrance' },
+  { query: '29:45', label: 'Prayer Restraining Wrongdoing' },
 
   // Character & conduct
   { query: '17:23-24', label: 'Rights of Parents' },
@@ -283,6 +289,93 @@ const ALL_QUICK_SELECTS = [
   { query: '105:1-5', label: 'The Army of Abraha' },
   { query: '109:1-6', label: 'Declaration of Tawheed' },
   { query: '110:1-3', label: 'The Final Surah' },
+];
+
+const QUICK_SELECT_BY_QUERY = new Map(
+  ALL_QUICK_SELECTS.map(item => [item.query, item])
+);
+
+const themeVerses = (suggestions) => suggestions
+  .map(([query, description]) => {
+    const catalogItem = QUICK_SELECT_BY_QUERY.get(query);
+    return catalogItem ? { ...catalogItem, description } : null;
+  })
+  .filter(Boolean);
+
+export const THEME_QUICK_SELECTS = [
+  {
+    id: 'patience',
+    label: 'Patience',
+    verses: themeVerses([
+      ['2:153', 'Seek steadiness through patience and prayer.'],
+      ['3:200', 'Practice patient endurance together.'],
+      ['39:10', 'Consider the unmeasured reward of patience.'],
+    ]),
+  },
+  {
+    id: 'gratitude',
+    label: 'Gratitude',
+    verses: themeVerses([
+      ['14:7', 'Notice the promise attached to gratitude.'],
+      ['2:152', 'Connect remembering Allah with giving thanks.'],
+      ['31:12', 'Learn why gratitude ultimately benefits the grateful.'],
+    ]),
+  },
+  {
+    id: 'forgiveness',
+    label: 'Forgiveness',
+    verses: themeVerses([
+      ['39:53', 'Hear hope addressed to those who have wronged themselves.'],
+      ['4:110', 'Trace the path from wrongdoing to seeking forgiveness.'],
+      ['42:25', 'Reflect on Allah accepting repentance and pardoning sins.'],
+    ]),
+  },
+  {
+    id: 'grief-hope',
+    label: 'Grief & Hope',
+    verses: themeVerses([
+      ['93:3', 'Sit with the assurance that you are not forsaken.'],
+      ['12:87', 'See how grief can coexist with hope in Allah.'],
+      ['21:83', 'Learn from Ayyub naming pain without surrendering trust.'],
+    ]),
+  },
+  {
+    id: 'trust',
+    label: 'Trust in Allah',
+    verses: themeVerses([
+      ['3:159', 'Move from consultation and decision into reliance.'],
+      ['9:51', 'Reframe uncertainty through Allah’s decree and care.'],
+      ['14:12', 'Hear prophetic trust spoken in the face of harm.'],
+    ]),
+  },
+  {
+    id: 'prayer',
+    label: 'Prayer',
+    verses: themeVerses([
+      ['20:14', 'Approach prayer as an act of remembering Allah.'],
+      ['29:45', 'Examine how prayer should reshape conduct.'],
+      ['2:153', 'Turn to prayer while learning patient endurance.'],
+    ]),
+  },
+  {
+    id: 'family',
+    label: 'Family',
+    verses: themeVerses([
+      ['30:21', 'Reflect on tranquility, affection, and mercy in marriage.'],
+      ['25:74', 'Study a prayer for families that bring joy and integrity.'],
+      ['4:19', 'Consider the command to live with spouses in kindness.'],
+      ['46:15', 'Remember gratitude and care across generations.'],
+    ]),
+  },
+  {
+    id: 'justice',
+    label: 'Justice',
+    verses: themeVerses([
+      ['16:90', 'Begin with the Quran’s concise command to justice and excellence.'],
+      ['4:135', 'Stand for justice even against self-interest.'],
+      ['5:8', 'Do not let dislike pull you away from fairness.'],
+    ]),
+  },
 ];
 
 export default function SurahVersePicker({ onSelect, initialSurah = null, initialVerse = null, externalSurah = null, externalVerse = null }) {

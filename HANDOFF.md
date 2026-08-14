@@ -119,7 +119,10 @@ Q6. **Source-coverage contract** (finding 5): deterministic coverage object +
     "Sources used" UI panel; regenerate stale plan metadata in CI.
 Q7. **Verse-first progressive loading** (finding 8): show Arabic+translation
     immediately, skeleton for commentary. After Q4 measurements.
-Q8+ Remaining findings (6, 9-14) stay in the review doc; promote after the above.
+Q8+ Remaining findings (6, 9, 11-14) stay in the review doc; promote after the above.
+Q10. **CODE COMPLETE 2026-08-13 — Curated theme entry point**
+    (`codex/s6-themes`; awaiting review/frontend deploy). The home search surface now
+    offers eight editorial themes that lead directly into ordinary verse queries.
 
 ### P2 — planned work
 6. **Gemini migration (deadline mid-Oct 2026)**: `gemini-2.5-flash` → `gemini-3.6-flash`,
@@ -156,6 +159,20 @@ Q8+ Remaining findings (6, 9-14) stay in the review doc; promote after the above
     load branch; startup now directly precomputes from the already-loaded tafsir chunks.
 
 ## Session log
+
+### 2026-08-13 — GPT 5.6: Session 6 Unit 8 — Explore a theme
+- **Branch/commit:** `codex/s6-themes` / `Add curated theme exploration`.
+- **Catalog:** exported eight curated themes from the picker’s quick-select catalog:
+  Patience, Gratitude, Forgiveness, Grief & Hope, Trust in Allah, Prayer, Family,
+  and Justice. Added four missing singular quick-select references (`93:3`, `21:83`,
+  `20:14`, `29:45`) so grief/hope and prayer have clear editorial entry points.
+- **Experience:** choosing a theme reveals three or four verse cards under the
+  explicit “Editorial suggestions” label. Each card has a one-line description and
+  selection runs the same hidden-form tafsir query path as the existing picker.
+- **Scope/verified:** no free-text semantic search, backend, model, or pipeline change.
+  Verified all eight catalog IDs and absence of model/semantic additions by grep,
+  `git diff --check`, and `npm run build` (exit 0). The known trailing `window is not
+  defined` diagnostic remains. No browser interaction test or deploy was performed.
 
 ### 2026-08-13 — Claude: gcloud-side P2 items done; session 6 prompt issued
 - **Firestore TTL enabled** on `tafsir_cache.expires_at` (DB `tafsir-db`, project
