@@ -48,6 +48,7 @@ from services.source_service import (
     format_scholarly_excerpts_for_prompt,
     plan_scholarly_retrieval_deterministic,
 )
+from services.hadith_validation import validate_hadith_items
 from data.reading_plans import READING_PLANS
 from data.iman_behaviors import (
     IMAN_CATEGORIES,
@@ -159,7 +160,7 @@ quran_db = None      # Google Cloud client -> tafsir-db database for Quran texts
 TAFSIR_CHUNKS = {}   # Flattened text for direct verse lookup
 VERSE_METADATA = {}  # Structured metadata for direct queries
 RESPONSE_CACHE = {}  # In-memory cache
-SCHOLARLY_PIPELINE_VERSION = "12.0"  # Bump: pre-computed scholarly plans (eliminates runtime Gemini planning call)
+SCHOLARLY_PIPELINE_VERSION = "13.0"  # Bump: source-grounded hadith validation invalidates unverified cached citations
 USER_RATE_LIMITS = defaultdict(list)  # Rate limiting
 ANALYTICS = defaultdict(int)  # Usage analytics
 
@@ -3663,7 +3664,7 @@ ONLY use the source material provided above for tafsir_explanations. DO NOT gene
 
 However, USE the Additional Scholarly Sources (if provided above) EXTENSIVELY to create deeply layered responses:
 - The "lessons_practical_applications" section MUST integrate scholarly sources by name ("Imam al-Ghazali explains...", "Ibn al-Qayyim describes...")
-- The "hadith" section should use hadith excerpts from Riyad al-Saliheen when provided
+- The "hadith" section may use ONLY hadith wording present in the source material supplied above
 - The "summary" section must connect classical tafsir with spiritual insights from scholarly sources
 - NEVER cite granular section names (e.g., "Section: SECRETS OF MARRIAGE"). Instead, cite naturally: "Imam al-Ghazali, in Ihya Ulum al-Din, discusses..."
 
@@ -3698,9 +3699,13 @@ However, USE the Additional Scholarly Sources (if provided above) EXTENSIVELY to
 
     "hadith": [
         {{
-            "reference": "Source attribution (e.g., 'Sahih Bukhari 1234' or 'Riyad al-Saliheen, Imam al-Nawawi'). NEVER include section/chapter names like 'Section: X'.",
-            "text": "The hadith text or a scholarly excerpt. If from Riyad al-Saliheen data, use the provided text. Cite naturally: 'Imam al-Ghazali, in Ihya Ulum al-Din, discusses...' — NOT 'Section: SECRETS OF MARRIAGE'.",
-            "relevance": "How this connects to the verse. Weave in the scholarly perspective — why this teaching matters for the verse's message."
+            "reference": {{
+                "collection": "The named collection, or null. Set this ONLY when the supplied excerpt explicitly attributes this exact wording to that collection.",
+                "narrator": "Narrator named in the supplied excerpt, or null.",
+                "attribution": "Always name the in-corpus source, e.g. 'As cited in Ibn Kathir's tafsir of this verse'."
+            }},
+            "text": "Copy the hadith wording VERBATIM from the supplied source excerpts. Tight trimming at the beginning or end is allowed; paraphrasing, combining reports, and adding wording from memory are forbidden.",
+            "relevance": "Briefly explain how this source-grounded report connects to the verse."
         }}
     ],
 
@@ -3715,7 +3720,7 @@ However, USE the Additional Scholarly Sources (if provided above) EXTENSIVELY to
             "type": "contemplation",
             "core_principle": "A concise statement of the ethical/spiritual principle derived from the verse.",
             "contemplation": "A deep, probing question that forces genuine self-reflection. Example: 'If you stripped away all human witnesses to your good deeds, what would remain of your motivation?'",
-            "prophetic_anchor": "A short hadith or scholarly quote that answers or deepens the contemplation."
+            "prophetic_anchor": "A short source-grounded scholarly principle. Do not quote or cite hadith here; verified hadith belong only in the hadith array."
         }},
         {{
             "point": "Lesson title (Progression)",
@@ -3760,6 +3765,7 @@ CRITICAL REMINDERS
 14. **LESSONS TRILOGY** - Each response MUST have exactly 3 lessons: one synthesis, one contemplation, one progression
 15. **RICH SUMMARY** - Summary is a scholarly synthesis (4-6 sentences), NOT a 2-sentence blurb
 16. **REFLECTION PROMPT** - The reflection_prompt MUST be specific to this verse's content. Reference the verse's themes/imagery directly. NEVER generic.
+17. **HADITH INTEGRITY** - Every hadith.text MUST be verbatim (or tightly trimmed) from the supplied source excerpts, never model memory. Never merge two wordings. If an excerpt distinguishes collection wordings, attribute each wording only to the collection the excerpt names for it; otherwise set collection to null. Return an empty hadith array when no source-grounded item is available. A server validator will drop unsupported text or collection claims.
 
 Current persona: **{persona_name}** ({knowledge_level} level)
 Apply formatting: Short paragraphs with **bolded sub-headers**. NO bullets. NO emojis. NO single asterisks. Vocabulary adapted to {persona_name} level.
@@ -7069,6 +7075,10 @@ def tafsir_handler_enhanced():
                 cross_refs = first_item['metadata'].get('cross_references', [])
 
         scholarly_ctx, scholarly_badges, scholarly_pipeline = _get_scholarly_context_two_stage(query, verses_for_ai, context_by_source)
+        hadith_source_context = "\n\n".join(filter(None, [
+            build_structured_context(context_by_source, arabic_text, cross_refs),
+            scholarly_ctx,
+        ]))
 
         # Compute dynamic verse limit from token budget
         from services.token_budget_service import compute_max_end_verse as _compute_max_end
@@ -7176,6 +7186,19 @@ def tafsir_handler_enhanced():
                 return jsonify({
                     "error": "AI returned a malformed response. Please try again."
                 }), 502
+
+            kept_hadith, dropped_hadith = validate_hadith_items(
+                final_json.get("hadith", []),
+                hadith_source_context,
+            )
+            final_json["hadith"] = kept_hadith
+            for rejected in dropped_hadith:
+                logger.warning(
+                    "HADITH_INTEGRITY_DROP verse=%s reference=%r reason=%s",
+                    f"{surah}:{start_verse}" + (f"-{end_verse}" if end_verse != start_verse else ""),
+                    rejected.get("reference", ""),
+                    rejected.get("_validation_reason", "validation_failed"),
+                )
 
             final_json["query_type"] = "direct_verse"
             final_json["verse_reference"] = f"{surah}:{verse}"

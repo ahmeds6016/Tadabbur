@@ -96,7 +96,8 @@ unused project (candidates: synapse-demo-471205, vertical-karma-471205-j1).
    messages are unchanged. The global backend-down banner remains a separate future task.
 
 ### P1-Q — product quality (promoted from docs/QUALITY-REVIEW-2026-08-03.md; Claude-verified)
-Q1. **P0 — hadith citation integrity** (review finding 1; **verified live by Claude**:
+Q1. **✅ CODE COMPLETE 2026-08-13 — P0 hadith citation integrity**
+    (`codex/q1-hadith-integrity`; awaiting review/backend deploy). Review finding 1 was **verified live by Claude**:
     cached 2:255 attributes the Ahmad-version "tongue and two lips" wording to Sahih
     Muslim; Muslim 810 ends at the congratulation). Fix: structured hadith fields
     (collection, canonical ID, grade, exact excerpt, source pointer), containment
@@ -148,6 +149,17 @@ Q8+ Remaining findings (6, 9-14) stay in the review doc; promote after the above
     repo (fallback path always taken) — either ship it or delete the load path.
 
 ## Session log
+
+### 2026-08-13 — GPT 5.6: Q1 hadith citation integrity
+- **Branch/commit:** `codex/q1-hadith-integrity` / `Document source-grounded hadith validation`.
+- **Changed:** `build_enhanced_prompt` now requires structured collection/narrator/in-corpus attribution and verbatim source wording; nested lesson anchors may no longer introduce unvalidated hadith.
+- **Validation:** added the pure `services/hadith_validation.py` validator. Normalized 12-word shingles require an 80% match (short 4–11 word items require exact containment); named collections must occur in the 24 words preceding the matched wording, deliberately preferring a safe false negative over a misattribution.
+- **Pipeline:** `/tafsir` validates against the exact tafsir + scholarly context supplied to the prompt before post-processing or either cache write, returns an empty list if all items fail, and logs verse/reference/reason for each drop. Kept items retain a display-string `reference` plus additive `collection`, `narrator`, and `attribution` fields.
+- **P0 regression:** the fixture where Ahmad's 2:255 “tongue and two lips” wording is labeled Sahih Muslim is dropped because Muslim is not the preceding attribution; verbatim, absent, and empty cases are also covered.
+- **Version:** `SCHOLARLY_PIPELINE_VERSION` 12.0 → 13.0, deliberately making all old Firestore cache documents stale on deployment, including the bad 2:255 response.
+- **Verified:** `py -3 -m pytest backend/tests/test_hadith_integrity.py -q` (4 passed), `py -3 -m py_compile` for the app/validator/test, and `git diff --check` all pass. Code trace confirms validation precedes filtering and caches.
+- **Not run:** full backend startup or HTTP/live tests because these changes are undeployed and startup requires GCP-backed configuration. No live API, deploy, gcloud, Firestore, billing, or secrets access performed.
+- **Deployment:** Claude/Ahmed must review, merge, rebuild, and deploy the backend; the version bump will cause regeneration and normal LLM cost as stale verses are requested.
 
 ### 2026-08-03 — Claude: Phase 2 review validated; P0 confirmed; findings promoted
 - Independently verified the P0: fetched live cached 2:255 — first hadith reads
