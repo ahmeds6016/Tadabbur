@@ -22,7 +22,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-from flask import Flask, request, jsonify, make_response
+
+def _single_line_log(value: Any) -> str:
+    """Escape line breaks so Cloud Logging emits one entry per message."""
+    return str(value).replace("\r", "\\r").replace("\n", "\\n")
+
+from flask import Flask, request, jsonify, make_response, g
 from flask_cors import CORS
 
 import requests
@@ -103,6 +108,32 @@ CORS(app, resources={r"/*": {
     "allow_headers": ["Content-Type", "Authorization"],
     "expose_headers": ["Server-Timing", "X-Cache-Status"],
 }}, supports_credentials=True, max_age=86400)
+
+
+@app.before_request
+def start_observed_request_timer():
+    """Start timing the two user-facing generation/share endpoints."""
+    if request.path in {"/tafsir", "/share"}:
+        g.request_started_at = time.time()
+
+
+@app.after_request
+def log_observed_request(response):
+    """Emit one structured summary for tafsir and share requests."""
+    if request.path not in {"/tafsir", "/share"}:
+        return response
+
+    started_at = getattr(g, "request_started_at", time.time())
+    duration_ms = (time.time() - started_at) * 1000
+    logger.info(
+        "REQUEST_METRIC method=%s path=%s status=%s duration_ms=%.1f cache_status=%s",
+        request.method,
+        request.path,
+        response.status_code,
+        duration_ms,
+        response.headers.get("X-Cache-Status", "none"),
+    )
+    return response
 
 # --- Configuration (UPDATED for new sliding window vector index) ---
 # Firebase project (Auth, Firestore, Users, Quran texts)
@@ -2285,7 +2316,7 @@ def handle_errors(f):
             }), 400
         except Exception as e:
             # Log the full error for debugging
-            print(f"❌ Unhandled error in {f.__name__}: {type(e).__name__} - {e}")
+            logger.error("Unhandled error in %s: %s - %s", f.__name__, type(e).__name__, e)
             traceback.print_exc()
 
             # Return generic error to client
@@ -2437,25 +2468,29 @@ def extract_json_from_response(text: str) -> Optional[dict]:
     try:
         return json.loads(text)
     except json.JSONDecodeError as e:
-        print(f"⚠️ Initial JSON parse failed at position {e.pos}: {e.msg}")
+        logger.warning("Initial JSON parse failed at position %s: %s", e.pos, e.msg)
 
         # If it looks like a quote/comma/control character issue, try comprehensive fix
         if any(keyword in str(e.msg) for keyword in ["Expecting ','", "Expecting ':'", "Unterminated string", "Invalid control character"]):
-            print(f"⚠️ Attempting comprehensive JSON cleanup...")
+            logger.warning("Attempting comprehensive JSON cleanup...")
             try:
                 fixed_text = fix_malformed_json(text)
                 result = json.loads(fixed_text)
-                print(f"✅ Successfully cleaned and parsed malformed JSON!")
+                logger.info("Successfully cleaned and parsed malformed JSON!")
                 return result
             except json.JSONDecodeError as e2:
-                print(f"⚠️ Cleanup failed at position {e2.pos}: {e2.msg}")
+                logger.warning("Cleanup failed at position %s: %s", e2.pos, e2.msg)
                 if e2.pos < len(fixed_text):
                     context_start = max(0, e2.pos - 100)
                     context_end = min(len(fixed_text), e2.pos + 100)
-                    print(f"⚠️ Error context: ...{fixed_text[context_start:e2.pos]}<<<HERE>>>{fixed_text[e2.pos:context_end]}...")
+                    logger.warning(
+                        "Error context: ...%s<<<HERE>>>%s...",
+                        _single_line_log(fixed_text[context_start:e2.pos]),
+                        _single_line_log(fixed_text[e2.pos:context_end]),
+                    )
                 # Continue to other methods below
             except Exception as ex:
-                print(f"⚠️ Unexpected error during cleanup: {str(ex)}")
+                logger.warning("Unexpected error during cleanup: %s", ex)
 
         # Continue with original fallback logic
         pass
@@ -2530,40 +2565,49 @@ def extract_json_from_response(text: str) -> Optional[dict]:
         pass
 
     # Try 5: Fallback - create minimal valid response
-    print(f"⚠️ JSON extraction failed, using fallback response")
-    print(f"⚠️ Response length: {len(text)} chars")
+    logger.warning("JSON extraction failed, using fallback response")
+    logger.warning("Response length: %s chars", len(text))
 
     # Check for common JSON issues
     has_opening_brace = text.strip().startswith('{')
     has_closing_brace = text.strip().endswith('}')
     brace_count = text.count('{') - text.count('}')
 
-    print(f"⚠️ JSON structure check: starts_with_brace={has_opening_brace}, ends_with_brace={has_closing_brace}, brace_imbalance={brace_count}")
+    logger.warning(
+        "JSON structure check: starts_with_brace=%s, ends_with_brace=%s, brace_imbalance=%s",
+        has_opening_brace,
+        has_closing_brace,
+        brace_count,
+    )
 
     # LOG RESPONSE (truncated for large responses)
     if len(text) > 2000:
-        print(f"⚠️ === FIRST 1000 CHARS OF GEMINI RESPONSE ===")
-        print(text[:1000])
-        print(f"⚠️ === (TRUNCATED - TOTAL LENGTH: {len(text)} chars) ===")
+        logger.warning("=== FIRST 1000 CHARS OF GEMINI RESPONSE ===")
+        logger.warning("%s", _single_line_log(text[:1000]))
+        logger.warning("=== (TRUNCATED - TOTAL LENGTH: %s chars) ===", len(text))
     else:
-        print("⚠️ === COMPLETE GEMINI RESPONSE ===")
-        print(text)
-        print("⚠️ === END RESPONSE ===")
+        logger.warning("=== COMPLETE GEMINI RESPONSE ===")
+        logger.warning("%s", _single_line_log(text))
+        logger.warning("=== END RESPONSE ===")
 
     # If response looks like it might be valid JSON that's just very long, try one more parse
     if has_opening_brace and has_closing_brace and brace_count == 0:
-        print(f"⚠️ Response structure looks valid, attempting final JSON parse...")
+        logger.warning("Response structure looks valid, attempting final JSON parse...")
         try:
             return json.loads(text)
         except json.JSONDecodeError as e:
-            print(f"⚠️ Final parse failed at position {e.pos}: {e.msg}")
+            logger.warning("Final parse failed at position %s: %s", e.pos, e.msg)
 
             # Show context around the exact error
             if e.pos < len(text):
                 context_start = max(0, e.pos - 150)
                 context_end = min(len(text), e.pos + 150)
-                print(f"⚠️ Error context (150 chars before/after pos {e.pos}):")
-                print(text[context_start:e.pos] + " <<<ERROR_HERE>>> " + text[e.pos:context_end])
+                logger.warning("Error context (150 chars before/after pos %s):", e.pos)
+                logger.warning(
+                    "%s <<<ERROR_HERE>>> %s",
+                    _single_line_log(text[context_start:e.pos]),
+                    _single_line_log(text[e.pos:context_end]),
+                )
 
     return {
         "response": text[:500] if len(text) > 500 else text,
@@ -2656,7 +2700,7 @@ def _get_scholarly_context_for_prompt(query, verse_data=None):
         )
         return ctx
     except Exception as e:
-        print(f"⚠️ Scholarly source retrieval error (non-fatal): {e}")
+        logger.warning("Scholarly source retrieval error (non-fatal): %s", e)
         return ""
 
 
@@ -2685,7 +2729,7 @@ def _get_scholarly_sources_metadata(query, verse_data=None):
             topic_keywords=topic_keywords,
         )
     except Exception as e:
-        print(f"⚠️ Scholarly sources metadata error (non-fatal): {e}")
+        logger.warning("Scholarly sources metadata error (non-fatal): %s", e)
         return []
 
 
@@ -3350,7 +3394,7 @@ def cache_lookup():
             }), 200
 
     except Exception as e:
-        print(f"❌ Cache lookup error: {e}")
+        logger.error("Cache lookup error: %s", e)
         return jsonify({'error': str(e)}), 500
 
 @app.route("/cache/store", methods=["POST"])
@@ -3380,7 +3424,7 @@ def cache_store():
         }), 200
 
     except Exception as e:
-        print(f"❌ Cache store error: {e}")
+        logger.error("Cache store error: %s", e)
         return jsonify({'error': str(e)}), 500
 
 @app.route("/cache/analytics", methods=["GET"])
@@ -3398,7 +3442,7 @@ def cache_analytics():
         }), 200
 
     except Exception as e:
-        print(f"❌ Cache analytics error: {e}")
+        logger.error("Cache analytics error: %s", e)
         return jsonify({'error': str(e)}), 500
 
 @app.route("/cache/popular", methods=["GET"])
@@ -3434,7 +3478,7 @@ def get_popular_queries():
         }), 200
 
     except Exception as e:
-        print(f"❌ Popular queries error: {e}")
+        logger.error("Popular queries error: %s", e)
         return jsonify({'error': str(e)}), 500
 
 @app.route("/cache/prewarm", methods=["POST"])
@@ -3486,7 +3530,7 @@ def prewarm_cache():
         }), 200
 
     except Exception as e:
-        print(f"❌ Cache pre-warm error: {e}")
+        logger.error("Cache pre-warm error: %s", e)
         return jsonify({'error': str(e)}), 500
 
 @app.route("/cache/invalidate", methods=["POST"])
@@ -3560,7 +3604,7 @@ def invalidate_cache():
             return jsonify({'error': f'Unknown invalidation type: {invalidate_type}'}), 400
 
     except Exception as e:
-        print(f"❌ Cache invalidation error: {e}")
+        logger.error("Cache invalidation error: %s", e)
         return jsonify({'error': str(e)}), 500
 
 # Cache utility functions (to be added before the endpoints)
@@ -3621,7 +3665,7 @@ def get_cached_tafsir_response(query: str, user_profile: dict, approach: str = "
         cache_key = cache_info['cache_key']
 
         # Debug logging for cache key
-        print(f"🔍 Looking for cache with key: {cache_key[:16]}...")
+        logger.info("Looking for cache with key: %s...", cache_key[:16])
         print(f"   Query: {cache_info['query_normalized']}")
         print(f"   Profile: persona={cache_info['profile_details'].get('persona')}, level={cache_info['profile_details'].get('knowledge_level')}")
 
@@ -3635,7 +3679,12 @@ def get_cached_tafsir_response(query: str, user_profile: dict, approach: str = "
             # Check pipeline version — reject old cache entries from before two-stage scholarly pipeline
             cached_version = cache_data.get('version', '1.0')
             if cached_version != SCHOLARLY_PIPELINE_VERSION:
-                print(f"💾 Cache STALE (version {cached_version} != {SCHOLARLY_PIPELINE_VERSION}) for key {cache_key[:8]}... — regenerating")
+                logger.info(
+                    "Cache STALE (version %s != %s) for key %s... — regenerating",
+                    cached_version,
+                    SCHOLARLY_PIPELINE_VERSION,
+                    cache_key[:8],
+                )
                 return None
 
             # Increment hit count
@@ -3644,7 +3693,7 @@ def get_cached_tafsir_response(query: str, user_profile: dict, approach: str = "
                 'last_accessed': datetime.now(timezone.utc)
             })
 
-            print(f"💾 Firestore cache HIT for query: {cache_info['query_normalized']}")
+            logger.info("Firestore cache HIT for query: %s", cache_info["query_normalized"])
             print(f"   Profile: {cache_info['profile_details']}")
             print(f"   Hit count: {cache_data.get('hit_count', 0) + 1}")
 
@@ -3659,7 +3708,7 @@ def get_cached_tafsir_response(query: str, user_profile: dict, approach: str = "
 
         # If no cache found with user profile, try with default profile as fallback
         if user_profile and any(user_profile.values()):
-            print(f"💾 No cache found with user profile, trying default profile fallback...")
+            logger.info("No cache found with user profile, trying default profile fallback...")
             default_profile = {
                 'persona': 'practicing_muslim',
                 'knowledge_level': 'intermediate',
@@ -3670,7 +3719,7 @@ def get_cached_tafsir_response(query: str, user_profile: dict, approach: str = "
             default_cache_key = default_cache_info['cache_key']
 
             if default_cache_key != cache_key:  # Only try if different
-                print(f"🔍 Looking for default cache with key: {default_cache_key[:16]}...")
+                logger.info("Looking for default cache with key: %s...", default_cache_key[:16])
                 default_cache_ref = quran_db.collection('tafsir_cache').document(default_cache_key)
                 default_cache_doc = default_cache_ref.get()
 
@@ -3682,7 +3731,7 @@ def get_cached_tafsir_response(query: str, user_profile: dict, approach: str = "
                     if cached_version != SCHOLARLY_PIPELINE_VERSION:
                         return None
 
-                    print(f"💾 Using DEFAULT cached response")
+                    logger.info("Using DEFAULT cached response")
 
                     # Decompress if needed
                     response_data = cache_data.get('response')
@@ -3695,8 +3744,8 @@ def get_cached_tafsir_response(query: str, user_profile: dict, approach: str = "
 
     except Exception as e:
         import traceback
-        print(f"⚠️ Cache retrieval error: {e}")
-        print(f"Traceback: {traceback.format_exc()}")
+        logger.warning("Cache retrieval error: %s", e)
+        logger.warning("Traceback: %s", _single_line_log(traceback.format_exc()))
 
     return None
 
@@ -3748,7 +3797,7 @@ def store_tafsir_cache(query: str, user_profile: dict, response: dict, approach:
 
         quran_db.collection('tafsir_cache').document(cache_key).set(cache_doc)
 
-        print(f"💾 STORING cache for: {cache_info['query_normalized']}")
+        logger.info("STORING cache for: %s", cache_info["query_normalized"])
         print(f"   Cache key: {cache_key[:16]}...")
         print(f"   Profile: persona={cache_info['profile_details'].get('persona')}, level={cache_info['profile_details'].get('knowledge_level')}")
         print(f"   Approach: {approach}")
@@ -3758,7 +3807,7 @@ def store_tafsir_cache(query: str, user_profile: dict, response: dict, approach:
         track_popular_query(cache_info['query_normalized'], cache_info['profile_details'])
 
     except Exception as e:
-        print(f"⚠️ Cache storage error: {e}")
+        logger.warning("Cache storage error: %s", e)
 
 def track_popular_query(normalized_query: str, profile: dict):
     """
@@ -3785,7 +3834,7 @@ def track_popular_query(normalized_query: str, profile: dict):
                 'last_queried': datetime.now()
             })
     except Exception as e:
-        print(f"⚠️ Popular query tracking error: {e}")
+        logger.warning("Popular query tracking error: %s", e)
 
 def get_cache_analytics() -> dict:
     """
@@ -3839,7 +3888,7 @@ def get_cache_analytics() -> dict:
         }
 
     except Exception as e:
-        print(f"⚠️ Cache analytics error: {e}")
+        logger.warning("Cache analytics error: %s", e)
         return {}
 
 @app.route("/export/<format_type>", methods=["POST"])
@@ -6140,7 +6189,7 @@ def tafsir_handler_enhanced():
     """
     # Initialize performance tracking before the try so error responses get the
     # same observability headers as successful responses.
-    perf_start = time.time()
+    perf_start = g.request_started_at
     perf_metrics = {
         'total_start': perf_start,
         'stages': {},
@@ -6378,8 +6427,11 @@ def tafsir_handler_enhanced():
             firestore_cached = get_cached_tafsir_response(query, user_profile, approach)
             if firestore_cached:
                 perf_metrics['stages']['cache_check'] = (time.time() - stage_start) * 1000
-                print(f"💾 FIRESTORE cache hit for tafsir query")
-                print(f"   ⏱️  PERFORMANCE: Firestore cache hit in {perf_metrics['stages']['cache_check']:.0f}ms")
+                logger.info("FIRESTORE cache hit for tafsir query")
+                logger.info(
+                    "PERFORMANCE: Firestore cache hit in %.0fms",
+                    perf_metrics["stages"]["cache_check"],
+                )
                 # Apply sanitization to cached responses (ensures line breaks in headings)
                 firestore_cached = filter_unavailable_sources(firestore_cached)
                 firestore_cached = attach_source_coverage(firestore_cached)
@@ -6392,8 +6444,11 @@ def tafsir_handler_enhanced():
             firestore_cached = get_cached_tafsir_response(query, user_profile, approach)
             if firestore_cached:
                 perf_metrics['stages']['cache_check'] = (time.time() - stage_start) * 1000
-                print(f"💾 FIRESTORE cache hit for explore/semantic query")
-                print(f"   ⏱️  PERFORMANCE: Firestore cache hit in {perf_metrics['stages']['cache_check']:.0f}ms")
+                logger.info("FIRESTORE cache hit for explore/semantic query")
+                logger.info(
+                    "PERFORMANCE: Firestore cache hit in %.0fms",
+                    perf_metrics["stages"]["cache_check"],
+                )
                 # Apply sanitization to cached responses (ensures line breaks in headings)
                 firestore_cached = filter_unavailable_sources(firestore_cached)
                 firestore_cached = attach_source_coverage(firestore_cached)
@@ -6407,8 +6462,11 @@ def tafsir_handler_enhanced():
         with cache_lock:
             if cache_key in RESPONSE_CACHE:
                 perf_metrics['stages']['cache_check'] = (time.time() - stage_start) * 1000
-                print(f"💾 Memory cache hit for query (approach: {approach})")
-                print(f"   ⏱️  PERFORMANCE: Memory cache hit in {perf_metrics['stages']['cache_check']:.0f}ms")
+                logger.info("Memory cache hit for query (approach: %s)", approach)
+                logger.info(
+                    "PERFORMANCE: Memory cache hit in %.0fms",
+                    perf_metrics["stages"]["cache_check"],
+                )
                 # Apply sanitization to cached responses (ensures line breaks in headings)
                 cached_response = filter_unavailable_sources(RESPONSE_CACHE[cache_key].copy())
         if cached_response is not None:
@@ -6428,10 +6486,10 @@ def tafsir_handler_enhanced():
         perf_metrics['stages']['classification'] = (time.time() - stage_start) * 1000
 
         if verse_ref:
-            print(f"🎯 Verse: {verse_ref[0]}:{verse_ref[1]} (confidence: {confidence:.0%})")
+            logger.info("Verse: %s:%s (confidence: %.0f%%)", verse_ref[0], verse_ref[1], confidence * 100)
         verse_range = extract_verse_range(query)
         if verse_range:
-            print(f"   📖 Verse Range: {verse_range[0]}:{verse_range[1]}-{verse_range[2]}")
+            logger.info("Verse Range: %s:%s-%s", verse_range[0], verse_range[1], verse_range[2])
 
         # ===================================================================
         # DIRECT VERSE QUERY (Direct lookup → AI formatting)
@@ -6453,7 +6511,13 @@ def tafsir_handler_enhanced():
         if surah in QURAN_METADATA:
             max_verse = QURAN_METADATA[surah]["verses"]
             if end_verse > max_verse:
-                print(f"⚠️  Verse range {surah}:{start_verse}-{end_verse} exceeds surah limit ({max_verse} verses)")
+                logger.warning(
+                    "Verse range %s:%s-%s exceeds surah limit (%s verses)",
+                    surah,
+                    start_verse,
+                    end_verse,
+                    max_verse,
+                )
                 end_verse = max_verse
             if start_verse > max_verse:
                 return tafsir_response({
@@ -6475,7 +6539,12 @@ def tafsir_handler_enhanced():
             perf_metrics['stages']['verse_lookup'] = (time.time() - stage_start) * 1000
             return tafsir_response({"error": f"Verse {surah}:{start_verse} not found"}, 404)
 
-        print(f"✅ Firestore: {verse_data.get('surah_number')}:{verse_data.get('verse_number')} ({verse_data.get('surah_name')})")
+        logger.info(
+            "Firestore: %s:%s (%s)",
+            verse_data.get("surah_number"),
+            verse_data.get("verse_number"),
+            verse_data.get("surah_name"),
+        )
 
         # Get metadata via direct lookup (with range support)
         verse_metadata_list = get_verse_metadata_direct(surah, start_verse, end_verse=end_verse if start_verse != end_verse else None)
@@ -6485,7 +6554,12 @@ def tafsir_handler_enhanced():
         context_by_source = {}
 
         if not verse_metadata_list:
-            print(f"⚠️  No tafsir found for {surah}:{start_verse}" + (f"-{end_verse}" if start_verse != end_verse else ""))
+            logger.warning(
+                "No tafsir found for %s:%s%s",
+                surah,
+                start_verse,
+                f"-{end_verse}" if start_verse != end_verse else "",
+            )
 
         if verse_metadata_list:
             for item in verse_metadata_list:
@@ -6569,7 +6643,12 @@ def tafsir_handler_enhanced():
         surah_max_v = QURAN_METADATA.get(surah, {}).get("verses", 286)
         dynamic_max_end, _ = _compute_max_end(surah, start_verse, surah_max_v)
         dynamic_verse_limit = dynamic_max_end - start_verse + 1
-        print(f"   📊 Dynamic verse limit for {surah}:{start_verse}: {dynamic_verse_limit} verses")
+        logger.info(
+            "Dynamic verse limit for %s:%s: %s verses",
+            surah,
+            start_verse,
+            dynamic_verse_limit,
+        )
 
         stage_start = time.time()
         prompt = build_enhanced_prompt(query, context_by_source, user_profile,
@@ -6578,9 +6657,19 @@ def tafsir_handler_enhanced():
         perf_metrics['stages']['prompt_build'] = (time.time() - stage_start) * 1000
 
         if isinstance(verses_for_ai, list):
-            print(f"🔍 Calling Gemini with {len(verses_for_ai)} verses: {verses_for_ai[0].get('surah_number')}:{verses_for_ai[0].get('verse_number')}-{verses_for_ai[-1].get('verse_number')}")
+            logger.info(
+                "Calling Gemini with %s verses: %s:%s-%s",
+                len(verses_for_ai),
+                verses_for_ai[0].get("surah_number"),
+                verses_for_ai[0].get("verse_number"),
+                verses_for_ai[-1].get("verse_number"),
+            )
         else:
-            print(f"🔍 Calling Gemini with single verse: {verses_for_ai.get('surah_number')}:{verses_for_ai.get('verse_number')}")
+            logger.info(
+                "Calling Gemini with single verse: %s:%s",
+                verses_for_ai.get("surah_number"),
+                verses_for_ai.get("verse_number"),
+            )
 
         # Get auth token
         gemini_start = time.time()
@@ -6622,7 +6711,7 @@ def tafsir_handler_enhanced():
                         "retry": True,
                         "error_type": "timeout"
                     }, 503)
-                print(f"⚠️ Retry {attempt + 1}/{max_retries} in {retry_delay}s...")
+                logger.warning("Retry %s/%s in %ss...", attempt + 1, max_retries, retry_delay)
                 time.sleep(retry_delay)
             except requests.HTTPError as e:
                 status_code = response.status_code if response else 500
@@ -6635,13 +6724,13 @@ def tafsir_handler_enhanced():
                             "error_type": "rate_limit",
                             "retry_after": 30
                         }, 429)
-                    print(f"⚠️ Rate limited (429), retrying in {retry_delay}s...")
+                    logger.warning("Rate limited (429), retrying in %ss...", retry_delay)
                     time.sleep(retry_delay)
                     continue
                 if status_code == 503:
                     if attempt == max_retries - 1:
                         raise
-                    print(f"⚠️ Service unavailable, retrying in {retry_delay}s...")
+                    logger.warning("Service unavailable, retrying in %ss...", retry_delay)
                     time.sleep(retry_delay)
                     continue
                 raise
@@ -6664,7 +6753,7 @@ def tafsir_handler_enhanced():
 
         finish_reason = safe_get_nested(raw_response, "candidates", 0, "finishReason")
         if finish_reason and finish_reason not in ("STOP", "MAX_TOKENS"):
-            print(f"⚠️ Gemini finishReason: {finish_reason}")
+            logger.warning("Gemini finishReason: %s", finish_reason)
             if finish_reason == "SAFETY":
                 perf_metrics['stages']['post_processing'] = (time.time() - stage_start) * 1000
                 return tafsir_response({
@@ -6678,7 +6767,7 @@ def tafsir_handler_enhanced():
             final_json = extract_json_from_response(generated_text)
 
             if not final_json:
-                print(f"❌ Failed to extract JSON from Gemini response")
+                logger.error("Failed to extract JSON from Gemini response")
                 perf_metrics['stages']['post_processing'] = (time.time() - stage_start) * 1000
                 return tafsir_response({
                     "error": "AI returned malformed response",
@@ -6686,7 +6775,7 @@ def tafsir_handler_enhanced():
                 }, 500)
 
             if final_json.get('metadata', {}).get('extraction_error'):
-                print(f"❌ Gemini returned malformed JSON; refusing to cache fallback response")
+                logger.error("Gemini returned malformed JSON; refusing to cache fallback response")
                 perf_metrics['stages']['post_processing'] = (time.time() - stage_start) * 1000
                 return tafsir_response({
                     "error": "AI returned a malformed response. Please try again."
@@ -6729,13 +6818,18 @@ def tafsir_handler_enhanced():
                 dynamic_limit=dynamic_verse_limit
             )
             if trimmed:
-                print(f"   ℹ️  Trimmed verses to {final_count}/{original_count} for persona {persona_name}")
+                logger.info(
+                    "Trimmed verses to %s/%s for persona %s",
+                    final_count,
+                    original_count,
+                    persona_name,
+                )
 
             verse_count = len(final_json.get('verses', []))
             if verse_count > dynamic_verse_limit:
-                print(f"   ⚠️  VERSE LIMIT EXCEEDED: {verse_count}/{dynamic_verse_limit}")
+                logger.warning("VERSE LIMIT EXCEEDED: %s/%s", verse_count, dynamic_verse_limit)
             else:
-                print(f"   ✅ Verse count: {verse_count}/{dynamic_verse_limit}")
+                logger.info("Verse count: %s/%s", verse_count, dynamic_verse_limit)
 
             attach_recommendations(final_json)
 
@@ -6754,7 +6848,7 @@ def tafsir_handler_enhanced():
                 _track_explored_verse(user_id, surah, start_verse, end_verse)
                 _check_and_award_badges(user_id)
 
-            print(f"✅ Formatted by AI from {len(verse_metadata_list)} source(s)")
+            logger.info("Formatted by AI from %s source(s)", len(verse_metadata_list))
             perf_metrics['stages']['post_processing'] = (time.time() - stage_start) * 1000
             return tafsir_response(final_json)
         else:
@@ -6950,9 +7044,9 @@ def debug_query(query):
         prompt = build_enhanced_prompt(query, context_by_source, user_profile,
                                      arabic_text, None, 'direct_verse', verse_data, approach, scholarly_ctx)
 
-        print("🔵 === COMPLETE PROMPT TO GEMINI ===")
-        print(prompt)
-        print("🔵 === END COMPLETE PROMPT ===")
+        logger.info("=== COMPLETE PROMPT TO GEMINI ===")
+        logger.info("%s", _single_line_log(prompt))
+        logger.info("=== END COMPLETE PROMPT ===")
 
         log_step("8. Build AI Prompt", {"prompt_length": len(prompt), "num_sources": len(context_by_source)})
         log_timing("8. Build Prompt", time.time() - step_start)
@@ -6984,9 +7078,9 @@ def debug_query(query):
             result = response.json()
             generated_text = result['candidates'][0]['content']['parts'][0]['text']
 
-            print("🟢 === COMPLETE GEMINI RESPONSE ===")
-            print(generated_text)
-            print("🟢 === END COMPLETE RESPONSE ===")
+            logger.info("=== COMPLETE GEMINI RESPONSE ===")
+            logger.info("%s", _single_line_log(generated_text))
+            logger.info("=== END COMPLETE RESPONSE ===")
 
             final_json = extract_json_from_response(generated_text)
 
