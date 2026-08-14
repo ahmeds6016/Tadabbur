@@ -188,6 +188,32 @@ Q14. **CODE COMPLETE 2026-08-13 — Reliability quick wins**
 
 ## Session log
 
+### 2026-08-13 — Claude: Session 6 (all 10 units) reviewed, merged, DEPLOYED & VERIFIED
+- **Live: backend `tafsir-backend-00263-5wb` + frontend `tafsir-frontend-00304-9qr`.**
+  Pipeline 14.0 flushed the 13.0 cache on deploy.
+- Review: approved all ten units, ZERO fixups needed this time (prop plumbing and
+  pin choices were clean — the session-5 lessons landed). Independently verified:
+  persona/hadith tests pass (11 total), `is_rate_limited` signature supports the
+  share limiter, purge left zero code references to deleted modules, frontend
+  builds, and the full backend suite shows IDENTICAL 41 pre-existing failures on
+  main and on the session-6 tree — no regressions (those 41 are env/data-dependent
+  + 2 stale constant tests; queued as cleanup).
+- Live verification (all pass):
+  * Fresh 2:255 under 14.0: miss → 38s; `source_coverage` present (Qurtubi=true,
+    no notice needed), 3 `recommendations`, hadith attribution still clean, and
+    the reflection prompt is anchored in the verse's own imagery ("does not tire
+    Him") — persona meaning-first contract visibly working.
+  * 30:54 (post-Qurtubi): `al_qurtubi: false` + notice "Al-Qurtubi is not
+    available in this corpus for this verse." + per-source retrieval methods.
+  * Share: POST /share for cached 2:255 → share_id, GET → 200; unviewed 48:29 →
+    409 "View the verse first". Caller-supplied response bodies are dead.
+  * New v14 cache doc carries `expires_at` = +90d (2026-11-12) — the TTL policy
+    enabled on 2026-08-13 will reap old docs server-side.
+- Remaining queue: Gemini 3.6 flip (Claude, via canary + `golden_regression.py`,
+  before mid-Oct); fix 2 stale token-budget constant tests; env/data-dependent
+  test suite cleanup; P2.13 logger/metrics remainder; review finding 10's L-sized
+  free-text theme search (future).
+
 ### 2026-08-13 — GPT 5.6: Session 6 Unit 10 — dead-code purge
 - **Branch/commit:** `codex/s6-purge` / `Purge unreachable legacy code`, branched from
   local-only `codex/s6-integration` after merging Units 1–9 in order.
