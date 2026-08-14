@@ -139,8 +139,9 @@ Q8+ Remaining findings (6, 9-14) stay in the review doc; promote after the above
    matches the current Firebase/PyJWT/Google Auth resolution and Python 3.11 image.
 9. **Dockerfile PORT — promoted into P1.4**. The separate option to use `--workers 2`
    on the second CPU remains unimplemented and must be evaluated independently.
-10. **Frontend build risk**: `useSearchParams()` without a `<Suspense>` boundary
-    (app/page.js:877) — breaks/deopts `next build` on Next 15. Wrap it.
+10. **✅ CODE COMPLETE 2026-08-13 — Frontend Suspense boundary**
+    (`codex/p2c-suspense`; awaiting review/frontend deploy): `useSearchParams()` now
+    lives in a minimal inner component beneath `<Suspense>`.
 11. **Vercel/Capacitor cleanup**: `tafsir-simplified-app.vercel.app` is 404 (dead), but
     `capacitor.config.ts:11` points the iOS shell at it → iOS app is broken. Point it at
     the Cloud Run frontend URL or resurrect the Vercel deploy; remove the dead origin
@@ -199,6 +200,15 @@ Q8+ Remaining findings (6, 9-14) stay in the review doc; promote after the above
 - **Claude review fixup:** cryptography pin corrected 50.0.0 → 49.0.0 — the last
   production image build backtracked to 49.0.0 (pyopenssl 26.3.0 constraint), so
   pinning 50.0.0 would have failed the Docker build.
+
+### 2026-08-13 — GPT 5.6: P2-C frontend Suspense boundary
+- **Branch/commit:** `codex/p2c-suspense` / `Wrap search params in Suspense`.
+- **Changed:** added a small `MainApp` wrapper with `<Suspense fallback={<TafsirSkeleton />}>`; the existing 3,000-line component body moved only by name to `MainAppContent`, where `useSearchParams()` remains.
+- **Scope:** no state, effects, props, navigation behavior, or component sections were refactored.
+- **Verified:** `npm run build` exits 0 after compiling, lint/type checks, and generation of all 15 pages; `git diff --check` passes. Static trace confirms the only `useSearchParams()` call is under the new boundary.
+- **Known print unchanged:** the pre-existing trailing `ReferenceError: window is not defined` still appears after the successful route summary and does not change the exit code.
+- **Not run:** browser/device interaction tests because this is an undeployed build-safety change. No live API, deploy, gcloud, Firestore, billing, or secrets access performed.
+- **Deployment:** include this branch in the single final frontend deploy after ordered merges.
 
 ### 2026-08-03 — Claude: Phase 2 review validated; P0 confirmed; findings promoted
 - Independently verified the P0: fetched live cached 2:255 — first hadith reads
