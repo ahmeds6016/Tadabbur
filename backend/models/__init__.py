@@ -1,1 +1,0 @@
-# Models module for Tafsir Simplified backend

@@ -7,9 +7,4 @@ firebase-admin==6.5.0
 cryptography==49.0.0
 google-cloud-secret-manager==2.19.0
 google-cloud-firestore==2.18.0
-google-cloud-aiplatform==1.60.0
 google-cloud-storage==2.16.0
-vertexai==1.60.0
-redis==5.0.1
-pydantic==2.5.3
-pydantic-settings==2.1.0

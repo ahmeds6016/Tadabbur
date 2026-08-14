@@ -158,13 +158,15 @@ Q14. **CODE COMPLETE 2026-08-13 — Reliability quick wins**
    **Canary harness code complete 2026-08-13** on `codex/s6-golden-harness`
    (awaiting review; no deploy required): fixed baseline/canary checks cover six
    verses across curious-explorer and student profiles and persist raw diffs.
-7. **Dead code purge** (~2,000 backend + ~4,000 frontend lines): `app_optimized.py` tree
-   (+ redis/pydantic deps), dead functions listed in the audit §6, frontend
-   `AppContext.jsx`, `tafsirApi.{js,ts}`, 20+ orphaned Iman-journal components,
-   `/logo-demo`. One PR, pure deletion, no behavior change.
+7. **✅ CODE COMPLETE 2026-08-13 — Dead code purge**
+   (`codex/s6-purge`, based on local `codex/s6-integration`; awaiting review/backend
+   rebuild + frontend deploy): removed the unreachable optimized-backend tree, audited
+   dead `app.py` helpers and SDK/dependencies, and the re-verified orphaned frontend
+   context/API/components/demo/test surface. `RecommendationBar` and
+   `ReflectionDetailPanel` remain because Session 6 made/confirmed them live.
 8. **✅ CODE COMPLETE 2026-08-13 — Pin `cryptography`**
-   (`codex/p2b-hygiene`; awaiting review/backend rebuild): explicit `50.0.0` pin
-   matches the current Firebase/PyJWT/Google Auth resolution and Python 3.11 image.
+   (`codex/p2b-hygiene`; awaiting review/backend rebuild): explicit `49.0.0` pin
+   matches the version the production image resolver installs under pyOpenSSL 26.3.0.
 9. **Dockerfile PORT — promoted into P1.4**. The separate option to use `--workers 2`
    on the second CPU remains unimplemented and must be evaluated independently.
 10. **✅ CODE COMPLETE 2026-08-13 — Frontend Suspense boundary**
@@ -185,6 +187,34 @@ Q14. **CODE COMPLETE 2026-08-13 — Reliability quick wins**
     load branch; startup now directly precomputes from the already-loaded tafsir chunks.
 
 ## Session log
+
+### 2026-08-13 — GPT 5.6: Session 6 Unit 10 — dead-code purge
+- **Branch/commit:** `codex/s6-purge` / `Purge unreachable legacy code`, branched from
+  local-only `codex/s6-integration` after merging Units 1–9 in order.
+- **Backend deletion:** removed `app_optimized.py`, its exclusive config/model/service
+  tree, the migration script, and all audit §6 `app.py` functions after confirming zero
+  callers. Also removed four helper functions plus global state used only by that dead cluster.
+  The vestigial Vertex SDK import/init had no runtime consumer or required side effect, so
+  its two packages were removed with redis/pydantic/pydantic-settings; `cryptography==49.0.0`
+  and all live Google Cloud libraries remain.
+- **Frontend deletion:** removed the unused `AppContext`, duplicate tafsir API clients,
+  25 re-verified orphan components/styles, `/logo-demo`, and the standalone test with no
+  runner. `RecommendationBar` is live from Unit 4 and `ReflectionDetailPanel` is imported
+  by annotations, so both were deliberately retained.
+- **Scope proof:** code-only import/reference scans found no callers of deleted modules,
+  components, or `app.py` functions. Unit 9 has a separate script-local function also
+  named `validate_response`; it is live and unrelated to the removed Flask helper.
+- **Verified:** `py_compile` passed for all 50 remaining backend Python files;
+  `npm run build` exited 0 and generated 14 routes (the known trailing `window is not
+  defined` diagnostic remains); `git diff --check` and final zero-reference scans pass.
+- **Pytest:** the requested hadith + persona + token-budget run completed with 35 passed
+  and 2 failed. Both failures are inherited from the integration base: current constants
+  total 27,500 versus the test's expected 30,000, and cap ranges at 10 verses versus the
+  test's expected 5. Unit 10 changes neither test nor implementation, so this deletion-only
+  branch does not repair that separate mismatch.
+- **Not run/deployed:** no live API probes, GCP access, secrets, deployment, or browser
+  interaction tests. Production cleanup requires backend rebuild and frontend deploy by
+  Claude/Ahmed after review.
 
 ### 2026-08-13 — GPT 5.6: Session 6 Unit 9 — Golden canary harness
 - **Branch/commit:** `codex/s6-golden-harness` / `Add live golden regression harness`.

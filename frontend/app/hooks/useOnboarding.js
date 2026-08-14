@@ -45,7 +45,6 @@ export function useOnboarding(userId) {
         setOnboardingState(createInitialOnboardingState());
       }
     }
-    // No auto-start of TourOverlay — FeatureIntroModal handles first-time intro
     setIsLoaded(true); // Mark as loaded after processing
   }, [userId]);
 

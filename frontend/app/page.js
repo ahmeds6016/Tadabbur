@@ -30,7 +30,6 @@ import TadabburLogo from './components/Logo';
 import SurahVersePicker from './components/SurahVersePicker';
 import RecommendationBar from './components/RecommendationBar';
 import ThemeExplorer from './components/ThemeExplorer';
-// CollectionsGrid removed for minimalist homepage
 import BadgeDisplay, { BadgePopup } from './components/BadgeDisplay';
 import { ToastContainer } from './components/ui/Toast';
 import { TafsirSkeleton, Skeleton } from './components/ui/SkeletonLoader';

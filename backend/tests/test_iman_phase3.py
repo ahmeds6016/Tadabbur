@@ -267,8 +267,6 @@ class TestDeleteConfirmation:
 # ==========================================================================
 
 class TestCatalogFrontendContract:
-    """Ensure the catalog data shape matches what BehaviorSelector.jsx expects."""
-
     def test_behaviors_have_input_type(self):
         valid_types = {"binary", "scale_5", "minutes", "hours", "count", "count_inv"}
         for b in IMAN_BEHAVIORS:
