@@ -49,6 +49,7 @@ from services.source_service import (
     plan_scholarly_retrieval_deterministic,
 )
 from services.hadith_validation import validate_hadith_items
+from services.persona_prompt_service import build_persona_learning_contract
 from data.reading_plans import READING_PLANS
 from data.iman_behaviors import (
     IMAN_CATEGORIES,
@@ -162,7 +163,7 @@ quran_db = None      # Google Cloud client -> tafsir-db database for Quran texts
 TAFSIR_CHUNKS = {}   # Flattened text for direct verse lookup
 VERSE_METADATA = {}  # Structured metadata for direct queries
 RESPONSE_CACHE = {}  # In-memory cache
-SCHOLARLY_PIPELINE_VERSION = "13.0"  # Bump: source-grounded hadith validation invalidates unverified cached citations
+SCHOLARLY_PIPELINE_VERSION = "14.0"  # Bump: persona learning contracts change generated content
 USER_RATE_LIMITS = defaultdict(list)  # Rate limiting
 ANALYTICS = defaultdict(int)  # Usage analytics
 
@@ -3436,6 +3437,7 @@ def build_enhanced_prompt(query, context_by_source, user_profile, arabic_text=No
 
     persona = PERSONAS[persona_name]
     format_style = persona.get('format_style', 'balanced')
+    persona_learning_contract = build_persona_learning_contract(persona_name, verse_data)
 
     # NEW: Get knowledge_level from profile (Suggestion 1)
     knowledge_level = user_profile.get('knowledge_level', 'intermediate')
@@ -3519,6 +3521,9 @@ USER PROFILE: {persona['name']} ({knowledge_level.title()} Level)
 • Include hadith: {'Yes' if persona['include_hadith'] else 'No - avoid hadith references'}
 • Scholarly debates: {'Yes' if persona['scholarly_debates'] else 'No - avoid scholarly disagreements'}
 • Format style: {format_style}
+
+PERSONA LEARNING CONTRACT
+{persona_learning_contract}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 LEARNING GOAL INSTRUCTION
