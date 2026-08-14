@@ -1,6 +1,6 @@
 # Prompts for GPT 5.6
 
-## Session 7 prompt (2026-08-13, tonight) — Gemini 3.6 flip PR + green test suite + logging
+## Session 7 prompt (2026-08-13, tonight) — MEGA ONE-SHOT: model flip w/ canary fixes + green tests + observability + banner + docs truth-up
 
 ---
 
@@ -9,10 +9,13 @@ owner). First: `git pull` and read `HANDOFF.md` top entry. Session 6 (all ten
 units) is DEPLOYED and verified live: backend `tafsir-backend-00263-5wb`,
 frontend `tafsir-frontend-00304-9qr`, pipeline 14.0, coverage/recommendations/
 share/persona contracts all confirmed working in production. Your work needed
-ZERO review fixups. Tonight: three units, one branch each, all from `main`.
-While you work, Claude is IN PARALLEL running the Gemini 3.6 canary validation
-with your `golden_regression.py` harness — Unit 1 is the code half of that flip
-and Claude merges it ONLY after the canary passes, so keep it exactly scoped.
+ZERO review fixups. This session: FIVE units, one branch each, all from `main`,
+worked IN ORDER — this is everything left in the queue that is code-side, in one
+shot, including the fixes Claude's Gemini 3.6 canary just discovered. While you
+work, Claude is IN PARALLEL finishing the canary validation with your
+`golden_regression.py` harness — Unit 1 is the code half of that flip and Claude
+merges it ONLY after the canary passes, so keep it exactly scoped. If any unit
+balloons: stop it, record why in HANDOFF, move to the next.
 
 ### Unit 1 — the Gemini 3.6 flip PR (branch `codex/s7-model-flip`)
 Code-side changes only; NO deploys, and Claude decides when this merges:
@@ -92,11 +95,55 @@ P2.13 remainder. Mechanical but large — do it in two commits for reviewability
   remaining emoji prints in app.py. State honestly that log-output formatting
   can only be fully confirmed after deploy.
 
+### Unit 4 — global backend-down banner (branch `codex/s7-backend-banner`)
+The last deferred piece of P1.5. Today, when the backend is unreachable, 31
+empty catch blocks make every page render its empty state — "backend down" is
+indistinguishable from "you have no data".
+- Add ONE tiny shared module (e.g. `app/lib/backendHealth.js`): a function
+  `reportBackendFailure()` / `reportBackendSuccess()` and a subscribable flag
+  (module-level state + listener set is fine; NO new dependencies, NO context
+  refactor — AppContext stays dead/deleted).
+- A thin `<BackendStatusBanner />` mounted once in `app/layout.js`: when ≥2
+  failures within 30s and no success since, show a slim dismissible banner
+  "Can't reach the server — some content may be unavailable. Retrying…"; auto-
+  hide on the next reported success. Style consistent with existing toasts;
+  polite live region (aria) per the Session 6 accessibility conventions.
+- Wire ONLY the highest-traffic call sites to report success/failure: the
+  /tafsir submit path, daily-verse, streak, profile fetch, saved-searches list,
+  plans list, annotations list. Do NOT touch the other catch blocks' behavior —
+  one added report call per site, everything else identical.
+- Verify with `npm run build` exit 0 + trace; note honestly that live behavior
+  needs a deployed backend outage (or devtools offline) to fully confirm.
+
+### Unit 5 — docs truth-up (branch `codex/s7-docs-truth`)
+The public docs still describe the pre-takeover app. Pure documentation; no
+code. Update:
+- `README.md`: tech-stack table (model → the Unit 1 values, marked "canary-
+  gated"; cache → "Firestore cache, 90-day TTL, version-invalidated" — the
+  "7-day response cache" claim is false), feature list (guest reflections,
+  Continue-reflecting cards, theme chips, source-coverage panel now exist;
+  Iman Journal stays listed as suspended), deployment section (deploy scripts +
+  the PowerShell note from HANDOFF), and remove/repair anything else you can
+  prove stale against the code.
+- `AI.md`: refresh the architecture map bullets that Session 5/6 changed
+  (hadith validation module, share-by-cache-key, coverage object, pipeline
+  version now 14.0→15.0-pending, TTL field, monitoring alerts exist), and add
+  a "Testing" section: how to run the offline suites and how Claude runs
+  `golden_regression.py` against a canary.
+- `docs/AUDIT-2026-08-01.md`: add a short "Status as of 2026-08-13" preamble
+  noting which audit sections are now RESOLVED (P1 all, Q1-Q7, purge) so a
+  future reader doesn't re-discover fixed issues. Do not rewrite history below
+  the preamble.
+- Cross-check every claim you write against the code, not against memory or
+  HANDOFF prose; where they disagree, the code wins and note the discrepancy.
+
 ### Global rules
 Per unit: short plan → implement → verify → HANDOFF session-log entry with
 branch + commit. No deploys, no gcloud, no secrets, no drive-by refactors, no
-new dependencies. Line numbers drift — trust the code. Finish with the summary
-table (unit | branch | commit | verified | deploy-needed).
+new dependencies. Line numbers drift — trust the code. Frontend: null-guard any
+field that may be absent. Finish with the summary table
+(unit | branch | commit | verified | deploy-needed backend/frontend/none),
+plus anything skipped and why.
 
 ---
 
