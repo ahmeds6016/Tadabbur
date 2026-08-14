@@ -1,5 +1,80 @@
 # Prompts for GPT 5.6
 
+## Session 7 prompt (2026-08-13, tonight) — Gemini 3.6 flip PR + green test suite + logging
+
+---
+
+You are GPT 5.6, main coder for Tadabbur (Claude = architect/reviewer, Ahmed =
+owner). First: `git pull` and read `HANDOFF.md` top entry. Session 6 (all ten
+units) is DEPLOYED and verified live: backend `tafsir-backend-00263-5wb`,
+frontend `tafsir-frontend-00304-9qr`, pipeline 14.0, coverage/recommendations/
+share/persona contracts all confirmed working in production. Your work needed
+ZERO review fixups. Tonight: three units, one branch each, all from `main`.
+While you work, Claude is IN PARALLEL running the Gemini 3.6 canary validation
+with your `golden_regression.py` harness — Unit 1 is the code half of that flip
+and Claude merges it ONLY after the canary passes, so keep it exactly scoped.
+
+### Unit 1 — the Gemini 3.6 flip PR (branch `codex/s7-model-flip`)
+Code-side changes only; NO deploys, and Claude decides when this merges:
+- `backend/app.py`: `GEMINI_MODEL_ID` default `"gemini-2.5-flash"` →
+  `"gemini-3.6-flash"`; `GEMINI_LITE_MODEL_ID` default `"gemini-2.5-flash-lite"`
+  → `"gemini-3.5-flash-lite"`. Update the stale comment on the GEMINI_MODEL_ID
+  line (it still talks about the 2.0→2.5 upgrade).
+- `deploy-backend.sh`: same two value changes.
+- `SCHOLARLY_PIPELINE_VERSION` "14.0" → "15.0" (a model change is a material
+  content change; the bump flushes mixed-model cache on deploy).
+- Update `AI.md`'s model-config truth table to the new values, marked
+  "pending canary validation (Claude, tonight)".
+- Grep the whole repo for any remaining `gemini-2.5` / `gemini-2.0` strings and
+  report every hit with your judgment (docs/metadata references stay; the
+  `_precomputed_scholarly_plans.json` `_metadata.model` value is HISTORY — do
+  not touch it; `precompute_scholarly_plans.py` and `test_live_pipeline.py`
+  defaults should flip).
+
+### Unit 2 — make `pytest backend/tests` green (branch `codex/s7-green-tests`)
+Current state: 337 passed / 41 failed, identical on main — all pre-existing.
+Goal: a clean signal, honestly.
+- The 2 stale constant tests (`TestBudgetConstants`): read
+  `config/token_budget.py` and the git history of the constants; the RUNTIME
+  values (27,500 component sum, ABSOLUTE_MAX_VERSES=10) are the deliberate
+  current behavior — update the test expectations to match, with a comment
+  naming the values' source of truth. Do NOT change the constants.
+- The remaining ~39 failures: triage each into (a) needs GCS/GCP credentials or
+  network, (b) needs data files not in the repo, (c) tests dead code that no
+  longer exists post-purge, (d) genuinely broken assertion worth fixing.
+  For (a)/(b): add `pytest.mark.skipif` with a precise reason string (e.g.
+  "requires GCS credentials; run in cloud env") — prefer an env-var gate
+  (`RUN_LIVE_TESTS=1`) over deletion. For (c): delete the test with a note.
+  For (d): fix it. End state: `py -3 -m pytest backend/tests -q` exits 0
+  locally with a skip count, and the skip reasons are greppable.
+- Add the final pass/skip counts to HANDOFF.
+
+### Unit 3 — logger + request metrics cleanup (branch `codex/s7-observability`)
+P2.13 remainder. Mechanical but large — do it in two commits for reviewability:
+- Commit 1: replace the emoji `print(...)` calls in `backend/app.py` (and the
+  live services) with `logger.info/warning/error(...)` preserving message
+  content minus emojis; keep messages single-line (Cloud Logging treats each
+  line as an entry). Module-level prints during startup may stay prints if
+  logger isn't configured yet at that point — check order. Do not change any
+  logic, and leave the structured `GEMINI_USAGE` / `HADITH_INTEGRITY_DROP`
+  logger lines exactly as they are.
+- Commit 2: add one `@app.after_request` hook emitting a single structured
+  request log line for /tafsir and /share only: method, path, status,
+  duration_ms (reuse the perf_start already in the handler via `g` or an
+  equivalent — simplest correct mechanism you can find), X-Cache-Status if set.
+  Skip /health (noise).
+- Verify: py_compile, the (now green) test suite, and grep-proof there are no
+  remaining emoji prints in app.py. State honestly that log-output formatting
+  can only be fully confirmed after deploy.
+
+### Global rules
+Per unit: short plan → implement → verify → HANDOFF session-log entry with
+branch + commit. No deploys, no gcloud, no secrets, no drive-by refactors, no
+new dependencies. Line numbers drift — trust the code. Finish with the summary
+table (unit | branch | commit | verified | deploy-needed).
+
+---
+
 ## Session 6 prompt (2026-08-13) — MEGA ONE-SHOT: Q5-Q7, findings 6/9-14, model-flip harness, purge
 
 ---
