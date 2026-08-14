@@ -144,7 +144,7 @@ export default function SharedPage() {
                     </p>
                   </div>
                   {verse.arabic_text && verse.arabic_text !== 'Not available' && (
-                    <p className="arabic-text" dir="rtl">{verse.arabic_text}</p>
+                    <p className="arabic-text" lang="ar" dir="rtl">{verse.arabic_text}</p>
                   )}
                   <p className="translation">
                     <em>&quot;{verse.text_saheeh_international}&quot;</em>

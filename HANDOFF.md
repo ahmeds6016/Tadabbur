@@ -121,8 +121,10 @@ Q6. **✅ CODE COMPLETE 2026-08-13 — source-coverage contract**
     (`codex/s6-coverage`; awaiting review/backend + frontend deploy). Every verse
     answer now carries deterministic classical/additional-source coverage, including
     old cache hits; the UI renders a compact source panel and neutral corpus notice.
-Q7. **Verse-first progressive loading** (finding 8): show Arabic+translation
-    immediately, skeleton for commentary. After Q4 measurements.
+Q7. **✅ CODE COMPLETE 2026-08-13 — verse-first loading + accessibility**
+    (`codex/s6-progressive-a11y`; awaiting review/frontend deploy). The canonical
+    start verse now renders while commentary loads, with accessible picker labels,
+    live status announcements, focus transitions, and Arabic language metadata.
 Q8+ Remaining findings (6, 9-14) stay in the review doc; promote after the above.
 
 ### P2 — planned work
@@ -161,6 +163,28 @@ Q8+ Remaining findings (6, 9-14) stay in the review doc; promote after the above
     load branch; startup now directly precomputes from the already-loaded tafsir chunks.
 
 ## Session log
+
+### 2026-08-13 — GPT 5.6: Session 6 Unit 3 — progressive loading and accessibility
+- **Branch/commit:** `codex/s6-progressive-a11y` /
+  `Show the verse before commentary`.
+- **Progressive path:** submit starts public `GET /verse/<surah>/<start>` before any
+  auth-token wait while `/tafsir` proceeds with the same abort signal. Success renders
+  Arabic, translation, reference, and the existing commentary skeleton; range previews
+  identify the full requested range while showing its start verse.
+- **Fallback/cancel:** preview HTTP/network failure is silent and preserves the old
+  spinner. User cancel, timeout, retry, defensive response parsing, and history paths
+  remain intact; stale preview responses are rejected by controller identity.
+- **Accessibility:** the Surah select has a visible label; from/to selects have names
+  and a `fieldset`/`legend`. Loading and result regions announce politely; focus moves
+  to the verse preview, completed answer, clarification, or error/warning as appropriate.
+- **Arabic:** main, progressive, and shared verse text now use `lang="ar" dir="rtl"`.
+  `TafsirSkeleton` accepts an optional null-safe display prop so the known verse is not
+  replaced by a duplicate verse skeleton.
+- **Verified:** `npm run build` exits 0 and generates all 15 routes; selector, endpoint,
+  language, live-region, controller, and focus code traces pass; `git diff --check`
+  passes. The known trailing non-fatal `window is not defined` print remains.
+- **Not run:** browser timing, keyboard, VoiceOver/NVDA, or mobile-device tests. No
+  backend changes, live probes, deploy, GCP, or secrets access; frontend deploy required.
 
 ### 2026-08-13 — GPT 5.6: Session 6 Unit 1 — `/share` integrity
 - **Branch/commit:** `codex/s6-share` / `Secure shared tafsir snapshots`.
