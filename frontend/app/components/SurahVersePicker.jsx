@@ -466,7 +466,14 @@ export default function SurahVersePicker({ onSelect, initialSurah = null, initia
 
       {/* Surah Dropdown */}
       <div style={{ marginBottom: '12px' }}>
+        <label
+          htmlFor="tafsir-surah-select"
+          style={{ display: 'block', marginBottom: '6px', fontSize: '0.8rem', fontWeight: '600', color: 'var(--color-text, #374151)' }}
+        >
+          Surah
+        </label>
         <select
+          id="tafsir-surah-select"
           value={selectedSurah}
           onChange={handleSurahChange}
           style={{ ...selectStyle, width: '100%', fontWeight: '500' }}
@@ -483,15 +490,19 @@ export default function SurahVersePicker({ onSelect, initialSurah = null, initia
       {/* Verse Dropdowns - Only show when surah is selected */}
       {selectedSurah && (
         <>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr auto 1fr',
-            gap: '10px',
-            alignItems: 'center',
-            marginBottom: '12px'
-          }}>
+          <fieldset style={{ border: 0, padding: 0, margin: '0 0 12px' }}>
+            <legend style={{ marginBottom: '6px', fontSize: '0.8rem', fontWeight: '600', color: 'var(--color-text, #374151)' }}>
+              Verse range
+            </legend>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr auto 1fr',
+              gap: '10px',
+              alignItems: 'center'
+            }}>
             {/* Start Verse */}
             <select
+              aria-label="From verse"
               value={startVerse}
               onChange={handleStartVerseChange}
               style={selectStyle}
@@ -511,6 +522,7 @@ export default function SurahVersePicker({ onSelect, initialSurah = null, initia
 
             {/* End Verse */}
             <select
+              aria-label="To verse"
               value={endVerse || startVerse}
               onChange={handleEndVerseChange}
               style={selectStyle}
@@ -521,7 +533,8 @@ export default function SurahVersePicker({ onSelect, initialSurah = null, initia
                 <option key={v} value={v}>{v}</option>
               ))}
             </select>
-          </div>
+            </div>
+          </fieldset>
 
           {/* Range limit info */}
           {isDynamicallyLimited && (

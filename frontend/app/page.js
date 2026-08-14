@@ -889,6 +889,7 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
   const [pickerSurah, setPickerSurah] = useState(null);
   const [pickerVerse, setPickerVerse] = useState(null);
   const [response, setResponse] = useState(null);
+  const [versePreview, setVersePreview] = useState(null);
   const [urlParamsProcessed, setUrlParamsProcessed] = useState(false);
   const [error, setError] = useState('');
   const [isTafsirLoading, setIsTafsirLoading] = useState(false);
@@ -961,6 +962,29 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
 
   // Ref to track pending share request (for ensureShareId)
   const pendingShareRequest = useRef(null);
+
+  // Focus targets for progressive loading, completed results, and errors.
+  const previewRegionRef = useRef(null);
+  const resultsRegionRef = useRef(null);
+  const feedbackRegionRef = useRef(null);
+
+  useEffect(() => {
+    if (!versePreview || !isTafsirLoading) return undefined;
+    const frame = requestAnimationFrame(() => previewRegionRef.current?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, [versePreview, isTafsirLoading]);
+
+  useEffect(() => {
+    if (!response) return undefined;
+    const frame = requestAnimationFrame(() => resultsRegionRef.current?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, [response]);
+
+  useEffect(() => {
+    if (!error && !rateLimitWarning) return undefined;
+    const frame = requestAnimationFrame(() => feedbackRegionRef.current?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, [error, rateLimitWarning]);
 
   // Detect mobile
   useEffect(() => {
@@ -1073,6 +1097,7 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
   const handleNewSearch = useCallback(() => {
     // Clear results and focus input for new search
     setResponse(null);
+    setVersePreview(null);
     setError('');
     clearSearchState(); // Clear persisted search
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1222,6 +1247,7 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
       abortControllerRef.current.abort();
     }
     setIsTafsirLoading(false);
+    setVersePreview(null);
     setError('');
     // Keep query intact - don't clear it!
   };
@@ -1266,8 +1292,31 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
 
     setIsTafsirLoading(true);
     setResponse(null);
+    setVersePreview(null);
     setError('');
     setRateLimitWarning('');
+
+    // Fetch the canonical start verse immediately while the full tafsir request
+    // proceeds. A failed preview is intentionally silent and leaves the existing
+    // loading state in place.
+    const activeController = abortControllerRef.current;
+    const verseMatch = query.match(/^(\d+):(\d+)(?:-(\d+))?$/);
+    if (verseMatch) {
+      const previewSurah = verseMatch[1];
+      const previewVerse = verseMatch[2];
+      fetch(`${BACKEND_URL}/verse/${previewSurah}/${previewVerse}`, {
+        signal: activeController.signal
+      })
+        .then(res => res.ok ? res.json() : Promise.reject(new Error('Verse preview unavailable')))
+        .then(data => {
+          if (abortControllerRef.current === activeController && !activeController.signal.aborted) {
+            setVersePreview(data);
+          }
+        })
+        .catch(() => {
+          // Silent fallback to the existing loading spinner.
+        });
+    }
 
     try {
       const headers = { 'Content-Type': 'application/json' };
@@ -1901,23 +1950,65 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
         </form>
         
         {rateLimitWarning && (
-          <div className="rate-limit-warning">
+          <div
+            ref={feedbackRegionRef}
+            className="rate-limit-warning"
+            role="status"
+            aria-live="polite"
+            tabIndex={-1}
+          >
             {rateLimitWarning}
           </div>
         )}
         
-        {error && <p className="error">{error}</p>}
+        {error && (
+          <p
+            ref={feedbackRegionRef}
+            className="error"
+            role="alert"
+            tabIndex={-1}
+          >
+            {error}
+          </p>
+        )}
         {isTafsirLoading && (
-          <div style={{ textAlign: 'center', padding: '20px 0' }}>
-            <div className="loading-spinner"></div>
-            <p style={{ color: 'var(--text-secondary, #6b7280)', marginTop: '12px', fontSize: '0.95rem' }}>
-              Preparing your reflection...
-            </p>
-          </div>
+          versePreview ? (
+            <div
+              ref={previewRegionRef}
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+              tabIndex={-1}
+              className="results-container"
+            >
+              <p style={{ color: 'var(--text-secondary, #6b7280)', fontSize: '0.9rem', fontWeight: 600 }}>
+                {query.includes('-') ? `Loading verses ${query}…` : 'Verse loaded; gathering classical commentary'}
+              </p>
+              <div className="verse-card enhanced">
+                <p className="verse-ref">
+                  <strong>{versePreview.surah_name} {versePreview.surah_number}:{versePreview.verse_number}</strong>
+                </p>
+                {versePreview.arabic && (
+                  <p className="arabic-text" lang="ar" dir="rtl">{versePreview.arabic}</p>
+                )}
+                {versePreview.english && (
+                  <p className="translation"><em>&quot;{versePreview.english}&quot;</em></p>
+                )}
+              </div>
+              <TafsirSkeleton showVerse={false} />
+            </div>
+          ) : (
+            <div role="status" aria-live="polite" style={{ textAlign: 'center', padding: '20px 0' }}>
+              <div className="loading-spinner"></div>
+              <p style={{ color: 'var(--text-secondary, #6b7280)', marginTop: '12px', fontSize: '0.95rem' }}>
+                Preparing your reflection...
+              </p>
+            </div>
+          )
         )}
 
         {response && response.needs_clarification && (
-          <div style={{
+          <div ref={resultsRegionRef} role="region" aria-live="polite" tabIndex={-1} style={{
             background: 'rgba(251, 191, 36, 0.12)',
             border: '2px solid var(--gold, #f59e0b)',
             borderRadius: '12px',
@@ -1974,7 +2065,8 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
         )}
 
         {response && !response.needs_clarification && (
-          <>
+          <div ref={resultsRegionRef} role="region" aria-live="polite" tabIndex={-1}>
+            <span className="sr-only">Commentary ready for {query}.</span>
             {/* Sticky Result Navigation with Save & Share */}
             <div style={{
               position: 'sticky',
@@ -2178,7 +2270,7 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
                 </button>
               </div>
             )}
-          </>
+          </div>
         )}
       </div>
 
@@ -2921,7 +3013,7 @@ function EnhancedResultsDisplay({
 
   return (
     <>
-      <div className="results-container">
+      <div className="results-container" role="region" aria-label="Search results" aria-live="polite">
 
       <TabNavigation
         resetKey={query}  // Reset to first tab (verses) on new query
@@ -2945,7 +3037,7 @@ function EnhancedResultsDisplay({
                     </p>
                   </div>
                   {verse.arabic_text && verse.arabic_text !== 'Not available' && (
-                    <p className="arabic-text" dir="rtl">{verse.arabic_text}</p>
+                    <p className="arabic-text" lang="ar" dir="rtl">{verse.arabic_text}</p>
                   )}
                   <p className="translation">
                     <em>&quot;{verse.text_saheeh_international}&quot;</em>

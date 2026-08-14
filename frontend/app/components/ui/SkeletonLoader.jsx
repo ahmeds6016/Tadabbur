@@ -60,19 +60,20 @@ export function Skeleton({ width, height, className = '', variant = 'text' }) {
 }
 
 // Tafsir result skeleton
-export function TafsirSkeleton() {
+export function TafsirSkeleton({ showVerse = true }) {
   return (
     <div className="tafsir-skeleton">
-      {/* Verse card skeleton */}
-      <div className="skeleton-card">
-        <div className="skeleton-header">
-          <Skeleton width="80px" height="20px" />
-          <Skeleton width="60px" height="32px" variant="rectangular" />
+      {showVerse && (
+        <div className="skeleton-card">
+          <div className="skeleton-header">
+            <Skeleton width="80px" height="20px" />
+            <Skeleton width="60px" height="32px" variant="rectangular" />
+          </div>
+          <Skeleton width="100%" height="120px" variant="rectangular" className="skeleton-arabic" />
+          <Skeleton width="100%" height="60px" />
+          <Skeleton width="80%" height="20px" />
         </div>
-        <Skeleton width="100%" height="120px" variant="rectangular" className="skeleton-arabic" />
-        <Skeleton width="100%" height="60px" />
-        <Skeleton width="80%" height="20px" />
-      </div>
+      )}
 
       {/* Tafsir explanation skeleton */}
       <div className="skeleton-card">
