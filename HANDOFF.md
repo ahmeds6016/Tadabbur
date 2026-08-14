@@ -157,6 +157,33 @@ Q8+ Remaining findings (6, 9-14) stay in the review doc; promote after the above
 
 ## Session log
 
+### 2026-08-13 — Claude: all six units reviewed, merged, DEPLOYED & VERIFIED
+- **Backend `tafsir-backend-00262-82w` + frontend `tafsir-frontend-00303-9b6` are
+  live with Q1–Q4 and P2-A/B/C/D.** Q1–Q4 and P2 items 10/11 above: treat status
+  as DEPLOYED.
+- Review: approved all six branches with two fixups committed by Claude:
+  (1) `onGuestSignUp` was referenced in `EnhancedResultsDisplay` but never passed
+  as a prop — guest reflection CTA would have thrown ReferenceError (56c1832);
+  (2) cryptography pin 50.0.0 → 49.0.0 (pip backtracks to 49.0.0 under pyopenssl
+  26.3.0; 50.0.0 would fail the image build) (a6ce590).
+- Independently re-ran the Q1 golden tests (4 passed) and compile checks on the
+  merged tree before deploying.
+- **P0 VERIFIED FIXED IN PRODUCTION:** pipeline 13.0 flushed the old cache; fresh
+  2:255 (31s, X-Cache-Status: miss) now cites all hadith as "As cited in Ibn
+  Kathir's tafsir of this verse" with no Sahih-Muslim misattribution; repeat query
+  → hit-firestore in 0.3s. Server-Timing + X-Cache-Status live and CORS-exposed.
+  No HADITH_INTEGRITY_DROP events logged — model followed the new contract.
+- **Deploy incident (self-inflicted, resolved):** first deploy used
+  `--set-env-vars` with only the new var, which REPLACES the whole env set —
+  revision 00261 shipped with missing env vars (its readiness probe passed
+  because gunicorn's master binds the port before workers import the app).
+  Redeployed within minutes with the full set (00262). **Lesson recorded: always
+  use `--update-env-vars` for incremental changes, and the full-set deploy
+  command from deploy-backend.sh otherwise.**
+- Remaining queue: Q5 (/share validation), Q6 (coverage contract), Q7
+  (progressive loading), review findings 6/9-14, P2.6 model flip (Oct deadline),
+  P2.7 dead-code purge, P2.12-14 gcloud-side items (TTL, monitoring — Claude).
+
 ### 2026-08-13 — GPT 5.6: Q1 hadith citation integrity
 - **Branch/commit:** `codex/q1-hadith-integrity` / `Document source-grounded hadith validation`.
 - **Changed:** `build_enhanced_prompt` now requires structured collection/narrator/in-corpus attribution and verbatim source wording; nested lesson anchors may no longer introduce unvalidated hadith.
