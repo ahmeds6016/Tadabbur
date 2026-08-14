@@ -129,7 +129,11 @@ Q8. **CODE COMPLETE 2026-08-13 — Continue reflecting recommendations**
     (`codex/s6-recommendations`; awaiting review/backend + frontend deploy).
     Deterministic follow-on verses now reach fresh and cached answers and render as
     a three-card continuation path.
-Q9+ Remaining findings (9-14) stay in the review doc; promote after the above.
+Q9+ Remaining findings (9-13) stay in the review doc; promote after the above.
+Q14. **CODE COMPLETE 2026-08-13 — Reliability quick wins**
+    (`codex/s6-reliability`; awaiting review/backend + frontend deploy). The feedback
+    cron fails closed without its secret, corrupt onboarding state self-recovers,
+    and route render failures show a retry boundary.
 
 ### P2 — planned work
 6. **Gemini migration (deadline mid-Oct 2026)**: `gemini-2.5-flash` → `gemini-3.6-flash`,
@@ -167,6 +171,19 @@ Q9+ Remaining findings (9-14) stay in the review doc; promote after the above.
     load branch; startup now directly precomputes from the already-loaded tafsir chunks.
 
 ## Session log
+
+### 2026-08-13 — GPT 5.6: Session 6 Unit 5 — Reliability batch
+- **Branch/commit:** `codex/s6-reliability` / `Harden reliability failure paths`.
+- **Backend:** `/feedback/daily-summary` now returns 503 when
+  `FEEDBACK_CRON_SECRET` is unset and uses constant-time comparison for a configured
+  secret, mirroring the existing admin endpoint fail-closed boundary.
+- **Frontend:** malformed onboarding JSON is removed and state resets to the shared
+  first-run default; `app/error.js` catches route rendering failures and offers a
+  friendly “Try again” action through Next.js `reset`.
+- **Verified:** `py -3 -m py_compile backend/app.py`, failure-path code trace,
+  `git diff --check`, and `npm run build` (exit 0). The known post-build `window is
+  not defined` diagnostic remains. No browser localStorage corruption test, live
+  endpoint probe, or deploy was performed.
 
 ### 2026-08-13 — GPT 5.6: Session 6 Unit 4 — Continue reflecting
 - **Branch/commit:** `codex/s6-recommendations` / `Deliver continue-reflecting recommendations`.
