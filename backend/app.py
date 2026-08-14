@@ -27,7 +27,7 @@ def _single_line_log(value: Any) -> str:
     """Escape line breaks so Cloud Logging emits one entry per message."""
     return str(value).replace("\r", "\\r").replace("\n", "\\n")
 
-from flask import Flask, request, jsonify, make_response
+from flask import Flask, request, jsonify, make_response, g
 from flask_cors import CORS
 
 import requests
@@ -108,6 +108,32 @@ CORS(app, resources={r"/*": {
     "allow_headers": ["Content-Type", "Authorization"],
     "expose_headers": ["Server-Timing", "X-Cache-Status"],
 }}, supports_credentials=True, max_age=86400)
+
+
+@app.before_request
+def start_observed_request_timer():
+    """Start timing the two user-facing generation/share endpoints."""
+    if request.path in {"/tafsir", "/share"}:
+        g.request_started_at = time.time()
+
+
+@app.after_request
+def log_observed_request(response):
+    """Emit one structured summary for tafsir and share requests."""
+    if request.path not in {"/tafsir", "/share"}:
+        return response
+
+    started_at = getattr(g, "request_started_at", time.time())
+    duration_ms = (time.time() - started_at) * 1000
+    logger.info(
+        "REQUEST_METRIC method=%s path=%s status=%s duration_ms=%.1f cache_status=%s",
+        request.method,
+        request.path,
+        response.status_code,
+        duration_ms,
+        response.headers.get("X-Cache-Status", "none"),
+    )
+    return response
 
 # --- Configuration (UPDATED for new sliding window vector index) ---
 # Firebase project (Auth, Firestore, Users, Quran texts)
@@ -6163,7 +6189,7 @@ def tafsir_handler_enhanced():
     """
     # Initialize performance tracking before the try so error responses get the
     # same observability headers as successful responses.
-    perf_start = time.time()
+    perf_start = g.request_started_at
     perf_metrics = {
         'total_start': perf_start,
         'stages': {},

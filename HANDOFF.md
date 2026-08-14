@@ -179,14 +179,34 @@ Q14. **CODE COMPLETE 2026-08-13 — Reliability quick wins**
 12. **✅ CODE COMPLETE 2026-08-13 — Firestore cache TTL field**
     (`codex/s6-coverage`; awaiting backend deploy): new cache documents receive an
     `expires_at` timestamp 90 days after creation. Claude already enabled the TTL policy.
-13. **Observability**: replace emoji `print()` with the configured `logger`; add basic
-    request metrics; set up a Cloud Monitoring alert on 4xx/5xx spikes and on Firestore
-    PERMISSION_DENIED (this outage went unnoticed in logs for days).
+13. **CODE COMPLETE 2026-08-13 — Runtime logging + request metrics**
+    (`codex/s7-observability`; awaiting review/backend deploy): emoji diagnostics now
+    use the configured logger, and `/tafsir`/`/share` emit one duration/status/cache line.
+    Cloud Monitoring 5xx and permission-denied alerts were already enabled by Claude.
 14. **✅ CODE COMPLETE 2026-08-13 — Verse-range startup hygiene**
     (`codex/p2b-hygiene`; awaiting review/backend rebuild): removed the missing-file
     load branch; startup now directly precomputes from the already-loaded tafsir chunks.
 
 ## Session log
+
+### 2026-08-13 — GPT 5.6: Session 7 Unit 3 — logger and request metrics
+- **Branch/commits:** `codex/s7-observability`; `7a48fda` (`Route runtime diagnostics
+  through logging`) plus `Log tafsir and share request metrics`.
+- **Commit 1:** replaced every emoji `print` in live `app.py` code with severity-matched
+  `logger.info/warning/error` calls, preserving message content without emoji. Raw prompt,
+  response, traceback, and parse-context values escape line breaks so one call remains one
+  Cloud Logging entry. Startup/non-emoji prints remain; structured `GEMINI_USAGE` and
+  `HADITH_INTEGRITY_DROP` log statements are unchanged.
+- **Commit 2:** one timer hook stores the start on Flask `g`; one `after_request` hook
+  emits `REQUEST_METRIC method=… path=… status=… duration_ms=… cache_status=…` for exact
+  `/tafsir` and `/share` paths only. `/health`, shared-link reads, and other routes remain
+  noise-free; tafsir's existing perf clock reuses the same start.
+- **Verified:** app compiles; a focused hook harness confirms health suppression, one line
+  per observed request, cache-header capture, and `none` fallback; grep finds zero emoji
+  prints. A disposable combined Unit 2 + Unit 3 worktree passed the full suite: **378
+  passed, 0 skipped, 10 existing warnings**; the worktree was removed afterward.
+- **Not verified:** exact deployed Cloud Logging rendering/latency. No live calls, deploy,
+  GCP access, credentials, or secrets were used.
 
 ### 2026-08-13 — Claude: Session 6 (all 10 units) reviewed, merged, DEPLOYED & VERIFIED
 - **Live: backend `tafsir-backend-00263-5wb` + frontend `tafsir-frontend-00304-9qr`.**
