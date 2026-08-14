@@ -187,6 +187,36 @@ Q14. **CODE COMPLETE 2026-08-13 — Reliability quick wins**
 
 ## Session log
 
+### 2026-08-14 — Claude: Session 7 reviewed, merged, DEPLOYED — **GEMINI 3.6 LIVE**
+- **Production: backend `tafsir-backend-00269-z5h` (Gemini 3.6, global endpoint,
+  pipeline 15.1) + frontend `tafsir-frontend-00305-q78` (backend-down banner).**
+  Confirmed in prod logs: `GEMINI_USAGE model=gemini-3.6-flash`; fresh 18:10 in
+  15.3s (faster than 2.5); miss → hit-firestore round trip; REQUEST_METRIC lines
+  flowing; 379 offline tests green on main.
+- Units 2-5 approved unchanged. Unit 1 approved after canary iteration — TWO
+  Claude fixes were required, found only because the canary gate exists:
+  1. **Downgrade-not-drop for hadith collection labels** — 3.6 names collections
+     diligently; Ibn Kathir names them >24 tokens before the wording, so the
+     validator dropped grounded hadith wholesale (canary 2:255 served ZERO
+     hadith). Verified text now survives with the unverifiable label stripped
+     (`HADITH_COLLECTION_DOWNGRADE` logged). Pipeline bumped 15.0 → 15.1 so the
+     hadith-less canary cache docs are never served.
+  2. **Array-wrapped JSON guard** — 3.6 wrapped the 112:1-4 range response in a
+     JSON array; `.get` on a list crashed the handler (500). Single-element
+     object arrays are unwrapped; other non-objects return the no-cache 502.
+- Golden regression final: all content scenarios pass (first-run failures were
+  the two fixes above + harness proxy-context/token false-positives + my own
+  guest rate limit at requests 11-12).
+- **Ops gotcha discovered:** traffic had been PINNED to revision 00263-5wb (a
+  leftover from earlier canary36 probing), silently absorbing deploys — my
+  units-2/3 deploy wasn't actually serving until
+  `update-traffic --to-latest`. **Always check `status.traffic` after deploying
+  to a service that has ever used tags/pins.** Stale canary/canary36 tags removed.
+- Model migration COMPLETE ~2 months before the Oct 16 shutdown. AI.md truth
+  table updated. Remaining known work: iOS cap-sync/device test, min-instances
+  decision, token-cap experiment (now measurable via GEMINI_USAGE data),
+  free-text topic discovery (L), Firestore rules review.
+
 ### 2026-08-13 — GPT 5.6: Session 7 Unit 1 — Gemini 3.6 code-side flip
 - **Branch/commit:** `codex/s7-model-flip` / `Prepare Gemini 3.6 global model flip`.
 - **Endpoint/model contract:** added `GEMINI_API_LOCATION=global` and one shared URL

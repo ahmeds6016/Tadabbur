@@ -62,15 +62,18 @@ persona prompt → Gemini REST generation → JSON extraction → hadith groundi
 
 | Where | Value | Status |
 |---|---|---|
-| Current production revision | `gemini-2.5-flash` / `gemini-2.5-flash-lite`, pipeline `14.0` | deployed and verified 2026-08-13 |
-| `codex/s7-model-flip` app defaults | `gemini-3.6-flash` / `gemini-3.5-flash-lite` | **pending canary validation** |
-| `codex/s7-model-flip` Vertex location | `GEMINI_API_LOCATION=global` | **pending canary validation; required for 3.6** |
-| `codex/s7-model-flip` deploy script | same model/location values, pipeline `15.0` | merge/deploy only after Claude approval |
+| Production (rev tafsir-backend-00269-z5h) | `gemini-3.6-flash` / `gemini-3.5-flash-lite`, `GEMINI_API_LOCATION=global`, pipeline `15.1` | **DEPLOYED & canary-validated 2026-08-14** (`GEMINI_USAGE model=gemini-3.6-flash` confirmed in prod logs) |
+| app.py defaults + deploy-backend.sh | same values | in sync with production |
+| Retired | `gemini-2.5-flash` (shutdown Oct 16-20, 2026) | migration complete ~2 months ahead of deadline |
 
-The model flip is canary-gated because 3.6 requires the global endpoint and thinking
-tokens change small-output behavior. Validate strict JSON and content with
-`backend/tests/golden_regression.py`; do not merge, deploy, or shift traffic from docs
-alone.
+Migration notes (2026-08-14): 3.6 requires the global endpoint (404 on regional);
+thinking tokens eat small maxOutputTokens budgets (all raised); 3.6 sometimes wraps
+the response object in a JSON array (handler unwraps single-element arrays, 502s
+other non-objects); unverifiable hadith collection labels are now DOWNGRADED
+(label stripped, grounded text kept) instead of dropped — see
+`services/hadith_validation.py`. Pipeline 15.1 skipped 15.0 because early canary
+runs cached hadith-less 15.0 docs. Any future model change: same procedure —
+no-traffic canary + `golden_regression.py`, never flip from docs alone.
 
 ## Conventions & constraints
 
