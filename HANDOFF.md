@@ -125,6 +125,8 @@ Q8+ Remaining findings (6, 9-14) stay in the review doc; promote after the above
    `backend/tests/test_live_pipeline.py` against 3.6-flash; check JSON-format compliance
    & token limits; deploy with env var flip (no code change needed for the main model);
    bump `SCHOLARLY_PIPELINE_VERSION` if response quality/shape shifts.
+   **Env prep complete 2026-08-13** on `codex/p2a-model-env-prep`: both lite call
+   sites use `GEMINI_LITE_MODEL_ID`, still defaulted/deployed as 2.5-flash-lite.
 7. **Dead code purge** (~2,000 backend + ~4,000 frontend lines): `app_optimized.py` tree
    (+ redis/pydantic deps), dead functions listed in the audit §6, frontend
    `AppContext.jsx`, `tafsirApi.{js,ts}`, 20+ orphaned Iman-journal components,
@@ -148,6 +150,15 @@ Q8+ Remaining findings (6, 9-14) stay in the review doc; promote after the above
     repo (fallback path always taken) — either ship it or delete the load path.
 
 ## Session log
+
+### 2026-08-13 — GPT 5.6: P2-A Gemini lite model environment prep
+- **Branch/commit:** `codex/p2a-model-env-prep` / `Make Gemini lite model configurable`.
+- **Changed:** added `GEMINI_LITE_MODEL_ID` beside `GEMINI_MODEL_ID`, defaulting to `gemini-2.5-flash-lite`; the guidance summarizer and feedback enricher now interpolate it into their Vertex endpoints.
+- **Deploy config:** `deploy-backend.sh` passes `GEMINI_LITE_MODEL_ID=gemini-2.5-flash-lite`, preserving today's behavior in both default and explicit deploy configuration.
+- **Unchanged:** `GEMINI_MODEL_ID` remains `gemini-2.5-flash`; no model was flipped and no pipeline-version bump was made.
+- **Verified:** `py -3 -m py_compile backend/app.py` and `git diff --check` pass; trace finds zero hardcoded lite endpoint call sites and exactly two `GEMINI_LITE_MODEL_ID` consumers.
+- **Not run:** backend startup or live model calls because the change is configuration plumbing only and undeployed. No live API, deploy, gcloud, Firestore, billing, or secrets access performed.
+- **Next:** Claude merges in sequence; the 3.6/3.5 model flip remains a later deploy-time task with live golden-response regression testing.
 
 ### 2026-08-03 — Claude: Phase 2 review validated; P0 confirmed; findings promoted
 - Independently verified the P0: fetched live cached 2:255 — first hadith reads
