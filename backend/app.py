@@ -6803,6 +6803,21 @@ def tafsir_handler_enhanced():
                     "error_type": "json_parse_error"
                 }, 500)
 
+            if isinstance(final_json, list) and len(final_json) == 1 and isinstance(final_json[0], dict):
+                # Models occasionally wrap the response object in a one-element
+                # array; unwrap rather than fail the request.
+                logger.warning("Gemini wrapped response object in an array; unwrapping")
+                final_json = final_json[0]
+
+            if not isinstance(final_json, dict):
+                # The tafsir contract requires a JSON object. Treat anything
+                # else as malformed, never cache.
+                logger.error("Gemini returned non-object JSON (%s); refusing to cache", type(final_json).__name__)
+                perf_metrics['stages']['post_processing'] = (time.time() - stage_start) * 1000
+                return tafsir_response({
+                    "error": "AI returned a malformed response. Please try again."
+                }, 502)
+
             if final_json.get('metadata', {}).get('extraction_error'):
                 logger.error("Gemini returned malformed JSON; refusing to cache fallback response")
                 perf_metrics['stages']['post_processing'] = (time.time() - stage_start) * 1000
