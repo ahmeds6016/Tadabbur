@@ -94,10 +94,10 @@ from services.iman_service import (
 # --- App Initialization ---
 app = Flask(__name__)
 CORS(app, resources={r"/*": {
+    # Keep this allowlist limited to frontend origins that are currently live.
     "origins": [
         "http://localhost:3000",
-        "https://tafsir-frontend-612616741510.us-central1.run.app",
-        "https://tafsir-simplified-app.vercel.app"
+        "https://tafsir-frontend-612616741510.us-central1.run.app"
     ],
     "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     "allow_headers": ["Content-Type", "Authorization"],

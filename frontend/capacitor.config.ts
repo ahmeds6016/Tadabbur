@@ -8,7 +8,7 @@ const config: CapacitorConfig = {
   // Load from production server — keeps a single deployment pipeline,
   // supports dynamic routes, and lets you push updates without App Store review.
   server: {
-    url: 'https://tafsir-simplified-app.vercel.app',
+    url: 'https://tafsir-frontend-612616741510.us-central1.run.app',
     cleartext: false,
   },
 
