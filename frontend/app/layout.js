@@ -1,6 +1,7 @@
 import { Geist, Geist_Mono, Amiri } from "next/font/google";
 import "./globals.css";
 import PWAProvider from "./components/PWAProvider";
+import BackendStatusBanner from "./components/BackendStatusBanner";
 
 // Modern sans-serif font
 const geistSans = Geist({
@@ -126,6 +127,7 @@ export default function RootLayout({ children }) {
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
       <body suppressHydrationWarning>
+        <BackendStatusBanner />
         <PWAProvider>
           {children}
         </PWAProvider>

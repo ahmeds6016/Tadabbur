@@ -7,6 +7,7 @@ import { Lightbulb, HelpCircle, CheckSquare, Heart, Link2, BookOpen, ChevronDown
 import { auth } from '../lib/firebase';
 import { BACKEND_URL } from '../lib/config';
 import BottomNav from '../components/BottomNav';
+import { reportBackendFailure, reportBackendSuccess } from '../lib/backendHealth';
 
 // Core 5 reflection types with Lucide icons
 const ANNOTATION_TYPE_CONFIG = {
@@ -82,12 +83,14 @@ export default function MyReflectionsPage() {
       const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      reportBackendSuccess();
 
       if (res.ok) {
         const data = await res.json();
         setAnnotations(data.annotations || []);
       }
     } catch (err) {
+      if (err instanceof TypeError) reportBackendFailure();
       console.error('Failed to fetch annotations:', err);
     }
   };

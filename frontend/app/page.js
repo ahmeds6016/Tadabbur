@@ -39,6 +39,7 @@ import useTextSelection from './hooks/useTextSelection';
 import { useOnboarding } from './hooks/useOnboarding';
 import onboardingConfig from '../config/onboarding-messages.json';
 import { getNameInfo, validateFirstName } from './utils/nameInfo';
+import { reportBackendFailure, reportBackendSuccess } from './lib/backendHealth';
 
 // ============================================================================
 // MAIN COMPONENT
@@ -84,6 +85,7 @@ export default function HomePage() {
       const response = await fetch(`${BACKEND_URL}/get_profile`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      reportBackendSuccess();
       if (!response.ok) throw new Error('Network error fetching profile');
       const data = await response.json();
       if (data?.is_new_user) {
@@ -93,7 +95,8 @@ export default function HomePage() {
       if (data?.level || data?.persona) {
         setUserProfile(data);
       }
-    } catch {
+    } catch (err) {
+      if (err instanceof TypeError) reportBackendFailure();
       // No saved profile, will proceed to onboarding
     }
   };
@@ -1000,22 +1003,28 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
   // Fetch daily verse and streak on mount
   useEffect(() => {
     fetch(`${BACKEND_URL}/daily-verse`)
-      .then(res => res.ok ? res.json() : null)
+      .then(res => {
+        reportBackendSuccess();
+        return res.ok ? res.json() : null;
+      })
       .then(data => { if (data) setDailyVerse(data); })
-      .catch(() => {});
+      .catch((err) => { if (err instanceof TypeError) reportBackendFailure(); });
 
     if (user) {
       user.getIdToken().then(token => {
         fetch(`${BACKEND_URL}/streak`, {
           headers: { Authorization: `Bearer ${token}` }
         })
-          .then(res => res.ok ? res.json() : null)
+          .then(res => {
+            reportBackendSuccess();
+            return res.ok ? res.json() : null;
+          })
           .then(data => {
             if (data) {
               setStreak(data);
             }
           })
-          .catch(() => {});
+          .catch((err) => { if (err instanceof TypeError) reportBackendFailure(); });
       });
     }
   }, [user]);
@@ -1331,6 +1340,7 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
         body: JSON.stringify({ approach, query }),
         signal: abortControllerRef.current.signal
       });
+      reportBackendSuccess();
 
       if (!res.ok) {
         if (res.status === 429) {
@@ -1376,6 +1386,7 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
         await saveQueryToHistory(query, approach, userProfile?.persona || '', true);
       }
     } catch (err) {
+      if (err instanceof TypeError) reportBackendFailure();
       // Don't show error for user-initiated cancellations (but show for timeouts)
       if (err.name === 'AbortError') {
         // Check if this was a timeout abort (searchTimeoutRef is null after timeout fires)

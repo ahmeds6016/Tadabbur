@@ -7,6 +7,7 @@ import { auth } from '../lib/firebase';
 import { BACKEND_URL } from '../lib/config';
 import BadgeDisplay from '../components/BadgeDisplay';
 import BottomNav from '../components/BottomNav';
+import { reportBackendFailure, reportBackendSuccess } from '../lib/backendHealth';
 
 export default function PlansPage() {
   const router = useRouter();
@@ -47,7 +48,14 @@ export default function PlansPage() {
   }, [user]);
 
   const fetchPlans = useCallback(async () => {
-    const res = await fetch(`${BACKEND_URL}/reading-plans`);
+    let res;
+    try {
+      res = await fetch(`${BACKEND_URL}/reading-plans`);
+      reportBackendSuccess();
+    } catch (err) {
+      if (err instanceof TypeError) reportBackendFailure();
+      throw err;
+    }
     if (!res.ok) throw new Error('Failed to fetch plans');
     const data = await res.json();
     return data.plans || [];

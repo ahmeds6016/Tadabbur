@@ -93,7 +93,8 @@ unused project (candidates: synapse-demo-471205, vertical-karma-471205-j1).
    non-success responses are checked before parsing, JSON backend errors (including
    P1.2's 502) are preserved, non-JSON failures get a status-based message, and fetch
    `TypeError` failures get a friendly connection message. Existing 429 and timeout
-   messages are unchanged. The global backend-down banner remains a separate future task.
+   messages are unchanged. The global backend-down banner is code complete on
+   `codex/s7-backend-banner` and awaits review/frontend deploy.
 
 ### P1-Q — product quality (promoted from docs/QUALITY-REVIEW-2026-08-03.md; Claude-verified)
 Q1. **✅ CODE COMPLETE 2026-08-13 — P0 hadith citation integrity**
@@ -187,6 +188,23 @@ Q14. **CODE COMPLETE 2026-08-13 — Reliability quick wins**
     load branch; startup now directly precomputes from the already-loaded tafsir chunks.
 
 ## Session log
+
+### 2026-08-13 — GPT 5.6: Session 7 Unit 4 — global backend status banner
+- **Branch/commit:** `codex/s7-backend-banner` / `Surface repeated backend outages`.
+- **Shared signal/UI:** added a dependency-free module-level failure window and listener
+  set plus one layout-mounted client banner. Two fetch rejections within 30 seconds show
+  the slim dismissible polite live region; any later HTTP response clears failures,
+  auto-hides the banner, and rearms dismissal for a future outage.
+- **Scoped wiring:** only profile, daily verse, streak GET, tafsir submit, saved-search
+  list, reading-plan catalog, and annotation list report health. A resolved HTTP response
+  reports success regardless of status; only fetch `TypeError` counts as unreachable, so
+  4xx/5xx, JSON parsing, auth, cancellation, and existing UI error behavior are unchanged.
+- **Verified:** a deterministic module harness covers one-vs-two failures, 30-second
+  expiry, success reset, and subscription transitions; import/call-site trace confirms all
+  seven paths and the single layout mount; `npm run build` exits 0 with all 14 routes.
+  The known trailing non-fatal `window is not defined` diagnostic remains.
+- **Not verified:** deployed outage/devtools-offline behavior and visual interaction.
+  No backend changes, live calls, deploy, GCP access, credentials, or secrets were used.
 
 ### 2026-08-13 — Claude: Session 6 (all 10 units) reviewed, merged, DEPLOYED & VERIFIED
 - **Live: backend `tafsir-backend-00263-5wb` + frontend `tafsir-frontend-00304-9qr`.**

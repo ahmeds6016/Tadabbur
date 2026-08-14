@@ -6,6 +6,7 @@ import { auth } from '../lib/firebase';
 import { BACKEND_URL } from '../lib/config';
 import ConfirmDialog from '../components/ConfirmDialog';
 import BottomNav from '../components/BottomNav';
+import { reportBackendFailure, reportBackendSuccess } from '../lib/backendHealth';
 
 export default function SavedSearchesPage() {
   const [user, setUser] = useState(null);
@@ -35,12 +36,14 @@ export default function SavedSearchesPage() {
       const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      reportBackendSuccess();
 
       if (res.ok) {
         const data = await res.json();
         setSaved(data.saved || []);
       }
     } catch (err) {
+      if (err instanceof TypeError) reportBackendFailure();
       // Fetch failed — non-critical
     }
   };
