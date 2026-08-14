@@ -1,5 +1,121 @@
 # Prompts for GPT 5.6
 
+## Session 5 prompt (2026-08-03) — ONE-SHOT: P0 hadith integrity + quality wins + P2 batch
+
+---
+
+You are GPT 5.6, main coder for Tadabbur (Claude = architect/reviewer, Ahmed =
+owner). First: `git pull` and read `HANDOFF.md` (P1-Q section + latest session log)
+and `docs/QUALITY-REVIEW-2026-08-03.md`. Your Phase 2 review was validated: Claude
+independently confirmed the P0 (live 2:255 attributes Ahmad's "tongue and two lips"
+wording to Sahih Muslim; Muslim 810 ends at the congratulation) and spot-verified
+findings 2 and 7. Your findings are promoted as queue items Q1-Q7.
+
+This is a LONG end-to-end session: SIX branches, in this exact order. Each branch
+comes from `main` (Claude merges in order and resolves trivial cross-branch
+conflicts). Finish one unit — implement, verify, HANDOFF entry — before starting
+the next. If any unit balloons, stop it, write down why, and move on. No deploys,
+no gcloud, no secrets, ever.
+
+### Unit 1 — Q1: hadith citation integrity (branch `codex/q1-hadith-integrity`) — THE P0
+
+Design contract (Claude-approved):
+1. **Prompt contract** (in `build_enhanced_prompt`, hadith section ~app.py:3699):
+   hadith `text` MUST be verbatim (or tightly trimmed) from the source excerpts
+   supplied in the prompt context — never from model memory. `reference` becomes
+   structured: `collection` (ONLY if the supplied excerpt itself names that
+   collection for that wording), `narrator`, and `attribution` (always set to the
+   in-corpus source, e.g. "as cited in Ibn Kathir's tafsir of this verse"). If the
+   excerpt notes wording differences between collections (as Ibn Kathir does for
+   2:255), the model must attribute each wording to the collection the excerpt
+   assigns it, or omit `collection`.
+2. **Server-side validation** — a NEW PURE FUNCTION `validate_hadith_items(
+   hadith_list, source_context_text) -> (kept, dropped)`: for each item, normalize
+   both sides (lowercase, strip punctuation/diacritics, collapse whitespace) and
+   require a substantial containment match of the hadith text within the supplied
+   source context (e.g. a sliding window: ≥80% of the item's 12+-word shingles
+   found in the context — pick and document a defensible method). Items failing →
+   dropped, with a `print`/logger correctness event including verse ref and the
+   rejected reference. Wire it into the /tafsir handler after extraction, BEFORE
+   post-processing and caching, passing the same scholarly/tafsir context text the
+   prompt was built from. If everything is dropped, return the response with an
+   empty hadith list — never fail the whole request over hadith validation.
+3. **Version bump**: `SCHOLARLY_PIPELINE_VERSION` "12.0" → "13.0" (this
+   auto-invalidates ALL cached responses, including the bad 2:255 — deliberate).
+4. **Golden tests**: new `backend/tests/test_hadith_integrity.py`, pure pytest, NO
+   GCP/network — fixture-based: (a) the exact composite 2:255 case: an item with
+   the "tongue and two lips" wording attributed to Sahih Muslim against a fixture
+   context where that wording is attributed to Ahmad → must be dropped or
+   re-attributed per your implementation; (b) a legitimate verbatim item → kept;
+   (c) an item wholly absent from context → dropped; (d) empty hadith list → OK.
+   Design `validate_hadith_items` so these tests run offline.
+5. Response SHAPE stays: `hadith` remains a list of objects with at least
+   `reference`/`text`/`relevance` keys so the frontend needs no change this unit —
+   build `reference` as a display string from the structured parts, and add the
+   new structured fields alongside (additive).
+
+### Unit 2 — Q2+Q3+Q4: quality quick-wins (branch `codex/q2-4-quick-wins`)
+
+- **Q2 (frontend)**: `frontend/app/page.js` ~:3081 — remove the `user &&` gate on
+  `reflection_prompt` so guests see the question. Keep the save/annotate actions
+  auth-gated; for guests render the question plus a sign-in CTA phrased as saving
+  the reflection ("Sign in to save your reflection"), not unlocking it.
+- **Q3 (backend)**: on the authenticated cache-hit return paths in the /tafsir
+  handler (Firestore-hit and memory-hit returns, ~app.py:6904-6935), invoke the
+  same `_track_explored_verse` + `_check_and_award_badges` calls the fresh path
+  makes (~:7222-7224), guarded by `if user_id`. Confirm by reading
+  `_track_explored_verse` that repeat calls for the same verse are idempotent
+  (set/merge semantics) and say so in the PR; if they are NOT idempotent, add a
+  cheap per-user/verse/day guard.
+- **Q4 (backend)**: every /tafsir return path gets headers: `X-Cache-Status:
+  hit-firestore | hit-memory | miss` and `Server-Timing` built from the existing
+  `perf_metrics['stages']` (e.g. `cache;dur=114, gemini;dur=15800`). Use
+  `make_response(jsonify(...))` pattern; do NOT put perf data into the cached
+  response object. CORS: check whether `Server-Timing`/`X-Cache-Status` need
+  `expose_headers` in the flask-cors config for the frontend to read them — add if
+  so.
+- No pipeline bump in this unit (Q1 already bumped; response body shape unchanged).
+
+### Unit 3 — P2-A: Gemini migration prep (branch `codex/p2a-model-env-prep`)
+Hardcoded `gemini-2.5-flash-lite` sites (2 in app.py) → env `GEMINI_LITE_MODEL_ID`
+defaulting to `"gemini-2.5-flash-lite"`, defined next to `GEMINI_MODEL_ID`.
+Identical behavior today. Add `GEMINI_LITE_MODEL_ID=gemini-2.5-flash-lite` to
+deploy-backend.sh env vars. Do NOT touch `GEMINI_MODEL_ID` or flip any model.
+
+### Unit 4 — P2-B: dependency + data hygiene (branch `codex/p2b-hygiene`)
+Add `cryptography` to backend/requirements.txt pinned compatible with
+firebase-admin's transitive pull (state version + why). `verse_range_map.json`:
+missing from repo, so `load_range_map()` always falls back — either regenerate it
+via an existing export helper (check services/token_budget_service.py) and commit
+it, or delete the dead load path + misleading comment; state which and why.
+
+### Unit 5 — P2-C: frontend build safety (branch `codex/p2c-suspense`)
+Wrap the `useSearchParams()` usage (frontend/app/page.js, inside MainApp) in a
+`<Suspense>` boundary — smallest structural change. `npm run build` must exit 0;
+note whether the pre-existing trailing `window is not defined` print changes.
+
+### Unit 6 — P2-D: iOS/CORS cleanup (branch `codex/p2d-capacitor-cors`)
+`frontend/capacitor.config.ts` → point at
+`https://tafsir-frontend-612616741510.us-central1.run.app` (dead Vercel URL out).
+backend/app.py CORS origins: remove the dead Vercel origin, add comment that
+origins must match live frontends. Don't touch ios/ or run cap sync.
+
+### Global rules
+- Per unit: 2-3 sentence plan first, then implement, then verify (py_compile,
+  pytest for Unit 1's offline tests, npm build for frontend units, code trace for
+  the rest) and record verified-vs-not honestly in HANDOFF.md session log with
+  branch + commit.
+- Line numbers drift — trust the code. Match existing style. No drive-by
+  refactors, no dead-code deletion, no dependency changes beyond Unit 4's single
+  pin.
+- Live API probing is NOT useful this session (your changes aren't deployed);
+  don't spend the guest rate limit.
+- Finish with a single summary listing all six branches + commits + what Claude
+  must do (merge order, deploy backend once at the end — Unit 1's version bump
+  flushes the cache on deploy — and deploy frontend once for Units 2/5/6).
+
+---
+
 ## Session 4A prompt (2026-08-03) — Phase 2 product audit — copy the block below
 
 ---
