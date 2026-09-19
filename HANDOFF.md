@@ -4,7 +4,16 @@
 > what's next. Newest entries on top. Architecture & conventions: see `AI.md`.
 > Full audit: `docs/AUDIT-2026-08-01.md`.
 
-## Current status (2026-08-01, Claude)
+## Current status (2026-08-29, Claude)
+
+**Everything through Session 7 is MERGED and DEPLOYED.** Production: backend
+`tafsir-backend-00269-z5h` (Gemini 3.6, global endpoint, pipeline 15.1) + frontend
+`tafsir-frontend-00305-q78`. Verified 2026-08-29: every `codex/*` and `canary/*` branch
+tip is an ancestor of `origin/main` (28/28 merged, zero unmerged), so the queue below now
+records deployed revisions instead of "awaiting review/deploy". Dev environment moved to
+macOS 2026-08-28 (see session log). Open work lives in the 2026-08-29 session entry.
+
+### Historical record — 2026-08-01 outage & recovery
 
 **✅ RESOLVED 2026-08-01 ~18:45 UTC — app is back up.** Billing relinked to
 `tafsir-simplified-6b262` (freed a slot by unlinking `tafsir-sandbox` per Ahmed's
@@ -83,109 +92,361 @@ unused project (candidates: synapse-demo-471205, vertical-karma-471205-j1).
    after a guest-key miss (app.py:4269-4303). Therefore old mis-keyed documents can be
    served via fallback, and not every repeated guest query necessarily incurred an LLM
    call. No old documents were migrated or deleted.
-4. **Gunicorn/Cloud Run timeout mismatch** — **CODE COMPLETE 2026-08-01 on
-   `codex/p1-4-timeout-stack` (`2f0c4a3`); awaiting review/image rebuild/deploy**:
+4. **Gunicorn/Cloud Run timeout mismatch** — **✅ DEPLOYED 2026-08-01 (merged via `8f36ce2`; rev `tafsir-backend-00260-m9l`)**:
    Gunicorn now uses timeout 300 and `${PORT:-8080}`; the main Gemini call permits two
    total attempts. Worst network budget is `120s + 2s + 120s = 242s`, leaving about
    58 seconds inside the Gunicorn/Cloud Run limit for application overhead.
-5. **Frontend: defensive `/tafsir` error handling** — **CODE COMPLETE 2026-08-01 on
-   `codex/p1-5-tafsir-errors` (`58df38d`); awaiting review/frontend deploy**:
+5. **Frontend: defensive `/tafsir` error handling** — **✅ DEPLOYED 2026-08-01 (merged `8f36ce2`; rev `tafsir-frontend-00302-8ls`)**:
    non-success responses are checked before parsing, JSON backend errors (including
    P1.2's 502) are preserved, non-JSON failures get a status-based message, and fetch
    `TypeError` failures get a friendly connection message. Existing 429 and timeout
-   messages are unchanged. The global backend-down banner is code complete on
-   `codex/s7-backend-banner` and awaits review/frontend deploy.
+   messages are unchanged. The global backend-down banner
+   (`codex/s7-backend-banner`) ✅ DEPLOYED 2026-08-14 in `tafsir-frontend-00305-q78`.
 
 ### P1-Q — product quality (promoted from docs/QUALITY-REVIEW-2026-08-03.md; Claude-verified)
-Q1. **✅ CODE COMPLETE 2026-08-13 — P0 hadith citation integrity**
-    (`codex/q1-hadith-integrity`; awaiting review/backend deploy). Review finding 1 was **verified live by Claude**:
+Q1. **✅ DEPLOYED & P0 VERIFIED IN PROD 2026-08-13 — hadith citation integrity**
+    (`codex/q1-hadith-integrity`; rev `tafsir-backend-00262-82w`, pipeline 13.0 cache flush). Review finding 1 was **verified live by Claude**:
     cached 2:255 attributes the Ahmad-version "tongue and two lips" wording to Sahih
     Muslim; Muslim 810 ends at the congratulation). Fix: structured hadith fields
     (collection, canonical ID, grade, exact excerpt, source pointer), containment
     validation against the supplied source excerpts before render/cache, drop+log on
     failure, golden test for 2:255. Requires `SCHOLARLY_PIPELINE_VERSION` bump —
     which auto-invalidates ALL old cached responses, including the bad one.
-Q2. **✅ CODE COMPLETE 2026-08-13 — Guest reflection visibility**
-    (`codex/q2-4-quick-wins`; awaiting review/frontend deploy). Removed the `user`
+Q2. **✅ DEPLOYED 2026-08-13 — Guest reflection visibility**
+    (`codex/q2-4-quick-wins`; rev `tafsir-frontend-00303-9b6`, incl. `onGuestSignUp` fixup `56c1832`). Removed the `user`
     gate; guests see the question and a “Sign in to save your reflection” CTA.
-Q3. **✅ CODE COMPLETE 2026-08-13 — Cache-hit progress/badges**
-    (`codex/q2-4-quick-wins`; awaiting review/backend deploy). Existing idempotent
+Q3. **✅ DEPLOYED 2026-08-13 — Cache-hit progress/badges**
+    (`codex/q2-4-quick-wins`; rev `tafsir-backend-00262-82w`). Existing idempotent
     set/merge tracking and badge checks now run on authenticated cache hits.
-Q4. **✅ CODE COMPLETE 2026-08-13 — Timing + cache-status headers**
-    (`codex/q2-4-quick-wins`; awaiting review/backend deploy). `Server-Timing` and
+Q4. **✅ DEPLOYED & VERIFIED 2026-08-13 — Timing + cache-status headers**
+    (`codex/q2-4-quick-wins`; rev `tafsir-backend-00262-82w`; live + CORS-exposed). `Server-Timing` and
     `X-Cache-Status` now cover every handler path without changing response bodies.
-Q5. **✅ CODE COMPLETE 2026-08-13 — `/share` integrity**
-    (`codex/s6-share`; awaiting review/backend + frontend deploy). Share creation
+Q5. **✅ DEPLOYED & VERIFIED 2026-08-13 — `/share` integrity**
+    (`codex/s6-share`; revs `tafsir-backend-00263-5wb` + `tafsir-frontend-00304-9qr`; live 409-unviewed check passed). Share creation
     now snapshots only a current-version server cache record, rate-limits creation,
     and the public shared page no longer renders raw HTML.
-Q6. **✅ CODE COMPLETE 2026-08-13 — source-coverage contract**
-    (`codex/s6-coverage`; awaiting review/backend + frontend deploy). Every verse
+Q6. **✅ DEPLOYED & VERIFIED 2026-08-13 — source-coverage contract**
+    (`codex/s6-coverage`; revs 00263/00304; live 2:255 + 30:54 Qurtubi-notice checks passed). Every verse
     answer now carries deterministic classical/additional-source coverage, including
     old cache hits; the UI renders a compact source panel and neutral corpus notice.
-Q7. **✅ CODE COMPLETE 2026-08-13 — verse-first loading + accessibility**
-    (`codex/s6-progressive-a11y`; awaiting review/frontend deploy). The canonical
+Q7. **✅ DEPLOYED 2026-08-13 — verse-first loading + accessibility**
+    (`codex/s6-progressive-a11y`; rev `tafsir-frontend-00304-9qr`; covers review finding 11). The canonical
     start verse now renders while commentary loads, with accessible picker labels,
     live status announcements, focus transitions, and Arabic language metadata.
-Q8. **CODE COMPLETE 2026-08-13 — Continue reflecting recommendations**
-    (`codex/s6-recommendations`; awaiting review/backend + frontend deploy).
+Q8. **✅ DEPLOYED & VERIFIED 2026-08-13 — Continue reflecting recommendations**
+    (`codex/s6-recommendations`; revs 00263/00304; 3 recommendations confirmed in live 2:255).
     Deterministic follow-on verses now reach fresh and cached answers and render as
     a three-card continuation path.
-Q9. **CODE COMPLETE 2026-08-13 — Persona learning contracts**
-    (`codex/s6-personas`; awaiting review/backend deploy). All five personas now
+Q9. **✅ DEPLOYED & VERIFIED 2026-08-13 — Persona learning contracts**
+    (`codex/s6-personas`; rev 00263, pipeline 14.0 cache flush; meaning-first contract visible live). All five personas now
     receive distinct learning behavior plus shared meaning-first and verse-specific
     reflection requirements. Pipeline version is `14.0`.
-Q10. **CODE COMPLETE 2026-08-13 — Curated theme entry point**
-    (`codex/s6-themes`; awaiting review/frontend deploy). The home search surface now
+Q10. **✅ DEPLOYED 2026-08-13 — Curated theme entry point**
+    (`codex/s6-themes`; rev `tafsir-frontend-00304-9qr`). The home search surface now
     offers eight editorial themes that lead directly into ordinary verse queries.
-Q11+ Remaining findings (11, 13) stay in the review doc; promote after the above.
-Q12. **CODE COMPLETE 2026-08-13 — Study-centered streaks and progress**
-    (`codex/s6-streaks`; awaiting review/frontend deploy). Reflection saves and
+Q11+ Review-doc remainders: finding 11 (a11y naming) shipped inside Q7's unit; finding 13
+    (output/cache tuning) = the token-cap experiment, now measurable via GEMINI_USAGE — open.
+Q12. **✅ DEPLOYED 2026-08-13 — Study-centered streaks and progress**
+    (`codex/s6-streaks`; revs 00263/00304). Reflection saves and
     completed reading-plan days now count as daily learning activity; the progress
     page leads with verses studied and reflections written.
-Q14. **CODE COMPLETE 2026-08-13 — Reliability quick wins**
-    (`codex/s6-reliability`; awaiting review/backend + frontend deploy). The feedback
+Q14. **✅ DEPLOYED 2026-08-13 — Reliability quick wins**
+    (`codex/s6-reliability`; revs 00263/00304). The feedback
     cron fails closed without its secret, corrupt onboarding state self-recovers,
     and route render failures show a retry boundary.
 
 ### P2 — planned work
-6. **CODE COMPLETE 2026-08-13 — Gemini 3.6 code-side flip**
-   (`codex/s7-model-flip`; merge/deploy gated on Claude's canary): defaults and deploy
+6. **✅ DEPLOYED & CANARY-VALIDATED 2026-08-14 — Gemini 3.6 flip**
+   (`codex/s7-model-flip` via `canary/s7-flip` + fixes `5127bf4`/`7d19dd1`; rev
+   `tafsir-backend-00269-z5h`, pipeline 15.1; `GEMINI_USAGE model=gemini-3.6-flash` in prod logs): defaults and deploy
    configuration now use `gemini-3.6-flash`, `gemini-3.5-flash-lite`, and the required
    global Vertex endpoint. All live call sites share multipart response extraction and
    thinking-safe output budgets; pipeline version is `15.0`.
-7. **✅ CODE COMPLETE 2026-08-13 — Dead code purge**
-   (`codex/s6-purge`, based on local `codex/s6-integration`; awaiting review/backend
-   rebuild + frontend deploy): removed the unreachable optimized-backend tree, audited
+7. **✅ DEPLOYED 2026-08-13 — Dead code purge**
+   (`codex/s6-purge` merged as `11d946c`; revs 00263/00304): removed the unreachable optimized-backend tree, audited
    dead `app.py` helpers and SDK/dependencies, and the re-verified orphaned frontend
    context/API/components/demo/test surface. `RecommendationBar` and
    `ReflectionDetailPanel` remain because Session 6 made/confirmed them live.
-8. **✅ CODE COMPLETE 2026-08-13 — Pin `cryptography`**
-   (`codex/p2b-hygiene`; awaiting review/backend rebuild): explicit `49.0.0` pin
+8. **✅ DEPLOYED 2026-08-13 — Pin `cryptography`**
+   (`codex/p2b-hygiene` + fixup `a6ce590`; rev `tafsir-backend-00262-82w`): explicit `49.0.0` pin
    matches the version the production image resolver installs under pyOpenSSL 26.3.0.
 9. **Dockerfile PORT — promoted into P1.4**. The separate option to use `--workers 2`
    on the second CPU remains unimplemented and must be evaluated independently.
-10. **✅ CODE COMPLETE 2026-08-13 — Frontend Suspense boundary**
-    (`codex/p2c-suspense`; awaiting review/frontend deploy): `useSearchParams()` now
+10. **✅ DEPLOYED 2026-08-13 — Frontend Suspense boundary**
+    (`codex/p2c-suspense`; rev `tafsir-frontend-00303-9b6`): `useSearchParams()` now
     lives in a minimal inner component beneath `<Suspense>`.
-11. **✅ CODE COMPLETE 2026-08-13 — Vercel/Capacitor cleanup**
-    (`codex/p2d-capacitor-cors`; awaiting review/backend + frontend deploy):
+11. **✅ DEPLOYED 2026-08-13 (code) — Vercel/Capacitor cleanup**
+    (`codex/p2d-capacitor-cors`; revs 00262/00303). **Still open: `npx cap sync ios` +
+    a real-device test have never been run against the new config** (needs Xcode on the Mac):
     `capacitor.config.ts` now points the iOS shell at the stable project-number Cloud
     Run frontend URL, and backend CORS no longer permits the dead Vercel origin.
-12. **✅ CODE COMPLETE 2026-08-13 — Firestore cache TTL field**
-    (`codex/s6-coverage`; awaiting backend deploy): new cache documents receive an
+12. **✅ DEPLOYED & VERIFIED 2026-08-13 — Firestore cache TTL field**
+    (`codex/s6-coverage`; rev 00263; live v14 doc carried `expires_at`=+90d): new cache documents receive an
     `expires_at` timestamp 90 days after creation. Claude already enabled the TTL policy.
-13. **CODE COMPLETE 2026-08-13 — Runtime logging + request metrics**
-    (`codex/s7-observability`; awaiting review/backend deploy): emoji diagnostics now
+13. **✅ DEPLOYED & VERIFIED 2026-08-14 — Runtime logging + request metrics**
+    (`codex/s7-observability`; rev `tafsir-backend-00269-z5h`; REQUEST_METRIC lines flowing): emoji diagnostics now
     use the configured logger, and `/tafsir`/`/share` emit one duration/status/cache line.
     Cloud Monitoring 5xx and permission-denied alerts were already enabled by Claude.
-14. **✅ CODE COMPLETE 2026-08-13 — Verse-range startup hygiene**
-    (`codex/p2b-hygiene`; awaiting review/backend rebuild): removed the missing-file
+14. **✅ DEPLOYED 2026-08-13 — Verse-range startup hygiene**
+    (`codex/p2b-hygiene`; rev `tafsir-backend-00262-82w`): removed the missing-file
     load branch; startup now directly precomputes from the already-loaded tafsir chunks.
-15. **CODE COMPLETE 2026-08-13 — Green offline backend suite**
-    (`codex/s7-green-tests`; awaiting review/backend rebuild): all 378 tests pass
+15. **✅ DONE 2026-08-13 — Green offline backend suite**
+    (`codex/s7-green-tests`; in rev 00269; 379 green re-verified on macOS 2026-08-28): all 378 tests pass
     locally with no skips; UTF-8 scholarly loaders and stale test contracts were fixed.
 
 ## Session log
+
+### 2026-08-29 — Claude: queue reconciled to reality, prod health check green, Session 8 proposed
+
+- **Environment:** first working session from the macOS machine (migration recorded
+  below, 2026-08-28). gcloud authenticated as ahmedsheik123@gmail.com, project
+  `tafsir-simplified`. CLI quirk: the Homebrew gcloud cannot self-install the `alpha`
+  component non-interactively, so `gcloud alpha monitoring …` prints an install prompt
+  and no data — use the Monitoring REST API with `gcloud auth print-access-token`
+  instead (that is how the alert-policy state below was verified).
+- **Task queue reconciled.** Cross-checked every queue item against `git log`
+  (28/28 `codex/*` + `canary/*` branch tips are ancestors of `origin/main`, zero
+  unmerged) and the three merge/deploy session entries. Every P1, P1-Q, and P2 item
+  that said "CODE COMPLETE — awaiting review/deploy" actually shipped in revisions
+  00260/00262/00263/00269 (backend) and 00302–00305 (frontend); statuses now record
+  those revisions. Genuinely still open after reconciliation: P2.9's `--workers 2`
+  evaluation, P2.11's iOS `cap sync` + device test, min-instances decision,
+  token-cap experiment (finding 13), free-text topic discovery (finding 10),
+  Firestore rules review, and the migration cleanup batch (stale root test files,
+  `aiohttp`, `datetime.utcnow()` warnings).
+- **Prod health check (read-only) — ALL GREEN:**
+  - Backend serving `tafsir-backend-00269-z5h` = latestCreated = latestReady,
+    traffic `latestRevision: true` at 100% — **no silent pinning** (Session 7's ops
+    gotcha is not recurring). Frontend `tafsir-frontend-00305-q78`, same. No deploys
+    since Session 7.
+  - Serving env confirmed: `gemini-3.6-flash` / `gemini-3.5-flash-lite`,
+    `GEMINI_API_LOCATION=global`.
+  - Live smoke: `/health` healthy; 2:255 → 200 in 0.8s `hit-firestore`; uncached
+    58:12 → 200 in 32.2s `miss` (gemini phase 31.4s), clean structured JSON, 1
+    grounded hadith, 4 recommendations, `GEMINI_USAGE model=gemini-3.6-flash
+    prompt_tokens=8971 candidate_tokens=1488`.
+  - 5xx since Aug 14: **10 total, 9 of them Session 7's own Aug-14 canary probing.
+    The single organic 5xx (Aug 20 03:15) is the P1.2 guard working**: Gemini emitted
+    12 tokens of non-JSON ("An error occurred while evaluating…"), the handler logged
+    "refusing to cache fallback response", returned 502 without caching, and the next
+    request (6:14) generated cleanly. Neither alert policy fired (threshold >5/5min);
+    both policies verified enabled with the email channel via REST.
+  - Hadith telemetry: all 11 `HADITH_INTEGRITY_DROP` events are from the Aug-14
+    canary windows — **zero organic drops since 15.1**. `HADITH_COLLECTION_DOWNGRADE`
+    fired 4× organically in 15 days (25:74, 40:17, 1:1, 58:12) — the
+    downgrade-not-drop design working at low frequency.
+  - **Traffic reality: ~7 organic `/tafsir` requests in 15 days** (9 REQUEST_METRIC
+    lines post-canary; 2 are this health check), on 3 active days. Frontend ~200
+    raw 200s spread across the fortnight. Latency: fresh 17.8–32.0s (median ~20s),
+    hits ~0.5s. Both services cold-start from zero instances (observed: 6.3s first
+    frontend byte).
+  - Token data (6 generations): prompts 8.5–10.3K (one 21.1K outlier on 1:1 —
+    richest corpus), candidates 1.2–1.7K against the 65,536 main budget.
+  - Billing: BOTH projects linked and enabled on `0152F9-4F49EC-74C075` — the July
+    outage cause has not recurred. Vertex vector-index inventory was already
+    confirmed empty 2026-08-13. With 6 paid generations in 15 days and
+    min-instances=0, spend is effectively pennies; exact dollar figures are not
+    CLI-exposed (console check optional).
+- **Session 8 proposal (awaiting Ahmed's pick; no implementation started):**
+  - **8a — min-instances decision + uptime check** (Claude, XS, no code deploy).
+    Data says keep `min-instances=0`: always-on capacity would cost real money to
+    erase cold starts almost nobody hits. Add a Cloud Monitoring uptime check on
+    `/health` → email, closing the July-outage detection gap (user-report latency).
+  - **8b — iOS shell on the Mac** (Ahmed + Claude, M). `npx cap sync ios`, simulator
+    run, then device test. Blocked on Windows for months; the Mac migration finally
+    unblocks it, and it is the distribution path. Needs Ahmed: Xcode install + Apple ID.
+  - **8c — Firestore security-rules review** (Claude audit, S). `backend/firestore.rules`
+    has never been Claude-audited against actual client usage; verify what the deployed
+    rules in `tafsir-simplified-6b262` actually are and whether client SDK paths can
+    bypass the backend.
+  - **8d — hygiene + resilience batch** (GPT 5.6, S): delete/replace stale
+    `backend/test_heading_format.py`; resolve `backend/test_performance.py` /
+    `aiohttp`; fix 10 `datetime.utcnow()` deprecations; add ONE bounded retry on
+    malformed Gemini output before the 502 (the only organic prod defect in 2 weeks).
+  - **8e — free-text topic discovery** (finding 10, L; GPT 5.6 after Claude
+    architecture spec; Ahmed gate). The largest remaining product gap and the most
+    likely to make the app shareable; at ~0 traffic, product motion beats infra tuning.
+  - Deferred deliberately: token-cap experiment (piggyback the env change on the next
+    canary/deploy; candidates ≤1.7K vs 65K budget is pure headroom, and the canary
+    procedure costs 12 paid requests — poor value standalone), and P2.9 `--workers 2`
+    (meaningless at current traffic).
+- **Recommendation to Ahmed:** start with 8b (iOS) as the session centerpiece with
+  8a+8c as same-day Claude quick items; queue 8d for GPT 5.6 in parallel; green-light
+  the 8e spec if product growth is the goal this month.
+- **Ahmed approved ("proceed as you see fit") — Claude items EXECUTED same session:**
+  - **8a DONE.** min-instances stays 0 — decision + measured basis recorded in AI.md.
+    Created uptime check `tadabbur-backend-health-8GuGMv_lpPY` (`/health`, 900s period,
+    60s timeout so cold starts don't false-alarm) and alert policy
+    `3972331784810525302` ("/health failing from multiple regions": 2+ checkers
+    failing 15+ min → Ahmed's email channel, with a runbook note pointing at billing
+    first per 2026 history). Verified live: all 5 checker regions returning
+    `check_passed=true`. Three alert policies now enabled in total.
+  - **8c DONE (audit + repo fix; prod rules deploy PENDING Ahmed's OK).** Deployed
+    rules fetched via the Rules API (needs `x-goog-user-project` header on this
+    workstation): `tafsir-db` = deny-all (correct, untouched since 2025-09-21);
+    `(default)` = authed users can read/write their OWN `users/{uid}` doc
+    (2025-09-13), everything else deny-by-default. **No exploitable hole** — the one
+    LOW finding is self-profile writes (fake streaks/badges, corrupt own fields).
+    Frontend verified to use `firebase/auth` ONLY (zero client Firestore usage), so
+    `backend/firestore.rules` was rewritten to the deny-all target state with the
+    audit record and deploy instructions inline. Repo file previously matched
+    NEITHER deployed ruleset and referenced nonexistent collections.
+  - **8b SIMULATOR-VERIFIED 2026-09-05 (Xcode 26.6 installed by Ahmed; Claude drove
+    the rest).** The iOS project is pure SPM (`CapApp-SPM`, no Podfile → CocoaPods
+    NOT needed). `capacitor.config.ts` loads the production URL, so `webDir: 'out'`
+    is a sync-time placeholder; created a gitignored stub `frontend/out/index.html`
+    and `npx cap sync ios` SUCCEEDED (splash-screen + status-bar plugins registered
+    in Package.swift; no tracked files changed). Then on 09-05: SPM resolved,
+    **`xcodebuild` BUILD SUCCEEDED** for the iPhone 17 / iOS 26.5 simulator,
+    installed + launched, and a screenshot confirms the live production app
+    rendering correctly in the shell (welcome screen, guest CTA, Firebase Auth
+    reCAPTCHA badge, safe-area/notch respected, brand background). Two findings:
+    1. **Bundle-ID mismatch — RESOLVED 2026-09-05 (Ahmed: "take care of both"):**
+       `capacitor.config.ts` declared `appId: com.tadabbur.app` but the Xcode
+       project built `PRODUCT_BUNDLE_IDENTIFIER = com.tafsirsimplified.app`
+       (discovered when launching by the config ID failed). No `DEVELOPMENT_TEAM`
+       was configured, so there was zero signing/App Store history and the rename
+       was free. Both Debug and Release now build `com.tadabbur.app`; grep confirms
+       zero remaining `tafsirsimplified` references under `frontend/ios/`
+       (`Info.plist` inherits the variable). Rebuilt, old app uninstalled from the
+       simulator, new app installed + launched under `com.tadabbur.app`,
+       screenshot-verified identical rendering. **Register exactly
+       `com.tadabbur.app` as the App ID when the Apple Developer step comes.**
+    2. `xcode-select` globally still points at CLT; Claude worked via per-command
+       `DEVELOPER_DIR` (sudo needs a password only Ahmed can type). Ahmed runs once:
+       `sudo xcode-select -s /Applications/Xcode.app/Contents/Developer`.
+    Remaining Ahmed-only: the physical-device test (Xcode → Signing & Capabilities →
+    add Apple ID team → plug in iPhone → trust → Run). Simulator left booted.
+    Working tree now also carries `frontend/ios/App/App.xcodeproj/project.pbxproj`
+    (the two-line bundle-ID alignment) awaiting commit.
+  - **8d + 8e specs WRITTEN** into `docs/PROMPT-GPT56.md` as the Session 8 prompt:
+    Unit 1 `codex/s8-hygiene` (stale test deletion, `test_performance.py` →
+    `scripts/perf_probe.py`, `utcnow()` migration, ONE bounded malformed-output
+    retry reusing the second attempt slot within the 242s budget) is ready to hand
+    to Codex now; Unit 2 `codex/s8-topics` (deterministic topic discovery, lite
+    model closed-set mapping, no vector search) is GATED on Ahmed's explicit go.
+  - Still pending Ahmed: physical-device test + bundle-ID decision (8b), OK to
+    deploy the tightened default-DB rules (8c), go/no-go on Unit 2 (8e), and the
+    commit of this session's working-tree changes (AI.md, HANDOFF.md,
+    backend/firestore.rules, docs/PROMPT-GPT56.md, frontend/package-lock.json).
+    No code deploys happened; monitoring config was the only cloud change, per the
+    approved 8a scope.
+
+### 2026-08-28 — Claude: workstation migration Windows → macOS (MacBook Air, Apple Silicon)
+
+- **New machine.** Development moved off the Windows box (`c:\Users\us88832\Desktop\tadabbur`)
+  to macOS 26.6.2 / arm64. Repo now lives at `/Users/ahmeds/Desktop/Tadabbur`.
+- **The manual folder copy was incomplete — re-cloned.** The copied folder held only 7
+  loose top-level files (AI.md, HANDOFF.md, README.md, cloudbuild.yaml, deploy-backend.sh,
+  deploy-frontend.sh, and `gitignore` with the leading dot stripped). No `.git/`, and none
+  of `backend/`, `frontend/`, `docs/`, `secret/`. Confirmed by checksum that all 7 were
+  byte-identical to `7bbcc15` once CRLF was stripped, so **no local work was lost**.
+  Re-cloned from origin; the partial copy is preserved at
+  `~/Desktop/Tadabbur-incomplete-copy-backup`.
+- **Git verified:** on `main`, working tree clean, `HEAD == origin/main == 7bbcc15`.
+  No phantom CRLF modifications — the fresh clone checked out LF. Set
+  `core.autocrlf=input` globally (Mac-appropriate); nothing was committed to fix endings.
+- **Toolchain:** Homebrew 6.0.19 and Apple git 2.50.1 were already present. Installed
+  Node 24.19.0 LTS + npm 11.17.0 (note: plain `brew install node` pulls Node 26 *Current*,
+  so it was replaced with `node@24`), Python 3.11.16, and Google Cloud SDK 581.0.0.
+- **Dependencies rebuilt from scratch:** new `backend/venv` (all of requirements.txt +
+  pytest 9.1.1); `npm install` in `frontend/` clean. No Windows junk to delete — the fresh
+  clone had zero `node_modules`, `.next`, `__pycache__`, `.pytest_cache`, venv, or
+  `desktop.ini`/`Zone.Identifier` files. Execute bits on the shell scripts came across
+  correctly from git.
+- **Verified green on macOS:**
+  - `pytest backend/tests` → **379 passed** (matches the Session 7 clean signal)
+  - `backend/test_verse_extraction.py` (a `__main__` script, not pytest) → 14 passed
+  - `npm run build` → all 14 routes compiled, no errors
+  - `npm run dev` → ready in 557ms; `/`, `/progress`, `/saved`, `/plans`, `/names` all 200,
+    Arabic renders correctly
+  - the startup env check at `app.py:164` passes with the new local env file
+- **Pre-existing failures found (NOT caused by the migration):**
+  - `backend/test_heading_format.py` — 2 of 3 cases fail. The file asserts the old
+    `**Title**` → `## Title` behaviour that `utils/text_cleaning.py` deliberately dropped
+    in `c7e2511`. It is superseded by `backend/tests/test_text_cleaning.py` (50 cases,
+    all green). It also cannot be collected from the repo root — its `from utils...`
+    import needs `backend/` as cwd. Should be updated or deleted.
+  - `backend/test_performance.py` — cannot be collected: `import aiohttp`, which is not
+    in `requirements.txt`.
+- **`secret/admin-secret.txt` was lost in the copy, then RESTORED 2026-08-29.** Being
+  gitignored, it was not recoverable from origin, so it was re-pulled from Secret Manager
+  (`admin-secret` version 2 — the current `latest`; v1 still carries the trailing `\r`
+  from Windows openssl and must not be used):
+
+  ```bash
+  gcloud secrets versions access latest --secret=admin-secret \
+    --project=tafsir-simplified | tr -d '\r\n' > secret/admin-secret.txt
+  chmod 600 secret/admin-secret.txt
+  ```
+
+  Verified: 64 bytes, no stray CR/LF, sha1 matches the Secret Manager payload exactly,
+  mode `600`, ignored by `.gitignore:61` and absent from `git status`. Auth confirmed on a
+  scratch instance (port 8081, so the running dev server was untouched): all three
+  cache-mutation routes return **403** with a deliberately wrong header — 403 rather than
+  503 is what proves `ADMIN_SECRET` is loaded (`app.py:2255`) — and `/debug/range-map`
+  returns 404 with `DEBUG_ROUTES` unset. This reproduces the P1.1 posture recorded above.
+  The correct secret was deliberately never sent to a cache-mutation route: the local
+  backend writes to the same Firestore as production, so a successful `/cache/invalidate`
+  would wipe the live tafsir cache.
+- **gcloud authenticated — backend verified live on macOS (2026-08-28 17:03).** Ahmed ran
+  `gcloud auth login` and `gcloud auth application-default login` as
+  ahmedsheik123@gmail.com, plus `gcloud config set project tafsir-simplified`.
+  `./backend/run-local.sh` then booted cleanly: Firebase Admin SDK initialized for
+  `tafsir-simplified-6b262`, both Firestore DBs connected (`(default)` 2 collections,
+  `tafsir-db` 4 collections), all 8 GCS source blobs loaded (2,638 verses → 2,590 flat
+  chunks / 6,720 metadata entries; Ibn Kathir 2,146, al-Qurtubi 492), token budgets
+  precomputed for 114 surahs / 6,236 verses. The AI.md verification checklist was run
+  against `localhost:8080`:
+  - `/health` → `status: healthy`, 6,720 metadata entries
+  - `/daily-verse` → real verse returned, so the Firestore + billing path is healthy
+    (none of the 2026-07 "Verse not found" 403 behaviour)
+  - `/personas` → 5 personas
+  - `POST /tafsir {"query":"2:255","persona":"curious_explorer"}` → **200 in 0.44s**,
+    `X-Cache-Status: hit-firestore` (served from the live prod cache — no Gemini call and
+    no spend), `Server-Timing` present, body carrying grounded hadith, `source_coverage`
+    with additional sources, `recommendations`, `reflection_prompt`, and
+    `extraction_error: None`. The Session 6/7 feature set is intact from this machine.
+  - CORS preflight and a GET from `Origin: http://localhost:3000` both return
+    `Access-Control-Allow-Origin: http://localhost:3000`, so the browser path from the
+    local frontend to the local backend is open.
+- **ADC quota project set.** `gcloud auth application-default login` warned
+  `Cannot find a quota project to add to ADC`, which risks spurious "quota exceeded" /
+  "API not enabled" errors. Fixed with
+  `gcloud auth application-default set-quota-project tafsir-simplified`. The backend was
+  already running when this was applied, so restart it to clear the in-process
+  `UserWarning`.
+- **New gitignored local-dev env loading:** `backend/.env.local` carries the backend
+  environment — only `FIREBASE_SECRET_FULL_PATH` is genuinely required by the `:164`
+  check; every other variable has a safe default in `app.py`. `backend/run-local.sh`
+  sources it, injects `ADMIN_SECRET` from `secret/admin-secret.txt` (stripping any
+  trailing `\r`, per the P1.1 Windows-openssl note), and starts Flask; it is excluded via
+  `.git/info/exclude` so the tracked `.gitignore` stays untouched. It runs Flask with
+  `--debug` and forwards extra flags, so `./backend/run-local.sh --no-reload` skips the
+  reloader's second corpus load (8 GCS downloads, ~5s) when that startup cost is not wanted. `frontend/.env.local`
+  sets `NEXT_PUBLIC_BACKEND_URL=http://localhost:8080` so local work never falls back to
+  production — verified baked into the built chunks.
+- **Left uncommitted:** `frontend/package-lock.json` (978 insertions) — expected platform
+  churn, `@img/sharp-win32-x64` → `@img/sharp-darwin-arm64` and the Next.js SWC binaries.
+  Per instruction nothing was committed or pushed, and no deploy script was run. Note that
+  `package-lock.json` is listed in `.gitignore` but is already tracked, so that ignore
+  rule has no effect on it.
+- **macOS differences worth folding into the docs:** the `py -3` / PowerShell invocations
+  throughout AI.md and README.md are Windows-only — on this machine use
+  `backend/venv/bin/python -m pytest backend/tests -q` and `source backend/venv/bin/activate`.
+  `timeout(1)` does not exist on macOS (`brew install coreutils` gives `gtimeout`).
+  npm 11 now gates package install scripts: the `sharp`, `protobufjs`, `@firebase/util`
+  and `unrs-resolver` postinstalls were skipped, and the production build succeeds anyway.
+  The Git-Bash/gcloud-shim workaround described in AI.md and README.md no longer applies —
+  the deploy scripts can run directly in zsh once auth is in place.
+- **Next:** no blockers remain. The one unverified item is the browser round trip — open
+  `http://localhost:3000` with the backend running and confirm the backend-down banner
+  stays clear and a verse query renders. It is the only thing not checkable from the
+  shell, since the frontend's fetches execute in the browser; everything upstream of it
+  (bundled backend URL, CORS for `localhost:3000`, backend 200s) is confirmed.
+  Worth queuing separately: delete or update the two stale root-level test files, and
+  decide whether `aiohttp` belongs in `requirements.txt` or `test_performance.py` should
+  go.
 
 ### 2026-08-14 — Claude: Session 7 reviewed, merged, DEPLOYED — **GEMINI 3.6 LIVE**
 - **Production: backend `tafsir-backend-00269-z5h` (Gemini 3.6, global endpoint,

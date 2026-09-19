@@ -131,13 +131,24 @@ The Gemini migration harness is intentionally live and paid. Claude's canary pro
 ## Operations and monitoring
 
 - Firestore TTL is enabled on `tafsir_cache.expires_at` in database `tafsir-db`.
-- Cloud Monitoring alerts exist for backend 5xx bursts (>5 in five minutes) and any
-  logged backend `PermissionDenied`, with Ahmed's email channel configured.
-- Deploys remain manual through `deploy-backend.sh` / `deploy-frontend.sh`. On the
-  current Windows workstation, run the scripts' underlying gcloud commands in PowerShell;
-  the Git Bash gcloud shim resolves a broken Microsoft Store Python stub.
+- Cloud Monitoring alerts exist for backend 5xx bursts (>5 in five minutes), any
+  logged backend `PermissionDenied`, and `/health` uptime failure (check
+  `tadabbur-backend-health-8GuGMv_lpPY`, 900s period / 60s timeout so cold starts
+  don't false-alarm; fires when 2+ regions fail 15+ min), all on Ahmed's email channel.
+- Deploys remain manual through `deploy-backend.sh` / `deploy-frontend.sh`, now run
+  from the macOS workstation's zsh (the old Windows PowerShell/Git-Bash gcloud-shim
+  workaround no longer applies).
 
 ## Decisions
+
+- **2026-08-29 (Claude, Ahmed-approved):** `min-instances` stays **0** on both Cloud
+  Run services. Measured basis: ~7 organic `/tafsir` requests in the 15 days after
+  Session 7, cold start observed at ~6s first frontend byte — an always-on
+  2-CPU/2-GiB backend instance is real money to erase a cold start almost no one
+  hits. Revisit when REQUEST_METRIC shows recurring daily traffic. The new `/health`
+  uptime check + alert covers total-outage detection (the July outage ran a week on
+  user-report-only detection). P2.9's `--workers 2` evaluation is likewise deferred
+  until traffic exists.
 
 - **2026-08-01 (Claude):** Frontend /tafsir abort timer stays at 180s although the
   backend's bounded worst case is 242s (P1.4). Rationale: a >3-minute spinner is

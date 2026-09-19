@@ -1,5 +1,102 @@
 # Prompts for GPT 5.6
 
+## Session 8 prompt (2026-08-29) — hygiene + resilience batch, and the gated topic-discovery feature
+
+---
+
+You are GPT 5.6, main coder for Tadabbur (Claude = architect/reviewer, Ahmed =
+owner). First: `git pull` and read the top two entries of `HANDOFF.md`. Session 7
+is DEPLOYED and canary-validated: backend `tafsir-backend-00269-z5h` (Gemini 3.6,
+global endpoint, pipeline 15.1), frontend `tafsir-frontend-00305-q78`. Development
+moved to a macOS workstation — commands in older prompts written as `py -3` /
+PowerShell are now `python3` / zsh; the backend venv lives at `backend/venv`. Two
+weeks of production telemetry exist (REQUEST_METRIC + GEMINI_USAGE): traffic is
+tiny (~7 organic /tafsir requests in 15 days), fresh generations run 17.8–32s with
+candidates ≤1.7K tokens, and exactly ONE organic defect occurred — Gemini emitted
+12 tokens of non-JSON and the P1.2 guard correctly 502'd without caching. Unit 1
+is approved to start now. Unit 2 is GATED — do not start it unless Ahmed has
+said go in HANDOFF or in your prompt.
+
+### Unit 1 — hygiene + resilience batch (branch `codex/s8-hygiene`)
+
+1. **Delete `backend/test_heading_format.py`.** It asserts the pre-`c7e2511`
+   `**Title**` → `## Title` behavior that `utils/text_cleaning.py` deliberately
+   dropped, and it cannot even be collected from the repo root (`from utils...`
+   needs `backend/` as cwd). It is fully superseded by
+   `backend/tests/test_text_cleaning.py` (50 green cases). Do not port anything.
+2. **Resolve `backend/test_performance.py`.** It imports `aiohttp` (not in
+   `requirements.txt`) and is a live load-generation script against a deployed
+   URL, not an offline test. Move it to `backend/scripts/perf_probe.py` with its
+   `if __name__ == "__main__"` entry intact and a module docstring stating it is
+   live/paid and needs `pip install aiohttp` ad hoc. Do NOT add aiohttp to
+   `requirements.txt` (production imports nothing from it).
+   `backend/test_verse_extraction.py` is a fine `__main__` script — leave it.
+3. **Replace all `datetime.utcnow()` calls** (10 deprecation warnings in the
+   suite) with `datetime.now(timezone.utc)`. Preserve stored-format compatibility
+   EXACTLY: where the old value was naive and is serialized/compared (Firestore
+   fields, isoformat strings, cache timestamps), strip tzinfo or format
+   identically so documents written before and after the change compare cleanly.
+   Add no new formats.
+4. **One bounded retry on malformed Gemini output** in the main `/tafsir` path:
+   when `extract_json_from_response` yields `metadata.extraction_error` (the
+   fallback dict), make exactly ONE additional Gemini attempt before returning
+   the existing no-cache 502. Constraints: total attempts across network retries
+   AND this retry stay within the 242s worst-case budget from P1.4 (do not stack
+   a new full 120s attempt on top of two existing ones — reuse the second
+   attempt slot: i.e., at most 2 total Gemini calls per request, where a
+   malformed FIRST response consumes the retry that a network failure would
+   have). Log `GEMINI_RETRY_MALFORMED verse=<ref>` on the retry, and keep the
+   502-without-caching behavior when the retry also fails. The `/debug/test`
+   handler keeps its current single-attempt behavior. Add an offline test that
+   fakes a malformed-then-valid response pair and asserts: one retry, success
+   cached, log line emitted; and malformed-malformed → 502, nothing cached.
+5. **Verify:** full suite green from repo root (`python3 -m pytest backend/tests -q`
+   with the venv active — expect 379 + your new tests, 0 skips), zero
+   `DeprecationWarning: datetime.datetime.utcnow` lines in the run, backend
+   compiles. No pipeline bump — response shape is unchanged.
+
+### Unit 2 — GATED: free-text topic discovery (branch `codex/s8-topics`) — finding 10
+
+Do not start without Ahmed's go. Scope contract (Claude will review against
+this):
+
+- **Goal:** a learner can type "patience during hardship" (or tap a theme) and
+  land in the ordinary verse-answer flow. Topic → verses must be deterministic
+  and grounded; the LLM never invents verse references.
+- **Retrieval spine (no vector search — AI.md convention):** reuse
+  `services/source_service.py` keyword routing + the curated-theme machinery
+  from `codex/s6-themes` as the candidate generator. Build a small topic→verse
+  index at startup from existing local data (theme seed lists + keyword maps);
+  no new external data sources.
+- **LLM role (lite model only):** `GEMINI_LITE_MODEL_ID` maps free text → up to
+  3 candidate topics from OUR index vocabulary (closed set, JSON-schema output,
+  reject anything outside the vocabulary). On mapping failure → respond with the
+  8 curated themes as suggestions, never an error dead-end. Cap the lite call's
+  output budget consistent with Session 7 thinking-safe budgets (4,096).
+- **Endpoint:** `POST /topics/resolve` {text} → {topics: [{name, verse_refs
+  (from index), confidence}]} with the same in-memory rate limiting family as
+  `/tafsir`, guest-allowed, response cached in memory (no Firestore writes, no
+  pipeline interaction).
+- **Frontend:** the home search box detects non-verse queries (reuse the
+  existing verse-ref extraction's failure path) and offers "Explore as a topic"
+  → calls `/topics/resolve` → renders verse chips that feed the EXISTING query
+  flow. No new state layer (AI.md convention: local useState + raw fetch).
+- **Out of scope:** no changes to `/tafsir`, no pipeline bump, no new
+  dependencies, no Firestore schema changes.
+- **Verify:** offline tests for the index build + closed-set mapping validation
+  (fake the lite call); `npm run build`; manual script hitting `/topics/resolve`
+  with 5 sample phrases documented in the HANDOFF entry.
+
+### Global rules
+Per unit: short plan → implement → verify → HANDOFF session-log entry with
+branch + commit. No deploys, no gcloud, no secrets, no drive-by refactors, no
+new dependencies. Line numbers drift — trust the code. Frontend: null-guard any
+field that may be absent. Finish with the summary table
+(unit | branch | commit | verified | deploy-needed backend/frontend/none),
+plus anything skipped and why.
+
+---
+
 ## Session 7 prompt (2026-08-13, tonight) — MEGA ONE-SHOT: model flip w/ canary fixes + green tests + observability + banner + docs truth-up
 
 ---

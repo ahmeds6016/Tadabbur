@@ -1,24 +1,31 @@
 rules_version = '2';
+
+// ============================================================================
+// Tadabbur Firestore security rules — TARGET state for the (default) database
+// in project tafsir-simplified-6b262.
+//
+// Audited 2026-08-29 (Claude). Ground truth then:
+//   (default)  — deployed 2025-09-13: authed users could read/write their OWN
+//                users/{uid} doc; everything else deny-by-default.
+//   tafsir-db  — deployed 2025-09-21: deny-all (correct; keep as is).
+//
+// The web/iOS client uses firebase/auth ONLY — no client-side Firestore SDK
+// anywhere in frontend/. All data access goes through the Flask backend via the
+// Admin SDK, which bypasses these rules entirely. Therefore NOTHING legitimate
+// needs client Firestore access, and deny-all is the correct posture for BOTH
+// databases. The old own-profile-write allowance let a signed-in user hand-craft
+// writes to their own profile (fake streaks/badges, corrupt fields the backend
+// expects) — low severity, self-inflicted only, but pointless surface.
+//
+// Deploy (per database — firebase.json cannot target the named DB):
+//   gcloud firestore databases update is NOT for rules; use the Firebase CLI:
+//     firebase deploy --only firestore:rules --project tafsir-simplified-6b262
+//   or the Firebase console → Firestore → Rules for each database.
+// ============================================================================
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Users can only access their own user document and subcollections
-    match /users/{userId}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // Quran verses are read-only for authenticated users
-    match /quran/{document=**} {
-      allow read: if request.auth != null;
-      allow write: if false; // Admin only via server
-    }
-
-    // Tafsir content is read-only for authenticated users
-    match /tafsir/{document=**} {
-      allow read: if request.auth != null;
-      allow write: if false; // Admin only via server
-    }
-
-    // Default deny all
+    // Deny all client-SDK access. The backend (Admin SDK) is unaffected.
     match /{document=**} {
       allow read, write: if false;
     }
