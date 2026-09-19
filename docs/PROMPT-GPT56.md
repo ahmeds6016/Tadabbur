@@ -1,5 +1,90 @@
 # Prompts for GPT 5.6
 
+## Session 9 prompt (2026-09-19) — Iman retry-branch fix + free-text topic discovery (Unit 2 UNGATED)
+
+---
+
+You are GPT 5.6/6, main coder for Tadabbur (Claude = architect/reviewer, Ahmed =
+owner). First: `git pull` and read the top entry of `HANDOFF.md`.
+
+**State:** Session 8 Unit 1 is merged and DEPLOYED — backend
+`tafsir-backend-00270-9fr` (merge `3d0983a`), frontend `tafsir-frontend-00305-q78`,
+pipeline **15.1** (unchanged; do not bump). Offline baseline is **393 tests green**
+with zero deprecation warnings — keep it that way. Workstation is macOS: use
+`python3` / zsh and the venv at `backend/venv`
+(`source backend/venv/bin/activate`). Traffic is still tiny (~7 organic /tafsir
+requests per fortnight), so favor correctness and clarity over premature tuning.
+
+Two units, one branch each, worked IN ORDER. Unit 1 is small and should land first
+so Unit 2's review is not mixed with unrelated changes.
+
+### Unit 1 — finish the falsey-Response retry fix (branch `codex/s9-iman-retry`)
+
+Claude's Session 8 review found that Unit 1's `response is not None` fix was applied
+to the main `/tafsir` path only. The identical latent bug remains in two places:
+`app.py:9115` (`iman_generate_digest`) and `app.py:9412` (`iman_get_daily_insight`),
+both still `status_code = response.status_code if response else 500`.
+
+`requests.Response.__bool__` returns `status_code < 400`, so a 429 or 503 response is
+falsey, `status_code` collapses to 500, and the `if status_code in (429, 503) and
+attempt < max_retries - 1` branch never fires — those retries are dead code today.
+
+1. Change both sites to `response is not None`, matching `app.py:6746`. Nothing else
+   in those handlers changes — no restructuring, no moving parsing into the loop.
+   These are Iman Journal handlers on a surface README documents as suspended, so
+   the fix is for consistency and future correctness, not a user-facing bug.
+2. Add an offline test asserting that, for each of those two handlers, a 429 first
+   response triggers exactly one retry and a 503-on-last-attempt still raises. Follow
+   the existing harness style in `backend/tests/test_tafsir_retry.py` (AST-extract the
+   real handler, fake the namespace) rather than inventing a second pattern.
+3. Verify: full suite green from repo root
+   (`python3 -m pytest backend/tests -q -W error::DeprecationWarning`), backend
+   compiles. Backend-only deploy.
+
+### Unit 2 — free-text topic discovery (branch `codex/s8-topics`) — review finding 10
+
+**Ahmed has greenlit this.** It is the largest remaining product gap: today a learner
+who types "patience during hardship" gets nothing useful, because the app only
+understands verse references. Scope contract (Claude reviews against this):
+
+- **Goal:** a learner types a life question (or taps a theme) and lands in the
+  ordinary verse-answer flow. Topic → verses must be deterministic and grounded;
+  **the LLM never invents verse references.**
+- **Retrieval spine (no vector search — AI.md convention):** reuse
+  `services/source_service.py` keyword routing plus the curated-theme machinery from
+  `codex/s6-themes` as the candidate generator. Build a small topic→verse index at
+  startup from existing local data (theme seed lists + keyword maps). No new external
+  data sources, no new dependencies.
+- **LLM role (lite model only):** `GEMINI_LITE_MODEL_ID` maps free text → up to 3
+  candidate topics drawn from OUR index vocabulary — a closed set, JSON-schema
+  output, and anything outside the vocabulary is rejected rather than passed through.
+  On mapping failure, respond with the 8 curated themes as suggestions; never an
+  error dead-end. Output budget 4,096, consistent with the Session 7 thinking-safe
+  budgets.
+- **Endpoint:** `POST /topics/resolve` `{text}` → `{topics: [{name, verse_refs (from
+  the index), confidence}]}`. Guest-allowed, same in-memory rate-limiting family as
+  `/tafsir`, response cached in memory. No Firestore writes, no pipeline interaction.
+- **Frontend:** the home search box detects non-verse queries (reuse the existing
+  verse-ref extraction's failure path) and offers "Explore as a topic" → calls
+  `/topics/resolve` → renders verse chips that feed the EXISTING query flow. No new
+  state layer (AI.md convention: local `useState` + raw fetch). Null-guard every
+  field that may be absent.
+- **Out of scope:** no changes to `/tafsir`, no pipeline bump, no new dependencies,
+  no Firestore schema changes.
+- **Verify:** offline tests for the index build and closed-set mapping validation
+  (fake the lite call — do NOT make live paid calls); `npm run build`; and a manual
+  script hitting `/topics/resolve` with 5 sample phrases, with the results documented
+  in your HANDOFF entry.
+
+### Global rules
+Per unit: short plan → implement → verify → HANDOFF session-log entry with branch +
+commit. No deploys, no gcloud, no secrets, no live/paid probes, no drive-by
+refactors, no new dependencies. Line numbers drift — trust the code. Finish with the
+summary table (unit | branch | commit | verified | deploy-needed
+backend/frontend/none), plus anything skipped and why.
+
+---
+
 ## Session 8 prompt (2026-08-29) — hygiene + resilience batch, and the gated topic-discovery feature
 
 ---
@@ -55,10 +140,10 @@ said go in HANDOFF or in your prompt.
    `DeprecationWarning: datetime.datetime.utcnow` lines in the run, backend
    compiles. No pipeline bump — response shape is unchanged.
 
-### Unit 2 — GATED: free-text topic discovery (branch `codex/s8-topics`) — finding 10
+### Unit 2 — free-text topic discovery (branch `codex/s8-topics`) — finding 10
 
-Do not start without Ahmed's go. Scope contract (Claude will review against
-this):
+**SUPERSEDED — ungated 2026-09-19; issued in the Session 9 prompt above.**
+Scope contract (Claude will review against this):
 
 - **Goal:** a learner can type "patience during hardship" (or tap a theme) and
   land in the ordinary verse-answer flow. Topic → verses must be deterministic
