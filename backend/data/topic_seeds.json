@@ -1,0 +1,75 @@
+[
+  {
+    "id": "patience",
+    "name": "Patience",
+    "verse_refs": [
+      "2:153",
+      "3:200",
+      "39:10"
+    ]
+  },
+  {
+    "id": "gratitude",
+    "name": "Gratitude",
+    "verse_refs": [
+      "14:7",
+      "2:152",
+      "31:12"
+    ]
+  },
+  {
+    "id": "forgiveness",
+    "name": "Forgiveness",
+    "verse_refs": [
+      "39:53",
+      "4:110",
+      "42:25"
+    ]
+  },
+  {
+    "id": "grief-hope",
+    "name": "Grief & Hope",
+    "verse_refs": [
+      "93:3",
+      "12:87",
+      "21:83"
+    ]
+  },
+  {
+    "id": "trust",
+    "name": "Trust in Allah",
+    "verse_refs": [
+      "3:159",
+      "9:51",
+      "14:12"
+    ]
+  },
+  {
+    "id": "prayer",
+    "name": "Prayer",
+    "verse_refs": [
+      "20:14",
+      "29:45",
+      "2:153"
+    ]
+  },
+  {
+    "id": "family",
+    "name": "Family",
+    "verse_refs": [
+      "30:21",
+      "25:74",
+      "4:19",
+      "46:15"
+    ]
+  },
+  {
+    "id": "justice",
+    "name": "Justice",
+    "verse_refs": [
+      "16:90",
+      "4:135",
+      "5:8"
+    ]
+  }
+]

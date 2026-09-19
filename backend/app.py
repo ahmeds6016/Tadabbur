@@ -29,6 +29,14 @@ def _single_line_log(value: Any) -> str:
 
 from flask import Flask, request, jsonify, make_response, g
 from flask_cors import CORS
+from services.topic_service import (
+    build_topic_index, topic_mapping_body, validate_topic_mapping, curated_topic_suggestions,
+)
+
+TOPIC_INDEX = build_topic_index()
+TOPIC_RESPONSE_CACHE = {}
+TOPIC_CACHE_LOCK = threading.Lock()
+
 
 import requests
 import google.auth
@@ -6179,6 +6187,67 @@ def get_verse_metadata_endpoint(surah, verse):
     except Exception as e:
         print(f"Error in metadata lookup: {e}")
         return jsonify({'error': 'Internal server error'}), 500
+
+# Topic discovery is independent of tafsir generation and its versioned cache.
+def _map_topic_names(text):
+    """One bounded lite-model call; its only authority is selecting topic names."""
+    credentials, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
+    credentials.refresh(GoogleRequest())
+    response = requests.post(
+        vertex_generate_url(GEMINI_LITE_MODEL_ID),
+        headers={"Authorization": f"Bearer {credentials.token}", "Content-Type": "application/json"},
+        json=topic_mapping_body(text, TOPIC_INDEX),
+        timeout=20,
+    )
+    response.raise_for_status()
+    return json.loads(extract_gemini_text(response.json()))
+
+
+@app.route("/topics/resolve", methods=["POST"])
+@firebase_auth_optional
+def resolve_topics():
+    """Guest topic discovery with shared request limits and process-local caching."""
+    fallback = {"topics": curated_topic_suggestions(TOPIC_INDEX)}
+    data = request.get_json(silent=True)
+    text = data.get("text") if isinstance(data, dict) else None
+    if not isinstance(text, str) or not text.strip() or len(text) > 500:
+        return jsonify(fallback), 400
+    text = " ".join(text.split())
+    user = getattr(request, "user", None) or {}
+    uid = user.get("uid")
+    with rate_limit_lock:
+        limited = is_rate_limited(uid or f"guest_{request.remote_addr}", limit=150 if uid else 10)
+    if limited:
+        response = make_response(jsonify(fallback), 429)
+        response.headers["Retry-After"] = "60"
+        return response
+
+    cache_key = text.casefold()
+    with TOPIC_CACHE_LOCK:
+        cached = TOPIC_RESPONSE_CACHE.get(cache_key)
+        if cached and cached[0] > time.monotonic():
+            return jsonify(cached[1])
+    try:
+        # A curated theme name already identifies an exact local topic.
+        exact = next((name for name in TOPIC_INDEX if name.casefold() == cache_key), None)
+        mapped = ({"topics": [{"name": exact, "confidence": 1}]} if exact
+                  else _map_topic_names(text))
+        payload = {"topics": validate_topic_mapping(mapped, TOPIC_INDEX)}
+        ttl = 3600
+    except Exception as exc:
+        # Do not log learner text or model output. Mapping failures remain browsable.
+        logger.warning("TOPIC_MAPPING_FALLBACK reason=%s", type(exc).__name__)
+        payload, ttl = fallback, 60
+    with TOPIC_CACHE_LOCK:
+        now = time.monotonic()
+        for key in list(TOPIC_RESPONSE_CACHE):
+            if TOPIC_RESPONSE_CACHE[key][0] <= now:
+                del TOPIC_RESPONSE_CACHE[key]
+        if len(TOPIC_RESPONSE_CACHE) >= 256:
+            TOPIC_RESPONSE_CACHE.pop(next(iter(TOPIC_RESPONSE_CACHE)))
+        TOPIC_RESPONSE_CACHE[cache_key] = (now + ttl, payload)
+    return jsonify(payload)
+
 
 # ============================================================================
 # REPLACED: ENHANCED /tafsir ENDPOINT WITH HYBRID ROUTING
