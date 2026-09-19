@@ -9112,7 +9112,7 @@ def iman_generate_digest():
                     return jsonify({"error": "AI service timeout", "retry": True}), 503
                 time.sleep(retry_delay)
             except requests.HTTPError:
-                status_code = response.status_code if response else 500
+                status_code = response.status_code if response is not None else 500
                 if status_code in (429, 503) and attempt < max_retries - 1:
                     time.sleep(retry_delay)
                     continue
@@ -9409,7 +9409,7 @@ def iman_get_daily_insight(date_str):
                     return jsonify({"error": "AI service timeout", "retry": True}), 503
                 time.sleep(retry_delay)
             except requests.HTTPError:
-                status_code = response.status_code if response else 500
+                status_code = response.status_code if response is not None else 500
                 if status_code in (429, 503) and attempt < max_retries - 1:
                     time.sleep(retry_delay)
                     continue
