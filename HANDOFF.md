@@ -196,6 +196,70 @@ Q14. **✅ DEPLOYED 2026-08-13 — Reliability quick wins**
 
 ## Session log
 
+### 2026-09-19 — Claude: Session 8 Unit 1 reviewed, merged, DEPLOYED & VERIFIED
+
+- **Live: backend `tafsir-backend-00270-9fr`** (merge `3d0983a` of `codex/s8-hygiene`).
+  Pipeline stays **15.1** — no cache flush, response shape unchanged. Frontend
+  untouched (`tafsir-frontend-00305-q78` still current).
+- **Review: approved, zero fixups.** Every claim was re-verified independently rather
+  than taken on trust:
+  * 393 passed under `-W error::DeprecationWarning` (stricter than Codex's
+    `-W always` run — proves zero deprecation warnings, not merely that they were
+    displayed). Zero `utcnow()` remain repo-wide; all 50 backend files compile;
+    `perf_probe.py` collects no tests; git preserved the rename history.
+  * Retry control flow traced by indentation rather than from the diff: `break` sits
+    at loop-body level (not inside `if generated_text:`), `attempt < max_retries - 1`
+    yields exactly one retry, and no path reaches the post-loop code with
+    `generated_text` or `final_json` unbound. Budget holds: at most 2 Gemini calls,
+    240s (the malformed path deliberately does not sleep).
+  * `datetime.now(timezone.utc).replace(tzinfo=None)` preserves naive arithmetic
+    against `start` on the following line. Confirmed `timezone` resolves from the
+    module-level import at `iman_service.py:11` despite the function-local
+    `from datetime import datetime` shadow — the main NameError candidate, and clean.
+  * The new `test_tafsir_retry.py` AST-extracts the real `tafsir_handler_enhanced`
+    from `app.py` and runs it against a faked namespace, so it tests the shipping
+    function rather than a copy. It encodes the P1.4 budget as an assertion
+    (`sum(timeouts) + sum(sleeps) <= 242`) and covers the case worth demanding:
+    a network failure *after* a malformed response must not get a third attempt.
+- **Undeclared but correct behavior change, flagged for the record:** the
+  `if response` → `if response is not None` fix at `app.py:6746` is a genuine bug
+  fix. `requests.Response.__bool__` returns `status < 400`, so a 429/503 response was
+  falsey, `status_code` became 500, and **the 429/503 retry branches were dead code**.
+  They now actually execute. Verified empirically. Low risk (still inside the
+  two-attempt budget), but it activates a path that had never run in production.
+- **KNOWN REMAINING BUG (follow-up, deliberately not widened into this unit):** the
+  identical `if response else 500` remains at `app.py:9115` and `app.py:9412`
+  (`iman_generate_digest`, `iman_get_daily_insight`), so their 429/503 retry branches
+  are still dead. Both sit in the Iman Journal surface, which README documents as
+  suspended from shipped navigation — no user impact today, but the codebase is now
+  inconsistent. One-line fix each; queue for the next backend unit.
+- **Deploy hygiene — both Session 6/7 failure modes explicitly checked and clear:**
+  `status.traffic` is 100% on `00270-9fr` with `latestRevision: true` (NOT pinned —
+  the Session 7 trap), and the new revision carries the complete env set plus the
+  `ADMIN_SECRET` secret ref (the 00261 partial-env incident did not recur).
+  **Rollback target: `tafsir-backend-00269-z5h`.**
+- **Live verification (all pass):** `/health` healthy (6,720 metadata entries);
+  `/daily-verse` returns Arabic; `/tafsir` 2:255 → 200 in 0.58s `hit-firestore`;
+  admin lockdown intact after the rebuild (403 without secret, 404 on debug routes).
+  **Fresh generation 93:5 → 200 in 17.2s, `X-Cache-Status: miss`**, gemini stage
+  16.7s, 1 hadith + 3 recommendations, `extraction_error: None` — this is the
+  meaningful check, since a cache hit never touches the restructured parse-inside-loop
+  code. Logs confirm **exactly one** `GEMINI_USAGE verse=93:5
+  model=gemini-3.6-flash` line (no accidental double-call), no
+  `GEMINI_RETRY_MALFORMED` (first response was valid), no errors.
+- **Observability caveat:** a malformed response now emits TWO `GEMINI_USAGE` lines
+  for one user request. That is accurate — two calls genuinely occur — but the
+  token-cap experiment (finding 13) must dedupe per request when it reads this data.
+- **BLOCKED — `git push` fails: no GitHub credentials on this Mac.** `main` is 5
+  commits ahead of `origin/main` and the merge is local only. `osxkeychain` is
+  configured but empty; no SSH keys, and `gh` 2.98.0 was installed to make this a
+  one-liner. Ahmed runs `gh auth login` (or adds a PAT), then
+  `git push origin main codex/s8-hygiene`. **The deployed image was built from local
+  source via Cloud Build, so production is running reviewed code that does not yet
+  exist on origin — push soon to close that gap.**
+- **Next:** push once authenticated; fix the two Iman `if response` sites; Unit 2
+  (`codex/s8-topics`, free-text topic discovery) remains GATED on Ahmed.
+
 ### 2026-09-19 — Codex: Session 8 Unit 1 hygiene + bounded malformed-output retry
 
 - **Branch:** `codex/s8-hygiene`. **Implementation commit:** `1bb38d2`
