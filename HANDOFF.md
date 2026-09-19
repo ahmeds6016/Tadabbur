@@ -196,6 +196,66 @@ Q14. **✅ DEPLOYED 2026-08-13 — Reliability quick wins**
 
 ## Session log
 
+### 2026-09-19 — Codex: Session 9 Unit 2 — free-text topic discovery (Ahmed-approved)
+
+- **Branch:** `codex/s8-topics`; **implementation commit:** `aefed72`.
+  Branched independently from `main` after completing Unit 1, so this review does
+  not include Iman changes. **Review/merge Unit 1 first:** `codex/s9-iman-retry`,
+  implementation `2a61719`, handoff `7032b28` (397 tests, 51 backend files compiled).
+  Neither branch was merged or deployed by Codex.
+- **Index:** eight existing curated themes and their exact editorial verse order
+  copied into `backend/data/topic_seeds.json`, loaded once at startup. The index
+  reuses `source_service.py` keyword extraction and routing tables for candidate
+  ordering/aliases. A regression test checks seed parity with the frontend theme
+  catalog and every reference against canonical Quran bounds. This first vocabulary
+  is intentionally the eight themes; out-of-vocabulary questions receive browse
+  suggestions. No model-generated references, vector search, or external data.
+- **API:** guest-allowed `POST /topics/resolve` accepts `{text}` (1–500 characters)
+  and returns `{topics: [{name, verse_refs, confidence}]}`. Free text makes one
+  `GEMINI_LITE_MODEL_ID` request, 20s HTTP timeout, 4,096 output-token budget, with
+  JSON response schema restricting names to the local vocabulary and at most three
+  topics. Strict validation rejects unknown/duplicate names, generated references,
+  extra fields, and invalid/non-finite confidences. References are then attached
+  from the index. Exact curated theme names resolve locally without a model call.
+- **Failure/cache behavior:** mapping/transport/parse failures return 200 with all
+  eight curated themes (confidence 0 means browse suggestion). Bad input returns
+  400, rate limits return 429 + Retry-After, both with the same browsable suggestions.
+  Shares `/tafsir`'s user/IP rate-limit keys and limits, including cache hits.
+  Separate locked process-local cache: 256 entries, normalized text keys, 1h success
+  TTL / 60s fallback TTL. No Firestore reads/writes or pipeline interaction.
+- **Frontend:** added the visible home search box (the current UI previously had
+  only a picker). Text uses the existing verse-selection flow; `/tafsir`'s existing
+  `needs_clarification` response identifies failed verse extraction and presents
+  **Explore as a topic**. This preserves numeric/named-verse handling without a
+  second parser or changes to `/tafsir`. Topic verse chips call the same existing
+  `handleVerseSelection`. Local component state + raw fetch only; loading, timeout,
+  malformed/null fields, and network/rate-limit fallbacks are handled. The eight
+  existing theme buttons still lead straight to their editorial verse choices.
+- **Verification:** from repo root with `backend/venv` active,
+  `python3 -m pytest backend/tests -q -W error::DeprecationWarning` →
+  **434 passed (393 baseline + 41), 0 skips, 0 warnings** on this independent branch.
+  All **54 backend Python files compile**. `npm run build` succeeds (14 static pages,
+  lint/type checks included); `git diff --check` clean. AST comparison confirms all
+  pre-existing backend functions are unchanged. Pipeline stays **15.1**; dependency
+  manifests unchanged. No production/live Gemini quality claims are made.
+- **Manual offline endpoint script:**
+  `python3 backend/scripts/topics_smoke.py` exercises the real decorated route via
+  Flask's in-process HTTP test client with a **fake lite response** (no credentials,
+  paid calls, live server, or production traffic). All five requests returned 200:
+
+  | Phrase | Result (seeded references) |
+  |---|---|
+  | patience during hardship | Patience: 2:153, 3:200, 39:10 |
+  | how can I seek forgiveness? | Forgiveness: 39:53, 4:110, 42:25 |
+  | being kinder to my family | Family: 30:21, 25:74, 4:19, 46:15 |
+  | I feel uncertain about the future | Trust in Allah: 3:159, 9:51, 14:12 |
+  | help me pick a new laptop | Empty fake mapping → all 8 curated themes with their seed refs |
+
+- **Next:** Claude review, then backend + frontend deploy when separately authorized.
+  Live model mapping quality and browser/end-to-end production verification remain
+  for that authorized validation. No deploy, gcloud, secret access, live/paid probe,
+  new dependency, Firestore schema change, or pipeline bump was performed.
+
 ### 2026-09-19 — Claude: Session 8 Unit 1 reviewed, merged, DEPLOYED & VERIFIED
 
 - **Live: backend `tafsir-backend-00270-9fr`** (merge `3d0983a` of `codex/s8-hygiene`).
