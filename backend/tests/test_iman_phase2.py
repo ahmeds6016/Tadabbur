@@ -312,8 +312,8 @@ class TestStruggleProgress:
     def test_week_1_phase_1(self):
         config = STRUGGLE_MAP["anger_management"]
         # 10 days ago
-        from datetime import datetime, timedelta
-        declared = (datetime.utcnow() - timedelta(days=10)).isoformat() + "Z"
+        from datetime import datetime, timedelta, timezone
+        declared = (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=10)).isoformat() + "Z"
         progress = compute_struggle_progress(
             "anger_management", declared, [], config,
         )
@@ -322,8 +322,8 @@ class TestStruggleProgress:
 
     def test_week_4_caps_at_phase_3(self):
         config = STRUGGLE_MAP["quran_disconnection"]
-        from datetime import datetime, timedelta
-        declared = (datetime.utcnow() - timedelta(days=35)).isoformat() + "Z"
+        from datetime import datetime, timedelta, timezone
+        declared = (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=35)).isoformat() + "Z"
         progress = compute_struggle_progress(
             "quran_disconnection", declared, [], config,
         )
@@ -342,8 +342,8 @@ class TestStruggleProgress:
                 },
             })
 
-        from datetime import datetime, timedelta
-        declared = (datetime.utcnow() - timedelta(days=14)).isoformat() + "Z"
+        from datetime import datetime, timedelta, timezone
+        declared = (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=14)).isoformat() + "Z"
         progress = compute_struggle_progress(
             "prayer_consistency", declared, logs, config,
         )
@@ -363,8 +363,8 @@ class TestStruggleProgress:
 
     def test_phase_progress_pct_valid(self):
         config = STRUGGLE_MAP["tongue_control"]
-        from datetime import datetime, timedelta
-        declared = (datetime.utcnow() - timedelta(days=3)).isoformat() + "Z"
+        from datetime import datetime, timedelta, timezone
+        declared = (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=3)).isoformat() + "Z"
         progress = compute_struggle_progress(
             "tongue_control", declared, [], config,
         )

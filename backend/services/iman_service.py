@@ -1570,7 +1570,8 @@ def compute_struggle_progress(
     """
     from datetime import datetime
 
-    now = datetime.utcnow()
+    # Preserve naive UTC arithmetic with existing declared_at timestamps.
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     try:
         start = datetime.fromisoformat(declared_at.replace("Z", "+00:00")).replace(tzinfo=None)
     except (ValueError, AttributeError):
