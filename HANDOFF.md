@@ -196,6 +196,23 @@ Q14. **✅ DEPLOYED 2026-08-13 — Reliability quick wins**
 
 ## Session log
 
+### 2026-09-19 — Codex: Session 9 Unit 1 — Iman retry consistency
+
+- **Branch:** `codex/s9-iman-retry`; **implementation commit:** `2a61719`.
+  Changed only the two falsey-Response conditions in `iman_generate_digest` and
+  `iman_get_daily_insight` to `response is not None`; no handler restructuring.
+- **Verification:** `python3 -m pytest backend/tests -q -W error::DeprecationWarning`
+  in `backend/venv` from repo root → **397 passed, 0 skips, 0 warnings**.
+  All **51 backend Python files compile**; `git diff --check` clean.
+  Four AST-extracted handler tests use real requests.Response objects: each
+  429→200 sequence retries exactly once; a third-attempt 503 raises HTTPError,
+  which the existing handler catches and returns as 502, without a fourth call
+  or a cache write. This preserves the actual terminal behavior.
+- **Next:** Claude review; backend-only deploy when separately authorized.
+  No deploy, gcloud, secrets, paid calls, dependencies, or pipeline changes.
+  Unit 2 is now Ahmed-approved and will be developed separately from `main`
+  on `codex/s8-topics`, keeping the reviews independent.
+
 ### 2026-09-19 — Claude: Session 8 Unit 1 reviewed, merged, DEPLOYED & VERIFIED
 
 - **Live: backend `tafsir-backend-00270-9fr`** (merge `3d0983a` of `codex/s8-hygiene`).
