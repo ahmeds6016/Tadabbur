@@ -30,6 +30,7 @@ import TadabburLogo from './components/Logo';
 import SurahVersePicker from './components/SurahVersePicker';
 import RecommendationBar from './components/RecommendationBar';
 import ThemeExplorer from './components/ThemeExplorer';
+import TopicExplorer from './components/TopicExplorer';
 import BadgeDisplay, { BadgePopup } from './components/BadgeDisplay';
 import { ToastContainer } from './components/ui/Toast';
 import { TafsirSkeleton, Skeleton } from './components/ui/SkeletonLoader';
@@ -1949,6 +1950,28 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
           </div>
         )}
 
+        <form onSubmit={(event) => {
+          event.preventDefault();
+          const text = new FormData(event.currentTarget).get('searchText');
+          if (typeof text === 'string' && text.trim()) handleVerseSelection(text.trim());
+        }} style={{ marginBottom: '20px' }}>
+          <label htmlFor="home-search" style={{ display: 'block', fontWeight: 600, marginBottom: '8px' }}>
+            Search a verse or a life question
+          </label>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <input id="home-search" name="searchText" type="search" required maxLength={500}
+              placeholder="2:255 or patience during hardship"
+              style={{ flex: 1, minWidth: 0, padding: '12px', borderRadius: '8px',
+                border: '1px solid var(--color-border, #d1d5db)',
+                color: 'var(--foreground, #1f2937)', background: 'var(--color-surface, white)' }} />
+            <button type="submit" disabled={isTafsirLoading}
+              style={{ padding: '12px 18px', border: 0, borderRadius: '8px',
+                background: 'var(--primary-teal, #0d9488)', color: 'white', cursor: 'pointer' }}>
+              Search
+            </button>
+          </div>
+        </form>
+
         {/* Surah/Verse Picker */}
         <SurahVersePicker
           onSelect={handleVerseSelection}
@@ -2031,6 +2054,9 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
             padding: '24px',
             marginBottom: '20px'
           }}>
+            <TopicExplorer key={query} text={query} user={isGuest ? null : user} onSelect={handleVerseSelection} />
+            <details>
+              <summary style={{ cursor: 'pointer', marginBottom: '12px' }}>Looking for a verse reference instead?</summary>
             <h3 style={{ color: 'var(--color-text, #92400e)', marginBottom: '12px', fontSize: '1.1rem' }}>
               {response.message}
             </h3>
@@ -2077,6 +2103,7 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
                 </div>
               </>
             )}
+            </details>
           </div>
         )}
 
