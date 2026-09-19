@@ -196,6 +196,44 @@ Q14. **✅ DEPLOYED 2026-08-13 — Reliability quick wins**
 
 ## Session log
 
+### 2026-09-19 — Codex: Session 8 Unit 1 hygiene + bounded malformed-output retry
+
+- **Branch:** `codex/s8-hygiene`. **Implementation commit:** `1bb38d2`
+  (`fix: share Gemini retry budget with malformed output recovery`). Based on the
+  clean local `main` at `eff769a`; `git pull` reported already up to date. The two
+  pre-existing local main commits were preserved. **Not deployed.**
+- **Hygiene:** deleted obsolete `backend/test_heading_format.py` without porting
+  its assertions; moved the live load script to `backend/scripts/perf_probe.py`,
+  preserving its executable body and `__main__` entry. Its module docstring now
+  states that requests are live/paid and require ad hoc `pip install aiohttp`.
+  `backend/test_verse_extraction.py` and production requirements are unchanged.
+- **UTC compatibility:** replaced all five remaining `datetime.utcnow()` call
+  sites (one service call and four test fixtures) with `datetime.now(timezone.utc)`.
+  Stripped tzinfo to retain naive UTC comparisons and the fixtures' existing
+  `isoformat() + "Z"` strings. No stored timestamp formats changed.
+- **Resilience:** main `/tafsir` extraction now runs inside the existing two-attempt
+  loop. A first extraction fallback consumes the second slot and logs
+  `GEMINI_RETRY_MALFORMED verse=<ref>`; another fallback returns the existing 502
+  without memory or Firestore cache writes. Network failures and malformed output
+  cannot stack a third call: at most two 120s calls and one 2s network backoff
+  (242s). Each received Gemini response retains its `GEMINI_USAGE` log.
+  Corrected the adjacent HTTP status check to use `response is not None`, since
+  requests' 429/503 responses are falsey and otherwise bypass their retry branches.
+  Terminal network statuses retain their existing handling. `/debug/test` remains
+  single-attempt; pipeline version stays **15.1** and response shape is unchanged.
+- **Verification:** from repo root with `backend/venv` activated,
+  `python3 -m pytest backend/tests -q -W always::DeprecationWarning` →
+  **393 passed (379 + 14), 0 skipped, 0 warnings**. New offline tests execute the
+  actual route/parser function definitions with cloud startup excluded and external
+  services faked: malformed→valid success/cache/logging, malformed→malformed 502/no
+  cache, timeout/429/503 mixed sequences sharing the attempt budget, first-attempt
+  success, safety response, and debug single-attempt behavior. All **50 backend
+  Python files compile**; AST scan finds zero `utcnow()` calls; `git diff --check`
+  passes. Probe body and debug handler verified unchanged.
+- **Next:** Claude review, then a **backend-only deploy** when authorized. No deploy,
+  gcloud command, secret access, live/paid probe, or new dependency was used.
+  **Unit 2 remains GATED and was not started.**
+
 ### 2026-08-29 — Claude: queue reconciled to reality, prod health check green, Session 8 proposed
 
 - **Environment:** first working session from the macOS machine (migration recorded

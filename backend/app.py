@@ -6718,7 +6718,7 @@ def tafsir_handler_enhanced():
             },
         }
 
-        # Retry with exponential backoff
+        # Network failures and malformed output share two total attempts (120 + 2 + 120s).
         max_retries = 2
 
         for attempt in range(max_retries):
@@ -6731,7 +6731,6 @@ def tafsir_handler_enhanced():
                     timeout=120
                 )
                 response.raise_for_status()
-                break
             except requests.Timeout:
                 if attempt == max_retries - 1:
                     perf_metrics['stages']['gemini'] = (time.time() - gemini_start) * 1000
@@ -6742,8 +6741,9 @@ def tafsir_handler_enhanced():
                     }, 503)
                 logger.warning("Retry %s/%s in %ss...", attempt + 1, max_retries, retry_delay)
                 time.sleep(retry_delay)
+                continue
             except requests.HTTPError as e:
-                status_code = response.status_code if response else 500
+                status_code = response.status_code if response is not None else 500
                 if status_code == 429:
                     if attempt == max_retries - 1:
                         perf_metrics['stages']['gemini'] = (time.time() - gemini_start) * 1000
@@ -6764,67 +6764,76 @@ def tafsir_handler_enhanced():
                     continue
                 raise
 
-        perf_metrics['stages']['gemini'] = (time.time() - gemini_start) * 1000
+            perf_metrics['stages']['gemini'] = (time.time() - gemini_start) * 1000
 
-        # Parse response
-        stage_start = time.time()
-        raw_response = response.json()
+            # Parse response
+            stage_start = time.time()
+            raw_response = response.json()
 
-        usage_metadata = raw_response.get("usageMetadata", {})
-        logger.info(
-            "GEMINI_USAGE verse=%s model=%s prompt_tokens=%s candidate_tokens=%s total_tokens=%s",
-            f"{surah}:{start_verse}" + (f"-{end_verse}" if end_verse != start_verse else ""),
-            GEMINI_MODEL_ID,
-            usage_metadata.get("promptTokenCount"),
-            usage_metadata.get("candidatesTokenCount"),
-            usage_metadata.get("totalTokenCount"),
-        )
+            usage_metadata = raw_response.get("usageMetadata", {})
+            logger.info(
+                "GEMINI_USAGE verse=%s model=%s prompt_tokens=%s candidate_tokens=%s total_tokens=%s",
+                f"{surah}:{start_verse}" + (f"-{end_verse}" if end_verse != start_verse else ""),
+                GEMINI_MODEL_ID,
+                usage_metadata.get("promptTokenCount"),
+                usage_metadata.get("candidatesTokenCount"),
+                usage_metadata.get("totalTokenCount"),
+            )
 
-        finish_reason = safe_get_nested(raw_response, "candidates", 0, "finishReason")
-        if finish_reason and finish_reason not in ("STOP", "MAX_TOKENS"):
-            logger.warning("Gemini finishReason: %s", finish_reason)
-            if finish_reason == "SAFETY":
-                perf_metrics['stages']['post_processing'] = (time.time() - stage_start) * 1000
-                return tafsir_response({
-                    "error": "The AI could not generate a response for this query. Please try rephrasing.",
-                    "error_type": "content_blocked"
-                }, 400)
+            finish_reason = safe_get_nested(raw_response, "candidates", 0, "finishReason")
+            if finish_reason and finish_reason not in ("STOP", "MAX_TOKENS"):
+                logger.warning("Gemini finishReason: %s", finish_reason)
+                if finish_reason == "SAFETY":
+                    perf_metrics['stages']['post_processing'] = (time.time() - stage_start) * 1000
+                    return tafsir_response({
+                        "error": "The AI could not generate a response for this query. Please try rephrasing.",
+                        "error_type": "content_blocked"
+                    }, 400)
 
-        generated_text = extract_gemini_text(raw_response)
+            generated_text = extract_gemini_text(raw_response)
+
+            if generated_text:
+                final_json = extract_json_from_response(generated_text)
+
+                if not final_json:
+                    logger.error("Failed to extract JSON from Gemini response")
+                    perf_metrics['stages']['post_processing'] = (time.time() - stage_start) * 1000
+                    return tafsir_response({
+                        "error": "AI returned malformed response",
+                        "error_type": "json_parse_error"
+                    }, 500)
+
+                if isinstance(final_json, list) and len(final_json) == 1 and isinstance(final_json[0], dict):
+                    # Models occasionally wrap the response object in a one-element
+                    # array; unwrap rather than fail the request.
+                    logger.warning("Gemini wrapped response object in an array; unwrapping")
+                    final_json = final_json[0]
+
+                if not isinstance(final_json, dict):
+                    # The tafsir contract requires a JSON object. Treat anything
+                    # else as malformed, never cache.
+                    logger.error("Gemini returned non-object JSON (%s); refusing to cache", type(final_json).__name__)
+                    perf_metrics['stages']['post_processing'] = (time.time() - stage_start) * 1000
+                    return tafsir_response({
+                        "error": "AI returned a malformed response. Please try again."
+                    }, 502)
+
+                if final_json.get('metadata', {}).get('extraction_error'):
+                    if attempt < max_retries - 1:
+                        logger.warning(
+                            "GEMINI_RETRY_MALFORMED verse=%s",
+                            f"{surah}:{start_verse}" + (f"-{end_verse}" if end_verse != start_verse else ""),
+                        )
+                        continue
+                    logger.error("Gemini returned malformed JSON; refusing to cache fallback response")
+                    perf_metrics['stages']['post_processing'] = (time.time() - stage_start) * 1000
+                    return tafsir_response({
+                        "error": "AI returned a malformed response. Please try again."
+                    }, 502)
+
+            break
 
         if generated_text:
-            final_json = extract_json_from_response(generated_text)
-
-            if not final_json:
-                logger.error("Failed to extract JSON from Gemini response")
-                perf_metrics['stages']['post_processing'] = (time.time() - stage_start) * 1000
-                return tafsir_response({
-                    "error": "AI returned malformed response",
-                    "error_type": "json_parse_error"
-                }, 500)
-
-            if isinstance(final_json, list) and len(final_json) == 1 and isinstance(final_json[0], dict):
-                # Models occasionally wrap the response object in a one-element
-                # array; unwrap rather than fail the request.
-                logger.warning("Gemini wrapped response object in an array; unwrapping")
-                final_json = final_json[0]
-
-            if not isinstance(final_json, dict):
-                # The tafsir contract requires a JSON object. Treat anything
-                # else as malformed, never cache.
-                logger.error("Gemini returned non-object JSON (%s); refusing to cache", type(final_json).__name__)
-                perf_metrics['stages']['post_processing'] = (time.time() - stage_start) * 1000
-                return tafsir_response({
-                    "error": "AI returned a malformed response. Please try again."
-                }, 502)
-
-            if final_json.get('metadata', {}).get('extraction_error'):
-                logger.error("Gemini returned malformed JSON; refusing to cache fallback response")
-                perf_metrics['stages']['post_processing'] = (time.time() - stage_start) * 1000
-                return tafsir_response({
-                    "error": "AI returned a malformed response. Please try again."
-                }, 502)
-
             kept_hadith, dropped_hadith = validate_hadith_items(
                 final_json.get("hadith", []),
                 hadith_source_context,

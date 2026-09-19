@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """
-Performance Testing Script for Tafsir Simplified Backend
-Tests and compares performance metrics between old and optimized versions
+Live/paid performance probe for the Tafsir Simplified backend.
+
+This script sends real requests and may incur Gemini charges. Install its optional
+dependency ad hoc with `pip install aiohttp` before running it explicitly.
 """
 
 import time
