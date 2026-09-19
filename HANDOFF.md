@@ -291,6 +291,20 @@ Q14. **✅ DEPLOYED 2026-08-13 — Reliability quick wins**
     `backend/firestore.rules` was rewritten to the deny-all target state with the
     audit record and deploy instructions inline. Repo file previously matched
     NEITHER deployed ruleset and referenced nonexistent collections.
+    **DEPLOYED 2026-09-19 (Ahmed: "deploy the rules").** Pushed via the Firebase
+    Rules REST API (`releases.patch` with a wrapped `{"release": {...}}` body —
+    note PUT 404s, PATCH is the working method, and every call needs the
+    `x-goog-user-project` header on this workstation). New ruleset
+    `f1362022-03d4-4ef5-8bb0-660ec68caa5d` is live on release `cloud.firestore`;
+    `tafsir-db` untouched (already deny-all since 2025-09-21). Both databases are
+    now deny-all to client SDKs. **ROLLBACK:** repoint release `cloud.firestore`
+    at ruleset `d973c40a-60cc-44fe-828f-d4c27778ec55`. Pre-deploy re-verification
+    found exactly `firebase/app` (init) + `firebase/auth` (8 call sites) and zero
+    Firestore imports anywhere in the repo; the iOS shell carries no native
+    Firebase SDK. Post-deploy production smoke test PASSED: `/health` healthy,
+    `/daily-verse` returned Arabic text, `POST /tafsir` 2:255 → 200 in 0.62s
+    `hit-firestore` with hadith + recommendations intact, frontend 200 — the
+    backend's Admin SDK bypasses rules as expected.
   - **8b SIMULATOR-VERIFIED 2026-09-05 (Xcode 26.6 installed by Ahmed; Claude drove
     the rest).** The iOS project is pure SPM (`CapApp-SPM`, no Podfile → CocoaPods
     NOT needed). `capacitor.config.ts` loads the production URL, so `webDir: 'out'`
