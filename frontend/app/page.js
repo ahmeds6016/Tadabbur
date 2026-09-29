@@ -22,7 +22,7 @@ import BottomNav from './components/BottomNav';
 import DesktopNav from './components/DesktopNav';
 import Tooltip from './components/Tooltip';
 import RecaptchaAttribution from './components/RecaptchaAttribution';
-import HelpMenu, { FloatingHelpButton } from './components/HelpMenu';
+import HelpMenu from './components/HelpMenu';
 import FeatureIntroModal from './components/FeatureIntroModal';
 import FloatingAnnotateButton from './components/FloatingAnnotateButton';
 import ConfirmDialog from './components/ConfirmDialog';
@@ -1192,6 +1192,12 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
         return;
       }
 
+      if (e.key === 'F1') {
+        e.preventDefault();
+        setHelpMenuOpen(true);
+        return;
+      }
+
       // Skip other shortcuts if user is typing
       if (isTyping && e.key !== 'Escape') return;
 
@@ -1780,6 +1786,7 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
           stats={desktopStats}
           collapsed={navCollapsed}
           onToggleCollapse={() => setNavCollapsed(!navCollapsed)}
+          onHelp={() => setHelpMenuOpen(true)}
         />
       )}
 
@@ -1794,6 +1801,9 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
             {isGuest ? (
               <>
                 <span style={{ color: 'var(--color-text-muted, #999)', fontSize: '0.9rem' }}>Guest</span>
+                <button type="button" className="logout-button help-toggle" onClick={() => setHelpMenuOpen(true)}>
+                  Help
+                </button>
                 <button
                   onClick={onGuestSignUp}
                   style={{
@@ -2274,7 +2284,7 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
 
 
         {/* Bottom Navigation for PWA — hide for guests */}
-        {!isGuest && <BottomNav user={user} />}
+        {!isGuest && <BottomNav user={user} onHelp={() => setHelpMenuOpen(true)} />}
 
         {/* Feature Intro Modal (first-time users, not guests) */}
         {!isGuest && (
@@ -2299,7 +2309,6 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
         />
 
         {/* Floating Help Button */}
-        <FloatingHelpButton onClick={() => setHelpMenuOpen(true)} />
 
         {/* Floating Annotate Button - appears when text is selected */}
         {selectedText && user && (

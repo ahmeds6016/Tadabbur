@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Home, BookOpen as PlansIcon, Star, FileText, BarChart3, BookOpen, ChevronLeft, ChevronRight } from 'lucide-react';
 
-export default function DesktopNav({ user, stats = {}, collapsed = false, onToggleCollapse }) {
+export default function DesktopNav({ user, stats = {}, collapsed = false, onToggleCollapse, onHelp }) {
   const pathname = usePathname();
   const [tooltipVisible, setTooltipVisible] = useState(null);
 
@@ -145,6 +145,11 @@ export default function DesktopNav({ user, stats = {}, collapsed = false, onTogg
             </Link>
           );
         })}
+        {onHelp && (
+          <button type="button" className="nav-item nav-help help-toggle" onClick={onHelp} title="Help (F1)">
+            <span className="nav-label">Help</span>
+          </button>
+        )}
       </div>
 
       {user && (
@@ -252,6 +257,14 @@ export default function DesktopNav({ user, stats = {}, collapsed = false, onTogg
           transition: all 0.2s ease;
           position: relative;
           cursor: pointer;
+        }
+
+        .nav-help {
+          width: 100%;
+          border: 0;
+          background: none;
+          font: inherit;
+          text-align: left;
         }
 
         .collapsed .nav-item {
