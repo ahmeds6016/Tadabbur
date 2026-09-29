@@ -1,5 +1,126 @@
 # Prompts for GPT 5.6
 
+## Session 11 prompt (2026-09-28) — visual coherence pass: kill the reCAPTCHA badge, the floating FAB, and the colour chaos
+
+---
+
+You are GPT 5.6/6, main coder for Tadabbur (Claude = architect/reviewer, Ahmed =
+owner). `git pull` and read the top entries of `HANDOFF.md`.
+
+**State:** Session 10 (Units 1-4) is merged on `main`; backend is verified but **not yet
+deployed**, frontend deploy is held. Pipeline **15.1**, 441 offline tests green. macOS:
+`python3`, venv at `backend/venv`.
+
+**This session is FRONTEND-ONLY and purely visual.** Ahmed reviewed the real answer
+screen on an iPhone and called the layout "unorganized". His words also: the captcha
+symbol in the bottom corner "looks funny, please remove", and — standing rule — **no
+emoji anywhere, professional and serious, Islamic aesthetic matching the gravity of the
+content**. Do not change any backend behaviour, API shape, or copy semantics.
+
+Claude inspected three device screenshots and traced every issue to source. Work the
+units in order; they are independent commits.
+
+### Unit 1 — remove the reCAPTCHA badge, correctly (branch `codex/s11-recaptcha`)
+
+The floating Google reCAPTCHA badge sits bottom-right and overlaps the "Continue
+reflecting" cards. It is injected because `app/lib/firebase.js:12` calls
+`initializeRecaptchaConfig(auth)`.
+
+**Do NOT delete `initializeRecaptchaConfig`.** It enables Firebase Auth bot protection;
+removing it weakens sign-up/sign-in security. Remove only the *visual badge*:
+
+1. Hide the badge in `app/globals.css`:
+   `.grecaptcha-badge { visibility: hidden; }`
+2. **Google's Terms require attribution when the badge is hidden.** Add small,
+   unobtrusive footer text wherever the auth/sign-in surface lives (and the app footer
+   if there is one), using `--color-text-secondary` at ~0.75rem:
+   "This site is protected by reCAPTCHA and the Google
+   [Privacy Policy](https://policies.google.com/privacy) and
+   [Terms of Service](https://policies.google.com/terms) apply."
+   Links open in a new tab with `rel="noopener noreferrer"`.
+3. Confirm the badge is gone and auth still works locally.
+
+### Unit 2 — remove the floating help button (branch `codex/s11-fab`)
+
+`FloatingHelpButton` (`app/components/HelpMenu.jsx:1040-1068`) renders a
+`position: fixed` 44px circle at `bottom: 24px; right: 16px` with
+`background: linear-gradient(135deg, var(--primary-teal) 0%, var(--gold) 100%)`. In
+Ahmed's screenshots it **covers body text mid-sentence** and sits on top of the
+recommendation cards. The teal-to-gold gradient also matches nothing else in the app.
+
+1. Remove the `<FloatingHelpButton />` render at `app/page.js:2298` and its import at
+   `app/page.js:24`. **Keep `HelpMenu` itself** and keep the F1 keyboard shortcut.
+2. Give help a non-overlapping entry point: add a plain text/icon-free "Help" item to
+   the existing navigation (see `DesktopNav.jsx` and the mobile nav) that calls
+   `setHelpMenuOpen(true)`. Match the surrounding nav items exactly — no gradient, no
+   circle, no badge.
+3. Delete the now-unused `FloatingHelpButton` export and its `styled-jsx` block.
+4. Check no other screen relied on that button.
+
+### Unit 3 — one restrained colour system (branch `codex/s11-palette`)
+
+This is the main cause of "unorganized". The answer screen currently shows **six**
+unrelated accent families: brand teal, gold/amber, slate, blue, magenta, and purple.
+For Qur'anic commentary this reads arbitrary and unserious.
+
+Available brand tokens (`app/globals.css`): `--primary-teal`, `--primary-teal-dark`,
+`--primary-teal-light`, `--gold`, `--gold-text`, `--gold-light`, `--foreground`,
+`--color-text-secondary`, `--color-border`, `--color-surface`.
+
+1. **Progression cards** — `app/page.js` ~3368-3415, the baseline/ascent/peak blocks
+   currently hardcode slate `#94a3b8`, blue `#3b82f6`, magenta `#d946ef` as
+   `borderLeft` + label colour + 8%-alpha background. Replace all three with a single
+   restrained treatment: the SAME neutral `--color-border` left rule and
+   `--color-text-secondary` label on every step, distinguishing the three stages by
+   **label text and vertical order alone**, not by hue. If a visual gradient of
+   emphasis is wanted, use increasing left-rule weight or `--primary-teal` tints only —
+   never three unrelated hues.
+2. **Reflection card** — `app/page.js` ~3228-3262 hardcodes purple `#7c3aed` for the
+   "REFLECTION" label and `linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)` for the
+   "Sign in to save your reflection" button. Re-tone to the brand: label in
+   `--color-text-secondary` or `--primary-teal-dark`, button in flat `--primary-teal`
+   (no gradient), matching the app's other primary buttons.
+3. Sweep `app/page.js` and `app/components/*` for any other hardcoded hex accent that is
+   not teal/gold/neutral and bring it into the token set. **Do not restyle the Arabic
+   verse display, the tafsir source header bar, or the hadith card** — those already
+   read correctly; only remove off-palette colour.
+4. No new colours, no gradients on interactive elements.
+
+### Unit 4 — fix the clipped "Continue reflecting" row (branch `codex/s11-recs`)
+
+In the screenshots the second recommendation card is cut off at the viewport edge with
+text truncated mid-word and no affordance showing the row scrolls.
+`app/components/RecommendationBar.jsx` uses `display: flex; overflow-x: auto;` with
+`flex-shrink: 0; max-width: 220px` children.
+
+1. On narrow viewports (max-width ~640px) **stack the cards into a single column**
+   instead of a horizontal scroller, so nothing is ever clipped. Keep the horizontal
+   row on wider screens if it looks right there.
+2. If you keep any horizontal scroller, add `scroll-snap-type: x mandatory` with
+   `scroll-snap-align: start` on the cards, and side padding so the last card can rest
+   fully on screen.
+3. Ensure page content is not obscured by anything `position: fixed` — after Units 1
+   and 2 there should be nothing left overlapping, so verify by scrolling to the very
+   bottom of a full answer.
+4. **Heading consistency:** "Continue reflecting" renders at a noticeably different size
+   and weight from the neighbouring "Hadith" heading. Make section headings within the
+   answer view share one class and one type scale.
+
+### Not a bug — do not "fix" this
+The dark circular **"N" badge at bottom-left is the Next.js dev-tools indicator**. It
+appears only in `npm run dev` and is absent from production builds. Leave it alone.
+
+### Global rules
+Per unit: short plan → implement → verify → HANDOFF session-log entry with branch +
+commit. `npm run build` must pass and the backend suite must stay green (you should not
+be touching it). No deploys, no gcloud, no secrets, no new dependencies, no backend or
+API changes, no pipeline bump, no emoji. Describe in your HANDOFF entry what each screen
+looks like after the change, since Ahmed reviews on a device before any deploy. Finish
+with the summary table (unit | branch | commit | verified | deploy-needed
+backend/frontend/none).
+
+---
+
 ## Session 10 prompt (2026-09-28) — presentation pass: drop the corpus notice, full source titles, zero emoji, and REDESIGN topic discovery
 
 ---
