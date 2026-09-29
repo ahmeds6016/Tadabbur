@@ -196,6 +196,26 @@ Q14. **✅ DEPLOYED 2026-08-13 — Reliability quick wins**
 
 ## Session log
 
+### 2026-09-28 — Codex: Session 10 Unit 2 — full source titles
+
+- **Branch:** `codex/s10-titles`; **implementation commit:** `1c3fc13`.
+  Both thematic badge definitions now read `A Thematic Commentary on the Qurʼan`
+  with U+02BC. Ihya Ulum al-Din and Madarij al-Salikin were already correct and
+  unchanged; both Riyad badge labels now use Ahmed's requested `Riyad al-Salihin`
+  spelling instead of `Riyad al-Saliheen`. Authors and prompt/source excerpts unchanged.
+- **Pre-edit audit:** no runtime routing/filtering comparison matches the bare
+  `Thematic Commentary` display name. The internal `thematic` key and pointer
+  prefixes drive retrieval. `filter_unavailable_sources` handles classical tafsir
+  names only. The corpus parser's full-title comparison is unrelated and untouched.
+  No existing test asserted the old badge title (old excerpt fixtures are unchanged).
+- **Cached answers:** coverage presentation resolves titles from the existing badge
+  map by internal key, so old cached badges show the new titles without changing
+  stored answers, retrieval, coverage methods, or invalidating the cache.
+- **Verified:** full offline suite with deprecations as errors → **439 passed,
+  0 skips, 0 warnings**; module compiles; diff check clean. The new regression covers
+  cached display names, exact U+02BC, unchanged methods and unchanged stored badges.
+- **Next:** Claude review; backend-only deploy when authorized. No deploy, live probe,
+  gcloud, secrets, new dependency, or pipeline bump (**15.1**). Independent of Unit 1.
 ### 2026-09-28 — Codex: Session 10 Unit 1 — source-coverage notice
 
 - **Branch:** `codex/s10-notice`; **implementation commit:** `20b483e`.

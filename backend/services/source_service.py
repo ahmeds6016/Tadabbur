@@ -718,7 +718,7 @@ def get_scholarly_sources_metadata(surah_number=None, verse_start=None, verse_en
         if thematic and thematic.get("synopsis"):
             sources.append({
                 "key": "thematic",
-                "name": "Thematic Commentary",
+                "name": "A Thematic Commentary on the Qurʼan",
                 "author": "Shaykh al-Ghazali",
                 "type": "Surah Commentary",
             })
@@ -760,7 +760,7 @@ def get_scholarly_sources_metadata(surah_number=None, verse_start=None, verse_en
     if riyad and riyad.get("entries"):
         sources.append({
             "key": "riyad",
-            "name": "Riyad al-Saliheen",
+            "name": "Riyad al-Salihin",
             "author": "Imam al-Nawawi",
             "type": "Hadith Collection",
         })
@@ -900,7 +900,7 @@ _SOURCE_BADGE_MAP = {
     },
     "thematic": {
         "key": "thematic",
-        "name": "Thematic Commentary",
+        "name": "A Thematic Commentary on the Qurʼan",
         "author": "Shaykh al-Ghazali",
         "type": "Surah Commentary",
     },
@@ -918,7 +918,7 @@ _SOURCE_BADGE_MAP = {
     },
     "riyad": {
         "key": "riyad",
-        "name": "Riyad al-Saliheen",
+        "name": "Riyad al-Salihin",
         "author": "Imam al-Nawawi",
         "type": "Hadith Collection",
     },
@@ -1745,7 +1745,8 @@ def build_source_coverage(surah_number, verse_start, verse_end, sources_used,
         if not isinstance(source, dict):
             continue
         source_key = source.get("key")
-        source_name = source.get("name")
+        # Render current titles even when badges came from an older cached answer.
+        source_name = _SOURCE_BADGE_MAP.get(source_key, {}).get("name", source.get("name"))
         if not source_key or not source_name:
             continue
 
