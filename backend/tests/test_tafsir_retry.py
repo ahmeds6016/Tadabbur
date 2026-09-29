@@ -200,3 +200,22 @@ def test_debug_handler_still_makes_single_attempt(route_env, caplog):
     assert "GEMINI_RETRY_MALFORMED verse=2:255" not in caplog.messages
     env.store.assert_not_called()
     assert env.cache == {}
+
+
+@pytest.mark.parametrize("query", ["Surah 67", "patience during hardship"])
+def test_failed_lookup_help_has_no_pictographic_emoji(route_env, query):
+    # Exercise both real help-message branches without cloud startup or a model call.
+    namespace = route_env.client.application.view_functions["tafsir_handler_enhanced"].__globals__
+    namespace["extract_verse_reference_enhanced"] = lambda _: None
+    namespace["SURAHS_BY_NAME"] = {}
+    response = route_env.client.post("/tafsir", json={"query": query})
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["needs_clarification"] is True
+    help_copy = json.dumps({key: payload[key] for key in ("message", "help_text", "suggestions")},
+                           ensure_ascii=False)
+    # Pictograph blocks, dingbats, emoji presentation/joining, and keycap sequences.
+    emoji = re.compile(r"[\U0001F000-\U0001FAFF\u2600-\u27BF\uFE0F\u200D\u20E3]")
+    assert not emoji.search(help_copy)
+    assert "!" not in help_copy
+    route_env.post.assert_not_called()

@@ -196,6 +196,26 @@ Q14. **✅ DEPLOYED 2026-08-13 — Reliability quick wins**
 
 ## Session log
 
+### 2026-09-28 — Codex: Session 10 Unit 3 — remove product emoji
+
+- **Branch:** `codex/s10-no-emoji`; **implementation commit:** `92f76f1`.
+  Removed pictographic prefixes from both failed-lookup help messages, retaining
+  their sentences as requested. Changed only the surrounding format introduction
+  from "Try one of these formats" to "Supported verse-reference formats"; the
+  examples remain plain and contain no exclamation marks.
+- Removed six Gemini prompt markers, including SEMANTIC SEARCH APPROACH, leaving
+  their text headings intact. Verified that all pre-handler source is byte-identical
+  after stripping those six prefixes: no prompt instruction or ordering changed.
+  **Pipeline remains 15.1. Claude must spot-check generation quality against a known
+  verse before any backend deploy because prompt text changed.** No paid check run.
+- **Verified:** full offline suite with deprecations as errors → **440 passed,
+  0 skips, 0 warnings**; app compiles; diff check clean. Two new real-handler offline
+  cases cover full-surah and unrecognized-query help, asserting no pictographic
+  emoji or exclamation marks and no model call. Scanned app.py and all 49 frontend
+  source files: zero pictographic emoji; typographic arrows remain.
+- **Next:** Claude review; backend-only deploy when separately authorized. Independent
+  branch from main. Developer-facing deploy/run-local scripts deliberately untouched.
+  No deploy, gcloud, secrets, live probe, dependency change, or cache invalidation.
 ### 2026-09-28 — Codex: Session 10 Unit 2 — full source titles
 
 - **Branch:** `codex/s10-titles`; **implementation commit:** `1c3fc13`.
