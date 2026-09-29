@@ -196,6 +196,25 @@ Q14. **✅ DEPLOYED 2026-08-13 — Reliability quick wins**
 
 ## Session log
 
+### 2026-09-28 — Codex: Session 11 Unit 1 — reCAPTCHA badge attribution
+
+- **Branch:** `codex/s11-recaptcha`; **implementation:** `563c3e8`.
+  Added `.grecaptcha-badge { visibility: hidden; }`. Firebase initialization,
+  `initializeRecaptchaConfig(auth)`, and all auth handlers are unchanged.
+- **Appearance:** the bottom-right floating badge is hidden by CSS. The complete
+  Google attribution appears as 0.75rem secondary text below every auth mode
+  (sign-up, sign-in, password reset) and in the main app's in-flow footer. Both
+  policy links are underlined, open a new tab, and use `noopener noreferrer`.
+- **Verified:** frontend production build passes; offline backend suite **441 passed,
+  0 skips, 0 warnings** with deprecations as errors; diff check clean. No backend,
+  API, Firebase configuration, dependency, or pipeline change (**15.1**).
+- **Local verification limit:** computer-use native Chrome inspection is blocked by
+  pending Accessibility/Screen Recording permissions; no successful local sign-in
+  or visual badge check is claimed. Ahmed should confirm both before deployment.
+  No credentials were accessed and no auth account was created or modified.
+- **Next:** Claude review and local device/auth check; frontend-only deploy when
+  authorized. Nothing deployed. Independent branch from main.
+
 ### 2026-09-28 — Claude: Session 10 all four units reviewed and MERGED; backend verified, frontend deploy HELD
 
 - **Merged to `main`** (`1ac46bf`, `5cce098`, `7d34c1b`, `5b4a0c9`): 441 offline tests
