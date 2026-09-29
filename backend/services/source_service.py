@@ -1761,8 +1761,6 @@ def build_source_coverage(surah_number, verse_start, verse_end, sources_used,
         additional_sources.append({"name": source_name, "method": method})
 
     notices = []
-    if not qurtubi_available:
-        notices.append("Al-Qurtubi is not available in this corpus for this verse.")
 
     return {
         "classical": {
