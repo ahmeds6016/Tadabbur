@@ -196,6 +196,26 @@ Q14. **✅ DEPLOYED 2026-08-13 — Reliability quick wins**
 
 ## Session log
 
+### 2026-09-28 — Codex: Session 11 Unit 2 — help in navigation
+
+- **Branch:** `codex/s11-fab`; **implementation:** `b3f98a4`.
+  Removed the sole FloatingHelpButton caller, named import, unused export, and its
+  entire fixed-circle style block. No other screen imported or rendered it.
+- **Appearance:** Help is a plain, icon-free item with the existing desktop nav-item
+  styling (also visible when collapsed) and the mobile bottom-nav label styling.
+  Guests receive a plain Help action alongside the header account controls because
+  their side/bottom navigation is intentionally hidden. No floating control covers
+  answer text. Other screens' BottomNav calls are unchanged (onHelp is optional).
+- **Keyboard detail:** source inspection found F1 only in the old tooltip, not in
+  a key handler. F1 now directly opens the retained HelpMenu, including while typing.
+  Existing Alt+H finds the new help-toggle entry; all other shortcuts are unchanged.
+- **Verified:** frontend build passes; backend suite **441 passed, 0 skips/warnings**
+  with deprecations as errors; no FloatingHelpButton references remain; diff clean.
+  Native UI verification remains blocked by computer-use permissions; no device
+  visual/keyboard pass claimed. No backend/API/auth/pipeline change (**15.1**).
+- **Next:** Claude review and Ahmed device check; frontend-only deploy when authorized.
+  Nothing deployed; independent branch from main.
+
 ### 2026-09-28 — Claude: Session 10 all four units reviewed and MERGED; backend verified, frontend deploy HELD
 
 - **Merged to `main`** (`1ac46bf`, `5cce098`, `7d34c1b`, `5b4a0c9`): 441 offline tests
