@@ -196,6 +196,19 @@ Q14. **✅ DEPLOYED 2026-08-13 — Reliability quick wins**
 
 ## Session log
 
+### 2026-09-28 — Codex: Session 10 Unit 1 — source-coverage notice
+
+- **Branch:** `codex/s10-notice`; **implementation commit:** `20b483e`.
+  Removed only the conditional append advertising unavailable al-Qurtubi coverage.
+  `notices` remains an empty list; `classical.al_qurtubi` and frontend notice rendering
+  are unchanged. No offline test asserted the removed notice text (verified by search).
+- **Verified:** full offline suite in `backend/venv`,
+  `python3 -m pytest backend/tests -q -W error::DeprecationWarning` →
+  **438 passed, 0 skips, 0 warnings**; changed module compiles; diff check clean.
+- **Next:** Claude review; backend-only deploy when authorized. No deploy, live probe,
+  gcloud, secret access, dependency change, or pipeline bump (still **15.1**).
+  This branch is independent from `main`; the remaining units are separate branches.
+
 ### 2026-09-28 — Claude: Ahmed rejected the topic UI; presentation pass specced (Session 10)
 
 - **Ahmed reviewed topic discovery locally and rejected the presentation**
