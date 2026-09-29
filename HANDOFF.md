@@ -196,6 +196,49 @@ Q14. **✅ DEPLOYED 2026-08-13 — Reliability quick wins**
 
 ## Session log
 
+### 2026-09-28 — Claude: Session 10 all four units reviewed and MERGED; backend verified, frontend deploy HELD
+
+- **Merged to `main`** (`1ac46bf`, `5cce098`, `7d34c1b`, `5b4a0c9`): 441 offline tests
+  green under `-W error::DeprecationWarning`, all 55 backend files compile, frontend
+  builds, pipeline still **15.1**. **Nothing deployed** — production remains
+  `tafsir-backend-00270-9fr` + `tafsir-frontend-00305-q78`.
+- **GENERATION SPOT-CHECK PASSED** (the gate Claude owed for the prompt edit). Booted the
+  merged tree locally and generated a genuinely fresh verse (103:2, `X-Cache-Status:
+  miss`, 19.1s, one `GEMINI_USAGE model=gemini-3.6-flash` line, zero errors). Output is
+  fully intact and good: all 11 contract sections present, `extraction_error: None`,
+  scholarly attribution correct for Surah al-Asr (Ibn Kathir, Shaykh al-Ghazali, Ibn
+  Qayyim al-Jawziyyah), grounded hadith, and a verse-anchored reflection prompt. The
+  plain-text prompt markers did NOT degrade generation. Note this wrote one valid 15.1
+  document into the shared production cache.
+- **Units 1-3 verified LIVE, not just by test:** `source_coverage.notices` is now `[]`
+  even with `al_qurtubi: false`; badges render `A Thematic Commentary on the Qurʼan`
+  (U+02BC confirmed) and `Riyad al-Salihin`; both failed-lookup help branches return
+  zero emoji and zero exclamation marks. A simulator screenshot of the real UI confirms
+  the sources panel now reads the full commentary title with no absence notice.
+- **Unit 2 carried an unspecced improvement worth keeping:** display names resolve
+  through `_SOURCE_BADGE_MAP`, so answers already sitting in the 90-day cache render
+  current titles instead of stale ones. Without it the rename would have taken ~90 days
+  to fully appear.
+- **Unit 4 review:** the bolted-on search form and the `<details>` demotion are gone;
+  lookup help is primary again with themes beneath; bespoke `styled-jsx` replaced by
+  shared classes on existing design tokens; the panel moved from a 2px amber alert box
+  to a 1px bordered surface; resolves on arrival rather than behind a button. The
+  reviewed correctness pieces (AbortController, 30s timeout, null-guards, curated
+  fallback, `aria-live`) are intact, and the new component tests compile the real JSX
+  and assert exactly those behaviours.
+- **FINDING (minor, cosmetic, not blocking):** `services/hadith_validation.py:25` still
+  emits the canonical label `Riyad al-Saliheen` while source badges now read
+  `Riyad al-Salihin`. A reader can see both spellings in one answer. One-line fix;
+  queue it with the next backend unit.
+- **Deploy posture:** backend (Units 1-3) is verified and ready on Ahmed's word.
+  Frontend (Unit 4) is deliberately HELD until Ahmed reviews the redesign locally,
+  since he rejected the previous presentation unseen-by-him would repeat that mistake.
+  Note that a backend deploy also ships `/topics/resolve` (merged in Session 9); it is
+  unused without the frontend, guest rate-limited at 10/hr, input-capped, lite-model
+  only and fails safe, so exposure is minimal.
+- **Next:** Ahmed reviews the redesigned not-a-verse screen locally, then Claude deploys
+  backend + frontend together and runs the AI.md checklist.
+
 ### 2026-09-28 — Codex: Session 10 Unit 4 — restrained topic presentation
 
 - **Branch:** `codex/s10-topics-redesign`; **implementation commit:** `7e1cae5`.
