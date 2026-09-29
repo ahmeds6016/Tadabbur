@@ -1,5 +1,138 @@
 # Prompts for GPT 5.6
 
+## Session 10 prompt (2026-09-28) — presentation pass: drop the corpus notice, full source titles, zero emoji, and REDESIGN topic discovery
+
+---
+
+You are GPT 5.6/6, main coder for Tadabbur (Claude = architect/reviewer, Ahmed =
+owner). `git pull` and read the top entries of `HANDOFF.md`.
+
+**State:** `main` is at the Session 9 merges. Backend `tafsir-backend-00270-9fr` is
+live; **topic discovery (Unit 2) is merged but was NEVER DEPLOYED** — Ahmed reviewed
+it locally and rejected the presentation. Production has never served it, so you are
+correcting an unshipped feature, not fixing a live regression. Pipeline stays **15.1**.
+Baseline: 438 offline tests green, zero deprecation warnings. macOS: `python3`, venv
+at `backend/venv`.
+
+**Ahmed's direction, verbatim in substance:** the current topic UI is not acceptable;
+the presentation must be *professional, serious, and follow an Islamic aesthetic that
+matches the gravity of the content*. **He does not want emoji anywhere.** Treat
+restraint as the design goal: typography, hierarchy and spacing carry the design — not
+decoration, not novelty, not playful copy.
+
+Four units. Units 1-3 are small and independent; do them first and keep them in
+separate commits so they can ship without waiting on Unit 4.
+
+### Unit 1 — remove the al-Qurtubi absence notice (branch `codex/s10-notice`)
+
+`backend/services/source_service.py:1765` appends
+`"Al-Qurtubi is not available in this corpus for this verse."` to `notices`. Ahmed
+does not want absence advertised to readers — the panel should state what *was* used,
+nothing more.
+
+1. Delete that append. **Keep the `notices` key** in the `source_coverage` contract
+   (it stays an empty list) so the response shape and the frontend's
+   `(source_coverage.notices || []).map(...)` in `frontend/app/page.js` need no change.
+   Do not remove the frontend rendering — a future notice type may use it.
+2. The `classical.al_qurtubi: false` flag stays as-is; the badge simply does not render.
+3. Verify no offline test asserts that notice text (there is none today, but check).
+
+### Unit 2 — full scholarly source titles (branch `codex/s10-titles`)
+
+The coverage panel shows the bare label `Thematic Commentary`. Ahmed wants the real
+title. In `backend/services/source_service.py`, the display name is set at **line 721**
+and **line 903** as `"name": "Thematic Commentary"`.
+
+1. Change the display name to exactly: `A Thematic Commentary on the Qurʼan`
+   (note U+02BC MODIFIER LETTER APOSTROPHE in `Qurʼan`, matching Ahmed's request).
+2. **Before changing it, grep for code that compares against the string
+   `"Thematic Commentary"`** (routing, filtering, `filter_unavailable_sources`, plan
+   pointers, tests). If any logic matches on the display name, decouple it: keep the
+   internal key `thematic` for logic and change only what is rendered. Do not let a
+   display rename alter retrieval behavior.
+3. Check the other additional sources render their proper titles too — `Ihya Ulum
+   al-Din`, `Madarij al-Salikin`, `Riyad al-Salihin` — and leave them alone if already
+   correct. Do not invent new attributions.
+4. Update any offline test asserting the old display string.
+
+### Unit 3 — remove every emoji (branch `codex/s10-no-emoji`)
+
+Audit result (Claude, 2026-09-28): the **frontend is already emoji-free** — the arrows
+(`←`, `→`) are typography, keep them. All emoji live in `backend/app.py`:
+
+1. **User-facing, highest priority — these are what Ahmed saw:**
+   - `app.py:6371` — `'📚 Full surah queries are not currently supported.'`
+   - `app.py:6380` — `'🤔 I couldn\'t find that verse. Let me help you format it correctly.'`
+   Remove the emoji, keep the sentences. Also re-read the surrounding `help_text` /
+   `example_suggestions` copy and make the tone plain and respectful — no exclamation
+   marks, no chattiness. This is the screen a reader hits when a lookup fails.
+2. **Gemini prompt section markers** at approximately `app.py:2924, 2932, 3017, 3025,
+   3055, 3076` (`📖 TAFSIR-BASED APPROACH`, `⚠️ NOTE`, `✅ ENHANCE CLARITY`,
+   `❌ PRESERVE ACCURACY`, `🚨 STRICT VERSE LIMIT`). Replace each with a plain uppercase
+   text marker carrying identical meaning (e.g. `NOTE:`, `ENHANCE CLARITY:`,
+   `PRESERVE ACCURACY:`, `STRICT VERSE LIMIT:`). **Change nothing else about the prompt
+   — no rewording of instructions, no reordering.** The semantics must be identical.
+   **Do NOT bump `SCHOLARLY_PIPELINE_VERSION`:** the output contract is unchanged and a
+   bump would invalidate the entire production cache. Flag it in your HANDOFF entry so
+   Claude can spot-check generation quality against a known verse before deploy.
+3. **Out of scope:** `deploy-backend.sh`, `deploy-frontend.sh`, `backend/run-local.sh`
+   are developer-facing; leave their emoji alone unless Ahmed says otherwise.
+4. Add a small offline test asserting no pictographic emoji appear in the user-facing
+   help messages, so this cannot regress.
+
+### Unit 4 — REDESIGN topic discovery (branch `codex/s10-topics-redesign`)
+
+Keep the entire backend: `/topics/resolve`, `services/topic_service.py`, the closed
+vocabulary, and the seed data are all approved and verified — **do not touch the
+backend contract or the security model** (the model must never supply a verse
+reference). This unit is presentation only.
+
+What is wrong with the current frontend (Claude's review):
+
+- `frontend/app/page.js` bolts a **second search form** onto the home screen with
+  inline styles that match nothing else in the app. Ahmed does not want a new primary
+  affordance competing with the existing Surah/Verse picker.
+- The existing "verse not found" content was wrapped in a raw `<details>` toggle
+  labelled "Looking for a verse reference instead?" — a crude demotion of working UI.
+- `TopicExplorer.jsx` ships its own ad-hoc `styled-jsx` block instead of the app's
+  existing design language, and requires an extra "Explore as a topic" button press.
+
+Redesign requirements:
+
+1. **Remove the bolted-on `<form id="home-search">`** from `page.js` and **remove the
+   `<details>` wrapper**, restoring that content to its previous structure. Revert those
+   two edits cleanly.
+2. Surface topic discovery **only where it is already relevant**: the existing
+   not-a-verse result screen. It should read as a calm, scholarly continuation of that
+   screen, not a second product bolted on.
+3. **Use the app's existing design tokens and component idioms** (`--primary-teal`,
+   `--color-surface`, `--color-border`, `--foreground`, existing card/badge/chip
+   patterns — look at `ThemeExplorer` and the source-coverage panel and match them).
+   No bespoke `styled-jsx` visual language, no new colors, no rounded-pill novelty
+   that the rest of the app does not use.
+4. **Tone and typography:** no emoji, no exclamation marks, no coaching voice. Serious,
+   plain, respectful copy. Prefer a clear heading, generous whitespace, and restrained
+   type scale. Verse references should be presented with the dignity the rest of the
+   app gives them.
+5. **Reduce friction:** do not require a separate "Explore as a topic" click if the
+   screen is already a failed verse lookup — resolve on arrival, with a quiet loading
+   state. Keep the AbortController, the 30s timeout, the null-guarding, the graceful
+   fallback to curated themes, and the `aria-live` status region exactly as they are;
+   those were reviewed and are correct.
+6. Keep `key={query}`-style remounting semantics so state resets per query.
+7. **Verify:** `npm run build`; offline backend suite still 438+ green; and describe
+   in your HANDOFF entry exactly what the redesigned screen looks like, since Ahmed
+   will review it locally before any deploy.
+
+### Global rules
+Per unit: short plan → implement → verify → HANDOFF session-log entry with branch +
+commit. No deploys, no gcloud, no secrets, no live/paid probes, no drive-by refactors,
+no new dependencies, no pipeline bump. Line numbers drift — trust the code. Finish with
+the summary table (unit | branch | commit | verified | deploy-needed
+backend/frontend/none), plus anything skipped and why.
+
+---
+
 ## Session 9 prompt (2026-09-19) — Iman retry-branch fix + free-text topic discovery (Unit 2 UNGATED)
 
 ---

@@ -196,6 +196,43 @@ Q14. **✅ DEPLOYED 2026-08-13 — Reliability quick wins**
 
 ## Session log
 
+### 2026-09-28 — Claude: Ahmed rejected the topic UI; presentation pass specced (Session 10)
+
+- **Ahmed reviewed topic discovery locally and rejected the presentation**
+  ("not a fan of it at all"). Unit 2 is merged to `main` but **was never deployed**,
+  so production has never served it — this is an unshipped feature being corrected,
+  not a live regression. The **backend is approved and unchanged**: `/topics/resolve`,
+  `services/topic_service.py`, the closed vocabulary and the security model all stand.
+- **Ahmed's standing preference, recorded:** no emoji anywhere in the product, and the
+  presentation must be professional and serious, following an Islamic aesthetic that
+  matches the gravity of the content.
+- **Emoji audit (Claude):** the **frontend is already emoji-free** — the `←`/`→`
+  characters are typography and stay. Every emoji lives in `backend/app.py`:
+  * **User-facing (what Ahmed saw):** `app.py:6371` (`📚 Full surah queries…`) and
+    `app.py:6380` (`🤔 I couldn't find that verse…`) — the latter renders on exactly
+    the failed-lookup screen he was testing.
+  * **Gemini prompt section markers:** ~`app.py:2924, 2932, 3017, 3025, 3055, 3076`.
+    Specced as plain uppercase markers with identical semantics and **no pipeline
+    bump** — the output contract is unchanged and a bump would flush the whole
+    production cache. Claude should spot-check generation quality before deploy.
+  * Deploy scripts and `run-local.sh` keep their emoji (developer-facing, out of scope).
+- **Other fixes specced:** drop the `"Al-Qurtubi is not available in this corpus for
+  this verse."` notice at `services/source_service.py:1765` (keep the `notices` key so
+  the contract and frontend need no change — absence should simply not be advertised);
+  and render the full title `A Thematic Commentary on the Qurʼan` in place of the bare
+  `Thematic Commentary` label at `source_service.py:721` and `:903`, with an explicit
+  instruction to decouple display name from any matching logic first.
+- **Topic UI redesign specced** (`docs/PROMPT-GPT56.md`, Session 10 Unit 4): remove the
+  bolted-on second search form and the `<details>` demotion from `page.js`, surface
+  discovery only on the existing not-a-verse screen, adopt the app's existing design
+  tokens instead of bespoke `styled-jsx`, resolve on arrival rather than behind an
+  extra click, and keep the reviewed correctness pieces (AbortController, timeout,
+  null-guards, graceful fallback, `aria-live`) untouched.
+- **Nothing deployed this session.** Production remains `tafsir-backend-00270-9fr` +
+  `tafsir-frontend-00305-q78`. Local dev servers were run for Ahmed's review.
+- **Next:** Codex works Session 10 Units 1-4; Claude reviews, with generation-quality
+  spot-check required before any backend deploy because the Gemini prompt text changes.
+
 ### 2026-09-19 — Codex: Session 9 Unit 2 — free-text topic discovery (Ahmed-approved)
 
 - **Branch:** `codex/s8-topics`; **implementation commit:** `aefed72`.
