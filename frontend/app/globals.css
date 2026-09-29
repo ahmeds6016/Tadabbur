@@ -1143,6 +1143,101 @@ button:hover:not(:disabled) {
   letter-spacing: 0.01em;
 }
 
+/* Failed verse lookup and its related-theme continuation share result-card tokens. */
+.lookup-clarification {
+  padding: 24px;
+  margin-bottom: 20px;
+  border: 1px solid var(--color-border);
+  color: var(--foreground);
+}
+
+.lookup-heading {
+  margin: 0 0 12px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.lookup-help,
+.topic-status,
+.topic-query {
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+
+.lookup-help {
+  white-space: pre-line;
+  margin: 0 0 20px;
+}
+
+.lookup-suggestions-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.lookup-suggestion,
+.topic-verse {
+  padding: 10px 14px;
+  min-height: 44px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--primary-teal);
+  font: inherit;
+  font-size: 0.9rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.lookup-suggestion:hover,
+.topic-verse:hover {
+  border-color: var(--primary-teal);
+}
+
+.lookup-suggestion:focus-visible,
+.topic-verse:focus-visible {
+  outline: 2px solid var(--primary-teal);
+  outline-offset: 3px;
+}
+
+.topic-explorer {
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 1px solid var(--color-border);
+}
+
+.topic-query {
+  margin: 0 0 12px;
+  overflow-wrap: anywhere;
+}
+
+.topic-status {
+  margin: 0 0 20px;
+}
+
+.topic-entry + .topic-entry {
+  margin-top: 24px;
+}
+
+.topic-entry h4 {
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.topic-verses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.topic-verse {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
 .source-badge {
   display: inline-flex;
   align-items: center;
