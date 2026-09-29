@@ -1950,28 +1950,6 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
           </div>
         )}
 
-        <form onSubmit={(event) => {
-          event.preventDefault();
-          const text = new FormData(event.currentTarget).get('searchText');
-          if (typeof text === 'string' && text.trim()) handleVerseSelection(text.trim());
-        }} style={{ marginBottom: '20px' }}>
-          <label htmlFor="home-search" style={{ display: 'block', fontWeight: 600, marginBottom: '8px' }}>
-            Search a verse or a life question
-          </label>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <input id="home-search" name="searchText" type="search" required maxLength={500}
-              placeholder="2:255 or patience during hardship"
-              style={{ flex: 1, minWidth: 0, padding: '12px', borderRadius: '8px',
-                border: '1px solid var(--color-border, #d1d5db)',
-                color: 'var(--foreground, #1f2937)', background: 'var(--color-surface, white)' }} />
-            <button type="submit" disabled={isTafsirLoading}
-              style={{ padding: '12px 18px', border: 0, borderRadius: '8px',
-                background: 'var(--primary-teal, #0d9488)', color: 'white', cursor: 'pointer' }}>
-              Search
-            </button>
-          </div>
-        </form>
-
         {/* Surah/Verse Picker */}
         <SurahVersePicker
           onSelect={handleVerseSelection}
@@ -2047,55 +2025,28 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
         )}
 
         {response && response.needs_clarification && (
-          <div ref={resultsRegionRef} role="region" aria-live="polite" tabIndex={-1} style={{
-            background: 'rgba(251, 191, 36, 0.12)',
-            border: '2px solid var(--gold, #f59e0b)',
-            borderRadius: '12px',
-            padding: '24px',
-            marginBottom: '20px'
-          }}>
-            <TopicExplorer key={query} text={query} user={isGuest ? null : user} onSelect={handleVerseSelection} />
-            <details>
-              <summary style={{ cursor: 'pointer', marginBottom: '12px' }}>Looking for a verse reference instead?</summary>
-            <h3 style={{ color: 'var(--color-text, #92400e)', marginBottom: '12px', fontSize: '1.1rem' }}>
+          <div ref={resultsRegionRef} role="region" aria-live="polite" tabIndex={-1}
+            className="result-section lookup-clarification">
+            <h3 className="lookup-heading">
               {response.message}
             </h3>
-            <p style={{ color: 'var(--color-text-secondary, #78350f)', marginBottom: '16px', fontSize: '0.95rem' }}>
+            <p className="lookup-help">
               {response.help_text}
             </p>
-            {response.suggestions && response.suggestions.length > 0 && (
+            {Array.isArray(response.suggestions) && response.suggestions.length > 0 && (
               <>
-                <p style={{ fontWeight: '600', color: 'var(--color-text, #92400e)', marginBottom: '10px' }}>
+                <p className="lookup-suggestions-label">
                   Did you mean:
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {response.suggestions.map((suggestion, index) => (
+                  {response.suggestions.filter(suggestion => typeof suggestion === 'string').map((suggestion, index) => (
                     <button
                       key={index}
                       onClick={() => {
                         setQuery(suggestion);
                         setResponse(null);
                       }}
-                      style={{
-                        padding: '12px 16px',
-                        background: 'var(--color-surface, white)',
-                        border: '2px solid var(--gold, #f59e0b)',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        textAlign: 'left',
-                        fontSize: '0.95rem',
-                        color: 'var(--color-text, #78350f)',
-                        fontWeight: '500',
-                        transition: 'all 0.2s ease'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = 'rgba(251, 191, 36, 0.15)';
-                        e.currentTarget.style.transform = 'translateX(4px)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'var(--color-surface, white)';
-                        e.currentTarget.style.transform = 'translateX(0)';
-                      }}
+                      className="lookup-suggestion"
                     >
                       → {suggestion}
                     </button>
@@ -2103,7 +2054,7 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
                 </div>
               </>
             )}
-            </details>
+            <TopicExplorer key={query} text={query} user={isGuest ? null : user} onSelect={handleVerseSelection} />
           </div>
         )}
 

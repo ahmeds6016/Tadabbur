@@ -196,6 +196,61 @@ Q14. **✅ DEPLOYED 2026-08-13 — Reliability quick wins**
 
 ## Session log
 
+### 2026-09-28 — Codex: Session 10 Unit 4 — restrained topic presentation
+
+- **Branch:** `codex/s10-topics-redesign`; **implementation commit:** `7e1cae5`.
+  Independent from `main`. Topic discovery is still **unshipped**; this corrects
+  presentation rejected during local review. Backend files, topic vocabulary/seeds,
+  rate limiting, model contract and pipeline **15.1** are completely unchanged.
+- **Screen for Ahmed's local review:** the home screen again has its existing
+  Surah/Verse picker and curated theme controls, without the added free-text form.
+  On the failed-verse result screen, the original lookup message, supported formats,
+  and suggestions are fully visible at the top (no details toggle). The result uses
+  the app's existing surface card, a fine border, 24px padding, and normal foreground
+  text; the former yellow warning styling and moving hover treatment are removed.
+  Format examples preserve their line breaks. Below the lookup suggestions, a fine
+  divider and generous spacing introduce **Related themes**, followed by the query
+  in smaller secondary text. A quiet **Identifying related themes…** status appears
+  immediately, with no extra button press. Results show each theme as a restrained
+  semibold subheading and its references beneath in wrapping rectangular controls:
+  teal text, existing surface/border tokens, 8px corners, 44px minimum height, and a
+  visible keyboard-focus outline. No pictographic emoji, new colours, ornament,
+  rounded-pill treatment, or component-local styled-jsx. Styles live alongside the
+  existing results styles in globals.css and inherit the app's typography.
+- **Behavior:** reference selection still invokes the ordinary verse flow.
+  `key={query}` resets topic state. The effect retains AbortController cancellation,
+  the 30s timeout, null guards, curated-theme fallback, and the same polite aria-live
+  status region. Effect cleanup clears its timer and prevents an abandoned query
+  from updating state after automatic resolution is cancelled/remounted. Failure
+  copy is plain: e.g. "Topic search is unavailable. Curated themes are listed below."
+- **Verified:** `npm run build` passes (14 static pages, lint/type checks included).
+  `python3 -m pytest backend/tests -q -W error::DeprecationWarning` → **438 passed,
+  0 skips, 0 warnings** on this independent frontend branch. Four offline component
+  lifecycle checks pass via `node --test frontend/tests/topic-explorer.test.cjs`:
+  arrival triggers the request, valid references select correctly, null data shows
+  eight themes, and timeout/unmount abort safely. These execute the real JSX compiled
+  with installed Next tooling and simulated hooks/fetch; they are not browser tests.
+  Diff check clean; backend diff from main is empty.
+- **Visual verification limitation:** attempted a temporary fully mocked local preview,
+  but browser access was unavailable and native Chrome inspection remained blocked
+  by pending computer-use Accessibility/Screen Recording permissions. No visual
+  pass or screenshot is claimed. The temporary route and dev server were removed.
+  Ahmed's local visual review remains required before deployment; no paid/live
+  requests were made.
+- **Independent implementation commits, in review order:** Unit 1 `20b483e` on
+  `codex/s10-notice` (handoff `a34ac49`); Unit 2 `1c3fc13` on `codex/s10-titles`
+  (handoff `6fff8c3`); Unit 3 `92f76f1` on `codex/s10-no-emoji` (handoff `6429227`).
+  A disposable detached worktree applied all four implementation commits cleanly:
+  **441 backend tests pass with deprecations as errors; all 55 backend Python files
+  compile**. Worktree removed; no merge to main. Apply Units 1–3 for the complete
+  no-emoji/full-title/notice-free preview; this independent branch retains main's
+  unchanged backend until those commits are integrated.
+- **Next:** Claude review and Ahmed local presentation approval. Unit 4 changes need
+  a frontend deploy; its approved topic backend endpoint is still unshipped and must
+  also be deployed before topic discovery can work live. Units 1–3 can ship separately
+  via backend deploy; **Claude's known-verse generation spot-check is required before
+  deploying Unit 3's plain prompt markers**. No deploy, gcloud, secret access, new
+  dependency, live/paid probe, or pipeline bump performed.
 ### 2026-09-28 — Codex: Session 10 Unit 3 — remove product emoji
 
 - **Branch:** `codex/s10-no-emoji`; **implementation commit:** `92f76f1`.
