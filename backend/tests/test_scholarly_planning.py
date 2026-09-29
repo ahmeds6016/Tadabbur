@@ -745,3 +745,23 @@ class TestMultiSectionFetching:
         result = resolve_scholarly_pointers(pointers)
         total = sum(len(e["text"]) for e in result["excerpts"])
         assert total <= MAX_TOTAL_SCHOLARLY_CHARS + 10
+
+
+def test_coverage_uses_current_titles_for_cached_badges_without_changing_methods():
+    from services.source_service import build_source_coverage
+
+    badges = [
+        {"key": "thematic", "name": "Thematic Commentary"},
+        {"key": "riyad", "name": "Riyad al-Saliheen"},
+    ]
+    coverage = build_source_coverage(39, 53, 53, badges, pointer_methods={
+        "thematic:surah=39:section=0": "surah_overview",
+        "riyad:book=1:ch=2:hadith=0": "verse_plan",
+    })
+    assert coverage["additional_sources"] == [
+        {"name": "A Thematic Commentary on the Qur\u02bcan", "method": "surah_overview"},
+        {"name": "Riyad al-Salihin", "method": "verse_plan"},
+    ]
+    assert badges[0]["name"] == "Thematic Commentary"  # Stored data is untouched.
+    assert _SOURCE_BADGE_MAP["ihya"]["name"] == "Ihya Ulum al-Din"
+    assert _SOURCE_BADGE_MAP["madarij"]["name"] == "Madarij al-Salikin"
