@@ -2062,3 +2062,20 @@ summary:focus-visible {
     padding: 0;
   }
 }
+
+/* Keep Firebase bot protection active; attribution replaces its floating badge. */
+.grecaptcha-badge { visibility: hidden; }
+
+.recaptcha-attribution {
+  margin: 24px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  line-height: 1.6;
+  text-align: center;
+}
+
+.recaptcha-attribution a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}

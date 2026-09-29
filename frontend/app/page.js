@@ -21,6 +21,7 @@ import TabNavigation from './components/TabNavigation';
 import BottomNav from './components/BottomNav';
 import DesktopNav from './components/DesktopNav';
 import Tooltip from './components/Tooltip';
+import RecaptchaAttribution from './components/RecaptchaAttribution';
 import HelpMenu, { FloatingHelpButton } from './components/HelpMenu';
 import FeatureIntroModal from './components/FeatureIntroModal';
 import FloatingAnnotateButton from './components/FloatingAnnotateButton';
@@ -503,6 +504,8 @@ function AuthComponent({ onGuestBrowse }) {
             </button>
           </>
         )}
+
+        <RecaptchaAttribution />
 
       </div>
     </div>
@@ -2266,6 +2269,7 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
             )}
           </div>
         )}
+        <footer><RecaptchaAttribution /></footer>
       </div>
 
 
