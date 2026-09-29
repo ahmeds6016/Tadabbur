@@ -2921,7 +2921,7 @@ def build_enhanced_prompt(query, context_by_source, user_profile, arabic_text=No
     # NEW: Approach-specific instructions (MERGED: historical + thematic → semantic)
     approach_instructions = {
         'tafsir': """
-📖 TAFSIR-BASED APPROACH:
+TAFSIR-BASED APPROACH:
 Focus on CLASSICAL COMMENTARY and verse-by-verse analysis.
 - Emphasize what classical scholars (Ibn Kathir, al-Qurtubi) said about specific verses
 - Provide linguistic analysis and word meanings where relevant
@@ -2929,7 +2929,7 @@ Focus on CLASSICAL COMMENTARY and verse-by-verse analysis.
 - Prioritize scholarly precision and detailed explanation
         """,
         'semantic': """
-🔍 SEMANTIC SEARCH APPROACH:
+SEMANTIC SEARCH APPROACH:
 Focus on COMPREHENSIVE EXPLORATION of themes, events, and concepts.
 - For THEMATIC queries: Identify verses across different surahs that relate to the same theme, extract patterns and principles
 - For HISTORICAL queries: Emphasize asbab al-nuzul, chronological context, and how events illuminate meaning
@@ -3014,7 +3014,7 @@ SOURCE MATERIAL (Classical Tafsir - May Have Issues)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 {structured_context}
 
-⚠️ NOTE: This source material comes from JSON-structured classical tafsir texts.
+NOTE: This source material comes from JSON-structured classical tafsir texts.
 It may contain grammar errors, typos, run-on sentences, missing punctuation, and awkward phrasing from translation/OCR.
 {scholarly_context}
 
@@ -3022,7 +3022,7 @@ It may contain grammar errors, typos, run-on sentences, missing punctuation, and
 YOUR ROLE AS SCHOLARLY EDITOR
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-✅ ENHANCE CLARITY (Your Primary Job):
+ENHANCE CLARITY (Your Primary Job):
 1. **Fix Grammar & Structure**
    • Correct grammatical errors
    • Fix run-on sentences and fragments
@@ -3052,7 +3052,7 @@ YOUR ROLE AS SCHOLARLY EDITOR
    • Hadith references: {'INCLUDE hadith citations when relevant' if persona['include_hadith'] else 'AVOID hadith references - omit or minimize them'}
    • Scholarly debates: {'INCLUDE different scholarly opinions when relevant' if persona['scholarly_debates'] else 'AVOID scholarly disagreements - present unified explanations'}
 
-❌ PRESERVE ACCURACY (Never Compromise):
+PRESERVE ACCURACY (Never Compromise):
 1. **Never Alter Scholarly Content**
    • Do NOT change the meaning of tafsir
    • Do NOT add interpretations not in source
@@ -3073,7 +3073,7 @@ YOUR ROLE AS SCHOLARLY EDITOR
 VERSE LIMITS - CRITICAL FOR PERFORMANCE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-🚨 STRICT VERSE LIMIT: Maximum {VERSE_LIMIT} verses per response.
+STRICT VERSE LIMIT: Maximum {VERSE_LIMIT} verses per response.
 
 IMPORTANT: Even if more verses are provided in the source material, you MUST:
 1. Select only the MOST RELEVANT verses that directly answer the query
@@ -6368,7 +6368,7 @@ def tafsir_handler_enhanced():
                 # Check if this looks like a full surah query (e.g., "Surah 67" without verse)
                 surah_only_match = re.match(r'^(?:surah\s+)?(\d{1,3})$', query.strip().lower())
                 if surah_only_match or re.match(r'^surah\s+\d{1,3}$', query.strip().lower()):
-                    help_message = '📚 Full surah queries are not currently supported.'
+                    help_message = 'Full surah queries are not currently supported.'
                     help_text = 'Please specify a verse or verse range (max 5 verses):\n• Single verse: "67:1"\n• Verse range: "67:1-5"\n• Analysis: "historical context of 67:1"'
                     example_suggestions = [
                         '67:1 (First verse)',
@@ -6377,8 +6377,8 @@ def tafsir_handler_enhanced():
                         'linguistic analysis of 67:1'
                     ] if not suggestions else suggestions
                 else:
-                    help_message = '🤔 I couldn\'t find that verse. Let me help you format it correctly.'
-                    help_text = 'Try one of these formats:\n• Numeric: "2:255"\n• Named: "Surah Al-Baqarah verse 255"\n• Range: "2:255-257" (max 5 verses)\n• Analysis: "historical context of 2:255"'
+                    help_message = 'I couldn\'t find that verse. Let me help you format it correctly.'
+                    help_text = 'Supported verse-reference formats:\n• Numeric: "2:255"\n• Named: "Surah Al-Baqarah verse 255"\n• Range: "2:255-257" (max 5 verses)\n• Analysis: "historical context of 2:255"'
                     example_suggestions = [
                         '2:255 (Ayatul Kursi)',
                         'Surah Al-Fatihah verse 1',
