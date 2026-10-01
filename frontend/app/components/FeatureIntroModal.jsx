@@ -137,7 +137,7 @@ export default function FeatureIntroModal({ isOpen, onComplete, userName }) {
                   height: 8, borderRadius: 4,
                   border: 'none', padding: 0,
                   backgroundColor: i === currentStep
-                    ? 'var(--primary-teal, #10b981)'
+                    ? 'var(--primary-teal)'
                     : 'rgba(0,0,0,0.15)',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease'
@@ -195,7 +195,7 @@ export default function FeatureIntroModal({ isOpen, onComplete, userName }) {
               }}
               style={{
                 padding: '10px 24px', border: 'none', borderRadius: '10px',
-                background: 'linear-gradient(135deg, var(--primary-teal, #10b981) 0%, var(--gold, #d4af37) 100%)',
+                background: 'var(--primary-teal)',
                 color: 'white', cursor: 'pointer',
                 fontWeight: '600', fontSize: '0.9rem'
               }}

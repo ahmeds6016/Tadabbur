@@ -115,7 +115,7 @@ export default function FloatingAnnotateButton({
 
         .annotate-btn {
           padding: 6px 12px;
-          background: linear-gradient(135deg, var(--primary-teal) 0%, var(--gold) 100%);
+          background: var(--primary-teal);
           color: white;
           border: none;
           border-radius: 6px;
@@ -130,7 +130,7 @@ export default function FloatingAnnotateButton({
 
         .annotate-btn:hover {
           transform: scale(1.05);
-          box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+          box-shadow: 0 2px 8px color-mix(in srgb, var(--primary-teal) 30%, transparent);
         }
 
         .dismiss-btn {

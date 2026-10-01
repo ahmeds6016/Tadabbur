@@ -43,15 +43,15 @@ export function Toast({
     const iconProps = { size: 20, strokeWidth: 2.5 };
     switch (type) {
       case 'success':
-        return <CheckCircle {...iconProps} color="var(--success-color, #059669)" />;
+        return <CheckCircle {...iconProps} color="var(--primary-teal)" />;
       case 'error':
-        return <XCircle {...iconProps} color="var(--error-color, #DC2626)" />;
+        return <XCircle {...iconProps} color="var(--gold-text)" />;
       case 'warning':
-        return <AlertTriangle {...iconProps} color="var(--warning-color, #D97706)" />;
+        return <AlertTriangle {...iconProps} color="var(--gold-text)" />;
       case 'info':
-        return <Info {...iconProps} color="var(--info-color, #0D9488)" />;
+        return <Info {...iconProps} color="var(--primary-teal)" />;
       default:
-        return <Info {...iconProps} color="var(--info-color, #0D9488)" />;
+        return <Info {...iconProps} color="var(--primary-teal)" />;
     }
   };
 
@@ -150,19 +150,19 @@ export function Toast({
 
         /* Type-specific styles */
         .toast-success {
-          border-left: 4px solid var(--success-color);
+          border-left: 4px solid var(--primary-teal);
         }
 
         .toast-error {
-          border-left: 4px solid var(--error-color);
+          border-left: 4px solid var(--gold-text);
         }
 
         .toast-warning {
-          border-left: 4px solid var(--warning-color);
+          border-left: 4px solid var(--gold-text);
         }
 
         .toast-info {
-          border-left: 4px solid var(--info-color);
+          border-left: 4px solid var(--primary-teal);
         }
 
         /* Animations */

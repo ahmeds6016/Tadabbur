@@ -251,8 +251,8 @@ export default function TabNavigation({
           }
 
           .section-dots-menu-item:hover {
-            background: #f5f3ff;
-            color: #7c3aed;
+            background: var(--color-surface);
+            color: var(--primary-teal);
           }
 
           .section-dots-menu-item + .section-dots-menu-item {
@@ -488,7 +488,7 @@ export default function TabNavigation({
 
         .reflect-menu-item:hover,
         .reflect-menu-item:active {
-          background: #f5f3ff;
+          background: var(--color-surface);
         }
 
         .reflect-menu-item + .reflect-menu-item {

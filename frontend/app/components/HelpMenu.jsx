@@ -570,7 +570,7 @@ export default function HelpMenu({ currentPage = 'home', isOpen, onClose, onRepl
           }
 
           .section-title:hover {
-            background: linear-gradient(135deg, var(--cream) 0%, rgba(212, 175, 55, 0.1) 100%);
+            background: var(--color-surface);
           }
 
           .expand-icon {
@@ -621,14 +621,14 @@ export default function HelpMenu({ currentPage = 'home', isOpen, onClose, onRepl
           .help-cta {
             margin-top: 24px;
             padding: 20px;
-            background: linear-gradient(135deg, var(--cream) 0%, rgba(212, 175, 55, 0.1) 100%);
+            background: var(--color-surface);
             border-radius: 12px;
             text-align: center;
           }
 
           .replay-intro-btn {
             padding: 12px 24px;
-            background: linear-gradient(135deg, var(--primary-teal) 0%, var(--gold) 100%);
+            background: var(--primary-teal);
             color: white;
             border: none;
             border-radius: 12px;
@@ -641,7 +641,7 @@ export default function HelpMenu({ currentPage = 'home', isOpen, onClose, onRepl
 
           .replay-intro-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+            box-shadow: 0 6px 20px color-mix(in srgb, var(--primary-teal) 30%, transparent);
           }
 
           .shortcuts-grid {
@@ -832,14 +832,14 @@ export default function HelpMenu({ currentPage = 'home', isOpen, onClose, onRepl
           }
 
           .feedback-error {
-            color: #e74c3c;
+            color: var(--gold-text);
             font-size: 0.85rem;
             margin-top: 10px;
           }
 
           .feedback-submit-btn {
             padding: 10px 28px;
-            background: linear-gradient(135deg, var(--primary-teal) 0%, var(--gold) 100%);
+            background: var(--primary-teal);
             color: white;
             border: none;
             border-radius: 10px;
@@ -851,7 +851,7 @@ export default function HelpMenu({ currentPage = 'home', isOpen, onClose, onRepl
 
           .feedback-submit-btn:hover:not(:disabled) {
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+            box-shadow: 0 4px 12px color-mix(in srgb, var(--primary-teal) 30%, transparent);
           }
 
           .feedback-submit-btn:disabled {
