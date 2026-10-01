@@ -196,6 +196,48 @@ Q14. **✅ DEPLOYED 2026-08-13 — Reliability quick wins**
 
 ## Session log
 
+### 2026-10-01 — Claude: Sessions 10 + 11 DEPLOYED & VERIFIED (backend + frontend)
+
+- **Production: backend `tafsir-backend-00271-l8f` + frontend `tafsir-frontend-00306-ptn`**
+  from `main` @ `a05efde`. Ahmed approved after reviewing the merged build locally.
+  **Rollback targets:** backend `tafsir-backend-00270-9fr`, frontend
+  `tafsir-frontend-00305-q78`. Pipeline still **15.1** — no cache flush.
+- **Pre-deploy hazard checked:** `frontend/.env.local` sets
+  `NEXT_PUBLIC_BACKEND_URL=http://localhost:8080`, the frontend has no
+  `.gcloudignore`/`.dockerignore`, and the Dockerfile copies the whole directory before
+  `npm run build`. `gcloud meta list-files-for-upload` confirmed the generated ignore
+  (from `.gitignore`'s `.env*`) excludes it: 115 files uploaded, zero `.env*`, no
+  `node_modules`/`.next`. Post-deploy, the live JS bundle has **zero** `localhost:8080`
+  references. **Recommend adding an explicit `frontend/.gcloudignore`** so this never
+  depends on gcloud's fallback behaviour.
+- **Order:** backend first, so `/topics/resolve` existed before the new UI could call it.
+- **Backend verification:** traffic 100% on 00271 with `latestRevision: true` (not
+  pinned); all 9 env vars incl. `ADMIN_SECRET` secret ref; `/health` healthy;
+  `/daily-verse` Arabic present; `/tafsir` 2:255 → 200 in 0.61s `hit-firestore` with
+  `notices: []` and `A Thematic Commentary on the Qurʼan` rendered **on a cached
+  answer** (the badge-map resolution working); admin 403 / debug 404 intact;
+  `/topics/resolve` live; failed-lookup help text emoji-free.
+- **Frontend verification:** traffic 100% on 00306, not pinned; homepage 200.
+  **First-ever end-to-end check of the live production site in a browser** (headless
+  Chrome at 390px against the production URL, guest mode, 13:28): the deployed frontend
+  calls the deployed backend and renders the full answer. Measured on the live DOM:
+  reCAPTCHA badge hidden, attribution present, no floating help button, zero fixed
+  overlays, no horizontal overflow, recommendation cards full-width (16-374px), headings
+  18px. Single closing quote on 13:28; recommendation reasons end on whole words.
+- **NEW FINDING — pre-existing, not caused by this deploy:** the PWA "Install Tadabbur"
+  banner renders unstyled in production (text flush to the edge, dark text on teal).
+  **Tailwind is not installed in this project**, and `PWAProvider.jsx` is the only
+  component written with Tailwind utility classes, so none of its classes have ever
+  applied. It only appears on Chrome/Android (it surfaced here because headless Chrome
+  fires `beforeinstallprompt`).
+  **Correction to the Session 11 review entry:** it said the banner moved "from a fixed
+  bottom toast to in-flow". That was wrong — `fixed` never applied either, so the banner
+  was always in-flow and unstyled. Fix: restyle the banner with the app's design tokens
+  (inline styles or `globals.css` classes, like the rest of the app).
+- **Next:** banner restyle + `frontend/.gcloudignore` (both small, frontend-only); the
+  `hadith_validation.py` `Riyad al-Saliheen` spelling; the truncating quick-select
+  chips; iOS physical-device test.
+
 ### 2026-10-01 — Claude: Session 11 reviewed, rendered on a phone viewport, MERGED with three fixups
 
 - **Merged** as `78fec2a` (the four units via Codex's `codex/s11-preview` stack, plus
