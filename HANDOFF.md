@@ -196,6 +196,56 @@ Q14. **✅ DEPLOYED 2026-08-13 — Reliability quick wins**
 
 ## Session log
 
+### 2026-10-01 — Claude: Session 11 reviewed, rendered on a phone viewport, MERGED with three fixups
+
+- **Merged** as `78fec2a` (the four units via Codex's `codex/s11-preview` stack, plus
+  Claude fixups `ba4fdfa`). 445 backend tests green under
+  `-W error::DeprecationWarning`, 4 frontend component tests green, build passes
+  (14/14 pages). **Nothing deployed.** Production is still
+  `tafsir-backend-00270-9fr` + `tafsir-frontend-00305-q78`.
+- **Visual verification that Codex could not do.** Headless Chrome driven over the
+  DevTools protocol (Node 24's built-in WebSocket, no installs; driver kept in the
+  session scratchpad) at a 390px mobile viewport, entering guest mode, submitting
+  13:28 and switching tabs. Measured on the rendered DOM, not inferred from code:
+  * `.grecaptcha-badge` is `visibility: hidden`; attribution present.
+    `initializeRecaptchaConfig` is untouched, so Auth bot protection still runs.
+  * No `.floating-help-button`; **zero** visible `position: fixed` elements over the
+    answer; no horizontal page overflow.
+  * All three recommendation cards span 16-374px in a 390px viewport — stacked, none
+    clipped. Section headings share one 18px size.
+  * Zero off-palette hex accents (slate, blue, magenta, purple, violet, indigo, pink,
+    rose, emerald) left in `page.js` or `components/`. Progression stages now share one
+    neutral rule; the reflection card uses a grey label and a flat teal button.
+    Arabic verse, tafsir header bar and hadith card untouched as specified.
+- **Three fixups, found only by looking at the rendered page:**
+  1. **Recommendation reasons cut mid-word** ("those who tru"). `app.py` hard-sliced at
+     80 characters; the old one-line clamp hid it behind an ellipsis, and Unit 4 rightly
+     removed the clamp. Added `_shorten_on_word` (word boundary + ellipsis, never over
+     80, unchanged if it fits) and `tests/test_recommendation_reason.py`.
+     Recommendations are rebuilt at serve time, so cached answers benefit immediately.
+  2. **Doubled closing quote** on verses whose translation continues speech from a
+     neighbouring verse (13:28 closes a quotation opened in 13:27). New
+     `frontend/app/lib/scripture.js` `displayTranslation` drops only an *unmatched*
+     quote; balanced speech is preserved. Applied at all three render sites (main
+     view, shared page, annotation form). 7-case unit check passed.
+  3. **Bottom-nav Help item had no icon** beside icon-plus-label neighbours, so it
+     would sit misaligned for signed-in phone users. Added lucide `CircleHelp` at the
+     same 22px / 1.8 stroke. This was Claude's spec error: it said both "icon-free"
+     and "match the surrounding items exactly".
+- **Accepted, flagged:** the PWA install banner moved from a fixed bottom toast to
+  in-flow at the foot of the page. It no longer covers content but is less
+  discoverable. It only fires on Chrome/Android; Safari never shows it.
+- **Noticed, pre-existing, not from this session:** the rotating quick-select chips in
+  `SurahVersePicker` truncate long labels with an ellipsis at phone width
+  ("Nothing Resembles Alla…"). Worth a small follow-up.
+- **Correction to my own output during review:** a sample of five verses' quote
+  balance returned empty text for four of them because the local guest rate limit
+  (10/hr) had been hit. Those rows were discarded; only 13:28 was a valid data point.
+- **Ready to ship together:** Session 10 backend (notice, titles, emoji, and the
+  unshipped `/topics/resolve`) + Session 10/11 frontend + these fixups. Awaiting
+  Ahmed's device review of the merged build, then backend + frontend deploy and the
+  AI.md checklist.
+
 ### 2026-10-01 — Codex: Session 11 combined local review
 
 - **Checked-out review branch:** `codex/s11-preview` (local only, based on `main`
