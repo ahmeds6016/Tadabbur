@@ -1143,6 +1143,15 @@ button:hover:not(:disabled) {
   letter-spacing: 0.01em;
 }
 
+/* Shared type scale for answer sections at every viewport width. */
+.results-container .answer-section-heading {
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: normal;
+  margin: 0 0 12px;
+}
+
 /* Failed verse lookup and its related-theme continuation share result-card tokens. */
 .lookup-clarification {
   padding: 24px;

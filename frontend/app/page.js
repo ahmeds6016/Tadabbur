@@ -3030,7 +3030,7 @@ function EnhancedResultsDisplay({
           aria-label="Sources used for this answer"
           style={{ marginBottom: '16px' }}
         >
-          <h2>Sources used for this answer</h2>
+          <h2 className="answer-section-heading">Sources used for this answer</h2>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
             {source_coverage.classical?.ibn_kathir && (
               <span className="source-badge">Ibn Kathir</span>
@@ -3139,7 +3139,7 @@ function EnhancedResultsDisplay({
                 {/* Related Verses embedded within Tafsir tab */}
                 {cross_references.length > 0 && (
                   <div style={{ marginTop: '24px' }}>
-                    <h3 style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '12px' }}>
+                    <h3 className="answer-section-heading">
                       {cross_references.length === 1 ? 'Related Verse' : 'Related Verses'}
                     </h3>
           <div className="cross-references">
@@ -3187,7 +3187,7 @@ function EnhancedResultsDisplay({
                 {/* Hadith section - separate from Related Verses */}
                 {hadith.length > 0 && (
                   <div style={{ marginTop: '24px' }}>
-                    <h3 style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '12px' }}>
+                    <h3 className="answer-section-heading">
                       Hadith
                     </h3>
                     <div className="hadith-references" style={{ display: 'grid', gap: '12px' }}>
