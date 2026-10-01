@@ -68,7 +68,7 @@ export default function PWAProvider({ children }) {
         <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96
                         z-50 animate-slide-up"
              style={{
-               background: 'linear-gradient(135deg, #0D9488 0%, #1E3A5F 100%)',
+               background: 'var(--primary-teal)',
                boxShadow: '0 8px 32px rgba(30, 58, 95, 0.25)',
                borderRadius: '12px',
                border: '1px solid rgba(212, 175, 55, 0.2)'
@@ -94,8 +94,8 @@ export default function PWAProvider({ children }) {
                   className="px-4 py-2 rounded-md text-sm font-medium
                            transition-all duration-200 transform hover:scale-105"
                   style={{
-                    background: 'linear-gradient(135deg, #D4AF37 0%, #F4E4C1 100%)',
-                    color: '#1E3A5F',
+                    background: 'var(--gold-light)',
+                    color: 'var(--primary-teal-dark)',
                     boxShadow: '0 2px 8px rgba(212, 175, 55, 0.3)'
                   }}
                 >

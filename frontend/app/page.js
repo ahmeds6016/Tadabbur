@@ -270,7 +270,7 @@ function AuthComponent({ onGuestBrowse }) {
                   style={{ width: '100%' }}
                 />
                 {firstNameError && (
-                  <p style={{ color: '#dc2626', fontSize: '0.85rem', margin: '4px 0 0 0' }}>
+                  <p style={{ color: 'var(--gold-text)', fontSize: '0.85rem', margin: '4px 0 0 0' }}>
                     {firstNameError}
                   </p>
                 )}
@@ -278,7 +278,7 @@ function AuthComponent({ onGuestBrowse }) {
                   <div style={{
                     marginTop: '8px',
                     padding: '12px 16px',
-                    background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
+                    background: 'var(--color-surface)',
                     borderRadius: '10px',
                     border: '1px solid var(--primary-teal)',
                     position: 'relative',
@@ -475,7 +475,7 @@ function AuthComponent({ onGuestBrowse }) {
                 width: '64px',
                 height: '64px',
                 borderRadius: '50%',
-                background: 'rgba(5, 150, 105, 0.1)',
+                background: 'color-mix(in srgb, var(--primary-teal) 10%, transparent)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -686,7 +686,7 @@ function OnboardingComponent({ user, onProfileComplete }) {
           textAlign: 'center',
           marginBottom: '20px',
           padding: '16px',
-          background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
+          background: 'var(--color-surface)',
           borderRadius: '12px',
           border: '2px solid var(--primary-teal)'
         }}>
@@ -1580,11 +1580,11 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
       if (successful) {
         // Show success notification
         button.innerHTML = 'Copied!';
-        button.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+        button.style.background = 'var(--primary-teal)';
 
         setTimeout(() => {
           button.innerHTML = originalText;
-          button.style.background = 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)';
+          button.style.background = 'var(--primary-teal)';
         }, 2000);
       } else {
         throw new Error('Copy command failed');
@@ -1595,11 +1595,11 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
 
       // Show error in button
       button.innerHTML = 'Copy Failed';
-      button.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+      button.style.background = 'var(--primary-teal)';
 
       setTimeout(() => {
         button.innerHTML = originalText;
-        button.style.background = 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)';
+        button.style.background = 'var(--primary-teal)';
       }, 2000);
     }
   };
@@ -1646,14 +1646,14 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
           });
 
           button.innerHTML = 'Shared!';
-          button.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+          button.style.background = 'var(--primary-teal)';
           if (!onboardingState.hasSharedContent) {
             markStepComplete('hasSharedContent');
           }
 
           setTimeout(() => {
             button.innerHTML = originalText;
-            button.style.background = 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)';
+            button.style.background = 'var(--primary-teal)';
             button.disabled = false;
           }, 2000);
           return;
@@ -1661,7 +1661,7 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
           // User cancelled - this is normal, just reset button silently
           if (shareErr.name === 'AbortError') {
             button.innerHTML = originalText;
-            button.style.background = 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)';
+            button.style.background = 'var(--primary-teal)';
             button.disabled = false;
             return; // Exit gracefully, no error message
           }
@@ -1676,14 +1676,14 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
           await navigator.clipboard.writeText(shareUrl);
 
           button.innerHTML = 'Link Copied!';
-          button.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+          button.style.background = 'var(--primary-teal)';
           if (!onboardingState.hasSharedContent) {
             markStepComplete('hasSharedContent');
           }
 
           setTimeout(() => {
             button.innerHTML = originalText;
-            button.style.background = 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)';
+            button.style.background = 'var(--primary-teal)';
             button.disabled = false;
           }, 2000);
         } catch (clipboardErr) {
@@ -1708,14 +1708,14 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
 
           if (successful) {
             button.innerHTML = 'Link Copied!';
-            button.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+            button.style.background = 'var(--primary-teal)';
             if (!onboardingState.hasSharedContent) {
               markStepComplete('hasSharedContent');
             }
 
             setTimeout(() => {
               button.innerHTML = originalText;
-              button.style.background = 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)';
+              button.style.background = 'var(--primary-teal)';
               button.disabled = false;
             }, 2000);
           } else {
@@ -1731,11 +1731,11 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
 
       // Show error in button
       button.innerHTML = 'Share Failed - Tap to retry';
-      button.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+      button.style.background = 'var(--primary-teal)';
 
       setTimeout(() => {
         button.innerHTML = originalText;
-        button.style.background = 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)';
+        button.style.background = 'var(--primary-teal)';
         button.disabled = false;
       }, 3000);
     }
@@ -1909,8 +1909,8 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
               .daily-verse-card {
                 width: 100%;
                 padding: 16px 20px;
-                background: linear-gradient(135deg, #f0fdf4 0%, #f0f9ff 100%);
-                border: 1px solid #d1fae5;
+                background: var(--color-surface);
+                border: 1px solid var(--color-border);
                 border-radius: 14px;
                 text-align: left;
                 cursor: pointer;
@@ -2249,7 +2249,7 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
               <div style={{
                 margin: '24px 0',
                 padding: '20px',
-                background: 'linear-gradient(135deg, #f0f9f4 0%, #e8f5e9 100%)',
+                background: 'var(--color-surface)',
                 borderRadius: '12px',
                 border: '1px solid var(--primary-teal)',
                 textAlign: 'center',
@@ -2780,10 +2780,10 @@ function InlineAnnotationForm({ verse, user, onSaved, onCancel }) {
       {error && (
         <div style={{
           padding: '10px',
-          background: 'rgba(220, 38, 38, 0.1)',
-          border: '2px solid var(--error-color)',
+          background: 'color-mix(in srgb, var(--gold-text) 10%, transparent)',
+          border: '2px solid var(--gold-text)',
           borderRadius: '8px',
-          color: 'var(--error-color)',
+          color: 'var(--gold-text)',
           marginBottom: '12px',
           fontSize: '0.9rem',
           fontWeight: '600'
@@ -2815,7 +2815,7 @@ function InlineAnnotationForm({ verse, user, onSaved, onCancel }) {
           disabled={isSaving || !content.trim()}
           style={{
             padding: '10px 24px',
-            background: isSaving || !content.trim() ? '#ccc' : 'var(--gradient-teal-gold)',
+            background: isSaving || !content.trim() ? '#ccc' : 'var(--primary-teal)',
             border: 'none',
             color: 'white',
             borderRadius: '8px',
@@ -3230,8 +3230,8 @@ function EnhancedResultsDisplay({
                     gap: '12px',
                     padding: '14px 16px',
                     marginTop: '20px',
-                    background: 'rgba(124, 58, 237, 0.08)',
-                    border: '1px solid rgba(124, 58, 237, 0.2)',
+                    background: 'color-mix(in srgb, var(--primary-teal) 8%, transparent)',
+                    border: '1px solid color-mix(in srgb, var(--primary-teal) 20%, transparent)',
                     borderRadius: '12px',
                   }}>
                     <div style={{ flex: 1 }}>
@@ -3240,7 +3240,7 @@ function EnhancedResultsDisplay({
                         fontWeight: 700,
                         textTransform: 'uppercase',
                         letterSpacing: '0.08em',
-                        color: '#7c3aed',
+                        color: 'var(--color-text-secondary)',
                         margin: '0 0 6px 0',
                       }}>Reflection</p>
                       <p style={{
@@ -3265,7 +3265,7 @@ function EnhancedResultsDisplay({
                         }}
                         style={{
                           padding: '8px 18px',
-                          background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                          background: 'var(--primary-teal)',
                           color: 'white',
                           border: 'none',
                           borderRadius: '20px',
@@ -3315,8 +3315,8 @@ function EnhancedResultsDisplay({
                 {/* Synthesis type: single narrative body */}
                 {lesson.type === 'synthesis' && lesson.body && (
                   <div style={{
-                    background: 'rgba(14, 165, 233, 0.08)',
-                    borderLeft: '3px solid #0ea5e9',
+                    background: 'color-mix(in srgb, var(--primary-teal) 8%, transparent)',
+                    borderLeft: '3px solid var(--primary-teal)',
                     padding: '12px 14px',
                     borderRadius: '4px',
                     fontSize: '0.95rem',
@@ -3332,12 +3332,12 @@ function EnhancedResultsDisplay({
                   <div style={{ display: 'grid', gap: '10px' }}>
                     {lesson.core_principle && (
                       <div style={{
-                        background: 'rgba(16, 185, 129, 0.08)',
-                        borderLeft: '3px solid #10b981',
+                        background: 'color-mix(in srgb, var(--primary-teal) 8%, transparent)',
+                        borderLeft: '3px solid var(--primary-teal)',
                         padding: '10px 12px',
                         borderRadius: '4px'
                       }}>
-                        <div style={{ fontSize: '0.7rem', fontWeight: '700', color: '#10b981', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        <div style={{ fontSize: '0.7rem', fontWeight: '700', color: 'var(--primary-teal)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                           Core Principle
                         </div>
                         <div style={{ fontSize: '0.95rem', color: 'var(--foreground)', lineHeight: '1.6' }}>
@@ -3347,12 +3347,12 @@ function EnhancedResultsDisplay({
                     )}
                     {lesson.contemplation && (
                       <div style={{
-                        background: 'rgba(168, 85, 247, 0.08)',
-                        borderLeft: '3px solid #a855f7',
+                        background: 'color-mix(in srgb, var(--primary-teal) 8%, transparent)',
+                        borderLeft: '3px solid var(--primary-teal)',
                         padding: '10px 12px',
                         borderRadius: '4px'
                       }}>
-                        <div style={{ fontSize: '0.7rem', fontWeight: '700', color: '#a855f7', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        <div style={{ fontSize: '0.7rem', fontWeight: '700', color: 'var(--primary-teal)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                           Contemplation
                         </div>
                         <div style={{ fontSize: '0.95rem', color: 'var(--foreground)', lineHeight: '1.6', fontStyle: 'italic' }}>
@@ -3383,12 +3383,12 @@ function EnhancedResultsDisplay({
                   <div style={{ display: 'grid', gap: '10px' }}>
                     {lesson.baseline && (
                       <div style={{
-                        background: 'rgba(148, 163, 184, 0.08)',
-                        borderLeft: '3px solid #94a3b8',
+                        background: 'var(--color-surface)',
+                        borderLeft: '3px solid var(--color-border)',
                         padding: '10px 12px',
                         borderRadius: '4px'
                       }}>
-                        <div style={{ fontSize: '0.7rem', fontWeight: '700', color: '#94a3b8', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        <div style={{ fontSize: '0.7rem', fontWeight: '700', color: 'var(--color-text-secondary)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                           The Baseline
                         </div>
                         <div style={{ fontSize: '0.95rem', color: 'var(--foreground)', lineHeight: '1.6' }}>
@@ -3398,12 +3398,12 @@ function EnhancedResultsDisplay({
                     )}
                     {lesson.ascent && (
                       <div style={{
-                        background: 'rgba(59, 130, 246, 0.08)',
-                        borderLeft: '3px solid #3b82f6',
+                        background: 'var(--color-surface)',
+                        borderLeft: '3px solid var(--color-border)',
                         padding: '10px 12px',
                         borderRadius: '4px'
                       }}>
-                        <div style={{ fontSize: '0.7rem', fontWeight: '700', color: '#3b82f6', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        <div style={{ fontSize: '0.7rem', fontWeight: '700', color: 'var(--color-text-secondary)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                           The Ascent
                         </div>
                         <div style={{ fontSize: '0.95rem', color: 'var(--foreground)', lineHeight: '1.6' }}>
@@ -3413,12 +3413,12 @@ function EnhancedResultsDisplay({
                     )}
                     {lesson.peak && (
                       <div style={{
-                        background: 'rgba(217, 70, 239, 0.08)',
-                        borderLeft: '3px solid #d946ef',
+                        background: 'var(--color-surface)',
+                        borderLeft: '3px solid var(--color-border)',
                         padding: '10px 12px',
                         borderRadius: '4px'
                       }}>
-                        <div style={{ fontSize: '0.7rem', fontWeight: '700', color: '#d946ef', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        <div style={{ fontSize: '0.7rem', fontWeight: '700', color: 'var(--color-text-secondary)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                           The Peak
                         </div>
                         <div style={{ fontSize: '0.95rem', color: 'var(--foreground)', lineHeight: '1.6' }}>
@@ -3434,8 +3434,8 @@ function EnhancedResultsDisplay({
                   <>
                     {lesson.example && (
                       <div style={{
-                        background: 'rgba(16, 185, 129, 0.08)',
-                        borderLeft: '3px solid #10b981',
+                        background: 'color-mix(in srgb, var(--primary-teal) 8%, transparent)',
+                        borderLeft: '3px solid var(--primary-teal)',
                         padding: '10px 12px',
                         marginBottom: '12px',
                         borderRadius: '4px'

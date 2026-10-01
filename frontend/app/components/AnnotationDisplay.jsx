@@ -4,22 +4,22 @@ import ConfirmDialog from './ConfirmDialog';
 
 const ANNOTATION_TYPE_CONFIG = {
   personal_insight: { label: 'Insight', color: '#0D9488' },
-  question: { label: 'Question', color: '#8B5CF6' },
-  application: { label: 'Application', color: '#059669' },
-  memory: { label: 'Memory', color: '#3B82F6' },
+  question: { label: 'Question', color: 'var(--primary-teal)' },
+  application: { label: 'Application', color: 'var(--primary-teal)' },
+  memory: { label: 'Memory', color: 'var(--primary-teal)' },
   connection: { label: 'Connection', color: '#D97706' },
-  dua: { label: 'Dua/Prayer', color: '#10B981' },
+  dua: { label: 'Dua/Prayer', color: 'var(--primary-teal)' },
   gratitude: { label: 'Gratitude', color: '#F59E0B' },
-  reminder: { label: 'Reminder', color: '#EF4444' },
-  story: { label: 'Story', color: '#6366F1' },
-  linguistic: { label: 'Linguistic', color: '#84CC16' },
-  historical: { label: 'Historical', color: '#A78BFA' },
-  scientific: { label: 'Scientific', color: '#06B6D4' },
-  personal_experience: { label: 'Experience', color: '#EC4899' },
-  teaching_point: { label: 'Teaching', color: '#F97316' },
-  warning: { label: 'Warning', color: '#DC2626' },
-  goal: { label: 'Goal', color: '#059669' },
-  contemplation: { label: 'Contemplation', color: '#7C3AED' }
+  reminder: { label: 'Reminder', color: 'var(--gold-text)' },
+  story: { label: 'Story', color: 'var(--primary-teal)' },
+  linguistic: { label: 'Linguistic', color: 'var(--primary-teal)' },
+  historical: { label: 'Historical', color: 'var(--primary-teal)' },
+  scientific: { label: 'Scientific', color: 'var(--primary-teal)' },
+  personal_experience: { label: 'Experience', color: 'var(--primary-teal)' },
+  teaching_point: { label: 'Teaching', color: 'var(--gold-text)' },
+  warning: { label: 'Warning', color: 'var(--gold-text)' },
+  goal: { label: 'Goal', color: 'var(--primary-teal)' },
+  contemplation: { label: 'Contemplation', color: 'var(--primary-teal)' }
 };
 
 // Helper function to get config for any type (including custom ones)
@@ -136,7 +136,7 @@ export default function AnnotationDisplay({
                     style={{
                       background: 'transparent',
                       border: 'none',
-                      color: 'var(--error-color)',
+                      color: 'var(--gold-text)',
                       cursor: 'pointer',
                       fontSize: '1.2rem',
                       padding: '4px 8px'
