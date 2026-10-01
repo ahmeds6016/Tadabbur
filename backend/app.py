@@ -5031,6 +5031,15 @@ def get_badges():
 # PERSONALIZED RECOMMENDATIONS
 # ============================================================================
 
+def _shorten_on_word(text, limit):
+    """Trim to `limit` characters on a word boundary, marking the cut with an ellipsis."""
+    text = " ".join(str(text).split())
+    if len(text) <= limit:
+        return text
+    cut = text[:limit - 1].rsplit(" ", 1)[0].rstrip(" ,;:.-")
+    return f"{cut or text[:limit - 1]}…"
+
+
 def _generate_recommendations(surah, verse, final_json):
     """Generate deterministic verse recommendations based on cross-refs and themes."""
     recs = []
@@ -5044,7 +5053,7 @@ def _generate_recommendations(surah, verse, final_json):
             s, v = int(match.group(1)), int(match.group(2))
             sname = QURAN_METADATA.get(s, {}).get("name", f"Surah {s}")
             recs.append({"surah": s, "verse": v, "surah_name": sname,
-                         "reason": ref.get("relevance", "Related verse")[:80]})
+                         "reason": _shorten_on_word(ref.get("relevance", "Related verse"), 80)})
             seen.add(ref_str)
 
     # 2. Collection-based: if this verse is in a themed collection, suggest next verse

@@ -42,6 +42,7 @@ import { useOnboarding } from './hooks/useOnboarding';
 import onboardingConfig from '../config/onboarding-messages.json';
 import { getNameInfo, validateFirstName } from './utils/nameInfo';
 import { reportBackendFailure, reportBackendSuccess } from './lib/backendHealth';
+import { displayTranslation } from './lib/scripture';
 
 // ============================================================================
 // MAIN COMPONENT
@@ -3084,7 +3085,7 @@ function EnhancedResultsDisplay({
                     <p className="arabic-text" lang="ar" dir="rtl">{verse.arabic_text}</p>
                   )}
                   <p className="translation">
-                    <em>&quot;{verse.text_saheeh_international}&quot;</em>
+                    <em>&quot;{displayTranslation(verse.text_saheeh_international)}&quot;</em>
                   </p>
 
                   {/* Inline Annotation Form */}

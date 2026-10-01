@@ -5,6 +5,7 @@ import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
 import remarkBreaks from 'remark-breaks';
 import { BACKEND_URL } from '../../lib/config';
+import { displayTranslation } from '../../lib/scripture';
 
 export default function SharedPage() {
   const params = useParams();
@@ -147,7 +148,7 @@ export default function SharedPage() {
                     <p className="arabic-text" lang="ar" dir="rtl">{verse.arabic_text}</p>
                   )}
                   <p className="translation">
-                    <em>&quot;{verse.text_saheeh_international}&quot;</em>
+                    <em>&quot;{displayTranslation(verse.text_saheeh_international)}&quot;</em>
                   </p>
                 </div>
               ))}

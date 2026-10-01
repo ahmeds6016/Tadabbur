@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { BACKEND_URL } from '../lib/config';
+import { displayTranslation } from '../lib/scripture';
 
 const ANNOTATION_TYPES = [
   { value: 'personal_insight', label: 'Personal Insight' },
@@ -196,7 +197,7 @@ export default function AnnotationForm({
       {verse?.text_saheeh_international && reflectionType === 'verse' && (
         <div className="context-display">
           <label>Verse Text:</label>
-          <p className="verse-text">"{verse.text_saheeh_international}"</p>
+          <p className="verse-text">"{displayTranslation(verse.text_saheeh_international)}"</p>
         </div>
       )}
 
