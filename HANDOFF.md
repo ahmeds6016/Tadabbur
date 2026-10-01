@@ -196,6 +196,31 @@ Q14. **✅ DEPLOYED 2026-08-13 — Reliability quick wins**
 
 ## Session log
 
+### 2026-10-01 — Codex: Session 11 Unit 3 — restrained brand palette
+
+- **Branch:** `codex/s11-palette`; **implementation commit:** `6296694`.
+  Independent from `main`; frontend only, pipeline **15.1** unchanged.
+- **Screen for Ahmed's device review:** Baseline, Ascent and Peak have identical
+  neutral surfaces, 3px border-colour left rules and secondary-text labels. Their
+  names and vertical order distinguish them. Reflection has a quiet teal tint,
+  secondary-text label and flat teal sign-in button. Synthesis/contemplation cards,
+  annotation categories, badges, menus and status accents use teal/gold/neutral
+  colours; labels and icons still convey their existing meanings. Share, copy,
+  annotation, introduction, feedback and install controls have flat backgrounds.
+  Arabic verse typography, source header and hadith-card presentation are preserved.
+- **Verification:** `npm run build` passed (14 static pages);
+  `python3 -m pytest backend/tests -q -W error::DeprecationWarning` passed:
+  **441 passed, 0 skipped, 0 deprecation warnings**. `git diff --check` passed.
+  Audited remaining hex colours: teal, gold and neutrals. Token-based badge tints
+  use `color-mix` instead of appending hex alpha to CSS variable strings.
+- **Independent-unit boundary:** the obsolete floating help export is left intact
+  on this branch to avoid colliding with Unit 2, which deletes it entirely. Its
+  gradient disappears with Unit 2. Non-interactive manuscript/shimmer decoration
+  remains. No copy semantics, API/backend behaviour or dependencies changed.
+- **Pending:** device/browser visual review remains unverified: computer-use access
+  is blocked by macOS Accessibility/Screen Recording permissions. No live/paid
+  calls, credentials, deployment or backend changes. **Deploy needed: frontend.**
+
 ### 2026-09-28 — Claude: Session 10 all four units reviewed and MERGED; backend verified, frontend deploy HELD
 
 - **Merged to `main`** (`1ac46bf`, `5cce098`, `7d34c1b`, `5b4a0c9`): 441 offline tests
