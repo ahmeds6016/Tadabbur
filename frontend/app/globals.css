@@ -1143,6 +1143,15 @@ button:hover:not(:disabled) {
   letter-spacing: 0.01em;
 }
 
+/* Shared type scale for answer sections at every viewport width. */
+.results-container .answer-section-heading {
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: normal;
+  margin: 0 0 12px;
+}
+
 /* Failed verse lookup and its related-theme continuation share result-card tokens. */
 .lookup-clarification {
   padding: 24px;
@@ -2061,4 +2070,21 @@ summary:focus-visible {
   .card.main-app {
     padding: 0;
   }
+}
+
+/* Keep Firebase bot protection active; attribution replaces its floating badge. */
+.grecaptcha-badge { visibility: hidden; }
+
+.recaptcha-attribution {
+  margin: 24px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  line-height: 1.6;
+  text-align: center;
+}
+
+.recaptcha-attribution a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }

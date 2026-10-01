@@ -196,6 +196,120 @@ Q14. **✅ DEPLOYED 2026-08-13 — Reliability quick wins**
 
 ## Session log
 
+### 2026-10-01 — Codex: Session 11 combined local review
+
+- **Checked-out review branch:** `codex/s11-preview` (local only, based on `main`
+  `e525b4d`). All four independently reviewable unit branches remain available.
+  Combined implementation commits are `f4b9c67`, `5291315`, `34a10d9`, `72bfbd3`.
+  The only cherry-pick conflict was adjacent imports: kept RecaptchaAttribution and
+  the default HelpMenu import, dropping FloatingHelpButton as specified. `main`
+  remains unchanged. No deployment or push was performed.
+- **Combined verification:** production build passed (14 static pages); existing
+  frontend topic lifecycle tests **4 passed**; backend **441 passed, 0 skipped,
+  0 deprecation warnings** under `-W error::DeprecationWarning`; diff check clean.
+  No changes to backend files or `frontend/app/lib/firebase.js`, including
+  `initializeRecaptchaConfig(auth)`. Pipeline **15.1** unchanged.
+- **Device review still required:** confirm the badge is absent, attribution visible,
+  local sign-in works, Help opens through nav/F1, and a complete answer scrolls to
+  its final recommendation without obstruction at iPhone widths. Check the new
+  heading scale and colour restraint in light/dark appearance, plus wide-screen
+  recommendation snapping. Browser inventory is empty and native UI access was
+  blocked by macOS permissions; no visual/auth pass is claimed. No paid calls or
+  secrets were used. All four units need **frontend-only deployment**, after review.
+
+### 2026-10-01 — Codex: Session 11 Unit 4 — recommendations and answer hierarchy
+
+- **Branch:** `codex/s11-recs`; **implementation commit:** `b67ec28`.
+  Independent from `main`; frontend only, pipeline **15.1** unchanged.
+- **Screen for Ahmed's device review:** at viewport widths up to 640px, Continue
+  reflecting shows one full-width card per row. References and reasons wrap fully,
+  without ellipsis or a one-line clamp. Wider screens retain a horizontal row with
+  mandatory scroll snapping, 8px side padding/scroll padding and an available thin
+  scrollbar. Continue reflecting, Hadith, Related Verses, source coverage and desktop
+  answer-section headings share `answer-section-heading`: 1.125rem, weight 600,
+  line-height 1.4. Arabic text, tafsir source bars and hadith cards are unchanged.
+- **Overlap audit:** found an additional conditional PWA install banner fixed over
+  the page bottom; it now appears after content in normal flow, with bottom space
+  for the navigation/safe area. Install/dismiss behaviour and copy are unchanged.
+  BottomNav already reserves 52px plus the device safe area. Units 1 and 2 remove
+  the persistent badge/help overlays. Intentional user-triggered dialogs, text
+  selection controls and transient notifications remain; Next's development
+  indicator is untouched.
+- **Verification:** `npm run build` passed (14 static pages);
+  `python3 -m pytest backend/tests -q -W error::DeprecationWarning` passed:
+  **441 passed, 0 skipped, 0 deprecation warnings**. `git diff --check` passed.
+  Reviewed null filtering and verse callbacks: unchanged. No API/backend files,
+  dependencies or content semantics changed. No live/paid probes or deployment.
+- **Pending:** actual iPhone/desktop bottom-of-answer scrolling, badge visibility
+  and local sign-in remain manual review items. Browser inventory is still empty;
+  native computer use previously reported missing macOS Accessibility/Screen
+  Recording permissions. Source/build checks are not a device visual test.
+  **Deploy needed: frontend.**
+
+### 2026-10-01 — Codex: Session 11 Unit 3 — restrained brand palette
+
+- **Branch:** `codex/s11-palette`; **implementation commit:** `6296694`.
+  Independent from `main`; frontend only, pipeline **15.1** unchanged.
+- **Screen for Ahmed's device review:** Baseline, Ascent and Peak have identical
+  neutral surfaces, 3px border-colour left rules and secondary-text labels. Their
+  names and vertical order distinguish them. Reflection has a quiet teal tint,
+  secondary-text label and flat teal sign-in button. Synthesis/contemplation cards,
+  annotation categories, badges, menus and status accents use teal/gold/neutral
+  colours; labels and icons still convey their existing meanings. Share, copy,
+  annotation, introduction, feedback and install controls have flat backgrounds.
+  Arabic verse typography, source header and hadith-card presentation are preserved.
+- **Verification:** `npm run build` passed (14 static pages);
+  `python3 -m pytest backend/tests -q -W error::DeprecationWarning` passed:
+  **441 passed, 0 skipped, 0 deprecation warnings**. `git diff --check` passed.
+  Audited remaining hex colours: teal, gold and neutrals. Token-based badge tints
+  use `color-mix` instead of appending hex alpha to CSS variable strings.
+- **Independent-unit boundary:** the obsolete floating help export is left intact
+  on this branch to avoid colliding with Unit 2, which deletes it entirely. Its
+  gradient disappears with Unit 2. Non-interactive manuscript/shimmer decoration
+  remains. No copy semantics, API/backend behaviour or dependencies changed.
+- **Pending:** device/browser visual review remains unverified: computer-use access
+  is blocked by macOS Accessibility/Screen Recording permissions. No live/paid
+  calls, credentials, deployment or backend changes. **Deploy needed: frontend.**
+
+### 2026-09-28 — Codex: Session 11 Unit 2 — help in navigation
+
+- **Branch:** `codex/s11-fab`; **implementation:** `b3f98a4`.
+  Removed the sole FloatingHelpButton caller, named import, unused export, and its
+  entire fixed-circle style block. No other screen imported or rendered it.
+- **Appearance:** Help is a plain, icon-free item with the existing desktop nav-item
+  styling (also visible when collapsed) and the mobile bottom-nav label styling.
+  Guests receive a plain Help action alongside the header account controls because
+  their side/bottom navigation is intentionally hidden. No floating control covers
+  answer text. Other screens' BottomNav calls are unchanged (onHelp is optional).
+- **Keyboard detail:** source inspection found F1 only in the old tooltip, not in
+  a key handler. F1 now directly opens the retained HelpMenu, including while typing.
+  Existing Alt+H finds the new help-toggle entry; all other shortcuts are unchanged.
+- **Verified:** frontend build passes; backend suite **441 passed, 0 skips/warnings**
+  with deprecations as errors; no FloatingHelpButton references remain; diff clean.
+  Native UI verification remains blocked by computer-use permissions; no device
+  visual/keyboard pass claimed. No backend/API/auth/pipeline change (**15.1**).
+- **Next:** Claude review and Ahmed device check; frontend-only deploy when authorized.
+  Nothing deployed; independent branch from main.
+
+### 2026-09-28 — Codex: Session 11 Unit 1 — reCAPTCHA badge attribution
+
+- **Branch:** `codex/s11-recaptcha`; **implementation:** `563c3e8`.
+  Added `.grecaptcha-badge { visibility: hidden; }`. Firebase initialization,
+  `initializeRecaptchaConfig(auth)`, and all auth handlers are unchanged.
+- **Appearance:** the bottom-right floating badge is hidden by CSS. The complete
+  Google attribution appears as 0.75rem secondary text below every auth mode
+  (sign-up, sign-in, password reset) and in the main app's in-flow footer. Both
+  policy links are underlined, open a new tab, and use `noopener noreferrer`.
+- **Verified:** frontend production build passes; offline backend suite **441 passed,
+  0 skips, 0 warnings** with deprecations as errors; diff check clean. No backend,
+  API, Firebase configuration, dependency, or pipeline change (**15.1**).
+- **Local verification limit:** computer-use native Chrome inspection is blocked by
+  pending Accessibility/Screen Recording permissions; no successful local sign-in
+  or visual badge check is claimed. Ahmed should confirm both before deployment.
+  No credentials were accessed and no auth account was created or modified.
+- **Next:** Claude review and local device/auth check; frontend-only deploy when
+  authorized. Nothing deployed. Independent branch from main.
+
 ### 2026-09-28 — Claude: Session 10 all four units reviewed and MERGED; backend verified, frontend deploy HELD
 
 - **Merged to `main`** (`1ac46bf`, `5cce098`, `7d34c1b`, `5b4a0c9`): 441 offline tests

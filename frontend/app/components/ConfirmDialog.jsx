@@ -173,12 +173,12 @@ export default function ConfirmDialog({
           }
 
           .confirm-btn-danger {
-            background: #ef4444;
+            background: var(--gold-text);
             color: white;
           }
 
           .confirm-btn-danger:hover {
-            background: #dc2626;
+            background: var(--gold-text);
           }
 
           .confirm-btn-warning {

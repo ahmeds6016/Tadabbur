@@ -8,20 +8,20 @@ import { BACKEND_URL } from '../lib/config';
 
 // Color palette for badge icons
 const BADGE_COLORS = {
-  fire: '#EF4444',
-  calendar: '#2563EB',
+  fire: 'var(--gold-text)',
+  calendar: 'var(--primary-teal)',
   star: '#EAB308',
-  search: '#8B5CF6',
-  brain: '#EC4899',
-  graduation: '#059669',
-  compass: '#0891B2',
-  globe: '#6366F1',
+  search: 'var(--primary-teal)',
+  brain: 'var(--primary-teal)',
+  graduation: 'var(--primary-teal)',
+  compass: 'var(--primary-teal)',
+  globe: 'var(--primary-teal)',
   pen: '#D97706',
-  heart: '#F43F5E',
+  heart: 'var(--gold-text)',
   crown: '#B45309',
   book: '#0D9488',
   trophy: '#D4AF37',
-  rocket: '#7C3AED',
+  rocket: 'var(--primary-teal)',
 };
 
 // Lucide icon mapping for each badge type
@@ -49,7 +49,7 @@ function BadgeIcon({ iconKey, size = 40 }) {
   const iconSize = Math.round(size * 0.5);
   return (
     <span style={{
-      background: `${color}15`,
+      background: `color-mix(in srgb, ${color} 8%, transparent)`,
       width: size,
       height: size,
       borderRadius: size > 30 ? 12 : 6,
@@ -212,7 +212,7 @@ export default function BadgeDisplay({ user, compact = false }) {
           .badge-error {
             text-align: center;
             padding: 16px;
-            color: #b91c1c;
+            color: var(--gold-text);
             font-size: 0.85rem;
             display: flex;
             flex-direction: column;

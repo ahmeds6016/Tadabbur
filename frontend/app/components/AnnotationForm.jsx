@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { BACKEND_URL } from '../lib/config';
+import { displayTranslation } from '../lib/scripture';
 
 const ANNOTATION_TYPES = [
   { value: 'personal_insight', label: 'Personal Insight' },
@@ -196,7 +197,7 @@ export default function AnnotationForm({
       {verse?.text_saheeh_international && reflectionType === 'verse' && (
         <div className="context-display">
           <label>Verse Text:</label>
-          <p className="verse-text">"{verse.text_saheeh_international}"</p>
+          <p className="verse-text">"{displayTranslation(verse.text_saheeh_international)}"</p>
         </div>
       )}
 
@@ -475,10 +476,10 @@ export default function AnnotationForm({
           align-items: center;
           gap: 6px;
           padding: 8px 12px;
-          background: rgba(5, 150, 105, 0.08);
+          background: color-mix(in srgb, var(--primary-teal) 8%, transparent);
           border-radius: 6px;
           font-size: 0.75rem;
-          color: var(--color-secondary-light, #15803d);
+          color: var(--primary-teal-dark);
           margin-bottom: 20px;
         }
 
@@ -489,10 +490,10 @@ export default function AnnotationForm({
         /* Error Message */
         .error-message {
           padding: 12px;
-          background: #fee2e2;
-          border: 1px solid #fca5a5;
+          background: var(--gold-light);
+          border: 1px solid var(--gold);
           border-radius: 8px;
-          color: #dc2626;
+          color: var(--gold-text);
           font-size: 0.875rem;
         }
 

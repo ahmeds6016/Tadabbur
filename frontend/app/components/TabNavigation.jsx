@@ -122,7 +122,7 @@ export default function TabNavigation({
             <header className="desktop-section-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1 }}>
                 <span className="tab-icon">{tab.icon}</span>
-                <h2 className="tab-label">{tab.label}</h2>
+                <h2 className="answer-section-heading">{tab.label}</h2>
               </div>
               {onReflect && tab.sectionName && (
                 <div className="section-dots-area" ref={openDesktopMenu === index ? desktopMenuRef : null}>
@@ -194,9 +194,7 @@ export default function TabNavigation({
             font-size: 1.4rem;
           }
 
-          .desktop-section-header .tab-label {
-            font-size: 1.1rem;
-            font-weight: 700;
+          .desktop-section-header .answer-section-heading {
             color: #065f46;
             margin: 0;
           }
@@ -251,8 +249,8 @@ export default function TabNavigation({
           }
 
           .section-dots-menu-item:hover {
-            background: #f5f3ff;
-            color: #7c3aed;
+            background: var(--color-surface);
+            color: var(--primary-teal);
           }
 
           .section-dots-menu-item + .section-dots-menu-item {
@@ -488,7 +486,7 @@ export default function TabNavigation({
 
         .reflect-menu-item:hover,
         .reflect-menu-item:active {
-          background: #f5f3ff;
+          background: var(--color-surface);
         }
 
         .reflect-menu-item + .reflect-menu-item {

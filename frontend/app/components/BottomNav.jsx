@@ -1,8 +1,8 @@
 'use client';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, BookOpen, Star, FileText } from 'lucide-react';
+import { Home, BookOpen, Star, FileText, CircleHelp } from 'lucide-react';
 
-export default function BottomNav({ user }) {
+export default function BottomNav({ user, onHelp }) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -55,6 +55,12 @@ export default function BottomNav({ user }) {
               </button>
             );
           })}
+          {onHelp && (
+            <button type="button" className="nav-item help-toggle" onClick={onHelp} aria-label="Help">
+              <CircleHelp size={22} strokeWidth={1.8} />
+              <span className="nav-label">Help</span>
+            </button>
+          )}
         </div>
 
         <style jsx>{`

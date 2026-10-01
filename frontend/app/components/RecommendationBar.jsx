@@ -11,7 +11,7 @@ export default function RecommendationBar({ recommendations, onStudyVerse }) {
 
   return (
     <div className="recommendation-bar">
-      <h3 className="recommendation-header">Continue reflecting</h3>
+      <h3 className="answer-section-heading">Continue reflecting</h3>
       <div className="recommendation-scroll">
         {visibleRecommendations.map((rec, index) => (
           <button
@@ -48,29 +48,21 @@ export default function RecommendationBar({ recommendations, onStudyVerse }) {
           animation: fadeSlideIn 0.4s ease forwards;
         }
 
-        .recommendation-header {
-          font-size: 0.85rem;
-          font-weight: 600;
-          color: var(--deep-blue, #1e293b);
-          margin: 0 0 10px 4px;
-        }
-
         .recommendation-scroll {
           display: flex;
           gap: 10px;
           overflow-x: auto;
           scroll-snap-type: x mandatory;
-          padding: 4px 4px 12px;
+          scroll-padding-inline: 8px;
+          padding: 4px 8px 12px;
           -webkit-overflow-scrolling: touch;
-          scrollbar-width: none;
-        }
-
-        .recommendation-scroll::-webkit-scrollbar {
-          display: none;
+          scrollbar-width: thin;
         }
 
         .recommendation-pill {
-          flex-shrink: 0;
+          flex: 0 0 220px;
+          min-width: 0;
+          box-sizing: border-box;
           scroll-snap-align: start;
           display: flex;
           flex-direction: column;
@@ -81,7 +73,7 @@ export default function RecommendationBar({ recommendations, onStudyVerse }) {
           border-radius: 20px;
           cursor: pointer;
           text-align: left;
-          max-width: 220px;
+          max-width: 100%;
           transition: border-color 0.2s, box-shadow 0.2s;
           opacity: 0;
           animation: fadeSlideIn 0.4s ease forwards;
@@ -100,17 +92,28 @@ export default function RecommendationBar({ recommendations, onStudyVerse }) {
           font-size: 0.82rem;
           font-weight: 600;
           color: var(--primary-teal, #0d9488);
-          white-space: nowrap;
+          white-space: normal;
+          overflow-wrap: anywhere;
         }
 
         .pill-reason {
           font-size: 0.72rem;
           color: var(--color-text-secondary, #6b7280);
           line-height: 1.3;
-          display: -webkit-box;
-          -webkit-line-clamp: 1;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
+          overflow-wrap: anywhere;
+        }
+        @media (max-width: 640px) {
+          .recommendation-scroll {
+            flex-direction: column;
+            overflow-x: visible;
+            scroll-snap-type: none;
+            padding: 4px 0 12px;
+          }
+
+          .recommendation-pill {
+            flex: 0 0 auto;
+            width: 100%;
+          }
         }
       `}</style>
     </div>
