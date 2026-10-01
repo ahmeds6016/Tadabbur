@@ -196,6 +196,35 @@ Q14. **✅ DEPLOYED 2026-08-13 — Reliability quick wins**
 
 ## Session log
 
+### 2026-10-01 — Codex: Session 11 Unit 4 — recommendations and answer hierarchy
+
+- **Branch:** `codex/s11-recs`; **implementation commit:** `b67ec28`.
+  Independent from `main`; frontend only, pipeline **15.1** unchanged.
+- **Screen for Ahmed's device review:** at viewport widths up to 640px, Continue
+  reflecting shows one full-width card per row. References and reasons wrap fully,
+  without ellipsis or a one-line clamp. Wider screens retain a horizontal row with
+  mandatory scroll snapping, 8px side padding/scroll padding and an available thin
+  scrollbar. Continue reflecting, Hadith, Related Verses, source coverage and desktop
+  answer-section headings share `answer-section-heading`: 1.125rem, weight 600,
+  line-height 1.4. Arabic text, tafsir source bars and hadith cards are unchanged.
+- **Overlap audit:** found an additional conditional PWA install banner fixed over
+  the page bottom; it now appears after content in normal flow, with bottom space
+  for the navigation/safe area. Install/dismiss behaviour and copy are unchanged.
+  BottomNav already reserves 52px plus the device safe area. Units 1 and 2 remove
+  the persistent badge/help overlays. Intentional user-triggered dialogs, text
+  selection controls and transient notifications remain; Next's development
+  indicator is untouched.
+- **Verification:** `npm run build` passed (14 static pages);
+  `python3 -m pytest backend/tests -q -W error::DeprecationWarning` passed:
+  **441 passed, 0 skipped, 0 deprecation warnings**. `git diff --check` passed.
+  Reviewed null filtering and verse callbacks: unchanged. No API/backend files,
+  dependencies or content semantics changed. No live/paid probes or deployment.
+- **Pending:** actual iPhone/desktop bottom-of-answer scrolling, badge visibility
+  and local sign-in remain manual review items. Browser inventory is still empty;
+  native computer use previously reported missing macOS Accessibility/Screen
+  Recording permissions. Source/build checks are not a device visual test.
+  **Deploy needed: frontend.**
+
 ### 2026-09-28 — Claude: Session 10 all four units reviewed and MERGED; backend verified, frontend deploy HELD
 
 - **Merged to `main`** (`1ac46bf`, `5cce098`, `7d34c1b`, `5b4a0c9`): 441 offline tests
