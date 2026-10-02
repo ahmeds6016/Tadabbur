@@ -117,3 +117,44 @@ def test_item_absent_from_source_context_is_dropped():
 def test_empty_hadith_list_is_valid():
     assert validate_hadith_items([], "Any source context") == ([], [])
     assert validate_hadith_items(None, "Any source context") == ([], [])
+
+
+# --- Hyphenated collection names (models write "Sahih al-Bukhari") ---------------
+
+import pytest
+from services.hadith_validation import _infer_collection
+
+
+@pytest.mark.parametrize("reference, expected", [
+    ("Sahih al-Bukhari 6407", "Sahih al-Bukhari"),
+    ("Riyad al-Saliheen 1234", "Riyad al-Salihin"),
+    ("Riyad as-Salihin", "Riyad al-Salihin"),
+    ("Sunan al-Nasa'i", "Sunan al-Nasa'i"),
+    ("Sunan Abu Dawud", "Sunan Abi Dawud"),
+    ("Sunan at-Tirmidhi", "Jami al-Tirmidhi"),
+    ("Ibn Kathir's tafsir", ""),
+    ("Ahmadiyya", ""),
+])
+def test_collection_names_are_recognised_with_hyphens_and_variants(reference, expected):
+    assert _infer_collection(reference) == expected
+
+
+def test_supported_hyphenated_collection_is_now_kept():
+    text = "The best of you are those who learn the Quran and teach it to others."
+    context = f"Sahih al-Bukhari records from Uthman: {text} This is the virtue of teaching."
+    kept, dropped = validate_hadith_items(
+        [{"reference": "Sahih al-Bukhari 5027", "text": text}], context)
+    assert dropped == []
+    assert kept[0]["collection"] == "Sahih al-Bukhari"
+    assert "_downgraded_collection" not in kept[0]
+
+
+def test_unsupported_hyphenated_collection_is_still_stripped():
+    text = "The best of you are those who learn the Quran and teach it to others."
+    context = f"Ibn Kathir mentions: {text} This is the virtue of teaching."
+    kept, dropped = validate_hadith_items(
+        [{"reference": "Sahih al-Bukhari 5027", "text": text}], context)
+    assert dropped == []
+    assert kept[0]["collection"] == ""
+    assert kept[0]["_downgraded_collection"] == "Sahih al-Bukhari"
+    assert "Bukhari" not in kept[0]["reference"]

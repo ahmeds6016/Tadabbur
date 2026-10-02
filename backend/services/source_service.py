@@ -6,7 +6,7 @@ Provides retrieval of context from indexed scholarly sources:
 - Thematic Commentary (al-Ghazali) — surah-level thematic overviews
 - Ihya Ulum al-Din (al-Ghazali) — spiritual/ethical teachings
 - Madarij al-Salikin (Ibn Qayyim) — stations of spiritual development
-- Riyad al-Saliheen (al-Nawawi) — hadith collection by topic
+- Riyad al-Salihin (al-Nawawi) — hadith collection by topic
 
 Used by the prompt builder to inject scholarly context into AI responses.
 """
@@ -120,7 +120,7 @@ def _load_asbab_surah(surah_number):
 
 @lru_cache(maxsize=20)
 def _load_riyad_chapter(book_num, ch_num):
-    """Load a Riyad al-Saliheen chapter."""
+    """Load a Riyad al-Salihin chapter."""
     path = _INDEX_DIR / "riyad_al_saliheen" / f"book_{book_num:02d}_ch_{ch_num:03d}.json"
     if path.exists():
         with open(path, encoding="utf-8") as f:
@@ -174,7 +174,7 @@ def get_asbab_context(surah_number, verse_start=None, verse_end=None):
 
 
 def get_riyad_context_by_verse(surah_number, verse_number):
-    """Get Riyad al-Saliheen hadith related to a specific verse."""
+    """Get Riyad al-Salihin hadith related to a specific verse."""
     verse_map = _load_unified_verse_map()
     key = f"{surah_number}:{verse_number}"
     refs = verse_map.get(key, [])
@@ -203,7 +203,7 @@ def get_riyad_context_by_verse(surah_number, verse_number):
         return None
 
     return {
-        "source": "Riyad al-Saliheen (Imam al-Nawawi)",
+        "source": "Riyad al-Salihin (Imam al-Nawawi)",
         "entries": results,
     }
 
@@ -260,7 +260,7 @@ def get_riyad_context_by_topic(topic_keywords):
         return None
 
     return {
-        "source": "Riyad al-Saliheen (Imam al-Nawawi)",
+        "source": "Riyad al-Salihin (Imam al-Nawawi)",
         "entries": results,
     }
 
@@ -621,7 +621,7 @@ def get_relevant_scholarly_context(surah_number=None, verse_start=None, verse_en
             context_parts.append(entry_text)
             total_chars += len(entry_text)
 
-    # 4. Riyad al-Saliheen (hadith — verse-based or topic-based)
+    # 4. Riyad al-Salihin (hadith — verse-based or topic-based)
     riyad_context = None
     if surah_number and verse_start:
         riyad_context = get_riyad_context_by_verse(surah_number, verse_start)
@@ -639,7 +639,7 @@ def get_relevant_scholarly_context(surah_number=None, verse_start=None, verse_en
             section_text += f"{prefix}\n{entry.get('text', '')}\n\n"
 
         if section_text.strip():
-            header = "### Related Hadith — Riyad al-Saliheen\n"
+            header = "### Related Hadith — Riyad al-Salihin\n"
             header += f"*Source: {riyad_context['source']}*\n\n"
             entry_text = header + section_text.strip()
             remaining = MAX_TOTAL_SCHOLARLY_CHARS - total_chars
@@ -661,8 +661,8 @@ def get_relevant_scholarly_context(surah_number=None, verse_start=None, verse_en
     result += "- Use Asbab al-Nuzul to explain WHY a verse was revealed (historical context)\n"
     result += "- Use thematic commentary for surah-level context and themes\n"
     result += "- Use Ihya and Madarij for spiritual lessons and practical applications\n"
-    result += "- Use Riyad al-Saliheen hadith to support lessons with prophetic traditions\n"
-    result += "- When citing, attribute clearly: 'Al-Wahidi narrates...', 'As al-Ghazali notes...', 'Ibn Qayyim explains...', 'In Riyad al-Saliheen...'\n"
+    result += "- Use Riyad al-Salihin hadith to support lessons with prophetic traditions\n"
+    result += "- When citing, attribute clearly: 'Al-Wahidi narrates...', 'As al-Ghazali notes...', 'Ibn Qayyim explains...', 'In Riyad al-Salihin...'\n"
     result += "- These sources complement (not replace) the classical tafsir from Ibn Kathir and al-Qurtubi\n"
 
     return result
@@ -751,7 +751,7 @@ def get_scholarly_sources_metadata(surah_number=None, verse_start=None, verse_en
             "type": "Spiritual Development",
         })
 
-    # Riyad al-Saliheen
+    # Riyad al-Salihin
     riyad = None
     if surah_number and verse_start:
         riyad = get_riyad_context_by_verse(surah_number, verse_start)
@@ -1158,7 +1158,7 @@ def _resolve_riyad(params):
 
     return {
         "source_id": "riyad",
-        "source": "Riyad al-Saliheen (Imam al-Nawawi)",
+        "source": "Riyad al-Salihin (Imam al-Nawawi)",
         "title": title or "Hadith",
         "text": "\n\n".join(collected),
     }

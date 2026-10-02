@@ -1,0 +1,15 @@
+# Uploaded by `gcloud builds submit` from deploy-frontend.sh.
+# Once this file exists gcloud no longer reads .gitignore on its own, so pull it in
+# and then state the rules that must never depend on it.
+#!include:.gitignore
+
+.gcloudignore
+.git/
+.env
+.env.*
+node_modules/
+.next/
+out/
+ios/
+tests/
+*.log

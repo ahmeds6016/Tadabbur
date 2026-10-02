@@ -14,15 +14,18 @@ _GENERIC_COLLECTION_WORDS = {
     "al", "book", "collection", "jami", "jamiu", "musnad", "sahih", "sunan", "the",
 }
 
+# Separators accept spaces or hyphens: models write "Sahih al-Bukhari", not
+# "Sahih al Bukhari". An unmatched name is discarded rather than verified.
+_SEP = r"[\s\-]+"
 _KNOWN_COLLECTION_PATTERNS = (
-    (re.compile(r"\bsahih\s+(?:al\s+)?bukhari\b", re.IGNORECASE), "Sahih al-Bukhari"),
-    (re.compile(r"\bsahih\s+muslim\b", re.IGNORECASE), "Sahih Muslim"),
-    (re.compile(r"\b(?:musnad\s+)?ahmad\b", re.IGNORECASE), "Musnad Ahmad"),
-    (re.compile(r"\b(?:jami\s+)?(?:al\s+)?tirmidhi\b", re.IGNORECASE), "Jami al-Tirmidhi"),
-    (re.compile(r"\bsunan\s+(?:abi\s+)?dawud\b", re.IGNORECASE), "Sunan Abi Dawud"),
-    (re.compile(r"\bsunan\s+(?:al\s+)?nasai\b", re.IGNORECASE), "Sunan al-Nasa'i"),
-    (re.compile(r"\bsunan\s+ibn\s+majah\b", re.IGNORECASE), "Sunan Ibn Majah"),
-    (re.compile(r"\briyad\s+(?:al\s+)?saliheen\b", re.IGNORECASE), "Riyad al-Saliheen"),
+    (re.compile(rf"\bsahih{_SEP}(?:al{_SEP})?bukhari\b", re.IGNORECASE), "Sahih al-Bukhari"),
+    (re.compile(rf"\bsahih{_SEP}muslim\b", re.IGNORECASE), "Sahih Muslim"),
+    (re.compile(rf"\b(?:musnad{_SEP})?(?:imam{_SEP})?ahmad\b", re.IGNORECASE), "Musnad Ahmad"),
+    (re.compile(rf"\b(?:jami{_SEP}|sunan{_SEP})?(?:al{_SEP}|at{_SEP})?tirmidhi\b", re.IGNORECASE), "Jami al-Tirmidhi"),
+    (re.compile(rf"\bsunan{_SEP}(?:abi|abu){_SEP}dawud\b", re.IGNORECASE), "Sunan Abi Dawud"),
+    (re.compile(rf"\bsunan{_SEP}(?:al{_SEP}|an{_SEP})?nasa'?i\b", re.IGNORECASE), "Sunan al-Nasa'i"),
+    (re.compile(rf"\bsunan{_SEP}ibn{_SEP}majah\b", re.IGNORECASE), "Sunan Ibn Majah"),
+    (re.compile(rf"\briyad{_SEP}(?:al{_SEP}|as{_SEP})?sal(?:i|ee)h(?:ee|i)n\b", re.IGNORECASE), "Riyad al-Salihin"),
 )
 
 

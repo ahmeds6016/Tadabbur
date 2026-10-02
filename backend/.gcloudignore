@@ -1,0 +1,23 @@
+# Uploaded by `gcloud builds submit` from deploy-backend.sh.
+# Local-only secrets and tooling must never reach Cloud Build.
+.gcloudignore
+.git/
+.env
+.env.*
+venv/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+run-local.sh
+tests/golden-results/
+*.log
+
+# Large offline-only inputs (never needed at runtime; see .dockerignore).
+data/sources/ocr_images/
+data/sources/raw/
+*.png
+*.jpg
+*.jpeg
+*.pdf
+*.zip
