@@ -5031,6 +5031,29 @@ def get_badges():
 # PERSONALIZED RECOMMENDATIONS
 # ============================================================================
 
+_RIYAD_SPELLING = re.compile(r"\bRiyad[\s\-]+(?:al|as)[\s\-]*Sal(?:i|ee)h(?:ee|i)n\b", re.IGNORECASE)
+
+
+def _house_spelling(value):
+    if isinstance(value, str):
+        return _RIYAD_SPELLING.sub("Riyad al-Salihin", value)
+    if isinstance(value, list):
+        return [_house_spelling(item) for item in value]
+    if isinstance(value, dict):
+        return {key: _house_spelling(item) for key, item in value.items()}
+    return value
+
+
+def normalize_source_spellings(response_data):
+    """Rewrite source names to one house spelling, in place, for fresh and cached answers.
+
+    Answers generated before the spelling change hold model-written text such as
+    "As cited in Riyad al-Saliheen"; they stay in the 90-day cache, so fix on serve.
+    """
+    for key, value in response_data.items():
+        response_data[key] = _house_spelling(value)
+
+
 def _shorten_on_word(text, limit):
     """Trim to `limit` characters on a word boundary, marking the cut with an ellipsis."""
     text = " ".join(str(text).split())
@@ -6504,6 +6527,8 @@ def tafsir_handler_enhanced():
             """Attach deterministic follow-on verses to fresh and cached responses."""
             if not isinstance(response_data, dict):
                 return response_data
+
+            normalize_source_spellings(response_data)
 
             response_data["recommendations"] = []
             response_range = extract_verse_range(query)

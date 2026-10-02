@@ -90,6 +90,7 @@ def route_env(monkeypatch):
         "keep_requested_verses_primary": lambda value, *args, **kwargs: value,
         "enforce_persona_verse_limit": lambda value, *args, **kwargs: (value, False, 0, 0),
         "_generate_recommendations": lambda *args: [],
+        "normalize_source_spellings": lambda data: None,
         "store_tafsir_cache": store,
     }
     exec(compile(ast.Module(body=functions, type_ignores=[]), str(path), "exec"), namespace)

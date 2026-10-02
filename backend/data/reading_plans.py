@@ -8,7 +8,7 @@ Each plan includes:
 Source pointer format:
   ihya:vol=V:ch=C          — Ihya Ulum al-Din (Al-Ghazali)
   madarij:vol=V:station=S  — Madarij al-Salikin (Ibn Qayyim)
-  riyad:book=B:ch=C        — Riyad al-Saliheen (Al-Nawawi)
+  riyad:book=B:ch=C        — Riyad al-Salihin (Al-Nawawi)
   asbab:surah=S:verse=V    — Asbab al-Nuzul (Al-Wahidi)
   thematic:surah=S:section=N — Thematic Commentary (M. al-Ghazali)
 """
