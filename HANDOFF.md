@@ -196,6 +196,61 @@ Q14. **✅ DEPLOYED 2026-08-13 — Reliability quick wins**
 
 ## Session log
 
+### 2026-10-01 — Claude: follow-ups merged (NOT yet deployed) + App Store readiness assessment
+
+- **Merged** `128240f` (`claude/followups-banner-ignore-riyad`). 457 tests green, 4 frontend
+  component tests green, build 14/14. **Not deployed** — awaiting Ahmed's go. Needs
+  backend + frontend.
+- **Install banner:** rebuilt on design tokens (Tailwind was never installed, so it had
+  always rendered unstyled on Chrome/Android). In-flow card, teal Install / outlined
+  Not now. Dead iOS instructions block removed. Verified rendered by forcing
+  `beforeinstallprompt` in headless Chrome.
+- **Explicit `.gcloudignore` for frontend and backend.** A `.gcloudignore` disables
+  gcloud's `.gitignore` fallback, so both state every exclusion directly. Verified with
+  `gcloud meta list-files-for-upload`: zero `.env*`, venv, `run-local.sh`, caches or
+  OCR images; every runtime file still present (backend 20.8 MB, 627 files).
+- **Riyad al-Salihin — turned out to be a hadith-validator bug, not just a spelling.**
+  `_KNOWN_COLLECTION_PATTERNS` only matched unhyphenated names, so "Sahih al-Bukhari",
+  "Riyad al-Saliheen" and "Sunan al-Nasa'i" as models actually write them were never
+  recognised. **It failed safe** — an unrecognised label is discarded, never shown
+  unverified — but correctly supported labels were discarded too. Patterns now accept
+  hyphens and variants (Abu/Abi Dawud, Nasa'i/Nasai, at-/al-Tirmidhi,
+  as-/al-Salihin); recognised labels are still verified against the source wording
+  before display. Tests prove a supported hyphenated label is now kept and an
+  unsupported one is still stripped. Prompt context in `source_service.py` now says
+  al-Salihin (internal keys `riyad_al_saliheen` unchanged), and
+  `normalize_source_spellings` rewrites responses at serve time, so the 90-day cache
+  matches — confirmed on a cached 103:2 whose model-written hadith attribution now
+  reads "As cited in Riyad al-Salihin". Fresh-generation spot-check (49:12, cache
+  miss) passed: 9/9 sections, no extraction error; the validator correctly downgraded
+  an unsupported "Muslim" label live. No pipeline bump.
+
+**App Store readiness: NOT READY.** Two hard blockers, one high rejection risk:
+
+1. **BLOCKER — no in-app account deletion** (Guideline 5.1.1(v)). The app lets people
+   create accounts (`createUserWithEmailAndPassword`) but there is no way to delete one.
+   Apple rejects this outright. Needs a backend route that deletes the Firebase Auth
+   user and all their Firestore data (profile, saved searches, annotations,
+   reflections, progress, Iman data), plus a confirmed "Delete account" in Settings.
+2. **BLOCKER — no privacy policy.** App Store Connect requires a privacy policy URL, and
+   the app collects email, reflections and reading history. Needs a `/privacy` page
+   (and ideally `/terms`, `/support`) plus App Store privacy "nutrition label" answers.
+3. **HIGH RISK — Guideline 4.2 Minimum Functionality.** The iOS app is a Capacitor shell
+   whose `server.url` loads the production website, with only splash-screen and
+   status-bar plugins. Apple routinely rejects apps that are "just a website". Most
+   credible mitigations: an offline/error screen instead of a blank WebView (there is
+   none today), native share sheet, local notifications for the daily verse, and
+   ideally bundling the web assets instead of loading a remote URL.
+4. Smaller items: add `ITSAppUsesNonExemptEncryption=false` to Info.plist; check whether
+   an app-level `PrivacyInfo.xcprivacy` is needed; `TARGETED_DEVICE_FAMILY = "1,2"`
+   means iPad must work well and needs iPad screenshots — restrict to iPhone ("1") for
+   v1 unless iPad is wanted; disclose in the listing that commentary is AI-generated
+   from classical sources.
+5. Ahmed-only: Apple Developer Program membership ($99/yr), signing team, physical
+   device test, App Store Connect listing and screenshots.
+Already fine: 1024px icon with no alpha; email/password only, so Sign in with Apple is
+not required; bundle ID `com.tadabbur.app` set; version 1.0 (1).
+
 ### 2026-10-01 — Claude: Sessions 10 + 11 DEPLOYED & VERIFIED (backend + frontend)
 
 - **Production: backend `tafsir-backend-00271-l8f` + frontend `tafsir-frontend-00306-ptn`**
