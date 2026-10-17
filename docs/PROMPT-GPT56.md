@@ -1,5 +1,200 @@
 # Prompts for GPT 5.6
 
+## Session 12 prompt (2026-10-17) — FULL READ-ONLY AUDIT by GPT 6: security, vulnerabilities, logic, performance, error handling, privacy, reliability
+
+---
+
+You are GPT 6, acting as **independent auditor** for Tadabbur (Claude = architect/reviewer,
+Ahmed = owner). This session produces **findings, not fixes**. Claude will review your
+report and turn it into fix sessions.
+
+### 0. Orientation (do this first)
+
+`git pull`, then read, in order: `AI.md` (architecture, decisions, conventions, the model
+table), the top five entries of `HANDOFF.md`, `docs/AUDIT-2026-08-01.md` (Claude's earlier
+audit — its resolved items are history; only re-raise one if you can show it regressed), and
+`docs/QUALITY-REVIEW-2026-08-03.md`. Audit `main` at or after commit `2271020`.
+
+**What Tadabbur is:** an AI-assisted Qur'an study app. A reader picks a verse or range; the
+Flask backend assembles classical tafsir excerpts (Ibn Kathir, al-Qurtubi to 4:22, Ihya,
+Madarij, Riyad al-Salihin, A Thematic Commentary on the Qurʼan), Gemini writes a
+persona-tailored explanation, hadith are validated against the supplied source text before
+display or caching, and answers are cached in Firestore for 90 days. Plus accounts, guest mode,
+saved answers, reflections/annotations, reading plans, streaks, badges, share links, topic
+discovery, and a Capacitor iOS shell.
+
+**Production right now:** backend Cloud Run `tafsir-backend-00273-dpr` (project
+`tafsir-simplified`, us-central1), `gemini-3.8-flash` + `gemini-3.5-flash-lite` on the Vertex
+global endpoint, scholarly pipeline `16.0`; frontend `tafsir-frontend-00307-r65` (Next.js 15,
+React 19). Firebase project `tafsir-simplified-6b262`: Auth plus Firestore databases
+`(default)` (user data) and `tafsir-db` (verse text, `tafsir_cache`, `shared_content`). Both
+databases have deny-all client rules; the frontend uses Firebase Auth only and all data goes
+through the backend's Admin SDK. **Note:** `main` contains a frontend error-handling change
+(`frontend/app/lib/errors.js`, `components/ErrorNotice.jsx`) that is merged but not yet deployed
+— audit it as code that is about to ship. Traffic is tiny (~1-2 organic requests a day), so
+weigh risk by exploitability and harm, not by current volume.
+
+### 1. Hard rules
+
+- **Read-only.** No code changes, no refactors, no dependency changes. Your only commits are
+  the audit document and a `HANDOFF.md` session-log entry, on branch `codex/audit-gpt6`.
+- **Production is off-limits for active testing.** No fuzzing, load tests, auth attacks,
+  account creation, or requests to admin or cache-mutation routes against the live URLs. At
+  most a handful of `GET /health` and other read-only public GETs to confirm a header or
+  behaviour, and say so in the report when you do.
+- **The local backend is not a sandbox.** `./backend/run-local.sh` talks to the PRODUCTION
+  Firestore and to PAID Gemini. Running it is allowed for observing behaviour, but: never
+  call `/cache/*` or `/debug/*` routes, never trigger fresh `/tafsir` generations for
+  uncached verses (each costs money and writes the shared production cache), and never
+  write user data. Prefer code reading plus the offline suite.
+- No gcloud mutations, no secret access (`secret/admin-secret.txt` stays unread), no deploys.
+- Offline tooling is fine: `python3 -m pytest backend/tests -q` (venv `backend/venv`),
+  `node frontend/tests/*.test.*`, `npm run build`, `npm audit --omit=dev`, and `pip-audit`
+  run from a throwaway venv OUTSIDE the repo against `backend/requirements.txt`. Record exact
+  commands and versions.
+- Ahmed's standing rules apply to any copy you propose: no emoji, no exclamation marks,
+  serious and respectful tone suited to scriptural content.
+- Decisions recorded in `AI.md` (deliberate monolith, raw fetch plus local state, no vector
+  search, min-instances 0, 180s frontend abort) are not findings by themselves. You may flag a
+  concrete risk they create, with evidence, but do not recommend reversing them on taste.
+
+### 2. Evidence standard
+
+Every finding needs **evidence a reviewer can check in two minutes**: `path:line`, the exact
+code, and either a reproduction (offline test, local request, or a precise request/response
+trace) or a clear argument from the code. Mark each finding **Confirmed** (reproduced or
+unambiguous from code) or **Suspected** (plausible, needs a runtime check — say what check).
+No speculative "best practice" items without a concrete failure mode in THIS codebase.
+Line numbers drift — quote the code. If you check something and it is fine, record it in the
+"Verified safe" section; that list matters as much as the findings.
+
+Severity: **P0** exploitable now or causes data loss / wrong scripture attribution shown to
+readers; **P1** serious but needs a precondition, or a likely production failure; **P2**
+real defect with limited blast radius; **P3** hygiene. Give likelihood and impact separately,
+plus effort **S/M/L**.
+
+### 3. Scope — audit every dimension
+
+**A. Security and vulnerabilities**
+- Every route in `backend/app.py`: list method, path, auth (`@firebase_auth_required`,
+  `@firebase_auth_optional`, `admin_secret_required`, `debug_route_required`, or none), rate
+  limit, input validation, and what a guest, a signed-in reader, and another reader's ID can
+  reach. Hunt specifically for **IDOR**: any route taking an ID (annotation, saved search,
+  share, plan, reflection, heart note) that does not prove the record belongs to the caller.
+- Token verification paths, admin-secret handling, CORS allowlist, debug-route gating, the
+  feedback cron secret, the suspended-but-live Iman Journal endpoints.
+- **Prompt injection:** how reader-supplied text (the `/tafsir` query, topic text, reflection
+  text) reaches Gemini prompts; whether model output can change control flow, cache contents
+  served to others, or rendered markup.
+- **XSS / unsafe rendering:** the frontend renders model-written commentary with
+  `ReactMarkdown` plus `rehype-raw` (raw HTML enabled) — see the `tafsir_explanations`
+  render in `frontend/app/page.js`. Determine what HTML a model (or a cached/shared answer)
+  could inject and what React 19 / react-markdown actually let through. Check every other
+  `ReactMarkdown`, `dangerouslySetInnerHTML`, and `href` built from data.
+- **Information disclosure:** about 69 backend routes return `jsonify({"error": str(e)})`
+  on 500, and the token-verification failure returns `"details": str(e)`. Quantify what can
+  leak (project IDs, paths, Firestore/Google exception text) and which routes the shipped UI
+  calls.
+- Rate limiting: in-memory, per instance, keyed by `request.remote_addr` with **no
+  `ProxyFix`** behind Cloud Run's front end. Establish what `remote_addr` actually is on Cloud
+  Run (code, docs, or one harmless observation) and whether guests therefore share one bucket,
+  can evade the limit, or both. Also check memory growth of the rate-limit and response-cache
+  dictionaries.
+- Cost abuse: how many paid Gemini generations an anonymous actor can trigger per hour and
+  per day, and whether anything caps total spend.
+- Secrets and config in the repo and Docker images (`.gcloudignore`, `.dockerignore`), the
+  public Firebase web config (expected public — confirm nothing more sensitive ships), Secret
+  Manager usage.
+- Dependency vulnerabilities: `npm audit --omit=dev` and `pip-audit`; for each high/critical,
+  state whether the vulnerable code path is actually reachable here.
+- Security headers on the frontend (CSP, HSTS, X-Frame-Options/frame-ancestors,
+  Referrer-Policy) and backend; the Capacitor iOS shell (`capacitor.config.ts` loads the
+  production URL — navigation allowlist, external links); the service worker (`public/sw.js`)
+  — can it cache authenticated responses?
+- Firestore rules as deployed vs `backend/firestore.rules`, and whether any client path could
+  still write data.
+
+**B. Logic and correctness**
+- Verse-reference parsing (numeric, named surahs, ranges, out-of-range verses, Arabic
+  numerals, mixed input), the range budget (the picker said "limited to 6 verses" for 2:1
+  while the backend capped at 10 — find which is authoritative and whether they disagree).
+- Cache correctness: key composition (the key omits the pipeline version — a canary overwrote
+  production docs during the 3.8 migration), guest-key vs default-profile fallback, version
+  gate, TTL, `/share` snapshots, recommendations rebuilt at serve time.
+- Hadith validation (`services/hadith_validation.py`): false negatives (real hadith dropped)
+  and false positives (unsupported attribution kept), the downgrade-not-drop path, the
+  hyphen-tolerant collection patterns added on 2026-10-01.
+- Streaks, badges, progress and reading plans: timezone handling (naive UTC), double
+  counting, idempotency, concurrent requests.
+- Topic discovery: closed-vocabulary enforcement, fallback paths.
+- Persona handling: guest default profile vs signed-in profile, missing or partial profiles.
+
+**C. Performance**
+- `/tafsir` end to end: ~27s median on fresh answers under 3.8; break it down from
+  `Server-Timing` and `REQUEST_METRIC`/`GEMINI_USAGE` logs if you can read them (read-only),
+  otherwise from code. Startup cost (GCS corpus loads, precomputed budgets), cold starts with
+  min-instances 0, Gunicorn 1 worker / 8 threads, memory headroom at 2 GiB.
+- Firestore access patterns: N+1 reads, unbounded queries (`.stream()` without limits),
+  missing indexes, reads on hot paths.
+- Frontend: bundle size (first-load JS ~303 kB on `/`), the ~3,000-line `page.js` and its
+  re-render behaviour, images, caching headers, the build-time
+  `ReferenceError: window is not defined` (server chunk, every Cloud Build since August).
+
+**D. Error handling and resilience**
+- Backend: bare or broad `except` blocks that swallow failures, missing timeouts on outbound
+  calls (Vertex, Firestore, GCS), partial-failure states (answer generated but cache write
+  failed, progress written twice), retry behaviour (the bounded malformed-output retry and
+  the 429/503 retry paths), logging hygiene (is reader text or PII logged?).
+- Frontend: review the new `lib/errors.js` and `ErrorNotice` critically — any path that can
+  still show raw error text, any state that strands a reader with no way forward, unhandled
+  promise rejections, `ErrorBoundary` coverage, auth-state edge cases (expired token mid-
+  session, sign-out during a request).
+
+**E. Privacy and data**
+- Inventory personal data stored (email, display name, reflections, query history, saved
+  answers, Iman data) with location and retention. **Reflection encryption:** the backend
+  supports encrypting reflections, but `REFLECTION_ENCRYPTION_SECRET` is not set in the
+  production revision or `deploy-backend.sh` — confirm what is actually stored and assess.
+- There is no in-app account deletion (also an App Store blocker); map every collection a
+  deletion would need to cover.
+
+**F. Reliability, operations and cost**
+- Deploy scripts and their traps (documented in AI.md: `--no-traffic` pinning, retired
+  revisions skipped by `--to-latest`, cache-key overwrite by canaries), Firestore backups
+  (do any exist?), single region, alert coverage (5xx, PermissionDenied, `/health` uptime),
+  spend controls on Vertex and Firestore.
+
+**G. Maintainability and tests**
+- Test coverage of the paths that matter most (auth, `/tafsir`, hadith validation, cache,
+  share); critical paths with no offline test; dead code; duplicated logic. Keep this section
+  short and concrete.
+
+### 4. Deliverable
+
+Write `docs/AUDIT-2026-10-GPT6.md` with exactly these sections:
+
+1. **Executive summary** — 10 lines: overall posture, the three most important risks, and
+   whether anything needs action before the next deploy.
+2. **Scorecard** — one row per dimension A-G: rating (Strong / Adequate / Weak / Critical)
+   and a one-sentence reason.
+3. **Ranked findings table** — ID (`SEC-01`, `LOG-01`, `PERF-01`, `ERR-01`, `PRIV-01`,
+   `OPS-01`, `MAINT-01`), title, severity, Confirmed/Suspected, effort, area.
+4. **Detailed findings** — per finding: evidence (path:line plus the quoted code), what goes
+   wrong and for whom, reproduction or proof, recommended fix (specific, minimal, consistent
+   with AI.md conventions), the offline test that would prove the fix, and effort.
+5. **Verified safe** — everything you checked and found sound, with one line of evidence each.
+6. **Leads you could not verify** — and exactly what check would settle each.
+7. **Proposed fix sessions** — group findings into 3-6 implementable units (branch name,
+   files, acceptance criteria, deploy needed: backend/frontend/none), P0/P1 first.
+8. **Appendix** — route inventory table, tool outputs (`npm audit`, `pip-audit`, test
+   runs) with commands and versions.
+
+Then add a `HANDOFF.md` session-log entry: branch, commit, counts by severity, the top three
+risks, anything that should block the next deploy. Finish with a summary table (dimension |
+rating | P0 | P1 | P2 | P3) and a list of anything you skipped and why.
+
+---
+
 ## Session 11 prompt (2026-09-28) — visual coherence pass: kill the reCAPTCHA badge, the floating FAB, and the colour chaos
 
 ---

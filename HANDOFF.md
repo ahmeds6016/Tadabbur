@@ -196,6 +196,46 @@ Q14. **✅ DEPLOYED 2026-08-13 — Reliability quick wins**
 
 ## Session log
 
+### 2026-10-17 — Claude: plain-language errors app-wide (merged, NOT deployed); GPT 6 full audit issued
+
+- **Merged** `2271020` (`claude/friendly-errors`). Frontend only. **Not deployed** — awaiting
+  Ahmed's go (`deploy-frontend.sh`).
+- **Problem:** a wrong password showed Firebase's raw "Firebase: Error
+  (auth/invalid-credential)." The same pattern ran app-wide: raw `err.message` on sign-in,
+  sign-up, password reset, profile setup, progress, plans and badges; backend `error` text
+  passed straight to the screen; and the tafsir range error displayed the raw code
+  `verse_range_too_large` instead of the server's explanation.
+- **Fix:** `frontend/app/lib/errors.js` is the single place that decides what a reader is
+  told — Firebase codes map to plain sentences, HTTP failures map by status (401 sign in
+  again, 403, 404 per screen, 429, 5xx per-screen fallback), and server text is shown only for
+  4xx responses that read like a sentence (rejects codes, exception names, braces, URLs).
+  Raw `err.message` is never returned. `components/ErrorNotice.jsx` replaces seven different
+  error treatments with one calm design (thin rule in the error colour, reading-colour text,
+  no icon, no "Error:" prefix; forwards the tafsir focus ref; optional retry action).
+  Applied in `page.js` (auth, profile, tafsir, notes, save toast), progress, plans, badges,
+  annotation form, saved, shared page and the crash screen.
+- **No account enumeration:** sign-in gives one answer for wrong password and unknown
+  email; password reset shows the same neutral confirmation ("If an account exists for this
+  email...") whether or not the account exists.
+- **Verified against real Firebase** in headless Chrome: wrong password → "That email and
+  password don't match. Please check them and try again, or reset your password."; unknown
+  email on reset → neutral confirmation; no "Firebase" or `auth/` text anywhere on the page.
+  7 new unit tests (`node frontend/tests/errors.test.mjs`), 4 component tests, build 14/14.
+- **GPT 6 full audit issued** (`docs/PROMPT-GPT56.md`, Session 12): read-only, evidence-based,
+  dimensions security / logic / performance / error handling / privacy / ops / tests,
+  deliverable `docs/AUDIT-2026-10-GPT6.md`. Seeded with leads Claude confirmed in code but has
+  not runtime-verified:
+  * **~69 backend routes return `str(e)` on 500** (internal exception text to the client).
+  * **Guest rate limit keys on `request.remote_addr` with no `ProxyFix`** behind Cloud Run —
+    guests may share one 10/hr bucket, or evade it.
+  * **`REFLECTION_ENCRYPTION_SECRET` is not set in production** — reflections are stored
+    without the app-level encryption the code supports.
+  * **Model-written commentary is rendered with `ReactMarkdown` + `rehype-raw`** (raw HTML) in
+    `page.js`; the shared page does not use raw HTML.
+  * Picker range budget (6 for 2:1) vs backend cap (10) disagree.
+- **Next:** Ahmed's go to deploy the frontend; run the GPT 6 audit; Claude reviews it into fix
+  sessions; App Store blockers remain.
+
 ### 2026-10-17 — Claude: stale tafsir cache physically purged (Ahmed: "clear all cache")
 
 - **Before:** `tafsir-db/tafsir_cache` held 379 docs — 372 stale (pipeline 8.0: 94,
