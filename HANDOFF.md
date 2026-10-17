@@ -196,6 +196,70 @@ Q14. **✅ DEPLOYED 2026-08-13 — Reliability quick wins**
 
 ## Session log
 
+### 2026-10-17 — Claude: Gemini 3.8 Flash canary PASSED; traffic switch awaits Ahmed
+
+- **Why:** Vertex AI retires `gemini-3.6-flash` on **2026-11-19** (Vertex model page;
+  the Gemini API page lists no date, but Tadabbur runs on Vertex). Replacement:
+  `gemini-3.8-flash` — GA, global endpoint, retires "September 2, 2027 or later".
+  `gemini-3.7-flash` is already superseded by 3.8. Lite model stays on
+  `gemini-3.5-flash-lite` (retires "July 21, 2027 or later"; no 3.8 Flash-Lite exists
+  for text).
+- **Branch `claude/s12-gemini-38-canary` (pushed, NOT merged):** main model default +
+  `deploy-backend.sh` → `gemini-3.8-flash`; `SCHOLARLY_PIPELINE_VERSION` 15.1 → **16.0**;
+  `/iman/correlations` cap 4,096 → 8,192 (`eea4b9b`, see thinking below). Built from
+  `main`, so it also carries the 2026-10-01 follow-ups (banner, ignores, Riyad, hyphen
+  patterns) that are merged but not yet deployed. 457 offline tests green.
+- **Canary:** revision `tafsir-backend-00275-dap`, **0% traffic**, tag
+  `canary38` → https://canary38---tafsir-backend-vg7kshbegq-uc.a.run.app , image
+  `gcr.io/tafsir-simplified/tafsir-backend:canary-38` (separate tag; `:latest` untouched),
+  full 9-var environment verified.
+- **Golden harness, guest profile, six verses** (no persona tokens are available, so
+  both personas collapse to the guest default; run once per verse via a scratchpad
+  wrapper around `golden_regression.run_case`, which also keeps under the 10/hr guest
+  limit). Raw results in `backend/tests/golden-results/`.
+  * Baseline (prod 3.6): **6/6 PASS**, all cache hits, zero cost.
+  * Canary (3.8): **6/6 PASS** on all invariants. 1:5 first showed a 300s client
+    ReadTimeout — **proven a client artifact**: Cloud Run's request log shows 200 in
+    25.9s/7.4 KB delivered, and `pmset` shows the Mac lid closed 23s before the response
+    (13:36:02 CDT) and opened 13:40:44; awake time summed to exactly 300s. Re-validated
+    from the canary's cache: PASS.
+- **Numbers (3.8 canary vs 3.6 prod, last 30 days):** thinking tokens median 1,894
+  (max **4,627**) vs 2,663 (max 4,119); output median 1,572 vs 1,659; server latency on
+  fresh answers median **27.2s** (max 44.2s) vs 21.6s (max 26.9s). Verse sets differ,
+  but 3.8 is plausibly ~25% slower with a fatter tail. Still well inside the 120s
+  Gemini timeout and 180s frontend abort.
+- **Thinking risk confirmed and fixed:** 3.8's thinking reached 4,627 tokens, which counts
+  against `maxOutputTokens`; `/iman/correlations` (main model, cap 4,096) would have
+  truncated before writing JSON. Raised to 8,192. The other main-model Iman calls are
+  already 8,192 (~3.5K headroom at the observed max). Iman is suspended, but the
+  endpoints are live.
+- **Content review (Claude):** hadith totals 5 (3.8) vs 6 (3.6); **2:255 keeps its
+  hadith** (no repeat of the Session 7 zero-hadith canary). 3.8 attributes the
+  2:255 "tongue and two lips" wording to **Imam Ahmad** — correct, and the validator
+  confirmed the label against Ibn Kathir's text (the Session 5 P0 was this wording
+  misattributed to Muslim). 4:23 fosterage hadith → Sahih Muslim via 'Ā'ishah, correct.
+  Every 3.8 reflection prompt quotes the verse's own words; 4:23's leans toward honouring
+  nursing mothers rather than the verse's marriage prohibitions (acceptable, anchored to
+  verse text). No emoji anywhere; the only exclamation marks are inside the verbatim
+  2:255 hadith quotation. Cosmetic: a model-supplied label renders "Ṣaḥīḥ Muslim" with
+  diacritics rather than the canonical "Sahih Muslim" — follow-up, not blocking.
+- **Side effect, handled:** the cache key omits the pipeline version, so the canary
+  overwrote production's guest-profile docs for the six test verses with 16.0 docs.
+  Production never served them (version gate rejects them) but would regenerate on 3.6.
+  Re-warmed 2:255 on production (miss 24.9s → hit 0.4s). The other five regenerate
+  lazily if visited before the switch. Worth fixing generally: include the pipeline
+  version in the cache key so future canaries cannot touch production docs.
+- **Production unchanged:** `tafsir-backend-00271-l8f` 100%. **But traffic is now
+  pinned to 00271 by name** (a `--no-traffic` deploy replaces "latest") — the Session 7
+  trap. Any `deploy-backend.sh` run will NOT receive traffic until
+  `gcloud run services update-traffic tafsir-backend --to-latest`.
+- **Switch plan (needs Ahmed's go):** merge the canary branch → `deploy-backend.sh` →
+  `update-traffic --to-latest` → remove tag `canary38` → `deploy-frontend.sh` (ships the
+  pending follow-ups) → AI.md checklist + one fresh generation with
+  `GEMINI_USAGE model=gemini-3.8-flash` → update AI.md truth table. Pipeline 16.0 means
+  every cached answer regenerates once on first view. Rollback: `update-traffic` to
+  `tafsir-backend-00271-l8f` (works until 2026-11-19).
+
 ### 2026-10-01 — Claude: follow-ups merged (NOT yet deployed) + App Store readiness assessment
 
 - **Merged** `128240f` (`claude/followups-banner-ignore-riyad`). 457 tests green, 4 frontend
