@@ -196,6 +196,25 @@ Q14. **✅ DEPLOYED 2026-08-13 — Reliability quick wins**
 
 ## Session log
 
+### 2026-10-17 — Claude: stale tafsir cache physically purged (Ahmed: "clear all cache")
+
+- **Before:** `tafsir-db/tafsir_cache` held 379 docs — 372 stale (pipeline 8.0: 94,
+  9.0: 34, 10.0: 15, 11.0: 22, 12.0: 163, 14.0: 5, 15.1: 39) and 7 current (16.0,
+  Gemini 3.8, generated today). The version gate already made the stale docs
+  unservable, but **328 of them (8.0-12.0) predate the `expires_at` field, so the TTL
+  policy would never have deleted them.**
+- **Deleted all 372 stale docs**, each with a `last_update_time` precondition so a doc
+  regenerated mid-purge could not be removed (0 skipped). **Kept the 7 current 16.0 docs**
+  — deleting them would only force identical 3.8 regenerations.
+- **Verified safe beforehand:** shared links copy the full response into
+  `shared_content` at creation and read only that collection; saved searches live in
+  the users DB; nothing else reads `tafsir_cache` except the live lookup and analytics.
+  After the purge: `/health` healthy (in-memory cache = 2 entries, both 3.8 answers from
+  the new revision), 94:5 still `hit-firestore` in 0.25s, a pre-existing shared link
+  (`1762560969478_9e4504d9`, 39:53) still loads with its full response.
+- **Did not use `/cache/invalidate` `confirm=all`** — it deletes every doc including
+  current ones, and offers no version filter.
+
 ### 2026-10-17 — Claude: Gemini 3.8 Flash SWITCHED & VERIFIED in production (backend + frontend)
 
 - **Production: backend `tafsir-backend-00273-dpr` (gemini-3.8-flash, pipeline 16.0) +
