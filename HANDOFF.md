@@ -198,8 +198,13 @@ Q14. **✅ DEPLOYED 2026-08-13 — Reliability quick wins**
 
 ### 2026-10-17 — Claude: plain-language errors app-wide (merged, NOT deployed); GPT 6 full audit issued
 
-- **Merged** `2271020` (`claude/friendly-errors`). Frontend only. **Not deployed** — awaiting
-  Ahmed's go (`deploy-frontend.sh`).
+- **Merged** `2271020` (`claude/friendly-errors`). Frontend only. **DEPLOYED 2026-10-17** as
+  `tafsir-frontend-00308-vbm` (100%, `latestRevision: true`; rollback `00307-r65`). Backend
+  untouched (0 backend files changed since the deployed 3.8 merge). Verified on the live site:
+  bundle has zero `localhost:8080` references and ships the new copy; a wrong-password attempt
+  against production Firebase shows "That email and password don't match..." with no
+  "Firebase" text; a cached 94:5 answer renders fully (verse, sources, headings 18px, no fixed
+  overlays, no horizontal overflow).
 - **Problem:** a wrong password showed Firebase's raw "Firebase: Error
   (auth/invalid-credential)." The same pattern ran app-wide: raw `err.message` on sign-in,
   sign-up, password reset, profile setup, progress, plans and badges; backend `error` text
