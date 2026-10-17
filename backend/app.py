@@ -8566,7 +8566,8 @@ def iman_get_correlations():
                             "generation_config": {
                                 "response_mime_type": "application/json",
                                 "temperature": 0.6,
-                                "maxOutputTokens": 4096,
+                                # Gemini 3.8 thinking reached 4,627 tokens in the canary; it counts against this cap.
+                                "maxOutputTokens": 8192,
                             },
                         }
                         resp = requests.post(
