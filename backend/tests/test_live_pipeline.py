@@ -26,7 +26,7 @@ from services.source_service import (
 # --- Config (mirrors app.py) ---
 GCP_PROJECT = os.environ.get("GCP_INFRASTRUCTURE_PROJECT", "tafsir-simplified")
 GEMINI_API_LOCATION = os.environ.get("GEMINI_API_LOCATION", "global")
-MODEL = os.environ.get("GEMINI_MODEL_ID", "gemini-3.6-flash")
+MODEL = os.environ.get("GEMINI_MODEL_ID", "gemini-3.8-flash")
 
 
 def safe_get_nested(data, *keys, default=None):
