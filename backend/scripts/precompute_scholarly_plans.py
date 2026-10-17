@@ -60,7 +60,7 @@ from backend.services.source_service import (
 
 GCP_PROJECT = os.environ.get("GCP_INFRASTRUCTURE_PROJECT", "tafsir-simplified")
 GEMINI_API_LOCATION = os.environ.get("GEMINI_API_LOCATION", "global")
-GEMINI_MODEL_ID = os.environ.get("GEMINI_MODEL_ID", "gemini-3.6-flash")
+GEMINI_MODEL_ID = os.environ.get("GEMINI_MODEL_ID", "gemini-3.8-flash")
 
 CONCURRENCY = 30         # Parallel Gemini requests (override with --concurrency)
 MAX_RETRIES = 10         # Retries per verse on failure (high for aggressive concurrency)

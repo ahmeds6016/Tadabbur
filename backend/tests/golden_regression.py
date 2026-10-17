@@ -4,7 +4,7 @@
 Claude's model-flip procedure:
 1. Run this script against the current production URL to capture a baseline.
 2. Deploy a NO-TRAFFIC canary revision with
-   GEMINI_MODEL_ID=gemini-3.6-flash and
+   GEMINI_MODEL_ID=<candidate model> and
    GEMINI_LITE_MODEL_ID=gemini-3.5-flash-lite.
 3. Run this script against the canary URL, supplying a preconfigured bearer token
    for each persona, and compare its timestamped raw output with the baseline.
