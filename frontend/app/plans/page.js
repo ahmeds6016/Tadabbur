@@ -5,6 +5,10 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { ChevronRight, ChevronDown } from 'lucide-react';
 import { auth } from '../lib/firebase';
 import { BACKEND_URL } from '../lib/config';
+import ErrorNotice from '../components/ErrorNotice';
+import { requestErrorFrom, userMessage } from '../lib/errors';
+
+const PLANS_ERROR = "We couldn't load reading plans just now. Please try again.";
 import BadgeDisplay from '../components/BadgeDisplay';
 import BottomNav from '../components/BottomNav';
 import { reportBackendFailure, reportBackendSuccess } from '../lib/backendHealth';
@@ -56,7 +60,7 @@ export default function PlansPage() {
       if (err instanceof TypeError) reportBackendFailure();
       throw err;
     }
-    if (!res.ok) throw new Error('Failed to fetch plans');
+    if (!res.ok) throw await requestErrorFrom(res, { fallback: PLANS_ERROR });
     const data = await res.json();
     return data.plans || [];
   }, []);
@@ -73,7 +77,7 @@ export default function PlansPage() {
         setActivePlans(active);
         if (active.length === 0) setTab('browse');
       } catch (err) {
-        if (!cancelled) setError(err.message);
+        if (!cancelled) setError(userMessage(err, PLANS_ERROR));
       }
     }
     load();
@@ -221,9 +225,7 @@ export default function PlansPage() {
           ))}
         </div>
 
-        {error && (
-          <div className="error-banner">{error}</div>
-        )}
+        <ErrorNotice message={error} compact />
 
         {/* ===================== MY PLANS TAB ===================== */}
         {tab === 'plans' && (
@@ -541,14 +543,6 @@ export default function PlansPage() {
         }
 
         /* ===== Error banner ===== */
-        .error-banner {
-          padding: 10px 14px;
-          background: rgba(220, 38, 38, 0.1);
-          color: var(--error-color, #dc2626);
-          border-radius: 8px;
-          font-size: 0.85rem;
-          margin-bottom: 12px;
-        }
 
         /* ===== Plan list ===== */
         .plan-list {

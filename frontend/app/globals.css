@@ -2157,3 +2157,44 @@ summary:focus-visible {
   outline: 3px solid var(--primary-teal);
   outline-offset: 2px;
 }
+
+/* One presentation for every failure the reader sees (components/ErrorNotice.jsx).
+   Calm by design: a thin rule in the error colour, body text in the reading colour,
+   no icon and no "Error:" prefix. */
+.error-notice {
+  margin: 12px 0;
+  padding: 12px 16px;
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--error-color);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--foreground);
+}
+
+.error-notice:focus { outline: none; }
+.error-notice:focus-visible { outline: 3px solid var(--primary-teal); outline-offset: 2px; }
+
+.error-notice-text {
+  margin: 0;
+  font-size: 0.925rem;
+  line-height: 1.6;
+  white-space: pre-line;
+}
+
+.error-notice-compact { margin: 8px 0; padding: 8px 12px; }
+.error-notice-compact .error-notice-text { font-size: 0.875rem; }
+
+.error-notice-action {
+  margin-top: 10px;
+  padding: 6px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--primary-teal);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.error-notice-action:focus-visible { outline: 3px solid var(--primary-teal); outline-offset: 2px; }

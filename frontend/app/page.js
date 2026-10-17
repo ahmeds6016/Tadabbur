@@ -43,6 +43,19 @@ import onboardingConfig from '../config/onboarding-messages.json';
 import { getNameInfo, validateFirstName } from './utils/nameInfo';
 import { reportBackendFailure, reportBackendSuccess } from './lib/backendHealth';
 import { displayTranslation } from './lib/scripture';
+import ErrorNotice from './components/ErrorNotice';
+import { authErrorMessage, isUnknownAccountError, requestErrorFrom, userMessage } from './lib/errors';
+
+const TAFSIR_ERRORS = {
+  fallback: "We couldn't prepare this commentary just now. Please try again in a moment.",
+  notFound: "We couldn't find that verse. Please check the surah and verse numbers.",
+  messages: {
+    content_blocked: "We weren't able to prepare commentary for this request. Please try rephrasing it.",
+    timeout: 'Preparing this commentary is taking longer than usual. Please try again in a moment.',
+  },
+};
+const PROFILE_SAVE_ERROR = "We couldn't save your preferences just now. Please try again.";
+const NOTE_SAVE_ERROR = "We couldn't save your note just now. Please try again.";
 
 // ============================================================================
 // MAIN COMPONENT
@@ -226,7 +239,7 @@ function AuthComponent({ onGuestBrowse }) {
         await signInWithEmailAndPassword(auth, email, password);
       }
     } catch (err) {
-      setError(err.message);
+      setError(authErrorMessage(err, authMode === 'signUp' ? 'signUp' : 'signIn'));
     }
   };
 
@@ -237,14 +250,10 @@ function AuthComponent({ onGuestBrowse }) {
       await sendPasswordResetEmail(auth, email);
       setAuthMode('resetSent');
     } catch (err) {
-      if (err.code === 'auth/user-not-found') {
-        setError('No account found with this email address.');
-      } else if (err.code === 'auth/invalid-email') {
-        setError('Please enter a valid email address.');
-      } else if (err.code === 'auth/too-many-requests') {
-        setError('Too many requests. Please wait a few minutes and try again.');
+      if (isUnknownAccountError(err)) {
+        setAuthMode('resetSent');
       } else {
-        setError(err.message);
+        setError(authErrorMessage(err, 'reset'));
       }
     }
   };
@@ -327,7 +336,7 @@ function AuthComponent({ onGuestBrowse }) {
               />
               <button type="submit" style={{ width: '100%' }}>Sign Up</button>
             </form>
-            {error && <p className="error">{error}</p>}
+            <ErrorNotice message={error} compact />
             <button onClick={() => switchMode('signIn')} className="toggle-auth">
               Already have an account? Sign In
             </button>
@@ -408,7 +417,7 @@ function AuthComponent({ onGuestBrowse }) {
               </button>
               <button type="submit" style={{ width: '100%' }}>Sign In</button>
             </form>
-            {error && <p className="error">{error}</p>}
+            <ErrorNotice message={error} compact />
             <button onClick={() => switchMode('signUp')} className="toggle-auth">
               Need an account? Sign Up
             </button>
@@ -460,7 +469,7 @@ function AuthComponent({ onGuestBrowse }) {
               />
               <button type="submit" style={{ width: '100%' }}>Send Reset Link</button>
             </form>
-            {error && <p className="error">{error}</p>}
+            <ErrorNotice message={error} compact />
             <button onClick={() => switchMode('signIn')} className="toggle-auth">
               Back to Sign In
             </button>
@@ -488,7 +497,7 @@ function AuthComponent({ onGuestBrowse }) {
                 &#x2713;
               </div>
               <p style={{ fontSize: '1rem', color: 'var(--color-text-secondary, #666)', lineHeight: '1.6', marginBottom: '8px' }}>
-                We&apos;ve sent a password reset link to:
+                If an account exists for this email, a password reset link is on its way to:
               </p>
               <p style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--primary-teal)', marginBottom: '24px' }}>
                 {email}
@@ -624,15 +633,13 @@ function OnboardingComponent({ user, onProfileComplete }) {
       });
       
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to save profile.');
+        throw await requestErrorFrom(response, { fallback: PROFILE_SAVE_ERROR });
       }
       
       const result = await response.json();
       onProfileComplete(result.profile);
     } catch (err) {
-      // Profile fetch failed — user will be redirected to onboarding
-      setError(err.message);
+      setError(userMessage(err, PROFILE_SAVE_ERROR));
     }
   }, [user, profile, onProfileComplete, isDeterministicPersona]);
 
@@ -850,21 +857,16 @@ function OnboardingComponent({ user, onProfileComplete }) {
           </div>
         )}
 
-        {error && (
-          <div className="error" style={{ marginTop: '24px' }}>
-            <p><strong>Error:</strong> {error}</p>
-            <button 
-              onClick={() => {
-                setError('');
-                setStep(1);
-                setProfile({ persona: '', knowledge_level: '', learning_goal: '', level: '', focus: '', verbosity: '' });
-              }}
-              style={{ marginTop: '16px', width: '100%' }}
-            >
-              Start Over
-            </button>
-          </div>
-        )}
+        <ErrorNotice
+          message={error}
+          style={{ marginTop: '24px' }}
+          actionLabel="Start over"
+          onAction={() => {
+            setError('');
+            setStep(1);
+            setProfile({ persona: '', knowledge_level: '', learning_goal: '', level: '', focus: '', verbosity: '' });
+          }}
+        />
         
         <button 
           onClick={() => signOut(auth)} 
@@ -1169,10 +1171,10 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
           markStepComplete('hasViewedSaved');
         }
       } else {
-        showError('Failed to save. Please try again.');
+        showError(res.status === 401 ? 'Your session has ended. Please sign in again.' : "We couldn't save this answer just now. Please try again.");
       }
-    } catch {
-      showError('Failed to save. Please try again.');
+    } catch (err) {
+      showError(userMessage(err, "We couldn't save this answer just now. Please try again."));
     }
   }, [response, query, user, approach, onboardingState.hasViewedSaved, markStepComplete, showSuccess, showError]);
 
@@ -1356,19 +1358,12 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
       if (!res.ok) {
         if (res.status === 429) {
           setRateLimitWarning(isGuest
-            ? 'Guest limit reached. Create a free account for more queries!'
+            ? "You've reached the guest limit for now. Create a free account to keep studying."
             : 'You have reached your query limit. Please try again later.');
           return;
         }
 
-        let errorMessage = `The server had a problem (${res.status}). Please try again in a moment.`;
-        try {
-          const errorData = await res.json();
-          errorMessage = errorData.error || errorMessage;
-        } catch {
-          // Response body was not JSON — use the status-based message
-        }
-        throw new Error(errorMessage);
+        throw await requestErrorFrom(res, TAFSIR_ERRORS);
       }
 
       const data = await res.json();
@@ -1408,13 +1403,7 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
         // User cancelled the request
         return;
       }
-      // Improve error message for user
-      const errorMessage = err instanceof TypeError
-        ? "Can't reach the server — check your connection and try again."
-        : err.message.includes('Internal server error')
-          ? 'The server encountered an issue. Please try again in a moment.'
-          : err.message;
-      setError(errorMessage);
+      setError(userMessage(err, TAFSIR_ERRORS.fallback));
       // Save failed query to history too (authenticated users only)
       if (!isGuest) {
         await saveQueryToHistory(query, approach, userProfile?.persona || '', false);
@@ -1992,16 +1981,7 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
           </div>
         )}
         
-        {error && (
-          <p
-            ref={feedbackRegionRef}
-            className="error"
-            role="alert"
-            tabIndex={-1}
-          >
-            {error}
-          </p>
-        )}
+        <ErrorNotice ref={feedbackRegionRef} tabIndex={-1} message={error} />
         {isTafsirLoading && (
           versePreview ? (
             <div
@@ -2492,7 +2472,7 @@ function InlineAnnotationForm({ verse, user, onSaved, onCancel }) {
 
   const handleSave = async () => {
     if (!content.trim()) {
-      setError('Please enter some content');
+      setError('Please write something before saving.');
       return;
     }
 
@@ -2516,14 +2496,10 @@ function InlineAnnotationForm({ verse, user, onSaved, onCancel }) {
         })
       });
 
-      if (res.ok) {
-        onSaved();
-      } else {
-        const errorData = await res.json();
-        setError(errorData.error || 'Failed to save');
-      }
+      if (!res.ok) throw await requestErrorFrom(res, { fallback: NOTE_SAVE_ERROR });
+      onSaved();
     } catch (err) {
-      setError('Network error. Please try again.');
+      setError(userMessage(err, NOTE_SAVE_ERROR));
     } finally {
       setIsSaving(false);
     }
@@ -2778,20 +2754,7 @@ function InlineAnnotationForm({ verse, user, onSaved, onCancel }) {
         )}
       </div>
 
-      {error && (
-        <div style={{
-          padding: '10px',
-          background: 'color-mix(in srgb, var(--gold-text) 10%, transparent)',
-          border: '2px solid var(--gold-text)',
-          borderRadius: '8px',
-          color: 'var(--gold-text)',
-          marginBottom: '12px',
-          fontSize: '0.9rem',
-          fontWeight: '600'
-        }}>
-          {error}
-        </div>
-      )}
+      <ErrorNotice message={error} compact />
 
       {/* Action Buttons */}
       <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>

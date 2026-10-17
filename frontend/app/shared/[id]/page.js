@@ -61,16 +61,16 @@ export default function SharedPage() {
     return (
       <div className="container">
         <div className="card">
-          <h1 style={{ color: 'var(--error-color)', textAlign: 'center' }}>
-            Error
+          <h1 style={{ color: 'var(--foreground)', textAlign: 'center' }}>
+            This page isn&apos;t available
           </h1>
-          <p style={{ textAlign: 'center', color: '#666', fontSize: '1.1rem' }}>
+          <p style={{ textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: '1.05rem' }}>
             {error}
           </p>
           <div style={{ textAlign: 'center', marginTop: '24px' }}>
             <Link href="/" style={{
               padding: '12px 24px',
-              background: 'var(--gradient-teal-gold)',
+              background: 'var(--primary-teal)',
               color: 'white',
               textDecoration: 'none',
               borderRadius: '8px',

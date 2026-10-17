@@ -31,7 +31,6 @@ class ErrorBoundary extends React.Component {
       return (
         <div className="error-boundary">
           <div className="error-container">
-            <div className="error-icon">!</div>
             <h2>Something went wrong</h2>
             <p className="error-message">
               {this.props.fallbackMessage || 'An unexpected error occurred. Please try refreshing the page.'}
@@ -75,11 +74,6 @@ class ErrorBoundary extends React.Component {
               padding: 32px;
               box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
               text-align: center;
-            }
-
-            .error-icon {
-              font-size: 3rem;
-              margin-bottom: 16px;
             }
 
             h2 {

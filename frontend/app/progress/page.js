@@ -4,6 +4,10 @@ import { onAuthStateChanged } from 'firebase/auth';
 import Link from 'next/link';
 import { auth } from '../lib/firebase';
 import { BACKEND_URL } from '../lib/config';
+import ErrorNotice from '../components/ErrorNotice';
+import { requestErrorFrom, userMessage } from '../lib/errors';
+
+const PROGRESS_ERROR = "We couldn't load your progress just now. Please try again.";
 import BottomNav from '../components/BottomNav';
 import BadgeDisplay from '../components/BadgeDisplay';
 
@@ -35,7 +39,7 @@ export default function ProgressPage() {
         fetch(`${BACKEND_URL}/annotations/user?limit=500`, { headers }),
         fetch(`${BACKEND_URL}/streak`, { headers }),
       ]);
-      if (!progressRes.ok) throw new Error(`Failed to load progress (${progressRes.status})`);
+      if (!progressRes.ok) throw await requestErrorFrom(progressRes, { fallback: PROGRESS_ERROR });
       setProgress(await progressRes.json());
 
       if (annotationsRes.ok) {
@@ -47,7 +51,7 @@ export default function ProgressPage() {
       }
     } catch (err) {
       console.error('Failed to fetch progress:', err);
-      setError(err.message);
+      setError(userMessage(err, PROGRESS_ERROR));
     }
   };
 
@@ -127,17 +131,11 @@ export default function ProgressPage() {
         </div>
 
         {/* Error state */}
-        {error && (
-          <div style={{ textAlign: 'center', padding: '20px', color: '#b91c1c', fontSize: '0.9rem' }}>
-            {error}
-            <button
-              onClick={() => { setError(null); fetchProgress(user); }}
-              style={{ display: 'block', margin: '12px auto 0', padding: '8px 16px', border: '1px solid var(--border-light)', borderRadius: '8px', background: 'var(--color-surface, white)', cursor: 'pointer', color: 'var(--foreground)' }}
-            >
-              Retry
-            </button>
-          </div>
-        )}
+        <ErrorNotice
+          message={error}
+          actionLabel="Try again"
+          onAction={() => { setError(null); fetchProgress(user); }}
+        />
 
         {/* Surah grid */}
         {!error && (

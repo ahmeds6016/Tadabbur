@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { auth } from '../lib/firebase';
 import { BACKEND_URL } from '../lib/config';
 import ConfirmDialog from '../components/ConfirmDialog';
+import ErrorNotice from '../components/ErrorNotice';
 import BottomNav from '../components/BottomNav';
 import { reportBackendFailure, reportBackendSuccess } from '../lib/backendHealth';
 
@@ -196,18 +197,7 @@ export default function SavedSearchesPage() {
           </div>
         )}
 
-        {deleteError && (
-          <div style={{
-            padding: '12px 16px',
-            background: 'rgba(220, 38, 38, 0.1)',
-            color: 'var(--error-color, #dc2626)',
-            borderRadius: 8,
-            fontSize: '0.9rem',
-            marginBottom: 16,
-          }}>
-            {deleteError}
-          </div>
-        )}
+        <ErrorNotice message={deleteError} compact />
 
         {saved.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px 20px', color: '#999' }}>
