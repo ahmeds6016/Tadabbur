@@ -34,14 +34,14 @@ frontend experience is suspended and is not part of the shipped navigation.
 |---|---|
 | Frontend | Next.js 15, React 19, Capacitor 8 |
 | Backend | Flask 3, Python 3.11, Gunicorn |
-| AI | Gemini 3.6 Flash + Gemini 3.5 Flash Lite on Vertex AI's global endpoint (**canary-gated; not merged/deployed until validation passes**) |
+| AI | Gemini 3.8 Flash + Gemini 3.5 Flash Lite on Vertex AI's global endpoint |
 | Data | Firebase Auth; two Firestore databases; Cloud Storage source corpus |
 | Cache | Firestore tafsir cache, 90-day TTL, invalidated by scholarly pipeline version |
 | Infra | Google Cloud Run, Cloud Build, Secret Manager, Cloud Monitoring |
 
-Production is currently on pipeline `14.0`. The canary-gated model branch changes the
-generated-content pipeline to `15.0`; see [AI.md](AI.md) and [HANDOFF.md](HANDOFF.md)
-for the current merge/deploy gate.
+Production is on pipeline `16.0` (Gemini 3.8 Flash, deployed 2026-10-17). Model
+changes are canary-gated; see [AI.md](AI.md) for the procedure and current
+configuration, and [HANDOFF.md](HANDOFF.md) for deployed revisions.
 
 ## Repository map
 

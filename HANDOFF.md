@@ -196,6 +196,48 @@ Q14. **✅ DEPLOYED 2026-08-13 — Reliability quick wins**
 
 ## Session log
 
+### 2026-10-17 — Claude: Gemini 3.8 Flash SWITCHED & VERIFIED in production (backend + frontend)
+
+- **Production: backend `tafsir-backend-00273-dpr` (gemini-3.8-flash, pipeline 16.0) +
+  frontend `tafsir-frontend-00307-r65`**, from `main` @ `15b6108` (merge of
+  `claude/s12-gemini-38-canary`). Ahmed approved ("SWITCH"). Migration done 33 days
+  before Vertex retires gemini-3.6-flash (2026-11-19). **Rollback:** backend
+  `tafsir-backend-00271-l8f` (3.6, pipeline 15.1 — valid only until 2026-11-19),
+  frontend `tafsir-frontend-00306-ptn`.
+- **Traffic switch — a near-miss worth remembering.** `deploy-backend.sh` created
+  `00273-dpr` (the build WITH the correlations-cap fix) at 0% because the canary's
+  `--no-traffic` had pinned traffic to `00271` by name. Cloud Run then reported
+  `latestReadyRevisionName = 00275-dap` — the canary build WITHOUT the fix — because the
+  new revision, untagged at 0%, was "Retired" and skipped. `--to-latest` at that moment
+  would have routed production to the wrong build. Instead: `update-traffic
+  --to-revisions tafsir-backend-00273-dpr=100 --remove-tags canary38`, verified, and
+  only then `--to-latest` (now `100% LATEST (currently 00273-dpr)`, pin cleared, future
+  deploys take traffic normally). Procedure recorded in AI.md.
+- **Backend verification:** 9 env vars, `GEMINI_MODEL_ID=gemini-3.8-flash`;
+  `/health` healthy; `/daily-verse` Arabic; admin 403 / debug 404; `/topics/resolve` OK.
+  Fresh 2:255 (29.6s) and 94:5 (26.9s) → 200, 8/8 sections, no extraction error,
+  1 grounded hadith each, `notices: []`, no emoji; repeat 94:5 → `hit-firestore` 0.22s.
+  Prod logs: `GEMINI_USAGE ... model=gemini-3.8-flash`, zero errors.
+- **Frontend verification:** 100% on `00307-r65` with `latestRevision: true`. Live
+  bundle: zero `localhost:8080`, targets prod backend. Headless Chrome at 390px against
+  the live site (guest, 94:5): single closing quote, badge hidden + attribution, no
+  floating button, no fixed overlays, no horizontal overflow, headings 18px,
+  recommendation reasons end on whole words, install banner styled (white surface,
+  1px border, 20px padding). The 2026-10-01 follow-ups (banner, `.gcloudignore`,
+  Riyad spelling + hyphen-tolerant hadith labels) are now live too.
+- **Pre-existing, logged, not blocking:** every frontend Cloud Build since at least
+  2026-08-14 prints `ReferenceError: window is not defined` after all 14 pages generate
+  (`.next/server/chunks/434.js`, Node 20 image; does not reproduce on Node 24 locally).
+  No page fails to prerender. Some module touches `window` at import on the server —
+  worth tracking down. Also: an interrupted `deploy-frontend.sh` left one extra build
+  (`87b95d5d`) that never deployed; only `00307` was created.
+- **Cost note:** pipeline 16.0 means every cached answer regenerates once on 3.8 when
+  first viewed (about 27s for that reader, then cached for 90 days).
+- **Next:** iOS App Store blockers (account deletion, privacy policy, Guideline 4.2
+  native value — see the 2026-10-01 entry); include pipeline version in the Firestore
+  cache key; canonicalise model-supplied hadith collection labels ("Ṣaḥīḥ Muslim");
+  find the `window` access in the server bundle; truncating quick-select chips.
+
 ### 2026-10-17 — Claude: Gemini 3.8 Flash canary PASSED; traffic switch awaits Ahmed
 
 - **Why:** Vertex AI retires `gemini-3.6-flash` on **2026-11-19** (Vertex model page;

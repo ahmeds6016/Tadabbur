@@ -62,9 +62,10 @@ persona prompt → Gemini REST generation → JSON extraction → hadith groundi
 
 | Where | Value | Status |
 |---|---|---|
-| Production (rev tafsir-backend-00269-z5h) | `gemini-3.6-flash` / `gemini-3.5-flash-lite`, `GEMINI_API_LOCATION=global`, pipeline `15.1` | **DEPLOYED & canary-validated 2026-08-14** (`GEMINI_USAGE model=gemini-3.6-flash` confirmed in prod logs) |
+| Production (rev tafsir-backend-00273-dpr) | `gemini-3.8-flash` / `gemini-3.5-flash-lite`, `GEMINI_API_LOCATION=global`, pipeline `16.0` | **DEPLOYED & canary-validated 2026-10-17** (`GEMINI_USAGE model=gemini-3.8-flash` confirmed in prod logs) |
 | app.py defaults + deploy-backend.sh | same values | in sync with production |
-| Retired | `gemini-2.5-flash` (shutdown Oct 16-20, 2026) | migration complete ~2 months ahead of deadline |
+| Vertex retirement dates | `gemini-3.8-flash` "September 2, 2027 or later"; `gemini-3.5-flash-lite` "July 21, 2027 or later" | check the Vertex model pages, not the Gemini API deprecations page — they disagree |
+| Retired | `gemini-3.6-flash` (Vertex retirement 2026-11-19); `gemini-2.5-flash` (Oct 16-20, 2026) | 3.6 → 3.8 migration complete 33 days ahead of deadline |
 
 Migration notes (2026-08-14): 3.6 requires the global endpoint (404 on regional);
 thinking tokens eat small maxOutputTokens budgets (all raised); 3.6 sometimes wraps
@@ -74,6 +75,18 @@ other non-objects); unverifiable hadith collection labels are now DOWNGRADED
 `services/hadith_validation.py`. Pipeline 15.1 skipped 15.0 because early canary
 runs cached hadith-less 15.0 docs. Any future model change: same procedure —
 no-traffic canary + `golden_regression.py`, never flip from docs alone.
+
+Migration notes (2026-10-17, 3.6 → 3.8): 3.8 is ~25% slower on fresh answers (median
+~27s vs ~22s, tail 44s vs 27s) and its thinking reached 4,627 tokens, so every main-model
+call needs `maxOutputTokens` ≥ 8,192. Three operational traps hit during the switch:
+(1) the Firestore cache key omits the pipeline version, so a canary overwrites
+production's docs for the verses it tests — production never serves them (version
+gate), but regenerates them; (2) `gcloud run deploy --no-traffic` replaces the LATEST
+traffic target with a named revision, so later deploys silently get 0%; (3) an
+untagged 0%-traffic revision is "Retired", and Cloud Run's `latestReadyRevision` skips
+it — so `update-traffic --to-latest` can route to the OLD canary. Correct switch:
+deploy, then `update-traffic --to-revisions <new>=100 --remove-tags <canary>`, verify,
+then `update-traffic --to-latest` once `latestReadyRevisionName` is the new revision.
 
 ## Conventions & constraints
 
@@ -112,9 +125,10 @@ The Gemini migration harness is intentionally live and paid. Claude's canary pro
 
 1. Run `backend/tests/golden_regression.py` against the current production URL for a
    timestamped baseline.
-2. Deploy a **no-traffic** revision with `GEMINI_API_LOCATION=global`,
-   `GEMINI_MODEL_ID=gemini-3.6-flash`, and
-   `GEMINI_LITE_MODEL_ID=gemini-3.5-flash-lite`.
+2. Deploy a **no-traffic** revision (own image tag, `--tag <name>`, full environment
+   from `deploy-backend.sh`) with `GEMINI_API_LOCATION=global` and the candidate
+   `GEMINI_MODEL_ID`, on a branch that bumps `SCHOLARLY_PIPELINE_VERSION` so the canary
+   neither serves nor is served old cache.
 3. Run the harness against the canary URL with bearer tokens for users configured as
    `curious_explorer` and `student`:
 
