@@ -5,6 +5,10 @@ import {
   Compass, Globe, PenLine, Heart, Crown, BookOpen, Trophy, Rocket,
 } from 'lucide-react';
 import { BACKEND_URL } from '../lib/config';
+import ErrorNotice from './ErrorNotice';
+import { requestErrorFrom, userMessage } from '../lib/errors';
+
+const BADGES_ERROR = "We couldn't load your badges just now.";
 
 // Color palette for badge icons
 const BADGE_COLORS = {
@@ -173,13 +177,13 @@ export default function BadgeDisplay({ user, compact = false }) {
       const res = await fetch(`${BACKEND_URL}/badges`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) throw new Error(`Failed to load badges (${res.status})`);
+      if (!res.ok) throw await requestErrorFrom(res, { fallback: BADGES_ERROR });
       const data = await res.json();
       setBadges(data.badges || []);
       setTotalEarned(data.total_earned ?? 0);
       setTotalAvailable(data.total_available ?? 13);
     } catch (err) {
-      setError(err.message);
+      setError(userMessage(err, BADGES_ERROR));
     } finally {
       setLoading(false);
     }
@@ -205,30 +209,7 @@ export default function BadgeDisplay({ user, compact = false }) {
 
   if (error) {
     return (
-      <div className="badge-error">
-        <span>{error}</span>
-        <button onClick={fetchBadges}>Retry</button>
-        <style jsx>{`
-          .badge-error {
-            text-align: center;
-            padding: 16px;
-            color: var(--gold-text);
-            font-size: 0.85rem;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 8px;
-          }
-          .badge-error button {
-            padding: 6px 14px;
-            border: 1px solid var(--border-light, #e5e7eb);
-            border-radius: 6px;
-            background: var(--color-surface, white);
-            cursor: pointer;
-            font-size: 0.8rem;
-          }
-        `}</style>
-      </div>
+      <ErrorNotice message={error} compact actionLabel="Try again" onAction={fetchBadges} />
     );
   }
 

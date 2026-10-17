@@ -2,6 +2,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { BACKEND_URL } from '../lib/config';
 import { displayTranslation } from '../lib/scripture';
+import ErrorNotice from './ErrorNotice';
+import { requestErrorFrom, userMessage } from '../lib/errors';
+
+const SAVE_ERROR = "We couldn't save your reflection just now. Please try again.";
 
 const ANNOTATION_TYPES = [
   { value: 'personal_insight', label: 'Personal Insight' },
@@ -66,7 +70,7 @@ export default function AnnotationForm({
   // Handle save
   const handleSave = async () => {
     if (!content.trim()) {
-      setError('Please enter some content for your annotation');
+      setError('Please write something before saving.');
       return;
     }
 
@@ -121,15 +125,11 @@ export default function AnnotationForm({
         body: JSON.stringify(body)
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        onSaved?.(data);
-      } else {
-        const errorData = await res.json();
-        setError(errorData.error || 'Failed to save annotation');
-      }
+      if (!res.ok) throw await requestErrorFrom(res, { fallback: SAVE_ERROR });
+      const data = await res.json();
+      onSaved?.(data);
     } catch (err) {
-      setError('Network error. Please try again.');
+      setError(userMessage(err, SAVE_ERROR));
     } finally {
       setIsSaving(false);
     }
@@ -274,11 +274,7 @@ export default function AnnotationForm({
         </div>
 
         {/* Error Display */}
-        {error && (
-          <div className="error-message" role="alert">
-            {error}
-          </div>
-        )}
+        <ErrorNotice message={error} compact />
       </div>
 
       {/* Footer with Actions */}
@@ -488,14 +484,6 @@ export default function AnnotationForm({
         }
 
         /* Error Message */
-        .error-message {
-          padding: 12px;
-          background: var(--gold-light);
-          border: 1px solid var(--gold);
-          border-radius: 8px;
-          color: var(--gold-text);
-          font-size: 0.875rem;
-        }
 
         /* Footer */
         .form-footer {
