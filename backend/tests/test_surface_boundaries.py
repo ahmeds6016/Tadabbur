@@ -33,7 +33,7 @@ def surface():
               make_response=make_response, wraps=wraps, hmac=hmac, datetime=datetime,
               timedelta=timedelta, logger=logging.getLogger(__name__),
               ADMIN_SECRET='offline-admin', DEBUG_ROUTES_ENABLED=False,
-              auth=SimpleNamespace(verify_id_token=Mock(return_value={'uid': 'reader'})),
+              _account_is_deleting=lambda uid: False, auth=SimpleNamespace(verify_id_token=Mock(return_value={'uid': 'reader'})),
               rate_limit_lock=threading.RLock(), USER_RATE_LIMITS=defaultdict(list),
               COUNTER_MAX_KEYS=3, ANALYTICS=defaultdict(int), ANALYTICS_LAST_SEEN={})
     nodes = [n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name in names]

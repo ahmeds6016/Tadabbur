@@ -60,7 +60,7 @@ gcloud run deploy ${SERVICE_NAME} \
   --set-env-vars "GEMINI_LITE_MODEL_ID=gemini-3.5-flash-lite" \
   --set-env-vars "GCS_BUCKET_NAME=tafsir-simplified-sources" \
   --set-env-vars "FIREBASE_SECRET_FULL_PATH=projects/612616741510/secrets/firebase-sa-key/versions/latest" \
-  --set-secrets "ADMIN_SECRET=admin-secret:latest"
+  --set-secrets "ADMIN_SECRET=admin-secret:latest,REFLECTION_ENCRYPTION_SECRET=reflection-encryption-key:latest"
 
 echo -e "${GREEN}✓ Deployed successfully!${NC}"
 

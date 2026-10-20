@@ -154,12 +154,13 @@ def log_observed_request(response):
     started_at = getattr(g, "request_started_at", time.time())
     duration_ms = (time.time() - started_at) * 1000
     logger.info(
-        "REQUEST_METRIC method=%s path=%s status=%s duration_ms=%.1f cache_status=%s",
+        "REQUEST_METRIC method=%s path=%s status=%s duration_ms=%.1f cache_status=%s request_id=%s",
         request.method,
         request.path,
         response.status_code,
         duration_ms,
         response.headers.get("X-Cache-Status", "none"),
+        getattr(g, "request_id", "unknown"),
     )
     return response
 
@@ -171,7 +172,7 @@ def api_error(message="The request could not be completed. Please try again.", s
     request_id = getattr(g, 'request_id', None) or uuid.uuid4().hex[:12]
     logger.exception("REQUEST_ERROR request_id=%s status=%s", request_id, status)
     response = jsonify({'error': message, 'request_id': request_id, **({'retry': True} if dependency_failure else {})})
-    if dependency_failure:
+    if status == 503:
         response.headers['Retry-After'] = '30'
     return response, status
 
@@ -192,6 +193,9 @@ GEMINI_MODEL_ID = os.environ.get("GEMINI_MODEL_ID", "gemini-3.8-flash")  # Verte
 GEMINI_LITE_MODEL_ID = os.environ.get("GEMINI_LITE_MODEL_ID", "gemini-3.5-flash-lite")
 FIREBASE_SECRET_FULL_PATH = os.environ.get("FIREBASE_SECRET_FULL_PATH")
 REFLECTION_ENCRYPTION_SECRET = os.environ.get("REFLECTION_ENCRYPTION_SECRET", "")
+CIPHERTEXT_PREFIX = "fernet:v1:"
+if os.environ.get('K_SERVICE') and not REFLECTION_ENCRYPTION_SECRET:
+    logger.warning("REFLECTION_ENCRYPTION_SECRET is absent: new private reflection fields will be stored as plaintext until configured.")
 ADMIN_SECRET = os.environ.get("ADMIN_SECRET", "")
 DEBUG_ROUTES_ENABLED = os.environ.get("DEBUG_ROUTES", "") == "1"
 
@@ -306,21 +310,25 @@ def _encrypt_text(text: str, uid: str) -> str:
     f = _get_user_fernet(uid)
     if not f:
         return text
-    return f.encrypt(text.encode('utf-8')).decode('utf-8')
+    return CIPHERTEXT_PREFIX + f.encrypt(text.encode('utf-8')).decode('utf-8')
 
 
 def _decrypt_text(token: str, uid: str) -> str:
-    """Decrypt text from storage. Returns original text if decryption fails or is not configured."""
+    """Read legacy plaintext/unprefixed Fernet and versioned ciphertext."""
     if not token:
         return token
+    versioned = token.startswith(CIPHERTEXT_PREFIX)
     f = _get_user_fernet(uid)
-    if not f:
-        return token
-    try:
-        return f.decrypt(token.encode('utf-8')).decode('utf-8')
-    except Exception:
-        # Data was stored before encryption was enabled — return as-is
-        return token
+    if versioned:
+        if not f:
+            raise RuntimeError('Reflection encryption is unavailable')
+        return f.decrypt(token[len(CIPHERTEXT_PREFIX):].encode('utf-8')).decode('utf-8')
+    if f:
+        try:
+            return f.decrypt(token.encode('utf-8')).decode('utf-8')
+        except Exception:
+            pass  # Legacy plaintext remains readable.
+    return token
 
 
 # ============================================================================
@@ -2159,6 +2167,30 @@ load_chunks_from_verse_files_enhanced() # UPDATED CALL
 from services.token_budget_service import precompute_verse_budgets
 precompute_verse_budgets(TAFSIR_CHUNKS, QURAN_METADATA)
 
+def _deletion_job_ref(uid):
+    return users_db.collection('account_deletions').document(hashlib.sha256(uid.encode()).hexdigest())
+
+
+def _account_is_deleting(uid):
+    return _deletion_job_ref(uid).get().exists
+
+
+def _erase_descendants_page(document, budget):
+    """Delete descendants before parents; restarts safely after any interruption."""
+    for collection in document.collections():
+        # list_documents includes missing parents that still have descendants.
+        for child in collection.list_documents(page_size=max(1, min(100, budget[0]))):
+            if not _erase_descendants_page(child, budget):
+                return False
+            if budget[0] <= 0:
+                return False
+            child.delete()
+            budget[0] -= 1
+            if budget[0] == 0:
+                return False
+    return True
+
+
 # --- Firebase Auth Decorator ---
 def firebase_auth_required(f):
     @wraps(f)
@@ -2167,10 +2199,15 @@ def firebase_auth_required(f):
         if not id_token:
             return jsonify({"error": "Authorization token is missing"}), 401
         try:
-            decoded_token = auth.verify_id_token(id_token)
+            decoded_token = auth.verify_id_token(id_token, check_revoked=request.path != "/account/delete")
             request.user = decoded_token
         except Exception as e:
             return api_error("Please sign in again to continue.", 401)
+        try:
+            if request.path != '/account/delete' and _account_is_deleting(decoded_token['uid']):
+                return jsonify({'error': 'Account deletion is in progress.'}), 409
+        except Exception:
+            return api_error('Account services are temporarily unavailable. Please try again.', 503)
         return f(*args, **kwargs)
     return decorated_function
 
@@ -2183,6 +2220,8 @@ def firebase_auth_optional(f):
             try:
                 decoded_token = auth.verify_id_token(id_token)
                 request.user = decoded_token
+                if _account_is_deleting(decoded_token['uid']):
+                    request.user = None
             except Exception:
                 # Token invalid or expired, but that's OK for optional auth
                 request.user = None
@@ -3197,6 +3236,64 @@ def format_for_export(response_data, format_type='markdown'):
 # ============================================================================
 # API ROUTES
 # ============================================================================
+
+@app.route('/account/delete', methods=['POST'])
+@firebase_auth_required
+def delete_account():
+    """Bounded, idempotent erasure; Firebase Auth is removed after private data."""
+    uid = request.user['uid']
+    try:
+        data = request.get_json(silent=True) or {}
+        if data.get('confirmation') != 'DELETE':
+            return jsonify({'error': 'Confirm account deletion by entering DELETE.'}), 400
+        auth_time = request.user.get('auth_time')
+        job_ref = _deletion_job_ref(uid)
+        job = job_ref.get()
+        authorized = job.to_dict().get('authorized_auth_time') if job.exists else None
+        fresh = type(auth_time) in (int, float) and 0 <= time.time() - auth_time <= 300
+        resuming = type(auth_time) in (int, float) and authorized is not None and auth_time >= authorized
+        if not fresh and not resuming:
+            return jsonify({'error': 'Please sign in again before deleting your account.'}), 401
+        if not job.exists:
+            from google.api_core.exceptions import AlreadyExists
+            try:
+                job_ref.create({'phase': 'waiting', 'not_before': time.time() + 305, 'authorized_auth_time': auth_time,
+                                'created_at': firestore.SERVER_TIMESTAMP})
+            except AlreadyExists:
+                pass
+            job = job_ref.get()
+        state = job.to_dict()
+        if state.get('phase') == 'complete':
+            return jsonify({'complete': True}), 200
+        # Previously admitted requests have at most the service's 300s deadline.
+        # New authenticated work is gated by the marker before entering handlers.
+        wait = max(0, int(state.get('not_before', 0) - time.time()))
+        if wait:
+            response = make_response(jsonify({'complete': False, 'phase': 'waiting', 'retry_after': min(30, wait)}), 202)
+            response.headers['Retry-After'] = str(min(30, wait))
+            return response
+        root = users_db.collection('users').document(uid)
+        budget = [100]
+        if not _erase_descendants_page(root, budget):
+            return jsonify({'complete': False, 'phase': 'erasing', 'retry_after': 1}), 202
+        feedback = users_db.collection('feedback').where(filter=FieldFilter('uid', '==', uid)).limit(budget[0])
+        for document in feedback.stream():
+            document.reference.delete()
+            budget[0] -= 1
+        if budget[0] == 0:
+            return jsonify({'complete': False, 'phase': 'erasing', 'retry_after': 1}), 202
+        root.delete()
+        job_ref.set({'phase': 'private_data_deleted'}, merge=True)
+        try:
+            auth.revoke_refresh_tokens(uid)
+            auth.delete_user(uid)
+        except auth.UserNotFoundError:
+            pass  # A prior attempt removed Auth but lost its final response.
+        job_ref.set({'phase': 'complete', 'completed_at': firestore.SERVER_TIMESTAMP}, merge=True)
+        return jsonify({'complete': True}), 200
+    except Exception:
+        return api_error()
+
 
 @app.route("/suggestions", methods=["GET"])
 @firebase_auth_optional
@@ -6489,7 +6586,7 @@ def tafsir_handler_enhanced():
             return tafsir_response(cached_response, cache_status="hit-memory")
         perf_metrics['stages']['cache_check'] = (time.time() - stage_start) * 1000
 
-        print(f"[TAFSIR] query={query} approach={approach}")
+        logger.info("TAFSIR verse=%s request_id=%s", query, getattr(g, "request_id", "unknown"))
 
         # CLASSIFICATION
         stage_start = time.time()
@@ -7249,7 +7346,7 @@ def create_share():
         # Create the shared content document
         share_doc = {
             "share_id": share_id,
-            "query": query,
+            "query": cache_info['query_normalized'],
             "approach": approach,
             "response": cached_response,
             "pipeline_version": SCHOLARLY_PIPELINE_VERSION,
@@ -9708,7 +9805,7 @@ def _enrich_feedback_with_gemini(feedback_type, raw_message):
         if resp.status_code == 200:
             text = extract_gemini_text(resp.json())
             enriched = json.loads(text)
-            print(f"[FEEDBACK] Gemini enrichment OK — title: {enriched.get('title', '')[:60]}")
+            logger.info("FEEDBACK enrichment complete")
             return enriched
         else:
             print(f"[FEEDBACK] Gemini enrichment failed: HTTP {resp.status_code}")
@@ -9750,7 +9847,7 @@ def _create_github_issue(feedback_type, title, body, labels):
             print(f"[FEEDBACK] GitHub issue created: {issue_url}")
             return issue_url
         else:
-            print(f"[FEEDBACK] GitHub issue creation failed: HTTP {resp.status_code} — {resp.text[:200]}")
+            logger.warning("FEEDBACK issue delivery failed status=%s", resp.status_code)
             return None
 
     except Exception as e:
@@ -9800,7 +9897,7 @@ def submit_feedback():
             "created_at": firestore.SERVER_TIMESTAMP,
         }
         _, doc_ref = users_db.collection("feedback").add(doc)
-        print(f"[FEEDBACK] {feedback_type} from {uid[:8]}...: {message[:80]}")
+        logger.info("FEEDBACK accepted type=%s request_id=%s", feedback_type, getattr(g, "request_id", "unknown"))
 
         # Create GitHub issue in background thread (don't slow down response)
         def _bg_github(ref):
@@ -9907,14 +10004,14 @@ def feedback_daily_summary():
                     server.login(smtp_email, smtp_password)
                     server.send_message(mime_msg)
 
-                print(f"[FEEDBACK] Daily summary email sent to {FEEDBACK_SUMMARY_EMAIL}")
+                logger.info("FEEDBACK summary delivered")
 
             except Exception as mail_err:
                 print(f"[FEEDBACK] Email send failed: {mail_err}")
-                print(f"[FEEDBACK] Summary (logged):\n{email_body}")
+                logger.warning("FEEDBACK summary delivery failed; body omitted from logs")
         else:
             print("[FEEDBACK] SMTP not configured — logging summary instead")
-            print(f"[FEEDBACK] Summary:\n{email_body}")
+            logger.info("FEEDBACK summary prepared; body omitted from logs")
 
         return jsonify({"message": f"Summary generated for {len(items)} items"}), 200
 

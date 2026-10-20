@@ -40,6 +40,7 @@ def make_topic_app():
         "make_response": make_response, "wraps": wraps, "json": json,
         "datetime": datetime, "timedelta": timedelta,
         "logger": logging.getLogger("topic_test"), "time": SimpleNamespace(monotonic=clock),
+        "_account_is_deleting": lambda uid: False,
         "auth": SimpleNamespace(verify_id_token=Mock(return_value={"uid": "offline-user"})),
         "google": SimpleNamespace(auth=SimpleNamespace(default=Mock(return_value=(credentials, None)))),
         "GoogleRequest": Mock(), "requests": SimpleNamespace(post=post),
