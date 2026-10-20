@@ -196,6 +196,52 @@ Q14. **✅ DEPLOYED 2026-08-13 — Reliability quick wins**
 
 ## Session log
 
+### 2026-10-20 — Codex: Session 12 independent read-only audit completed (October 17 observations)
+
+- **Branch:** `codex/audit-gpt6`. **Audit commit:** `519788b`.
+  Report: [docs/AUDIT-2026-10-GPT6.md](docs/AUDIT-2026-10-GPT6.md).
+  Audited `main` at `7a0f3f1`, including required `2271020`; repository/cloud/test
+  observations were collected October 17 and the report completed October 20.
+- **34 findings: 1 P0, 11 P1, 22 P2, 0 P3.** Full evidence, quoted code,
+  offline reproductions, all **84 route handlers**, dependency applicability,
+  verified-safe checks, unresolved leads and six proposed fix sessions are in the report.
+- **Top three risks:** (1) **LOG-01 P0**: hadith downgrade strips the collection field
+  but preserves unverified narrator/free-text attribution; the existing Ahmad fixture
+  can still display a Muslim claim through `attribution`. Aggregate shingle matching
+  also accepts unsupported endings. (2) **SEC-01 P1**: main commentary raw HTML
+  permits unsandboxed `iframe srcdoc` script to execute in the parent's origin,
+  reproduced in an isolated browser using the installed libraries. (3) **OPS-01 P1**:
+  both Firestore databases have no managed backup schedule/retained us-central1
+  backup, PITR disabled and only 3600-second version retention.
+- **Before the next routine content deploy:** Claude should review and prioritize
+  **LOG-01 + SEC-01/02** (attribution, rendering and reader-input/shared-cache boundaries).
+  A focused emergency security fix should not wait for all 34 findings. Own the other
+  P1 recovery, encryption, erasure, abuse, dependency, account-state and deployment
+  work. **No iOS submission** until the affected native runtime, account deletion
+  and first-party privacy policy are resolved (SEC-04, PRIV-02/04).
+- **Verified:** 457 backend tests, 11 frontend tests, Next build 14/14; build emits
+  Firebase server-initialization failure, with the `window` source reproduced using
+  a synthetic enabled reCAPTCHA response. npm audit reports 14 affected production
+  packages (5 critical, 8 high, 1 moderate); pip-audit reports 20 records across five
+  packages, deduplicated to 10 advisory identities. The report distinguishes reachable,
+  absent and unverified advisory preconditions instead of treating every CVSS label
+  as a live exploit. No backend cross-user IDOR was found; required/admin/debug/cron
+  gates, strict topic mapping, share creation and bounded main retry remain sound.
+- **Observed production on October 17:** backend `00273-dpr`, frontend `00308-vbm`,
+  both 100% latest. Friendly errors had already deployed, correcting the kickoff's
+  pending-deploy assumption. This is not a new October 20 production observation.
+- **Read-only scope preserved:** no application/dependency changes, backend startup,
+  paid generation, private record/secret reads, cloud mutations or deployment.
+  Three explicit public GETs only: frontend `/`, backend `/health`, and the `2:1`
+  range limit. Six is its valid dynamic budget beneath the ten-verse hard cap.
+- **Not verified:** deployed Firestore rules (metadata read 403), exact guest proxy
+  identity, provider budgets/quotas (budget API disabled), exact image dependency
+  graph, native-device exploit behavior, old snapshots/external exports/log retention,
+  alert delivery and restore/failover. Production attacks/load/auth tests were excluded
+  by instruction. Section 6 names the precise isolated/read-only follow-up for each.
+- **Next:** Claude reviews the evidence into fix sessions. Only this audit document
+  and this handoff entry are committed; no fixes are implemented by this branch.
+
 ### 2026-10-17 — Claude: plain-language errors app-wide (merged, NOT deployed); GPT 6 full audit issued
 
 - **Merged** `2271020` (`claude/friendly-errors`). Frontend only. **DEPLOYED 2026-10-17** as
