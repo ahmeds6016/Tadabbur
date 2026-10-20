@@ -29,7 +29,7 @@ def _single_line_log(value: Any) -> str:
     """Escape line breaks so Cloud Logging emits one entry per message."""
     return str(value).replace("\r", "\\r").replace("\n", "\\n")
 
-from flask import Flask, request, jsonify, make_response, g
+from flask import Flask, request, jsonify, make_response, g, has_request_context
 from werkzeug.middleware.proxy_fix import ProxyFix
 from flask_cors import CORS
 from services.topic_service import (
@@ -1269,11 +1269,20 @@ def validate_verse_reference(surah, verse):
 
 
 # --- Firestore Verse Lookup ---
+def _surah_snapshot(surah_num):
+    if has_request_context():
+        if not hasattr(g, 'surah_snapshots'):
+            g.surah_snapshots = {}
+        if surah_num not in g.surah_snapshots:
+            g.surah_snapshots[surah_num] = quran_db.collection('quran_texts').document(f'surah_{surah_num}').get()
+        return g.surah_snapshots[surah_num]
+    return quran_db.collection('quran_texts').document(f'surah_{surah_num}').get()
+
+
 def get_verse_from_firestore(surah_num, verse_num):
     """Retrieve verse text from tafsir-db database"""
     try:
-        doc_ref = quran_db.collection('quran_texts').document(f'surah_{surah_num}')
-        doc = doc_ref.get()
+        doc = _surah_snapshot(surah_num)
 
         if doc.exists:
             verses = doc.to_dict().get('verses', {})
@@ -1296,8 +1305,7 @@ def get_verse_from_firestore(surah_num, verse_num):
 def get_verses_range_from_firestore(surah_num, start_verse, end_verse):
     """Retrieve multiple verses from tafsir-db database"""
     try:
-        doc_ref = quran_db.collection('quran_texts').document(f'surah_{surah_num}')
-        doc = doc_ref.get()
+        doc = _surah_snapshot(surah_num)
 
         if doc.exists:
             verses_dict = doc.to_dict().get('verses', {})
@@ -4270,61 +4278,18 @@ def get_streak():
 @app.route("/streak", methods=["POST"])
 @firebase_auth_required
 def update_streak():
-    """Record activity and update streak. Called when user makes a reflection or searches a verse."""
-    uid = request.user["uid"]
+    uid = request.user['uid']
     try:
-        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-        yesterday = (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%d")
-
-        user_ref = users_db.collection("users").document(uid)
-        user_doc = user_ref.get()
-        data = user_doc.to_dict() if user_doc.exists else {}
-
-        last_date = data.get("streak_last_date", None)
-        current = data.get("streak_current", 0)
-        longest = data.get("streak_longest", 0)
-
-        if last_date == today:
-            # Already recorded today — no change
-            return jsonify({
-                "current_streak": current,
-                "longest_streak": longest,
-                "last_activity_date": today,
-                "changed": False,
-            }), 200
-
-        if last_date == yesterday:
-            # Consecutive day — extend streak
-            current += 1
-        else:
-            # Streak broken or first activity — start fresh
-            current = 1
-
-        longest = max(longest, current)
-
-        user_ref.set({
-            "streak_current": current,
-            "streak_longest": longest,
-            "streak_last_date": today,
-        }, merge=True)
-
-        # Check for newly earned badges after streak update
-        newly_earned = []
-        try:
-            newly_earned = _check_and_award_badges(uid)
-        except Exception as badge_err:
-            print(f"[BADGES] Error checking badges after streak: {badge_err}")
-
-        return jsonify({
-            "current_streak": current,
-            "longest_streak": longest,
-            "last_activity_date": today,
-            "changed": True,
-            "newly_earned_badges": newly_earned,
-        }), 200
-
-    except Exception as e:
-        print(f"ERROR in POST /streak: {e}")
+        def mutate(data, transaction):
+            updates = _streak_updates(data)
+            return updates, {**data, **updates, 'changed': bool(updates)}
+        data = _update_user_transaction(uid, mutate)
+        newly = _check_and_award_badges(uid) if data['changed'] else []
+        return jsonify({'current_streak': data.get('streak_current', 0),
+                        'longest_streak': data.get('streak_longest', 0),
+                        'last_activity_date': data.get('streak_last_date'),
+                        'changed': data['changed'], 'newly_earned_badges': newly}), 200
+    except Exception:
         return api_error()
 
 
@@ -4332,42 +4297,62 @@ def update_streak():
 # VERSE EXPLORATION TRACKING
 # ============================================================================
 
+def _update_user_transaction(uid, mutate):
+    ref = users_db.collection('users').document(uid)
+    @gcp_firestore.transactional
+    def apply(transaction):
+        if _deletion_job_ref(uid).get(transaction=transaction).exists:
+            raise ValueError('Account deletion is in progress.')
+        snapshot = ref.get(transaction=transaction)
+        data = snapshot.to_dict() if snapshot.exists else {}
+        updates, result = mutate(data, transaction)
+        if updates:
+            transaction.set(ref, updates, merge=True)
+        return result
+    return apply(users_db.transaction())
+
+
+def _streak_updates(data):
+    today = datetime.now(timezone.utc).date()
+    date_text = today.isoformat()
+    current = data.get('streak_current', 0)
+    if data.get('streak_last_date') == date_text:
+        return {}
+    current = current + 1 if data.get('streak_last_date') == (today - timedelta(days=1)).isoformat() else 1
+    return {'streak_current': current, 'streak_longest': max(current, data.get('streak_longest', 0)),
+            'streak_last_date': date_text}
+
+
+def _annotation_count(data, uid, transaction):
+    if type(data.get('annotation_count')) is int:
+        return max(0, data['annotation_count'])
+    # Seed legacy accounts once via an index aggregation, never full documents.
+    results = users_db.collection('users').document(uid).collection('annotations').count().get(transaction=transaction)
+    return int(results[0][0].value) if results else 0
+
+
 def _track_explored_verse(uid, surah, start_verse, end_verse=None):
-    """Track which verses a user has explored. Non-blocking, fire-and-forget."""
+    if not uid:
+        return
     try:
-        if not uid:
-            return
-        end = end_verse or start_verse
-        verses = list(range(start_verse, end + 1))
-        surah_key = str(surah)
-
-        user_ref = users_db.collection("users").document(uid)
-        user_doc = user_ref.get()
-        data = user_doc.to_dict() if user_doc.exists else {}
-
-        explored = data.get("explored_verses", {})
-        existing = set(explored.get(surah_key, []))
-        new_verses = [v for v in verses if v not in existing]
-
-        if not new_verses:
-            return  # Already tracked
-
-        updated_list = sorted(existing | set(new_verses))
-        explored[surah_key] = updated_list
-
-        # Count totals
-        total = sum(len(v) for v in explored.values())
-        total_surahs = len(explored)
-
-        user_ref.set({
-            "explored_verses": explored,
-            "stats_cache": {
-                "total_explored_verses": total,
-                "total_explored_surahs": total_surahs,
-            }
-        }, merge=True)
-    except Exception as e:
-        print(f"WARNING: Failed to track explored verse: {e}")
+        def mutate(data, transaction):
+            explored = data.get('explored_verses', {})
+            collections = data.get('collection_progress', {})
+            end = end_verse or start_verse
+            explored[str(surah)] = sorted(set(explored.get(str(surah), [])) | set(range(start_verse, end + 1)))
+            for verse in range(start_verse, end + 1):
+                key = f'{surah}:{verse}'
+                for cid in _VERSE_TO_COLLECTIONS.get(key, []):
+                    progress = collections.setdefault(cid, {'explored': [], 'started_at': datetime.now(timezone.utc).isoformat()})
+                    progress['explored'] = sorted(set(progress.get('explored', [])) | {key})
+            updates = {'explored_verses': explored, 'collection_progress': collections,
+                       'stats_cache': {'total_explored_verses': sum(len(v) for v in explored.values()),
+                                       'total_explored_surahs': sum(bool(v) for v in explored.values())},
+                       **_streak_updates(data)}
+            return updates, None
+        return _update_user_transaction(uid, mutate)
+    except Exception:
+        logger.exception('Study progress update failed')
 
 
 @app.route("/progress", methods=["GET"])
@@ -4378,6 +4363,13 @@ def get_progress():
     try:
         user_doc = users_db.collection("users").document(uid).get()
         data = user_doc.to_dict() if user_doc.exists else {}
+        if type(data.get('annotation_count')) is not int:
+            def seed_count(value, tx):
+                count = _annotation_count(value, uid, tx)
+                return {'annotation_count': count}, count
+            count = _update_user_transaction(uid, seed_count)
+        else:
+            count = data['annotation_count']
         explored = data.get("explored_verses", {})
 
         total_explored = sum(len(v) for v in explored.values())
@@ -4396,6 +4388,7 @@ def get_progress():
 
         return jsonify({
             "total_explored": total_explored,
+            "annotation_count": count,
             "total_verses": total_verses,
             "percentage": round(total_explored / total_verses * 100, 1) if total_verses else 0,
             "total_surahs_touched": len(explored),
@@ -4715,17 +4708,15 @@ def update_collection_progress(collection_id):
         return jsonify({"error": "verse_key required"}), 400
 
     try:
-        user_ref = users_db.collection("users").document(uid)
-        user_doc = user_ref.get()
-        user_data = user_doc.to_dict() if user_doc.exists else {}
-        collection_progress = user_data.get("collection_progress", {})
-        col_data = collection_progress.get(collection_id, {"explored": [], "started_at": datetime.now(timezone.utc).isoformat()})
-
-        if verse_key not in col_data["explored"]:
-            col_data["explored"].append(verse_key)
-
-        collection_progress[collection_id] = col_data
-        user_ref.set({"collection_progress": collection_progress}, merge=True)
+        if verse_key not in {f'{surah}:{verse}' for surah, verse, _ in col['verses']}:
+            return jsonify({'error': 'Choose a verse in this collection.'}), 400
+        def mutate(user_data, transaction):
+            progress = user_data.get('collection_progress', {})
+            entry = progress.setdefault(collection_id, {'explored': [], 'started_at': datetime.now(timezone.utc).isoformat()})
+            entry['explored'] = sorted(set(entry.get('explored', [])) | {verse_key})
+            return {'collection_progress': progress, **_streak_updates(user_data)}, entry
+        col_data = _update_user_transaction(uid, mutate)
+        _check_and_award_badges(uid)
 
         return jsonify({
             "collection_id": collection_id,
@@ -4751,7 +4742,6 @@ BADGE_DEFINITIONS = {
     "streak_90": {"name": "Quarter of Commitment", "description": "90-day learning streak", "icon": "trophy", "category": "consistency", "tier": "gold", "threshold": 90},
     "streak_180": {"name": "Half-Year Dedication", "description": "180-day learning streak", "icon": "gem", "category": "consistency", "tier": "platinum", "threshold": 180},
     "streak_365": {"name": "Year of Transformation", "description": "365-day learning streak", "icon": "sun", "category": "consistency", "tier": "diamond", "threshold": 365},
-    "comeback_7": {"name": "The Return", "description": "Returned after 7+ days away and completed 3 consecutive days", "icon": "refresh", "category": "consistency", "tier": "silver", "threshold": 3},
 
     # ── Exploration (Breadth) ──
     "explore_10": {"name": "Curious Mind", "description": "Explored 10 unique verses", "icon": "search", "category": "exploration", "tier": "bronze", "threshold": 10},
@@ -4785,17 +4775,12 @@ BADGE_DEFINITIONS = {
 
     # ── Special & Seasonal ──
     "ramadan_plan": {"name": "Ramadan Completer", "description": "Completed the Ramadan Essentials plan", "icon": "moon", "category": "special", "tier": "gold", "threshold": 1},
-    "daily_verse_7": {"name": "Daily Verse Devotee", "description": "Studied the daily verse 7 times", "icon": "sunrise", "category": "special", "tier": "silver", "threshold": 7},
-    "first_week": {"name": "Welcome", "description": "Active during your first 7 days", "icon": "hand-wave", "category": "special", "tier": "bronze", "threshold": 1},
 }
 
 
 def _check_and_award_badges(uid):
-    """Check all badge conditions and award any newly earned badges. Returns list of newly earned."""
-    try:
-        user_doc = users_db.collection("users").document(uid).get()
-        data = user_doc.to_dict() if user_doc.exists else {}
-
+    """One bounded check using maintained counts; merge awards transactionally."""
+    def mutate(data, transaction):
         earned = data.get("badges_earned", {})
         stats = data.get("stats_cache", {})
         streak_current = data.get("streak_current", 0)
@@ -4803,19 +4788,13 @@ def _check_and_award_badges(uid):
         total_verses = stats.get("total_explored_verses", 0)
         total_surahs = stats.get("total_explored_surahs", 0)
 
-        # Count annotations (raise limit for higher-tier badges)
-        try:
-            ann_limit = 1001 if "reflect_500" not in earned else 51
-            ann_query = users_db.collection("users").document(uid).collection("annotations").limit(ann_limit)
-            annotation_count = sum(1 for _ in ann_query.stream())
-        except Exception:
-            annotation_count = 0
+        annotation_count = _annotation_count(data, uid, transaction)
 
         # Count completed collections
         collection_progress = data.get("collection_progress", {})
         completed_collections = sum(
             1 for cid, cp in collection_progress.items()
-            if len(cp.get("explored", [])) >= len(next((c["verses"] for c in THEMED_COLLECTIONS if c["id"] == cid), []))
+            if any(c["id"] == cid and {f"{s}:{v}" for s, v, _ in c["verses"]}.issubset(set(cp.get("explored", []))) for c in THEMED_COLLECTIONS)
         )
 
         # Count completed plans (support both old single and new multi-plan format)
@@ -4825,48 +4804,11 @@ def _check_and_award_badges(uid):
         if old_plan.get("completed_at") and old_plan.get("plan_id") not in active_plans:
             completed_plans += 1
 
-        # Check for comeback streak (7+ day gap then 3 consecutive days)
-        streak_last_date = data.get("streak_last_date")
-        is_comeback = False
-        if streak_last_date and streak_current >= 3:
-            try:
-                from datetime import date as dt_date
-                if isinstance(streak_last_date, str):
-                    last = dt_date.fromisoformat(streak_last_date)
-                else:
-                    last = streak_last_date
-                # Check if there was a gap of 7+ days before current streak started
-                gap_start = datetime.now(timezone.utc).date() - timedelta(days=streak_current)
-                if hasattr(last, 'date'):
-                    last = last.date()
-                # This is approximate — comeback detected if user had a long gap
-                # We store a flag when we detect it
-                is_comeback = data.get("_comeback_detected", False)
-            except Exception:
-                pass
-
         # Check for Ramadan plan completion
         ramadan_completed = any(
             p.get("plan_id") == "ramadan_30" and p.get("completed_at")
             for p in list(active_plans.values()) + ([old_plan] if old_plan else [])
         )
-
-        # Daily verse study count
-        daily_verse_count = data.get("daily_verse_count", 0)
-
-        # First week check
-        created_at = data.get("created_at")
-        first_week_active = False
-        if created_at:
-            try:
-                if isinstance(created_at, str):
-                    created_dt = datetime.fromisoformat(created_at)
-                else:
-                    created_dt = created_at
-                days_since_signup = (datetime.now(timezone.utc) - created_dt).days
-                first_week_active = days_since_signup <= 7 and streak_current >= 1
-            except Exception:
-                pass
 
         newly_earned = []
         best_streak = max(streak_current, streak_longest)
@@ -4880,7 +4822,6 @@ def _check_and_award_badges(uid):
             "streak_90": best_streak >= 90,
             "streak_180": best_streak >= 180,
             "streak_365": best_streak >= 365,
-            "comeback_7": is_comeback,
             # Exploration
             "explore_10": total_verses >= 10,
             "explore_50": total_verses >= 50,
@@ -4910,8 +4851,6 @@ def _check_and_award_badges(uid):
             "plan_all": completed_plans >= len(READING_PLANS),
             # Special
             "ramadan_plan": ramadan_completed,
-            "daily_verse_7": daily_verse_count >= 7,
-            "first_week": first_week_active,
         }
 
         for badge_id, condition in checks.items():
@@ -4922,14 +4861,11 @@ def _check_and_award_badges(uid):
                     **BADGE_DEFINITIONS[badge_id]
                 })
 
-        if newly_earned:
-            users_db.collection("users").document(uid).set(
-                {"badges_earned": earned}, merge=True
-            )
-
-        return newly_earned
-    except Exception as e:
-        print(f"WARNING: Badge check failed: {e}")
+        return {'annotation_count': annotation_count, 'badges_earned': earned}, newly_earned
+    try:
+        return _update_user_transaction(uid, mutate)
+    except Exception:
+        logger.exception('Badge update failed')
         return []
 
 
@@ -5229,94 +5165,50 @@ def get_plan_progress(plan_id):
 @app.route("/reading-plans/<plan_id>/progress", methods=["POST"])
 @firebase_auth_required
 def update_plan_progress(plan_id):
-    """Start a plan or complete a day."""
-    uid = request.user["uid"]
-    plan = next((p for p in READING_PLANS if p["id"] == plan_id), None)
+    uid = request.user['uid']
+    plan = next((p for p in READING_PLANS if p['id'] == plan_id), None)
     if not plan:
-        return jsonify({"error": "Plan not found"}), 404
-
-    data = request.get_json() or {}
-    action = data.get("action")  # "start" or "complete_day"
-
+        return jsonify({'error': 'Plan not found'}), 404
+    payload = request.get_json(silent=True) or {}
+    action, day = payload.get('action'), payload.get('day')
+    if action not in ('start', 'complete_day'):
+        return jsonify({'error': 'Choose start or complete_day.'}), 400
+    if action == 'complete_day' and (type(day) is not int or not 1 <= day <= plan['duration_days']):
+        return jsonify({'error': 'Choose an integer day in this plan.'}), 400
     try:
-        user_ref = users_db.collection("users").document(uid)
-
-        if action == "start":
-            # Read current active_plans dict
-            user_doc = user_ref.get()
-            user_data = user_doc.to_dict() if user_doc.exists else {}
-            active_plans = user_data.get("active_plans", {})
-
-            # Migrate old single active_plan if present
-            old_plan = user_data.get("active_plan", {})
-            if old_plan and old_plan.get("plan_id") and old_plan["plan_id"] not in active_plans:
-                active_plans[old_plan["plan_id"]] = old_plan
-
-            # Add the new plan (or restart it)
-            active_plans[plan_id] = {
-                "plan_id": plan_id,
-                "current_day": 1,
-                "completed_days": [],
-                "started_at": datetime.now(timezone.utc).isoformat(),
-                "completed_at": None,
-            }
-
-            user_ref.set({"active_plans": active_plans}, merge=True)
-            return jsonify({"status": "started", "plan_id": plan_id, "current_day": 1}), 200
-
-        elif action == "complete_day":
-            day_num = data.get("day")
-            if not day_num or day_num < 1 or day_num > plan["duration_days"]:
-                return jsonify({"error": "Invalid day number"}), 400
-
-            user_doc = user_ref.get()
-            user_data = user_doc.to_dict() if user_doc.exists else {}
-            active_plans = user_data.get("active_plans", {})
-
-            # Migrate old format
-            old_plan = user_data.get("active_plan", {})
-            if old_plan and old_plan.get("plan_id") and old_plan["plan_id"] not in active_plans:
-                active_plans[old_plan["plan_id"]] = old_plan
-
-            active = active_plans.get(plan_id)
-            if not active:
-                return jsonify({"error": "This plan is not active"}), 400
-
-            completed = active.get("completed_days", [])
-            if day_num not in completed:
-                completed.append(day_num)
-
-            next_day = min(day_num + 1, plan["duration_days"])
-            is_complete = len(completed) >= plan["duration_days"]
-
-            active_plans[plan_id] = {
-                "plan_id": plan_id,
-                "current_day": next_day,
-                "completed_days": completed,
-                "started_at": active.get("started_at"),
-                "completed_at": datetime.now(timezone.utc).isoformat() if is_complete else None,
-            }
-
-            user_ref.set({"active_plans": active_plans}, merge=True)
-
-            # Track the verse as explored
-            verse_info = plan["days"][day_num - 1]["verse"]
-            _track_explored_verse(uid, verse_info[0], verse_info[1])
-
-            # Check badges
-            newly_earned = _check_and_award_badges(uid)
-
-            return jsonify({
-                "status": "completed" if is_complete else "day_complete",
-                "day": day_num,
-                "current_day": next_day,
-                "completed_days": completed,
-                "is_complete": is_complete,
-                "newly_earned_badges": newly_earned,
-            }), 200
-
-        return jsonify({"error": "Invalid action. Use 'start' or 'complete_day'"}), 400
-    except Exception as e:
+        def mutate(data, transaction):
+            plans = data.get('active_plans', {})
+            legacy = data.get('active_plan', {})
+            if legacy.get('plan_id') and legacy['plan_id'] not in plans:
+                plans[legacy['plan_id']] = legacy
+            active = plans.get(plan_id)
+            if action == 'start':
+                active = active or {'plan_id': plan_id, 'current_day': 1, 'completed_days': [],
+                                    'started_at': datetime.now(timezone.utc).isoformat(), 'completed_at': None}
+            elif not active:
+                return {}, None
+            else:
+                completed = {d for d in active.get('completed_days', []) if type(d) is int and 1 <= d <= plan['duration_days']}
+                completed.add(day)
+                active['completed_days'] = sorted(completed)
+                active['current_day'] = next((d for d in range(1, plan['duration_days'] + 1) if d not in completed), plan['duration_days'])
+                if len(completed) == plan['duration_days'] and not active.get('completed_at'):
+                    active['completed_at'] = datetime.now(timezone.utc).isoformat()
+            plans[plan_id] = active
+            return {'active_plans': plans}, active
+        active = _update_user_transaction(uid, mutate)
+        if active is None:
+            return jsonify({'error': 'This plan is not active.'}), 400
+        newly = []
+        if action == 'complete_day':
+            surah, verse = plan['days'][day - 1]['verse']
+            _track_explored_verse(uid, surah, verse)
+            newly = _check_and_award_badges(uid)
+        return jsonify({'status': 'started' if action == 'start' else 'day_complete',
+                        'plan_id': plan_id, 'day': day, 'current_day': active['current_day'],
+                        'completed_days': active['completed_days'], 'is_complete': bool(active.get('completed_at')),
+                        'newly_earned_badges': newly}), 200
+    except Exception:
         return api_error()
 
 
@@ -5324,22 +5216,38 @@ def update_plan_progress(plan_id):
 # QUERY HISTORY & SAVED SEARCHES ENDPOINTS
 # ============================================================================
 
+def _page_documents(query, collection, sort_field, default=50):
+    raw_limit = request.args.get('limit', str(default))
+    if not raw_limit.isdigit() or not 1 <= int(raw_limit) <= 100:
+        raise ValueError('Choose a page size from 1 to 100.')
+    limit = int(raw_limit)
+    cursor = request.args.get('cursor')
+    if cursor:
+        if '/' in cursor or len(cursor) > 1500:
+            raise ValueError('Invalid page cursor.')
+        snapshot = collection.document(cursor).get(field_paths=[sort_field] if sort_field != '__name__' else [])
+        if not snapshot.exists:
+            raise ValueError('This page cursor is no longer available. Reload the list.')
+        query = query.start_after(snapshot)
+    documents = list(query.limit(limit + 1).stream())
+    more = len(documents) > limit
+    documents = documents[:limit]
+    return documents, documents[-1].id if more and documents else None
+
+
 @app.route("/query-history", methods=["GET"])
 @firebase_auth_required
 def get_query_history():
     """Get user's recent query history"""
     try:
         uid = request.user['uid']
-        try:
-            limit = min(int(request.args.get('limit', 50)), 200)  # Cap at 200
-        except (ValueError, TypeError):
-            limit = 50
 
         history_ref = users_db.collection('users').document(uid).collection('query_history')
-        query = history_ref.order_by('timestamp', direction='DESCENDING').limit(limit)
+        query = history_ref.select(['query', 'approach', 'persona', 'timestamp', 'hasResult']).order_by('timestamp', direction='DESCENDING')
+        documents, next_cursor = _page_documents(query, history_ref, 'timestamp')
 
         history = []
-        for doc in query.stream():
+        for doc in documents:
             data = doc.to_dict()
             # Convert Firestore timestamp to serializable format
             timestamp = data.get('timestamp', '')
@@ -5356,8 +5264,10 @@ def get_query_history():
                 'hasResult': data.get('hasResult', False)
             })
 
-        return jsonify({'history': history, 'count': len(history)}), 200
+        return jsonify({'history': history, 'count': len(history), 'next_cursor': next_cursor}), 200
 
+    except ValueError as error:
+        return jsonify({"error": str(error)}), 400
     except Exception as e:
         print(f"ERROR in /query-history: {type(e).__name__} - {e}")
         return api_error()
@@ -5412,8 +5322,10 @@ def get_saved_searches():
         else:
             query = saved_ref.order_by('savedAt', direction='DESCENDING')
 
+        query = query.select(['query', 'approach', 'folder', 'title', 'savedAt', 'responseSnippet', 'hasFullResponse'])
+        documents, next_cursor = _page_documents(query, saved_ref, 'savedAt')
         saved = []
-        for doc in query.stream():
+        for doc in documents:
             data = doc.to_dict()
             # Convert Firestore timestamp to serializable format
             savedAt = data.get('savedAt', '')
@@ -5429,11 +5341,13 @@ def get_saved_searches():
                 'title': data.get('title', data.get('query', '')[:50]),
                 'savedAt': savedAt,
                 'responseSnippet': data.get('responseSnippet', ''),
-                'fullResponse': data.get('fullResponse')  # Include full response for "View Full Answer"
+                'hasFullResponse': data.get('hasFullResponse', True)
             })
 
-        return jsonify({'saved': saved, 'count': len(saved)}), 200
+        return jsonify({'saved': saved, 'count': len(saved), 'next_cursor': next_cursor}), 200
 
+    except ValueError as error:
+        return jsonify({"error": str(error)}), 400
     except Exception as e:
         print(f"ERROR in /saved-searches: {type(e).__name__} - {e}")
         return api_error()
@@ -5470,6 +5384,7 @@ def save_search():
 
         if full_response:
             save_data['fullResponse'] = full_response
+        save_data['hasFullResponse'] = bool(full_response)
 
         doc_ref.set(save_data)
 
@@ -5478,6 +5393,21 @@ def save_search():
     except Exception as e:
         print(f"ERROR in POST /saved-searches: {type(e).__name__} - {e}")
         return api_error()
+
+@app.route('/saved-searches/<search_id>', methods=['GET'])
+@firebase_auth_required
+def get_saved_answer(search_id):
+    try:
+        document = users_db.collection('users').document(request.user['uid']).collection('saved_searches').document(search_id).get()
+        if not document.exists:
+            return jsonify({'error': 'Saved answer not found.'}), 404
+        data = document.to_dict()
+        if not isinstance(data.get('fullResponse'), dict):
+            return jsonify({'error': 'This saved item has no answer snapshot. Open its verse to study it again.'}), 404
+        return jsonify({'id': search_id, 'query': data.get('query', ''), 'response': data['fullResponse']}), 200
+    except Exception:
+        return api_error()
+
 
 @app.route("/saved-searches/<search_id>", methods=["DELETE"])
 @firebase_auth_required
@@ -5506,7 +5436,8 @@ def get_folders():
 
         # Get all saved searches and group by folder
         folders = {}
-        for doc in saved_ref.stream():
+        documents, next_cursor = _page_documents(saved_ref.select(['folder']).order_by('__name__'), saved_ref, '__name__', 100)
+        for doc in documents:
             data = doc.to_dict()
             folder = data.get('folder', 'Uncategorized')
             folders[folder] = folders.get(folder, 0) + 1
@@ -5514,8 +5445,10 @@ def get_folders():
         folder_list = [{'name': name, 'count': count} for name, count in folders.items()]
         folder_list.sort(key=lambda x: x['name'])
 
-        return jsonify({'folders': folder_list, 'totalFolders': len(folder_list)}), 200
+        return jsonify({'folders': folder_list, 'totalFolders': len(folder_list), 'next_cursor': next_cursor}), 200
 
+    except ValueError as error:
+        return jsonify({"error": str(error)}), 400
     except Exception as e:
         print(f"ERROR in /saved-searches/folders: {type(e).__name__} - {e}")
         return api_error()
@@ -5686,16 +5619,13 @@ def get_user_annotations():
         uid = request.user['uid']
         tag = request.args.get('tag')
         annotation_type = request.args.get('type')
-        try:
-            limit = min(int(request.args.get('limit', 100)), 500)  # Cap at 500
-        except (ValueError, TypeError):
-            limit = 100
 
         annotations_ref = users_db.collection('users').document(uid).collection('annotations')
-        query = annotations_ref.order_by('createdAt', direction='DESCENDING').limit(limit)
+        query = annotations_ref.order_by('createdAt', direction='DESCENDING')
+        documents, next_cursor = _page_documents(query, annotations_ref, 'createdAt', 100)
 
         annotations = []
-        for doc in query.stream():
+        for doc in documents:
             data = doc.to_dict()
 
             # Apply filters
@@ -5747,8 +5677,10 @@ def get_user_annotations():
 
             annotations.append(annotation_obj)
 
-        return jsonify({'annotations': annotations, 'count': len(annotations)}), 200
+        return jsonify({'annotations': annotations, 'count': len(annotations), 'next_cursor': next_cursor}), 200
 
+    except ValueError as error:
+        return jsonify({"error": str(error)}), 400
     except Exception as e:
         print(f"ERROR in /annotations/user: {type(e).__name__} - {e}")
         return api_error()
@@ -5840,7 +5772,14 @@ def create_annotation():
             annotation_data['highlighted_text'] = _encrypt_text(highlighted_text, uid)
             annotation_data['query_context'] = data.get('query_context', '')
 
-        doc_ref.set(annotation_data)
+        def create_with_count(user_data, transaction):
+            count = _annotation_count(user_data, uid, transaction)
+            existing = doc_ref.get(transaction=transaction)
+            if existing.exists:
+                return {}, None
+            transaction.set(doc_ref, annotation_data)
+            return {'annotation_count': count + 1, **_streak_updates(user_data)}, None
+        _update_user_transaction(uid, create_with_count)
 
         # Check for newly earned badges after annotation creation
         newly_earned = []
@@ -5903,7 +5842,13 @@ def delete_annotation(annotation_id):
         uid = request.user['uid']
 
         doc_ref = users_db.collection('users').document(uid).collection('annotations').document(annotation_id)
-        doc_ref.delete()
+        def delete_with_count(user_data, transaction):
+            count = _annotation_count(user_data, uid, transaction)
+            exists = doc_ref.get(transaction=transaction).exists
+            if exists:
+                transaction.delete(doc_ref)
+            return {'annotation_count': max(0, count - int(exists))}, None
+        _update_user_transaction(uid, delete_with_count)
 
         return jsonify({'success': True}), 200
 
@@ -5925,8 +5870,9 @@ def search_annotations():
 
         annotations_ref = users_db.collection('users').document(uid).collection('annotations')
 
+        documents, next_cursor = _page_documents(annotations_ref.order_by('createdAt', direction='DESCENDING'), annotations_ref, 'createdAt', 100)
         results = []
-        for doc in annotations_ref.stream():
+        for doc in documents:
             data = doc.to_dict()
             # Decrypt content before searching
             decrypted_content = _decrypt_text(data.get('content', ''), uid)
@@ -5957,8 +5903,10 @@ def search_annotations():
                     'createdAt': created_at
                 })
 
-        return jsonify({'results': results, 'count': len(results)}), 200
+        return jsonify({'results': results, 'count': len(results), 'next_cursor': next_cursor}), 200
 
+    except ValueError as error:
+        return jsonify({"error": str(error)}), 400
     except Exception as e:
         print(f"ERROR in /annotations/search: {type(e).__name__} - {e}")
         return api_error()
@@ -5973,14 +5921,17 @@ def get_all_tags():
         annotations_ref = users_db.collection('users').document(uid).collection('annotations')
 
         tags = set()
-        for doc in annotations_ref.stream():
+        documents, next_cursor = _page_documents(annotations_ref.select(['tags']).order_by('__name__'), annotations_ref, '__name__', 100)
+        for doc in documents:
             data = doc.to_dict()
             tags.update(data.get('tags', []))
 
         tag_list = sorted(list(tags))
 
-        return jsonify({'tags': tag_list, 'count': len(tag_list)}), 200
+        return jsonify({'tags': tag_list, 'count': len(tag_list), 'next_cursor': next_cursor}), 200
 
+    except ValueError as error:
+        return jsonify({"error": str(error)}), 400
     except Exception as e:
         print(f"ERROR in /annotations/tags: {type(e).__name__} - {e}")
         return api_error()

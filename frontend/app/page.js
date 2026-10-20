@@ -1065,7 +1065,7 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
     try {
       const token = await user.getIdToken();
       const res = await fetch(`${BACKEND_URL}/streak`, {
-        method: 'POST',
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`

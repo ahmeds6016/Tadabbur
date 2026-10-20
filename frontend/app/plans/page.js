@@ -114,7 +114,7 @@ export default function PlansPage() {
     try {
       const token = await user.getIdToken();
       await fetch(`${BACKEND_URL}/streak`, {
-        method: 'POST',
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`

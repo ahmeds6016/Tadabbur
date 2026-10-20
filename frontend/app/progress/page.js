@@ -42,9 +42,8 @@ export default function ProgressPage() {
     try {
       const token = await currentUser.getIdToken();
       const headers = { Authorization: `Bearer ${token}` };
-      const [progressRes, annotationsRes, streakRes] = await Promise.all([
+      const [progressRes, streakRes] = await Promise.all([
         fetch(`${BACKEND_URL}/progress`, { headers }),
-        fetch(`${BACKEND_URL}/annotations/user?limit=500`, { headers }),
         fetch(`${BACKEND_URL}/streak`, { headers }),
       ]);
       if (!progressRes.ok) throw await requestErrorFrom(progressRes, { fallback: PROGRESS_ERROR });
@@ -52,11 +51,7 @@ export default function ProgressPage() {
       if (!current()) return;
       setProgress(progressData);
 
-      if (annotationsRes.ok) {
-        const annotationData = await annotationsRes.json();
-        if (!current()) return;
-        setReflectionCount(annotationData.count || 0);
-      }
+      setReflectionCount(progressData.annotation_count || 0);
       if (streakRes.ok) {
         const streakData = await streakRes.json();
         if (!current()) return;

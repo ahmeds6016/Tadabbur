@@ -12,6 +12,7 @@ import BottomNav from '../components/BottomNav';
 
 export default function QueryHistoryPage() {
   const requests = useRef(createRequestIdentity()).current;
+  const [nextCursor, setNextCursor] = useState(null);
   const [user, setUser] = useState(null);
   const [history, setHistory] = useState([]);
   const [loadError, setLoadError] = useState(null);
@@ -20,7 +21,7 @@ export default function QueryHistoryPage() {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      requests.reset();
+      requests.reset(); setNextCursor(null);
       const authTicket = requests.start("auth", currentUser?.uid ?? null);
       setHistory([]); setLoadError(null);
       setIsLoading(true);
@@ -33,13 +34,14 @@ export default function QueryHistoryPage() {
     return () => { requests.reset(); unsubscribe(); };
   }, []);
 
-  const fetchHistory = async (currentUser) => {
+  const fetchHistory = async (currentUser, cursor = null) => {
+    if (!cursor) setNextCursor(null);
     const ticket = requests.start('history', currentUser?.uid ?? null);
     const current = () => requests.current(ticket, auth.currentUser?.uid ?? null);
     setLoadError(null); setNeedsSignIn(false);
     try {
       const token = await currentUser.getIdToken();
-      const res = await fetch(`${BACKEND_URL}/query-history?limit=50`, {
+      const res = await fetch(`${BACKEND_URL}/query-history?limit=50${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -52,7 +54,8 @@ export default function QueryHistoryPage() {
         const tafsirHistory = (data.history || []).filter(
           item => !item.approach || item.approach === 'tafsir'
         );
-        setHistory(tafsirHistory);
+        setHistory(previous => cursor ? [...previous, ...tafsirHistory] : tafsirHistory);
+        setNextCursor(data.next_cursor || null);
       }
     } catch (err) {
       if (!current()) return;
@@ -186,6 +189,7 @@ export default function QueryHistoryPage() {
             ))}
           </div>
         )}
+        {nextCursor && <button onClick={() => fetchHistory(user, nextCursor)}>Load more history</button>}
       </div>
 
       <style jsx>{`

@@ -17,7 +17,7 @@ def verses():
     for node in nodes: node.decorator_list = []
     error = type('VerseStoreUnavailable', (RuntimeError,), {})
     db = Mock()
-    ns = dict(quran_db=db, QURAN_METADATA={2: {'name': 'Al-Baqarah'}}, VerseStoreUnavailable=error,
+    ns = dict(_surah_snapshot=lambda surah: db.collection('quran_texts').document(f'surah_{surah}').get(), quran_db=db, QURAN_METADATA={2: {'name': 'Al-Baqarah'}}, VerseStoreUnavailable=error,
               datetime=datetime, timezone=timezone, hashlib=hashlib, DAILY_VERSE_POOL=[(2, 255, 'Theme')],
               jsonify=jsonify, api_error=lambda: (jsonify({'error': 'Please try again.', 'retry': True}), 503))
     exec(compile(ast.Module(body=nodes, type_ignores=[]), str(path), 'exec'), ns)

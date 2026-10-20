@@ -53,6 +53,8 @@ const getTypeConfig = (type) => {
 
 export default function MyReflectionsPage() {
   const requests = useRef(createRequestIdentity()).current;
+  const [tagCursor, setTagCursor] = useState(null);
+  const [nextCursor, setNextCursor] = useState(null);
   const [user, setUser] = useState(null);
   const [annotations, setAnnotations] = useState([]);
   const [allTags, setAllTags] = useState([]);
@@ -66,7 +68,7 @@ export default function MyReflectionsPage() {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      requests.reset();
+      requests.reset(); setNextCursor(null); setTagCursor(null);
       const authTicket = requests.start("auth", currentUser?.uid ?? null);
       setAnnotations([]); setAllTags([]); setSelectedTag(null); setSelectedType(null); setSearchQuery(''); setSelectedAnnotation(null);
       setIsLoading(true);
@@ -79,12 +81,14 @@ export default function MyReflectionsPage() {
     return () => { requests.reset(); unsubscribe(); };
   }, []);
 
-  const fetchAnnotations = async (currentUser, tag = null, type = null) => {
+  const fetchAnnotations = async (currentUser, tag = null, type = null, cursor = null) => {
+    if (!cursor) setNextCursor(null);
     const ticket = requests.start('annotations', currentUser?.uid ?? null);
     const current = () => requests.current(ticket, auth.currentUser?.uid ?? null);
     try {
       const token = await currentUser.getIdToken();
       let url = `${BACKEND_URL}/annotations/user?limit=100`;
+      if (cursor) url += `&cursor=${encodeURIComponent(cursor)}`;
       if (tag) url += `&tag=${encodeURIComponent(tag)}`;
       if (type) url += `&type=${type}`;
 
@@ -96,7 +100,8 @@ export default function MyReflectionsPage() {
         reportBackendSuccess();
         const data = await res.json();
         if (!current()) return;
-        setAnnotations(data.annotations || []);
+        setAnnotations(previous => cursor ? [...previous, ...(data.annotations || [])] : data.annotations || []);
+        setNextCursor(data.next_cursor || null);
       }
     } catch (err) {
       if (!current()) return;
@@ -105,12 +110,12 @@ export default function MyReflectionsPage() {
     }
   };
 
-  const fetchTags = async (currentUser) => {
+  const fetchTags = async (currentUser, cursor = null) => {
     const ticket = requests.start('tags', currentUser?.uid ?? null);
     const current = () => requests.current(ticket, auth.currentUser?.uid ?? null);
     try {
       const token = await currentUser.getIdToken();
-      const res = await fetch(`${BACKEND_URL}/annotations/tags`, {
+      const res = await fetch(`${BACKEND_URL}/annotations/tags${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -118,7 +123,8 @@ export default function MyReflectionsPage() {
         reportBackendSuccess();
         const data = await res.json();
         if (!current()) return;
-        setAllTags(data.tags || []);
+        setAllTags(previous => cursor ? [...new Set([...previous, ...(data.tags || [])])] : data.tags || []);
+        setTagCursor(data.next_cursor || null);
       }
     } catch (err) {
       if (!current()) return;
@@ -126,20 +132,22 @@ export default function MyReflectionsPage() {
     }
   };
 
-  const handleSearch = async () => {
+  const handleSearch = async (cursor = null) => {
     if (!searchQuery.trim()) return;
+    if (!cursor) setNextCursor(null);
     const ticket = requests.start('annotations', user?.uid ?? null);
     const current = () => requests.current(ticket, auth.currentUser?.uid ?? null);
     try {
       const token = await user.getIdToken();
-      const res = await fetch(`${BACKEND_URL}/annotations/search?q=${encodeURIComponent(searchQuery)}`, {
+      const res = await fetch(`${BACKEND_URL}/annotations/search?q=${encodeURIComponent(searchQuery)}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
         reportBackendSuccess();
         const data = await res.json();
         if (!current()) return;
-        setAnnotations(data.results || []);
+        setAnnotations(previous => cursor ? [...previous, ...(data.results || [])] : data.results || []);
+        setNextCursor(data.next_cursor || null);
       }
     } catch (err) {
       if (!current()) return;
@@ -312,7 +320,7 @@ export default function MyReflectionsPage() {
         <div className="empty-state">
           <BookOpen size={40} strokeWidth={1.2} color="#d1d5db" />
           <p className="empty-title">
-            {hasActiveFilters ? 'No matches' : 'No reflections yet'}
+            {nextCursor ? 'No matches in this page. Load more to continue.' : hasActiveFilters ? 'No matches' : 'No reflections yet'}
           </p>
           <p className="empty-desc">
             {hasActiveFilters
@@ -692,6 +700,8 @@ export default function MyReflectionsPage() {
         onDelete={handleDeleteAnnotation}
       />
 
+      {nextCursor && <button onClick={() => searchQuery.trim() ? handleSearch(nextCursor) : fetchAnnotations(user, selectedTag, selectedType, nextCursor)}>Load more reflections</button>}
+      {tagCursor && <button onClick={() => fetchTags(user, tagCursor)}>Load more tags</button>}
       <BottomNav user={user} />
     </div>
   );
