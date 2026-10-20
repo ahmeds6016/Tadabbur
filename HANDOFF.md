@@ -196,6 +196,15 @@ Q14. **✅ DEPLOYED 2026-08-13 — Reliability quick wins**
 
 ## Session log
 
+### 2026-10-20 — Codex: Session 13 Unit 4 — private data
+
+- Branch `codex/s13-privacy`, implementation `df5bba4`, stacked on Unit 3. Missing production encryption secret logs a startup warning without crashing. New reflection ciphertext has `fernet:v1:` prefix; reads accept legacy plaintext and unprefixed Fernet. Versioned ciphertext fails safely if a key is unavailable. Migration `backend/scripts/encrypt_existing_reflections.py` is dry-run by default, recognizes already migrated fields and uses update-time preconditions. **Migration was not run.** Tests imported pure helpers only.
+- Deploy script references `REFLECTION_ENCRYPTION_SECRET=reflection-encryption-key:latest`. **Claude must create the secret before the next backend deploy**, then review/dry-run/apply the migration separately. Keep the key stable; no key rotation protocol is introduced here.
+- Settings now requires password reauthentication and literal DELETE confirmation. `/account/delete` creates a hashed-UID status marker, rejects new account work, waits 305 seconds for previously admitted requests under the 300-second service deadline, erases at most 100 records per call, recursively walks even missing document parents, removes account-linked feedback, and removes Firebase Auth last. Retries resume after partial failures. Browser Firebase state, UID onboarding and session answer state are cleared on success. Minimal deletion markers remain for retry/late-write protection; their retention/cleanup policy needs owner review.
+- Shares still have **no owner field**. No share-removal policy was invented. Proposal for review: attribute future signed-in shares and provide revocation; explicitly decide how to handle legacy/guest anonymous scholarly snapshots and pre-existing external feedback copies. This is not implemented or promised by the erasure route.
+- Operational tafsir logging uses canonical references/status/request IDs; feedback bodies, enrichment titles, summary bodies and recipient emails are no longer emitted by routine feedback logging. Public shares now store canonical queries. `/privacy` is a serious **draft for Ahmed review**, linked from auth and Settings, with `[Ahmed to confirm]` placeholders and inventory/recovery/deletion limits. **Do not deploy the privacy text before Ahmed reviews it.**
+- Offline verification: **501 backend tests**, **15 frontend tests**, build **15/15**, no window-is-not-defined warning. Backend + frontend deploy needed. No cloud calls, account deletion, migration, secret access or deployment occurred.
+
 ### 2026-10-20 — Codex: Session 13 Unit 3 — client resilience
 
 - Branch `codex/s13-client`, implementation `4cd77ae`, stacked on Unit 2. Firestore lookup failures now differ from missing documents and return retryable 503; daily verse refuses empty Arabic/English text. Canonical missing verses still return 404.
