@@ -196,6 +196,14 @@ Q14. **✅ DEPLOYED 2026-08-13 — Reliability quick wins**
 
 ## Session log
 
+### 2026-10-20 — Codex: Session 13 Unit 3 — client resilience
+
+- Branch `codex/s13-client`, implementation `4cd77ae`, stacked on Unit 2. Firestore lookup failures now differ from missing documents and return retryable 503; daily verse refuses empty Arabic/English text. Canonical missing verses still return 404.
+- Component-local UID + generation tickets protect profile, saved/history, reflection lists and result annotations, progress and plans. Auth callbacks clear account data immediately; main study/onboarding components remount per UID. Each search captures its controller, timeout and generation; an old finally can clear only its own timer. The 180-second timeout remains unchanged.
+- Share IDs/pending promises reset with each answer; late old-answer results are discarded, and sharing uses the answer's captured query. Saved/history use ErrorNotice and lib/errors with retry; expired sessions offer sign-out and fresh sign-in. Successful HTTP responses alone report backend recovery.
+- reCAPTCHA initialization is browser-only with a handled rejection; protection remains enabled. Build emits no window-is-not-defined error.
+- Offline verification: **497 backend tests**, **15 frontend tests**, **14/14 production build**. New delayed-response component regressions exercise A-to-B account switches and logout for saved/history; identity generations also reject A/B/A reuse. No app/model/cloud calls or deployment. Backend + frontend deploy needed.
+
 ### 2026-10-20 — Codex: Session 13 Unit 2 — surface and dependency controls
 
 - Branch `codex/s13-surface`, stacked on Unit 1; implementation `c6a27e7`. Iman prefix gated before auth unless IMAN_ENABLED=1; all operational cache readers require the existing admin secret. Rate checks own their lock, evict stale keys and cap key counts; analytics uses bounded canonical-query keys. Feedback is limited before paid enrichment. Durable quotas remain deferred; Claude owns budget/quota cloud controls.
