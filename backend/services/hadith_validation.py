@@ -150,6 +150,33 @@ def _display_reference(collection, narrator, attribution):
     return "; ".join(parts)
 
 
+def _verified_narrator(narrator, source_tokens, matched_start):
+    # Reject the entire field when it embeds a collection claim; removing only
+    # the name could leave a misleading citation number or sentence fragment.
+    if _infer_collection(narrator):
+        return ""
+    tokens = _normalize_tokens(narrator)
+    if not tokens or matched_start is None:
+        return ""
+    window = source_tokens[max(0, matched_start - COLLECTION_CONTEXT_WORDS):matched_start]
+    return narrator if all(token in window for token in tokens) else ""
+
+
+def _source_attribution(source_text, matched_start):
+    # Only our structured source headings establish the source of the matched
+    # excerpt. Incidental author names inside prose do not establish provenance.
+    heading = None
+    for match in re.finditer(r"(?m)^--- ([^\n]+) ---$", source_text):
+        if len(_normalize_tokens(source_text[:match.end()])) > matched_start:
+            break
+        heading = match.group(1).casefold().replace("-", " ")
+    labels = {
+        "ibn kathir": "As cited in Ibn Kathir's tafsir of this verse",
+        "al qurtubi": "As cited in al-Qurtubi's tafsir of this verse",
+    }
+    return labels.get(heading, "As cited in the supplied source excerpts")
+
+
 def validate_hadith_items(hadith_list, source_context_text):
     """Validate and normalize generated hadith items against prompt sources.
 
@@ -198,8 +225,10 @@ def validate_hadith_items(hadith_list, source_context_text):
             item["_downgraded_collection"] = collection
             collection = ""
 
-        if not attribution:
-            attribution = "As cited in the supplied source excerpts"
+        narrator = _verified_narrator(narrator, source_tokens, matched_start)
+        # Never display model-written attribution, even when its collection
+        # field was downgraded or the prose sounds plausible.
+        attribution = _source_attribution(source_context_text, matched_start)
 
         item["collection"] = collection
         item["narrator"] = narrator

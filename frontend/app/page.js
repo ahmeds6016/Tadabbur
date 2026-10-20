@@ -1,7 +1,6 @@
 'use client';
 import ReactMarkdown from 'react-markdown';
 import remarkBreaks from 'remark-breaks';
-import rehypeRaw from 'rehype-raw';
 import { Suspense, useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
@@ -3093,7 +3092,7 @@ function EnhancedResultsDisplay({
                 )}
               </summary>
               <div className="explanation-content markdown-content">
-                <ReactMarkdown remarkPlugins={[remarkBreaks]} rehypePlugins={[rehypeRaw]}>
+                <ReactMarkdown remarkPlugins={[remarkBreaks]}>
                   {tafsir.explanation}
                 </ReactMarkdown>
               </div>

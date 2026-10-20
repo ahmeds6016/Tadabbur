@@ -86,7 +86,7 @@ def test_legitimate_verbatim_item_is_kept_with_display_reference():
     assert dropped == []
     assert len(kept) == 1
     assert kept[0]["reference"] == (
-        "Sahih Muslim; narrated by Abu Hurayrah; As cited in Riyad al-Saliheen"
+        "Sahih Muslim; narrated by Abu Hurayrah; As cited in the supplied source excerpts"
     )
     assert kept[0]["collection"] == "Sahih Muslim"
     assert kept[0]["text"] == text
@@ -158,3 +158,22 @@ def test_unsupported_hyphenated_collection_is_still_stripped():
     assert kept[0]["collection"] == ""
     assert kept[0]["_downgraded_collection"] == "Sahih al-Bukhari"
     assert "Bukhari" not in kept[0]["reference"]
+
+
+@pytest.mark.parametrize('field', ['attribution', 'narrator'])
+def test_collection_cannot_bypass_downgrade_through_other_fields(field):
+    context = f"--- IBN KATHIR ---\nImam Ahmad recorded from Ubayy ibn Kab: {AHMAD_WORDING} Muslim omitted this wording."
+    reference = {'collection': 'Sahih Muslim', 'narrator': 'Ubayy ibn Kab',
+                 'attribution': 'A model-written claim'}
+    reference[field] = 'Sahih Muslim 999999'
+    kept, dropped = validate_hadith_items([{'reference': reference, 'text': AHMAD_WORDING}], context)
+    assert not dropped
+    assert 'Muslim' not in kept[0]['reference']
+    assert kept[0]['attribution'] == "As cited in Ibn Kathir's tafsir of this verse"
+
+
+def test_wrong_narrator_is_removed_but_wording_survives():
+    context = f"Ahmad recorded from Ubayy ibn Kab: {AHMAD_WORDING}"
+    kept, _ = validate_hadith_items([{'text': AHMAD_WORDING, 'narrator': 'Abu Hurayrah'}], context)
+    assert kept[0]['narrator'] == ''
+    assert kept[0]['text'] == AHMAD_WORDING
