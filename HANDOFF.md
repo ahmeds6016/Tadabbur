@@ -196,6 +196,14 @@ Q14. **✅ DEPLOYED 2026-08-13 — Reliability quick wins**
 
 ## Session log
 
+### 2026-10-20 — Codex: Session 13 Unit 2 — surface and dependency controls
+
+- Branch `codex/s13-surface`, stacked on Unit 1; implementation `c6a27e7`. Iman prefix gated before auth unless IMAN_ENABLED=1; all operational cache readers require the existing admin secret. Rate checks own their lock, evict stale keys and cap key counts; analytics uses bounded canonical-query keys. Feedback is limited before paid enrichment. Durable quotas remain deferred; Claude owns budget/quota cloud controls.
+- Exception responses use stable copy and a server-generated 12-character request ID, with the active exception logged server-side. JSON object validation rejects malformed request bodies; tafsir and feedback text types are explicitly validated. Source regression prevents str(e) from returning. Added enforced frame/referrer/HSTS headers and a fuller Report-Only CSP.
+- Next pinned **15.5.27**, Capacitor core/CLI/iOS **8.5.1**, matching tooling/lock. Docker uses npm ci then copies pruned builder node_modules into Node 24 runtime. Added .dockerignore. cap sync ios succeeded and Swift package references/tag hash updated; **no iOS build or shipping**.
+- Verification: **494 backend tests**, **12 frontend tests**, production build **14/14**. The upgraded Next build required public font cache refresh under network access; no application/model calls. Dependency scan remains **16 npm packages** and **20 Python advisory entries across 5 packages**; exact residual applicability, CSP domains and proxy assumptions are recorded in `docs/SESSION-13-VERIFICATION.md`. No clean-scan claim. Python dependencies were audited in an external venv, not changed.
+- ProxyFix trusts one rightmost hop only under K_SERVICE for direct run.app ingress. The cited Google docs describe ordered XFF chains but do not explicitly guarantee a numerical hop count; this topology inference needs Claude's deployment smoke verification. Do not use leftmost XFF. Backend + frontend deploy needed; native release remains separate. No deployment/cloud mutation occurred.
+
 ### 2026-10-20 — Codex: Session 13 Unit 1 — content trust boundaries
 
 - Branch `codex/s13-content`; implementation `0c461d7` (stack starts at main `037e1c9`). Closes LOG-01 attribution/narrator bypass, SEC-01/02, LOG-02/03/04, LOG-05 version identity, ERR-02 answer contract.
