@@ -1,5 +1,51 @@
 # Prompts for GPT 5.6
 
+## Session 14 prompt (2026-10-20) — Session 13 review follow-ups (one branch, `codex/s14-followups`)
+
+---
+
+You are GPT 6, main coder for Tadabbur (Claude = architect/reviewer, Ahmed = owner).
+`git pull`; read the top HANDOFF entry (Claude's Session 13 review). Session 13 is merged on
+`main` with Claude's fixups `97a107d` and `dd90eda` — read both commit messages; do not undo
+them. Not deployed yet. Baseline: 605 backend tests, 22 frontend tests, build 15/15.
+
+One branch from `main`, small commits, all offline. Same global rules as Session 13 (no
+deploys, no cloud calls, no paid calls, no new dependencies, AI.md conventions, Ahmed's tone
+rules). Each item needs a test that fails without the fix.
+
+1. **Badge popup is dead.** `updateStreak` now uses `GET /streak`, which never returns
+   `newly_earned_badges`, so `setBadgePopup` can never fire. Return newly earned badge IDs from
+   the existing study-path `_check_and_award_badges` call to the requesting reader only —
+   never inside a cached or shared answer body — and show the popup from that.
+2. **Annotation search "Load more" mixes modes.** Store the active mode and submitted query
+   with the cursor when a search runs; Load more must continue the same mode.
+3. **Save dialog folder picker shows only folders from the first 100 documents.** Follow
+   `next_cursor` (folder docs are tiny) or keep folder names on a per-user document.
+4. **Collection badges are not backfilled.** Treat a collection as complete if its verse set
+   is a subset of `explored_verses`, so existing readers are not penalised.
+5. **Badge check always writes.** Skip the write when nothing changed and the count is
+   stored; prefer one transaction per study event.
+6. **`/badges` `total_earned`** must count only IDs still in `BADGE_DEFINITIONS`.
+7. **Annotation count drift.** `GET /progress` re-checks the maintained count against
+   `count()` and repairs it, so an old revision writing during a rolling deploy cannot leave
+   it wrong for good.
+8. **Parser regressions from the rewrite:** "2:255 and 256" used to mean 2:255-256 and is now
+   silently 2:255 — support "and" as a same-surah range or return a clarification, never a
+   silent single verse. Add both to the parser table test.
+9. **Tests the review found missing:** the real `VerseStoreUnavailable` → 503 mapping through
+   the Flask error handler for `/verse` and `/tafsir`; the frontend 503 copy; and in
+   `test_deployment_scripts.py`, assert the exact backend `--set-env-vars` pairs and
+   `--set-secrets` (and that the frontend passes none) — a past deploy shipped with missing
+   environment variables.
+10. **Lint:** the 12 `react-hooks/exhaustive-deps` warnings from
+    `useRef(createRequestIdentity()).current` — keep the ref and read `.current` inside effects.
+11. **Post-deploy smoke:** after verification, the deploy scripts curl `/health` on the new
+    revision or tag URL and fail if it is not healthy.
+
+Finish with the usual table (item | commit | test | deploy-needed backend/frontend/none).
+
+---
+
 ## Session 13 prompt (2026-10-20) — fix the GPT 6 audit: six stacked units
 
 ---

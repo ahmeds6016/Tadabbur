@@ -196,6 +196,56 @@ Q14. **✅ DEPLOYED 2026-08-13 — Reliability quick wins**
 
 ## Session log
 
+### 2026-10-20 — Claude: Session 13 reviewed and MERGED with fixups (NOT deployed)
+
+- **Merged** `b1daded` (six stacked GPT 6 units + Claude fixups `97a107d`, `dd90eda`).
+  605 backend tests, 22 frontend tests, build 15/15. **Nothing deployed.**
+- **Review split:** Claude reviewed Units 1 (content), 2 (surface), 4 (privacy); three review
+  agents took Units 3, 5, 6 in isolated worktrees. All four verdicts: approve with fixups. The
+  agents confirmed by mutation that the new boundary tests bite (removing an auth decorator or
+  breaking cache identity fails them) and that existing readers' annotation counts are seeded
+  from real data, not zero.
+- **Deploy blocker found and fixed (Claude):** `valid_answer_contract` required
+  `verses[].surah` to be a string; post-processing stores the surah number. Run against 12 real
+  Gemini answers (3.6 baseline + 3.8 canary): **12/12 failed**. In production every cache read
+  would have missed (every request a paid ~27s regeneration) and shares would have failed.
+- **Other fixups:** verified-only attribution recognised only `--- IBN KATHIR ---` headings, so
+  Riyad al-Salihin / Asbab al-Nuzul / Ihya / Madarij / thematic hadith all became "As cited in the
+  supplied source excerpts" — now named correctly (still never model-written); stuck Share button
+  after a failed share; completed reading plans could not be restarted; last viewed answer
+  survived sign-out into the next account's session (now owner-scoped); six paging handlers
+  returned raw `ValueError` text; guard tests on the REAL `/debug/` and `/cache/` handlers; deploy
+  preflight refuses a normal deploy when traffic is pinned (as after a `--no-traffic` canary);
+  per-item delete tickets and cursor repair on list pages; remaining exclamation marks removed;
+  non-tafsir approaches now return a 400 instead of a 500 on an unparseable query.
+- **Parser rewrite verified** against every format the old parser supported (side-by-side
+  table): all preserved; "Al-Fatihah 7" now 1:7. Known small regressions queued in Session 14:
+  "2:255 and 256" is now a single verse; "Al-Fatihah" alone no longer opens 1:1 (it only ever did
+  via an accidental substring match).
+- **Session 14 issued** (`docs/PROMPT-GPT56.md`) for non-blocking follow-ups: badge popup no
+  longer fires, search Load-more mode, folder picker paging, collection badge backfill, badge
+  write skipping, `/badges` total, count drift repair, the "and" range, missing tests (real 503
+  path, deploy env/secret flag assertions), lint warnings, post-deploy `/health` smoke.
+- **Deploy prerequisites (in order):**
+  1. **Ahmed:** privacy page details — contact address, deletion-marker retention, policy for
+     public shares after account deletion, operational log retention. The page is linked from
+     the sign-in screen and currently titled "draft for owner review", so **the frontend cannot
+     ship until this is settled.**
+  2. **Claude:** create `reflection-encryption-key` (random 32+ bytes) in Secret Manager and grant
+     the runtime service account `secretAccessor` — `deploy-backend.sh` now fails without it.
+     Losing this key later would make encrypted reflections unrecoverable; never delete versions.
+  3. **Claude:** pipeline 17.0 canary (`deploy-backend.sh --no-traffic` + golden harness, ~6
+     paid calls). Cache keys now include the version, so the canary can no longer overwrite
+     production documents. Also verify ProxyFix on the canary with spoofed `X-Forwarded-For`
+     (cached verses, zero cost).
+  4. **Backend before frontend** (new frontend against the old backend breaks streak recording
+     and reflection counts; old frontend against the new backend shows 0 reflections on progress
+     temporarily). Switch with `--to-revisions`, verify, then `--to-latest` (the canary pins
+     traffic; the new preflight enforces this).
+  5. **Ahmed:** budget alert amount; Claude sets it with a Vertex quota cap.
+  6. Not before Ahmed approves: running `scripts/encrypt_existing_reflections.py` (dry run
+     first) on existing plaintext reflections.
+
 ### 2026-10-20 — Codex: Session 13 Unit 6 — deploy verification and real boundaries
 
 - Branch `codex/s13-verification`; implementation **`9dc4ca6`**, stacked on Unit 5 and containing all six units. Both deploy entrypoints build unique tags, obtain the exact successful build digest, deploy by digest with an explicit revision suffix, capture the created revision and verify image/readiness/reconciliation/retirement/actual resolved traffic. Normal deploys require 100%; `--no-traffic` requires a ready tagged 0% canary. Wrong latest, pinned traffic and retired revisions fail with exact diagnoses. Verification never changes traffic. **22 stubbed-gcloud entrypoint scenarios pass; no real deploy ran.**
