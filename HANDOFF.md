@@ -196,6 +196,14 @@ Q14. **✅ DEPLOYED 2026-08-13 — Reliability quick wins**
 
 ## Session log
 
+### 2026-10-20 — Codex: Session 13 Unit 1 — content trust boundaries
+
+- Branch `codex/s13-content`; implementation `0c461d7` (stack starts at main `037e1c9`). Closes LOG-01 attribution/narrator bypass, SEC-01/02, LOG-02/03/04, LOG-05 version identity, ERR-02 answer contract.
+- One validated tuple drives explicit-reference parsing, canonical prompt input and both cache keys. Invalid/reversed ranges and distinct references require correction. Exact resolved profiles replace cross-persona fallback; missing profiles use curious_explorer/beginner. Pipeline **17.0** is in prompt cache identity. Firestore TTL remains the expiry policy.
+- Hadith labels retain the existing support check; narrator names require nearby source tokens; display attribution comes from structured source headings or the neutral default. Downgrade-not-drop and **0.80 wording threshold remain unchanged**. Trailing unsupported words remain a golden-canary follow-up owned by Claude. Existing saved answers and shared snapshots are unchanged and **predate this attribution fix**.
+- Commentary no longer parses raw HTML; removed rehype-raw and unused lockfile dependencies. Browser-free hostile iframe/form/style/script rendering test passes.
+- Verified offline: `backend/venv/bin/python -m pytest backend/tests -q` **485 passed**; `node --test tests/*.test.*` **12 passed**; frontend `npm run build` **14/14**. No live/model/cloud calls, no deployment. Backend + frontend deploy needed; Claude owns paid golden canary and deployment.
+
 ### 2026-10-20 — Claude: Ahmed approved all six audit decisions; OPS-01 done; Session 13 issued
 
 - **Decisions recorded in AI.md (2026-10-20):** canonical-verse-only shared prompt (SEC-02,
