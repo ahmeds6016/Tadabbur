@@ -47,7 +47,7 @@ def make_topic_app():
         "GCP_INFRASTRUCTURE_PROJECT": "offline-project",
         "TOPIC_INDEX": build_topic_index(), "TOPIC_RESPONSE_CACHE": {},
         "TOPIC_CACHE_LOCK": threading.Lock(), "rate_limit_lock": threading.Lock(),
-        "USER_RATE_LIMITS": defaultdict(list),
+        "USER_RATE_LIMITS": defaultdict(list), "COUNTER_MAX_KEYS": 10000,
         "topic_mapping_body": topic_mapping_body,
         "validate_topic_mapping": validate_topic_mapping,
         "curated_topic_suggestions": curated_topic_suggestions,

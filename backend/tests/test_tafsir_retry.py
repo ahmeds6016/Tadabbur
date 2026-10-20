@@ -76,6 +76,7 @@ def route_env(monkeypatch):
         "classify_query_enhanced": lambda _: {"verse_ref": (2, 255), "confidence": 1},
         "validate_verse_reference": lambda *args: (True, ""),
         "is_rate_limited": lambda *args, **kwargs: False,
+        "record_query_analytics": lambda value: None,
         "normalize_verse_query": lambda value: value,
         "resolve_answer_profile": lambda value: value,
         "get_cache_key": lambda *args: "fixture-cache-key",

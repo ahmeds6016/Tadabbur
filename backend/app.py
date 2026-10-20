@@ -5,6 +5,7 @@ import traceback
 import time
 import hashlib
 import hmac
+import uuid
 import base64
 import threading
 import logging
@@ -28,6 +29,7 @@ def _single_line_log(value: Any) -> str:
     return str(value).replace("\r", "\\r").replace("\n", "\\n")
 
 from flask import Flask, request, jsonify, make_response, g
+from werkzeug.middleware.proxy_fix import ProxyFix
 from flask_cors import CORS
 from services.topic_service import (
     build_topic_index, topic_mapping_body, validate_topic_mapping, curated_topic_suggestions,
@@ -106,6 +108,12 @@ from services.iman_service import (
 
 # --- App Initialization ---
 app = Flask(__name__)
+# Direct run.app ingress has one platform proxy hop. Never trust caller-supplied
+# leftmost XFF values or forwarded host/port. Local direct sockets trust no XFF.
+if os.environ.get('K_SERVICE'):
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=0, x_port=0, x_prefix=0)
+app.config['MAX_CONTENT_LENGTH'] = 256 * 1024
+
 CORS(app, resources={r"/*": {
     # Keep this allowlist limited to frontend origins that are currently live.
     "origins": [
@@ -120,7 +128,14 @@ CORS(app, resources={r"/*": {
 
 @app.before_request
 def start_observed_request_timer():
-    """Start timing the two user-facing generation/share endpoints."""
+    """Assign server-generated correlation IDs; suspended routes fail before auth."""
+    g.request_id = uuid.uuid4().hex[:12]
+    if request.path.startswith('/iman/') and os.environ.get('IMAN_ENABLED') != '1':
+        return jsonify({'error': 'Not found'}), 404
+    if request.method in {'POST', 'PUT', 'PATCH'} and request.is_json:
+        body = request.get_json(silent=True)
+        if not isinstance(body, dict):
+            return jsonify({'error': 'Please send a JSON object.', 'request_id': g.request_id}), 400
     if request.path in {"/tafsir", "/share"}:
         g.request_started_at = time.time()
 
@@ -142,6 +157,13 @@ def log_observed_request(response):
         response.headers.get("X-Cache-Status", "none"),
     )
     return response
+
+def api_error(message="The request could not be completed. Please try again.", status=500):
+    """Log the active exception; readers receive stable copy and a correlation ID."""
+    request_id = getattr(g, 'request_id', None) or uuid.uuid4().hex[:12]
+    logger.exception("REQUEST_ERROR request_id=%s status=%s", request_id, status)
+    return jsonify({'error': message, 'request_id': request_id}), status
+
 
 # --- Configuration (UPDATED for new sliding window vector index) ---
 # Firebase project (Auth, Firestore, Users, Quran texts)
@@ -236,7 +258,9 @@ ANALYTICS = defaultdict(int)  # Usage analytics
 
 # Thread safety locks
 cache_lock = threading.Lock()
-rate_limit_lock = threading.Lock()
+rate_limit_lock = threading.RLock()
+COUNTER_MAX_KEYS = 10000
+ANALYTICS_LAST_SEEN = {}
 analytics_lock = threading.Lock()
 
 # ============================================================================
@@ -1287,30 +1311,39 @@ def get_cache_key(query, user_profile, approach="tafsir"):
 
 
 def is_rate_limited(user_id, limit=150, window_hours=1):
-    """Check if user is rate limited (150 requests per hour per user)"""
+    """Process-local sliding window, locked and bounded on every call."""
     now = datetime.now()
-    window_start = now - timedelta(hours=window_hours)
-
-    # Clean old entries
-    USER_RATE_LIMITS[user_id] = [
-        timestamp for timestamp in USER_RATE_LIMITS[user_id]
-        if timestamp > window_start
-    ]
-
-    # Check limit
-    if len(USER_RATE_LIMITS[user_id]) >= limit:
-        return True
-
-    # Add current request
-    USER_RATE_LIMITS[user_id].append(now)
-    return False
-
-
-
+    cutoff = now - timedelta(hours=window_hours)
+    with rate_limit_lock:
+        stale = now - timedelta(hours=24)
+        for key in list(USER_RATE_LIMITS):
+            values = USER_RATE_LIMITS[key]
+            if not values or values[-1] <= stale:
+                USER_RATE_LIMITS.pop(key, None)
+        if user_id not in USER_RATE_LIMITS and len(USER_RATE_LIMITS) >= COUNTER_MAX_KEYS:
+            oldest = min(USER_RATE_LIMITS, key=lambda key: USER_RATE_LIMITS[key][-1])
+            USER_RATE_LIMITS.pop(oldest, None)
+        values = [timestamp for timestamp in USER_RATE_LIMITS.get(user_id, []) if timestamp > cutoff]
+        USER_RATE_LIMITS[user_id] = values
+        if len(values) >= limit:
+            return True
+        values.append(now)
+        return False
 
 
-
-
+def record_query_analytics(query):
+    now = datetime.now()
+    with rate_limit_lock:
+        for key in list(ANALYTICS):
+            if ANALYTICS_LAST_SEEN.get(key, datetime.min) < now - timedelta(hours=24):
+                ANALYTICS.pop(key, None)
+                ANALYTICS_LAST_SEEN.pop(key, None)
+        if query not in ANALYTICS and len(ANALYTICS) >= COUNTER_MAX_KEYS:
+            oldest = min(ANALYTICS, key=lambda key: ANALYTICS_LAST_SEEN[key])
+            ANALYTICS.pop(oldest, None)
+            ANALYTICS_LAST_SEEN.pop(oldest, None)
+        ANALYTICS[query] += 1
+        ANALYTICS_LAST_SEEN[query] = now
 
 
 # ============================================================================
@@ -2122,7 +2155,7 @@ def firebase_auth_required(f):
             decoded_token = auth.verify_id_token(id_token)
             request.user = decoded_token
         except Exception as e:
-            return jsonify({"error": "Invalid or expired token", "details": str(e)}), 401
+            return api_error("Please sign in again to continue.", 401)
         return f(*args, **kwargs)
     return decorated_function
 
@@ -2183,72 +2216,20 @@ def debug_route_required(f):
 
 # --- Comprehensive Error Handler Decorator ---
 def handle_errors(f):
-    """
-    Comprehensive error handling wrapper for API endpoints.
-    Catches and properly formats various types of errors.
-    """
     @wraps(f)
     def wrapper(*args, **kwargs):
         try:
             return f(*args, **kwargs)
-        except auth.InvalidIdTokenError as e:
-            return jsonify({
-                "error": "Authentication failed",
-                "type": "auth_error",
-                "details": str(e)
-            }), 401
-        except auth.ExpiredIdTokenError as e:
-            return jsonify({
-                "error": "Authentication token expired",
-                "type": "token_expired",
-                "details": "Please sign in again"
-            }), 401
-        except gcp_firestore.DocumentNotFoundError as e:
-            return jsonify({
-                "error": "Resource not found",
-                "type": "not_found",
-                "details": str(e)
-            }), 404
-        except requests.Timeout as e:
-            return jsonify({
-                "error": "Service timeout",
-                "type": "timeout",
-                "details": "The AI service is taking longer than expected. Please try again.",
-                "retry": True
-            }), 503
-        except requests.HTTPError as e:
-            error_code = e.response.status_code if hasattr(e, 'response') else 500
-            return jsonify({
-                "error": "External service error",
-                "type": "http_error",
-                "details": str(e),
-                "status_code": error_code
-            }), 502
-        except json.JSONDecodeError as e:
-            return jsonify({
-                "error": "Invalid response format",
-                "type": "parse_error",
-                "details": "The AI response could not be parsed. Please try rephrasing your query."
-            }), 500
-        except ValueError as e:
-            return jsonify({
-                "error": "Invalid input",
-                "type": "validation_error",
-                "details": str(e)
-            }), 400
-        except Exception as e:
-            # Log the full error for debugging
-            logger.error("Unhandled error in %s: %s - %s", f.__name__, type(e).__name__, e)
-            traceback.print_exc()
-
-            # Return generic error to client
-            return jsonify({
-                "error": "An unexpected error occurred",
-                "type": "internal_error",
-                "details": "The request could not be completed. Please try again later."
-            }), 500
-
+        except (auth.InvalidIdTokenError, auth.ExpiredIdTokenError):
+            return api_error("Please sign in again to continue.", 401)
+        except requests.Timeout:
+            return api_error("The service is taking longer than expected. Please try again.", 503)
+        except requests.HTTPError:
+            return api_error("The service is temporarily unavailable. Please try again.", 502)
+        except Exception:
+            return api_error()
     return wrapper
+
 
 # --- JSON Extraction Helper ---
 def fix_malformed_json(text: str) -> str:
@@ -2753,9 +2734,9 @@ def _get_scholarly_context_two_stage(query, verse_data, context_by_source):
         return scholarly_ctx, badges, pipeline_info, source_coverage
 
     except Exception as e:
-        print(f"  [SCHOLARLY] EXCEPTION: {type(e).__name__}: {str(e)[:300]}")
+        print(f"  [SCHOLARLY] EXCEPTION: {type(e).__name__}: {type(e).__name__[:300]}")
         traceback.print_exc()
-        return _fallback(f"Exception: {type(e).__name__}: {str(e)[:200]}")
+        return _fallback(f"Exception: {type(e).__name__}: {type(e).__name__[:200]}")
 
 
 # ============================================================================
@@ -3273,13 +3254,14 @@ def get_analytics():
             "cache_hit_rate": len(RESPONSE_CACHE) / max(sum(ANALYTICS.values()), 1)
         }), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 # ============================================================================
 # TAFSIR CACHING SYSTEM - Dedicated Endpoints
 # ============================================================================
 
 @app.route("/cache/lookup", methods=["POST"])
+@admin_secret_required
 def cache_lookup():
     """
     Check if a tafsir query is cached.
@@ -3319,7 +3301,7 @@ def cache_lookup():
 
     except Exception as e:
         logger.error("Cache lookup error: %s", e)
-        return jsonify({'error': str(e)}), 500
+        return api_error()
 
 @app.route("/cache/store", methods=["POST"])
 @admin_secret_required
@@ -3349,9 +3331,10 @@ def cache_store():
 
     except Exception as e:
         logger.error("Cache store error: %s", e)
-        return jsonify({'error': str(e)}), 500
+        return api_error()
 
 @app.route("/cache/analytics", methods=["GET"])
+@admin_secret_required
 def cache_analytics():
     """
     Get comprehensive cache analytics and statistics.
@@ -3367,9 +3350,10 @@ def cache_analytics():
 
     except Exception as e:
         logger.error("Cache analytics error: %s", e)
-        return jsonify({'error': str(e)}), 500
+        return api_error()
 
 @app.route("/cache/popular", methods=["GET"])
+@admin_secret_required
 def get_popular_queries():
     """
     Get most popular queries for cache pre-warming.
@@ -3403,7 +3387,7 @@ def get_popular_queries():
 
     except Exception as e:
         logger.error("Popular queries error: %s", e)
-        return jsonify({'error': str(e)}), 500
+        return api_error()
 
 @app.route("/cache/prewarm", methods=["POST"])
 @admin_secret_required
@@ -3455,7 +3439,7 @@ def prewarm_cache():
 
     except Exception as e:
         logger.error("Cache pre-warm error: %s", e)
-        return jsonify({'error': str(e)}), 500
+        return api_error()
 
 @app.route("/cache/invalidate", methods=["POST"])
 @admin_secret_required
@@ -3529,7 +3513,7 @@ def invalidate_cache():
 
     except Exception as e:
         logger.error("Cache invalidation error: %s", e)
-        return jsonify({'error': str(e)}), 500
+        return api_error()
 
 # Cache utility functions (to be added before the endpoints)
 def normalize_verse_query(query: str) -> str:
@@ -3791,7 +3775,7 @@ def export_response(format_type):
 
     except Exception as e:
         print(f"ERROR in export: {e}")
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 @app.route("/get_profile", methods=["GET"])
 @firebase_auth_required
@@ -3805,7 +3789,7 @@ def get_profile():
         return jsonify({"profile": None, "is_new_user": True}), 200
     except Exception as e:
         print(f"ERROR in /get_profile: {type(e).__name__} - {e}")
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 # ============================================================================
 # UPDATED: /set_profile ENDPOINT WITH SMART LOGIC (Suggestions 2 & 3)
@@ -3936,7 +3920,7 @@ def set_profile():
         
     except Exception as e:
         print(f"ERROR in /set_profile: {type(e).__name__} - {e}")
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 # NEW: Persona endpoints
 @app.route("/personas", methods=["GET"])
@@ -4138,7 +4122,7 @@ def get_daily_verse():
 
     except Exception as e:
         print(f"ERROR in /daily-verse: {e}")
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 
 # ============================================================================
@@ -4166,7 +4150,7 @@ def get_streak():
         }), 200
     except Exception as e:
         print(f"ERROR in GET /streak: {e}")
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 
 @app.route("/streak", methods=["POST"])
@@ -4227,7 +4211,7 @@ def update_streak():
 
     except Exception as e:
         print(f"ERROR in POST /streak: {e}")
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 
 # ============================================================================
@@ -4305,7 +4289,7 @@ def get_progress():
         }), 200
     except Exception as e:
         print(f"ERROR in GET /progress: {e}")
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 
 # ============================================================================
@@ -4571,7 +4555,7 @@ def get_collection_progress(collection_id):
             "percentage": round(len(explored) / len(col["verses"]) * 100) if col["verses"] else 0,
         }), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 
 @app.route("/collections/progress", methods=["GET"])
@@ -4599,7 +4583,7 @@ def get_all_collection_progress():
 
         return jsonify(result), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 
 @app.route("/collections/<collection_id>/progress", methods=["POST"])
@@ -4637,7 +4621,7 @@ def update_collection_progress(collection_id):
             "is_complete": len(col_data["explored"]) >= len(col["verses"]),
         }), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 
 # ============================================================================
@@ -4861,7 +4845,7 @@ def get_badges():
             "total_available": len(BADGE_DEFINITIONS),
         }), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 
 # ============================================================================
@@ -5077,7 +5061,7 @@ def get_all_active_plans():
 
         return jsonify({"plans": results}), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 
 @app.route("/reading-plans/<plan_id>/progress", methods=["GET"])
@@ -5125,7 +5109,7 @@ def get_plan_progress(plan_id):
             "today_verse": today_verse,
         }), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 
 @app.route("/reading-plans/<plan_id>/progress", methods=["POST"])
@@ -5219,7 +5203,7 @@ def update_plan_progress(plan_id):
 
         return jsonify({"error": "Invalid action. Use 'start' or 'complete_day'"}), 400
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 
 # ============================================================================
@@ -5262,7 +5246,7 @@ def get_query_history():
 
     except Exception as e:
         print(f"ERROR in /query-history: {type(e).__name__} - {e}")
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 @app.route("/query-history", methods=["POST"])
 @firebase_auth_required
@@ -5296,7 +5280,7 @@ def save_query_to_history():
 
     except Exception as e:
         print(f"ERROR in POST /query-history: {type(e).__name__} - {e}")
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 @app.route("/saved-searches", methods=["GET"])
 @firebase_auth_required
@@ -5338,7 +5322,7 @@ def get_saved_searches():
 
     except Exception as e:
         print(f"ERROR in /saved-searches: {type(e).__name__} - {e}")
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 @app.route("/saved-searches", methods=["POST"])
 @firebase_auth_required
@@ -5379,7 +5363,7 @@ def save_search():
 
     except Exception as e:
         print(f"ERROR in POST /saved-searches: {type(e).__name__} - {e}")
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 @app.route("/saved-searches/<search_id>", methods=["DELETE"])
 @firebase_auth_required
@@ -5395,7 +5379,7 @@ def delete_saved_search(search_id):
 
     except Exception as e:
         print(f"ERROR in DELETE /saved-searches: {type(e).__name__} - {e}")
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 @app.route("/saved-searches/folders", methods=["GET"])
 @firebase_auth_required
@@ -5420,7 +5404,7 @@ def get_folders():
 
     except Exception as e:
         print(f"ERROR in /saved-searches/folders: {type(e).__name__} - {e}")
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 # ============================================================================
 # VERSE-LEVEL ANNOTATIONS ENDPOINTS
@@ -5509,7 +5493,7 @@ def get_verse_annotations(surah, verse):
 
         except Exception as e:
             print(f"ERROR in /annotations/verse: {type(e).__name__} - {e}")
-            return jsonify({"error": str(e)}), 500
+            return api_error()
 
     # Call the inner function for GET requests
     return handle_get()
@@ -5577,7 +5561,7 @@ def get_batch_verse_annotations():
 
     except Exception as e:
         print(f"ERROR in /annotations/verses: {type(e).__name__} - {e}")
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 
 @app.route("/annotations/user", methods=["GET"])
@@ -5653,7 +5637,7 @@ def get_user_annotations():
 
     except Exception as e:
         print(f"ERROR in /annotations/user: {type(e).__name__} - {e}")
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 @app.route("/annotations", methods=["POST"])
 @firebase_auth_required
@@ -5760,7 +5744,7 @@ def create_annotation():
     except Exception as e:
         print(f"ERROR in POST /annotations: {type(e).__name__} - {e}")
         traceback.print_exc()
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 @app.route("/annotations/<annotation_id>", methods=["PUT"])
 @firebase_auth_required
@@ -5795,7 +5779,7 @@ def update_annotation(annotation_id):
 
     except Exception as e:
         print(f"ERROR in PUT /annotations: {type(e).__name__} - {e}")
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 @app.route("/annotations/<annotation_id>", methods=["DELETE"])
 @firebase_auth_required
@@ -5811,7 +5795,7 @@ def delete_annotation(annotation_id):
 
     except Exception as e:
         print(f"ERROR in DELETE /annotations: {type(e).__name__} - {e}")
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 @app.route("/annotations/search", methods=["GET"])
 @firebase_auth_required
@@ -5863,7 +5847,7 @@ def search_annotations():
 
     except Exception as e:
         print(f"ERROR in /annotations/search: {type(e).__name__} - {e}")
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 @app.route("/annotations/tags", methods=["GET"])
 @firebase_auth_required
@@ -5885,7 +5869,7 @@ def get_all_tags():
 
     except Exception as e:
         print(f"ERROR in /annotations/tags: {type(e).__name__} - {e}")
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 @app.route("/verse/<int:surah>/<int:verse>", methods=["GET"])
 def get_specific_verse(surah, verse):
@@ -6084,8 +6068,7 @@ def resolve_topics():
     text = " ".join(text.split())
     user = getattr(request, "user", None) or {}
     uid = user.get("uid")
-    with rate_limit_lock:
-        limited = is_rate_limited(uid or f"guest_{request.remote_addr}", limit=150 if uid else 10)
+    limited = is_rate_limited(uid or f"guest_{request.remote_addr}", limit=150 if uid else 10)
     if limited:
         response = make_response(jsonify(fallback), 429)
         response.headers["Retry-After"] = "60"
@@ -6353,7 +6336,7 @@ def tafsir_handler_enhanced():
             return resp
 
         # Analytics
-        ANALYTICS[query] += 1
+        record_query_analytics(query)
 
         # Get user profile for caching — guests get default profile
         stage_start = time.time()
@@ -6922,7 +6905,7 @@ def debug_range_map():
             info["exported_to"] = path
         return jsonify(info), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 
 @app.route("/debug/test/<path:query>", methods=["GET"])
@@ -7126,12 +7109,10 @@ def debug_query(query):
     except Exception as e:
         log_step("CRITICAL ERROR", {
             "error_type": type(e).__name__,
-            "error_message": str(e),
+            "error_message": type(e).__name__,
             "traceback": traceback.format_exc()
         })
-        trace["error"] = str(e)
-        trace["timings"] = step_timings
-        return jsonify(trace), 500
+        return api_error()
 
 @app.route("/debug/verse-metadata/<surah>/<verse>", methods=["GET"])
 @debug_route_required
@@ -7186,11 +7167,7 @@ def check_verse_metadata(surah, verse):
         return jsonify(result), 200
 
     except Exception as e:
-        return jsonify({
-            "error": str(e),
-            "type": type(e).__name__,
-            "traceback": traceback.format_exc()
-        }), 500
+        return api_error()
 
 # ============================================================================
 # SHAREABLE LINKS
@@ -7276,7 +7253,7 @@ def create_share():
     except Exception as e:
         print(f"Error creating share: {e}")
         traceback.print_exc()
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 @app.route('/share/<share_id>', methods=['GET'])
 def get_shared_content(share_id):
@@ -7309,7 +7286,7 @@ def get_shared_content(share_id):
     except Exception as e:
         print(f"Error retrieving shared content: {e}")
         traceback.print_exc()
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 # ============================================================================
 # MUSLIM NAME DICTIONARY
@@ -7647,7 +7624,7 @@ def iman_setup():
         return jsonify({"error": str(ve)}), 400
     except Exception as e:
         print(f"ERROR in POST /iman/setup: {e}")
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 
 @app.route("/iman/config", methods=["GET"])
@@ -7703,7 +7680,7 @@ def iman_get_config():
 
     except Exception as e:
         print(f"ERROR in GET /iman/config: {e}")
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 
 @app.route("/iman/config", methods=["PUT"])
@@ -7771,7 +7748,7 @@ def iman_update_config():
 
     except Exception as e:
         print(f"ERROR in PUT /iman/config: {e}")
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 
 @app.route("/iman/catalog", methods=["GET"])
@@ -7825,7 +7802,7 @@ def iman_get_catalog():
 
     except Exception as e:
         print(f"ERROR in GET /iman/catalog: {e}")
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 
 @app.route("/iman/data", methods=["DELETE"])
@@ -7867,7 +7844,7 @@ def iman_delete_all_data():
 
     except Exception as e:
         print(f"ERROR in DELETE /iman/data: {e}")
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 
 @app.route("/iman/clear-digest-cache", methods=["POST"])
@@ -7886,7 +7863,7 @@ def iman_clear_digest_cache():
         return jsonify({"message": f"Cleared {cleared} cached digests", "cleared": cleared}), 200
     except Exception as e:
         print(f"ERROR in POST /iman/clear-digest-cache: {e}")
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 
 @app.route("/iman/log", methods=["POST"])
@@ -8076,7 +8053,7 @@ def iman_submit_log():
 
     except Exception as e:
         print(f"ERROR in POST /iman/log: {e}")
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 
 @app.route("/iman/log/<date_str>", methods=["GET"])
@@ -8107,7 +8084,7 @@ def iman_get_log(date_str):
 
     except Exception as e:
         print(f"ERROR in GET /iman/log/{date_str}: {e}")
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 
 @app.route("/iman/logs", methods=["GET"])
@@ -8144,7 +8121,7 @@ def iman_get_logs():
 
     except Exception as e:
         print(f"ERROR in GET /iman/logs: {e}")
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 
 @app.route("/iman/trajectory", methods=["GET"])
@@ -8194,7 +8171,7 @@ def iman_get_trajectory():
 
     except Exception as e:
         print(f"ERROR in GET /iman/trajectory: {e}")
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 
 @app.route("/iman/heart-note", methods=["POST"])
@@ -8246,7 +8223,7 @@ def iman_add_heart_note():
 
     except Exception as e:
         print(f"ERROR in POST /iman/heart-note: {e}")
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 
 # ---------------------------------------------------------------------------
@@ -8295,7 +8272,7 @@ def iman_heart_state_response(state_id):
 
     except Exception as e:
         print(f"ERROR in GET /iman/heart-state/{state_id}/response: {e}")
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 
 @app.route("/iman/heart-patterns", methods=["GET"])
@@ -8328,7 +8305,7 @@ def iman_heart_patterns():
 
     except Exception as e:
         print(f"ERROR in GET /iman/heart-patterns: {e}")
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 
 # ---------------------------------------------------------------------------
@@ -8456,7 +8433,7 @@ def iman_get_correlations():
 
     except Exception as e:
         print(f"ERROR in GET /iman/correlations: {e}")
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 
 @app.route("/iman/safeguards/status", methods=["GET"])
@@ -8489,7 +8466,7 @@ def iman_get_safeguard_status():
 
     except Exception as e:
         print(f"ERROR in GET /iman/safeguards/status: {e}")
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 
 # ---------------------------------------------------------------------------
@@ -8702,7 +8679,7 @@ def iman_declare_struggle():
 
     except Exception as e:
         print(f"ERROR in POST /iman/struggle: {e}")
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 
 @app.route("/iman/struggles", methods=["GET"])
@@ -8781,7 +8758,7 @@ def iman_list_struggles():
 
     except Exception as e:
         print(f"ERROR in GET /iman/struggles: {e}")
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 
 @app.route("/iman/struggle/<struggle_id>", methods=["PUT"])
@@ -8819,7 +8796,7 @@ def iman_update_struggle(struggle_id):
 
     except Exception as e:
         print(f"ERROR in PUT /iman/struggle/{struggle_id}: {e}")
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 
 @app.route("/iman/struggle/<struggle_id>/guidance", methods=["GET"])
@@ -8887,7 +8864,7 @@ def iman_struggle_guidance(struggle_id):
 
     except Exception as e:
         print(f"ERROR in GET /iman/struggle/{struggle_id}/guidance: {e}")
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 
 # ---------------------------------------------------------------------------
@@ -9124,7 +9101,7 @@ def iman_generate_digest():
         print(f"ERROR in POST /iman/digest/generate: {e}")
         import traceback
         traceback.print_exc()
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 
 @app.route("/iman/digest/latest", methods=["GET"])
@@ -9149,7 +9126,7 @@ def iman_digest_latest():
 
     except Exception as e:
         print(f"ERROR in GET /iman/digest/latest: {e}")
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 
 @app.route("/iman/digest/<week_id>", methods=["GET"])
@@ -9172,7 +9149,7 @@ def iman_digest_by_week(week_id):
 
     except Exception as e:
         print(f"ERROR in GET /iman/digest/{week_id}: {e}")
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 
 def _decrypt_digest(digest: dict, uid: str) -> dict:
@@ -9402,7 +9379,7 @@ def iman_get_daily_insight(date_str):
         print(f"ERROR in GET /iman/daily-insight/{date_str}: {e}")
         import traceback
         traceback.print_exc()
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 
 # ---------------------------------------------------------------------------
@@ -9446,7 +9423,7 @@ def iman_edit_heart_note(date_str, index):
 
     except Exception as e:
         print(f"ERROR in PUT /iman/heart-note/{date_str}/{index}: {e}")
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 
 @app.route("/iman/heart-note/<date_str>/<int:index>", methods=["DELETE"])
@@ -9477,7 +9454,7 @@ def iman_delete_heart_note(date_str, index):
 
     except Exception as e:
         print(f"ERROR in DELETE /iman/heart-note/{date_str}/{index}: {e}")
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 
 @app.route("/iman/heart-notes", methods=["GET"])
@@ -9527,7 +9504,7 @@ def iman_heart_note_history():
 
     except Exception as e:
         print(f"ERROR in GET /iman/heart-notes: {e}")
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 
 # ---------------------------------------------------------------------------
@@ -9617,7 +9594,7 @@ def iman_get_struggle_goals(struggle_id):
 
     except Exception as e:
         print(f"ERROR in GET /iman/struggle/{struggle_id}/goals: {e}")
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 
 @app.route("/iman/struggle/<struggle_id>/goal/complete", methods=["POST"])
@@ -9659,7 +9636,7 @@ def iman_complete_struggle_goal(struggle_id):
 
     except Exception as e:
         print(f"ERROR in POST /iman/struggle/{struggle_id}/goal/complete: {e}")
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 
 # ============================================================================
@@ -9768,7 +9745,13 @@ def submit_feedback():
     """Store user feedback in Firestore, enrich with Gemini, create GitHub issue."""
     try:
         uid = request.user["uid"]
-        data = request.get_json()
+        if is_rate_limited(f"feedback_{uid}", limit=10):
+            response = make_response(jsonify({'error': 'Please wait before sending more feedback.'}), 429)
+            response.headers['Retry-After'] = '3600'
+            return response
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict) or not isinstance(data.get('message', ''), str):
+            return jsonify({'error': 'Feedback message must be text.'}), 400
 
         feedback_type = data.get("type", "general")
         message = (data.get("message") or "").strip()
@@ -9811,11 +9794,11 @@ def submit_feedback():
 
         threading.Thread(target=_bg_github, args=(doc_ref,), daemon=True).start()
 
-        return jsonify({"message": "Feedback submitted. Thank you!"}), 200
+        return jsonify({"message": "Feedback submitted. Thank you."}), 200
 
     except Exception as e:
         print(f"ERROR in POST /feedback: {e}")
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 
 @app.route("/feedback/daily-summary", methods=["POST"])
@@ -9918,7 +9901,7 @@ def feedback_daily_summary():
 
     except Exception as e:
         print(f"ERROR in POST /feedback/daily-summary: {e}")
-        return jsonify({"error": str(e)}), 500
+        return api_error()
 
 
 # --- Main ---
