@@ -6,6 +6,7 @@ import time
 import hashlib
 import hmac
 import uuid
+import sys
 import base64
 import threading
 import logging
@@ -106,6 +107,10 @@ from services.iman_service import (
     ENGINE_VERSION,
 )
 
+class VerseStoreUnavailable(RuntimeError):
+    """Canonical verse storage is temporarily unavailable."""
+
+
 # --- App Initialization ---
 app = Flask(__name__)
 # Direct run.app ingress has one platform proxy hop. Never trust caller-supplied
@@ -160,9 +165,20 @@ def log_observed_request(response):
 
 def api_error(message="The request could not be completed. Please try again.", status=500):
     """Log the active exception; readers receive stable copy and a correlation ID."""
+    dependency_failure = isinstance(sys.exc_info()[1], VerseStoreUnavailable)
+    if dependency_failure:
+        message, status = 'The verse service is temporarily unavailable. Please try again.', 503
     request_id = getattr(g, 'request_id', None) or uuid.uuid4().hex[:12]
     logger.exception("REQUEST_ERROR request_id=%s status=%s", request_id, status)
-    return jsonify({'error': message, 'request_id': request_id}), status
+    response = jsonify({'error': message, 'request_id': request_id, **({'retry': True} if dependency_failure else {})})
+    if dependency_failure:
+        response.headers['Retry-After'] = '30'
+    return response, status
+
+
+@app.errorhandler(VerseStoreUnavailable)
+def verse_store_error(error):
+    return api_error("The verse service is temporarily unavailable. Please try again.", 503)
 
 
 # --- Configuration (UPDATED for new sliding window vector index) ---
@@ -1266,7 +1282,7 @@ def get_verse_from_firestore(surah_num, verse_num):
                 }
 
     except Exception as e:
-        print(f"Error fetching verse {surah_num}:{verse_num} from Firestore: {e}")
+        raise VerseStoreUnavailable() from e
     return None
 
 def get_verses_range_from_firestore(surah_num, start_verse, end_verse):
@@ -1295,8 +1311,7 @@ def get_verses_range_from_firestore(surah_num, start_verse, end_verse):
 
         return None
     except Exception as e:
-        print(f"Firestore lookup error: {e}")
-        return None
+        raise VerseStoreUnavailable() from e
 
 def get_arabic_text_from_verse_data(verse_data):
     """Extract Arabic text for use in RAG context"""
@@ -4107,6 +4122,8 @@ def get_daily_verse():
 
         # Fetch verse text from Firestore
         verse_data = get_verse_from_firestore(surah, verse_num)
+        if not verse_data or not verse_data.get("arabic") or not verse_data.get("english"):
+            raise VerseStoreUnavailable()
         arabic_text = verse_data.get("arabic", "") if verse_data else ""
         english_text = verse_data.get("english", "") if verse_data else ""
 
@@ -5886,7 +5903,7 @@ def get_specific_verse(surah, verse):
             return jsonify({'error': f'Verse {surah}:{verse} not found'}), 404
     except Exception as e:
         print(f"Error in verse lookup: {e}")
-        return jsonify({'error': 'Internal server error'}), 500
+        return api_error()
 
 # ============================================================================
 # NEW: METADATA ENDPOINTS
@@ -6039,7 +6056,7 @@ def get_verse_metadata_endpoint(surah, verse):
 
     except Exception as e:
         print(f"Error in metadata lookup: {e}")
-        return jsonify({'error': 'Internal server error'}), 500
+        return api_error()
 
 # Topic discovery is independent of tafsir generation and its versioned cache.
 def _map_topic_names(text):
@@ -6860,6 +6877,8 @@ def tafsir_handler_enhanced():
             perf_metrics['stages']['post_processing'] = (time.time() - stage_start) * 1000
             return tafsir_response(response)
 
+    except VerseStoreUnavailable:
+        return api_error()
     except requests.exceptions.Timeout:
         return tafsir_response({"error": "AI service timed out"}, 504)
     except Exception as e:

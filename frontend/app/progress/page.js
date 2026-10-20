@@ -1,7 +1,8 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import Link from 'next/link';
+import { createRequestIdentity } from '../lib/requestIdentity';
 import { auth } from '../lib/firebase';
 import { BACKEND_URL } from '../lib/config';
 import ErrorNotice from '../components/ErrorNotice';
@@ -12,6 +13,7 @@ import BottomNav from '../components/BottomNav';
 import BadgeDisplay from '../components/BadgeDisplay';
 
 export default function ProgressPage() {
+  const requests = useRef(createRequestIdentity()).current;
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [progress, setProgress] = useState(null);
@@ -21,16 +23,22 @@ export default function ProgressPage() {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      requests.reset();
+      const authTicket = requests.start("auth", currentUser?.uid ?? null);
+      setProgress(null); setReflectionCount(0); setStreak({ current_streak: 0, longest_streak: 0 }); setError(null);
+      setIsLoading(true);
       setUser(currentUser);
       if (currentUser) {
         await fetchProgress(currentUser);
       }
-      setIsLoading(false);
+      if (requests.current(authTicket, auth.currentUser?.uid ?? null)) setIsLoading(false);
     });
-    return () => unsubscribe();
+    return () => { requests.reset(); unsubscribe(); };
   }, []);
 
   const fetchProgress = async (currentUser) => {
+    const ticket = requests.start('progress', currentUser?.uid ?? null);
+    const current = () => requests.current(ticket, auth.currentUser?.uid ?? null);
     try {
       const token = await currentUser.getIdToken();
       const headers = { Authorization: `Bearer ${token}` };
@@ -40,16 +48,22 @@ export default function ProgressPage() {
         fetch(`${BACKEND_URL}/streak`, { headers }),
       ]);
       if (!progressRes.ok) throw await requestErrorFrom(progressRes, { fallback: PROGRESS_ERROR });
-      setProgress(await progressRes.json());
+      const progressData = await progressRes.json();
+      if (!current()) return;
+      setProgress(progressData);
 
       if (annotationsRes.ok) {
         const annotationData = await annotationsRes.json();
+        if (!current()) return;
         setReflectionCount(annotationData.count || 0);
       }
       if (streakRes.ok) {
-        setStreak(await streakRes.json());
+        const streakData = await streakRes.json();
+        if (!current()) return;
+        setStreak(streakData);
       }
     } catch (err) {
+      if (!current()) return;
       console.error('Failed to fetch progress:', err);
       setError(userMessage(err, PROGRESS_ERROR));
     }
@@ -127,7 +141,7 @@ export default function ProgressPage() {
 
         {/* Badges */}
         <div className="badges-section">
-          <BadgeDisplay user={user} compact={false} />
+          <BadgeDisplay key={user?.uid || "guest"} user={user} compact={false} />
         </div>
 
         {/* Error state */}

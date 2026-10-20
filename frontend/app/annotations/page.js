@@ -1,9 +1,10 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import Link from 'next/link';
 import ReflectionDetailPanel from '../components/ReflectionDetailPanel';
 import { Lightbulb, HelpCircle, CheckSquare, Heart, Link2, BookOpen, ChevronDown, Search, X } from 'lucide-react';
+import { createRequestIdentity } from '../lib/requestIdentity';
 import { auth } from '../lib/firebase';
 import { BACKEND_URL } from '../lib/config';
 import BottomNav from '../components/BottomNav';
@@ -51,6 +52,7 @@ const getTypeConfig = (type) => {
 };
 
 export default function MyReflectionsPage() {
+  const requests = useRef(createRequestIdentity()).current;
   const [user, setUser] = useState(null);
   const [annotations, setAnnotations] = useState([]);
   const [allTags, setAllTags] = useState([]);
@@ -64,16 +66,22 @@ export default function MyReflectionsPage() {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      requests.reset();
+      const authTicket = requests.start("auth", currentUser?.uid ?? null);
+      setAnnotations([]); setAllTags([]); setSelectedTag(null); setSelectedType(null); setSearchQuery(''); setSelectedAnnotation(null);
+      setIsLoading(true);
       setUser(currentUser);
       if (currentUser) {
         await Promise.all([fetchAnnotations(currentUser), fetchTags(currentUser)]);
       }
-      setIsLoading(false);
+      if (requests.current(authTicket, auth.currentUser?.uid ?? null)) setIsLoading(false);
     });
-    return () => unsubscribe();
+    return () => { requests.reset(); unsubscribe(); };
   }, []);
 
   const fetchAnnotations = async (currentUser, tag = null, type = null) => {
+    const ticket = requests.start('annotations', currentUser?.uid ?? null);
+    const current = () => requests.current(ticket, auth.currentUser?.uid ?? null);
     try {
       const token = await currentUser.getIdToken();
       let url = `${BACKEND_URL}/annotations/user?limit=100`;
@@ -83,19 +91,23 @@ export default function MyReflectionsPage() {
       const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      reportBackendSuccess();
 
       if (res.ok) {
+        reportBackendSuccess();
         const data = await res.json();
+        if (!current()) return;
         setAnnotations(data.annotations || []);
       }
     } catch (err) {
+      if (!current()) return;
       if (err instanceof TypeError) reportBackendFailure();
       console.error('Failed to fetch annotations:', err);
     }
   };
 
   const fetchTags = async (currentUser) => {
+    const ticket = requests.start('tags', currentUser?.uid ?? null);
+    const current = () => requests.current(ticket, auth.currentUser?.uid ?? null);
     try {
       const token = await currentUser.getIdToken();
       const res = await fetch(`${BACKEND_URL}/annotations/tags`, {
@@ -103,26 +115,34 @@ export default function MyReflectionsPage() {
       });
 
       if (res.ok) {
+        reportBackendSuccess();
         const data = await res.json();
+        if (!current()) return;
         setAllTags(data.tags || []);
       }
     } catch (err) {
+      if (!current()) return;
       console.error('Failed to fetch tags:', err);
     }
   };
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
+    const ticket = requests.start('annotations', user?.uid ?? null);
+    const current = () => requests.current(ticket, auth.currentUser?.uid ?? null);
     try {
       const token = await user.getIdToken();
       const res = await fetch(`${BACKEND_URL}/annotations/search?q=${encodeURIComponent(searchQuery)}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
+        reportBackendSuccess();
         const data = await res.json();
+        if (!current()) return;
         setAnnotations(data.results || []);
       }
     } catch (err) {
+      if (!current()) return;
       console.error('Search failed:', err);
     }
   };

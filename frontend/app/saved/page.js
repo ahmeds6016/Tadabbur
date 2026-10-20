@@ -1,7 +1,9 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { onAuthStateChanged } from 'firebase/auth';
+import { useState, useEffect, useRef } from 'react';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 import Link from 'next/link';
+import { createRequestIdentity } from '../lib/requestIdentity';
+import { requestErrorFrom, userMessage } from '../lib/errors';
 import { auth } from '../lib/firebase';
 import { BACKEND_URL } from '../lib/config';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -10,24 +12,34 @@ import BottomNav from '../components/BottomNav';
 import { reportBackendFailure, reportBackendSuccess } from '../lib/backendHealth';
 
 export default function SavedSearchesPage() {
+  const requests = useRef(createRequestIdentity()).current;
   const [user, setUser] = useState(null);
   const [saved, setSaved] = useState([]);
   const [folders, setFolders] = useState([]);
   const [selectedFolder, setSelectedFolder] = useState(null);
+  const [loadError, setLoadError] = useState(null);
+  const [needsSignIn, setNeedsSignIn] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      requests.reset();
+      const authTicket = requests.start("auth", currentUser?.uid ?? null);
+      setSaved([]); setFolders([]); setSelectedFolder(null); setDeleteTarget(null); setDeleteError(null); setLoadError(null);
+      setIsLoading(true);
       setUser(currentUser);
       if (currentUser) {
         await Promise.all([fetchSaved(currentUser), fetchFolders(currentUser)]);
       }
-      setIsLoading(false);
+      if (requests.current(authTicket, auth.currentUser?.uid ?? null)) setIsLoading(false);
     });
-    return () => unsubscribe();
+    return () => { requests.reset(); unsubscribe(); };
   }, []);
 
   const fetchSaved = async (currentUser, folder = null) => {
+    const ticket = requests.start('saved', currentUser?.uid ?? null);
+    const current = () => requests.current(ticket, auth.currentUser?.uid ?? null);
+    setLoadError(null); setNeedsSignIn(false);
     try {
       const token = await currentUser.getIdToken();
       const url = folder
@@ -37,31 +49,44 @@ export default function SavedSearchesPage() {
       const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      reportBackendSuccess();
 
+      if (!res.ok) throw await requestErrorFrom(res, { fallback: "We couldn't load your saved activity. Please try again." });
       if (res.ok) {
+        reportBackendSuccess();
         const data = await res.json();
+        if (!current()) return;
         setSaved(data.saved || []);
       }
     } catch (err) {
+      if (!current()) return;
       if (err instanceof TypeError) reportBackendFailure();
-      // Fetch failed — non-critical
+      setNeedsSignIn(err.status === 401);
+      setLoadError(userMessage(err, "We couldn't load your saved activity. Please try again."));
     }
   };
 
   const fetchFolders = async (currentUser) => {
+    const ticket = requests.start('folders', currentUser?.uid ?? null);
+    const current = () => requests.current(ticket, auth.currentUser?.uid ?? null);
+    setLoadError(null); setNeedsSignIn(false);
     try {
       const token = await currentUser.getIdToken();
       const res = await fetch(`${BACKEND_URL}/saved-searches/folders`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
+      if (!res.ok) throw await requestErrorFrom(res, { fallback: "We couldn't load your saved activity. Please try again." });
       if (res.ok) {
+        reportBackendSuccess();
         const data = await res.json();
+        if (!current()) return;
         setFolders(data.folders || []);
       }
     } catch (err) {
-      // Folders fetch failed — non-critical
+      if (!current()) return;
+      if (err instanceof TypeError) reportBackendFailure();
+      setNeedsSignIn(err.status === 401);
+      setLoadError(userMessage(err, "We couldn't load your saved activity. Please try again."));
     }
   };
 
@@ -69,6 +94,8 @@ export default function SavedSearchesPage() {
   const [deleteError, setDeleteError] = useState(null);
 
   const handleDelete = async (id) => {
+    const ticket = requests.start("delete", user?.uid ?? null);
+    const current = () => requests.current(ticket, auth.currentUser?.uid ?? null);
     setDeleteError(null);
     try {
       const token = await user.getIdToken();
@@ -77,12 +104,14 @@ export default function SavedSearchesPage() {
         headers: { Authorization: `Bearer ${token}` }
       });
 
+      if (!current()) return;
       if (res.ok) {
         setSaved(saved.filter(item => item.id !== id));
       } else {
         setDeleteError('Could not delete this item. Please try again.');
       }
     } catch {
+      if (!current()) return;
       setDeleteError('Could not delete this item. Please try again.');
     }
   };
@@ -199,7 +228,10 @@ export default function SavedSearchesPage() {
 
         <ErrorNotice message={deleteError} compact />
 
-        {saved.length === 0 ? (
+        <ErrorNotice message={loadError} actionLabel={needsSignIn ? 'Sign in again' : 'Retry'}
+          onAction={async () => needsSignIn ? signOut(auth).then(() => window.location.assign('/')) : Promise.all([fetchSaved(user, selectedFolder), fetchFolders(user)])} />
+
+        {saved.length === 0 && !loadError ? (
           <div style={{ textAlign: 'center', padding: '60px 20px', color: '#999' }}>
             <p style={{ fontSize: '1.5rem', marginBottom: '16px', color: 'var(--primary-teal)' }}>No saved items</p>
             <p style={{ fontSize: '1.2rem' }}>No saved answers yet</p>

@@ -60,6 +60,7 @@ def route_env(monkeypatch):
     ))
     verse = {"surah_number": 2, "verse_number": 255, "surah_name": "Al-Baqarah"}
     namespace = {
+        "VerseStoreUnavailable": type("VerseStoreUnavailable", (Exception,), {}),
         "Any": Any, "Dict": Dict, "Optional": Optional,
         "datetime": datetime, "hashlib": hashlib, "json": json, "re": re,
         "traceback": traceback, "logger": logging.getLogger("tafsir_retry_test"),

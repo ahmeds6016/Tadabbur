@@ -12,6 +12,7 @@ import threading
 from types import SimpleNamespace
 from unittest.mock import Mock
 import uuid
+import sys
 
 from flask import Flask, g, jsonify, make_response, request
 import pytest
@@ -28,7 +29,7 @@ def surface():
              'submit_feedback'}
     tree = ast.parse(SOURCE.read_text())
     app = Flask(__name__)
-    ns = dict(app=app, os=os, uuid=uuid, g=g, request=request, jsonify=jsonify,
+    ns = dict(sys=sys, VerseStoreUnavailable=type("VerseStoreUnavailable", (Exception,), {}), app=app, os=os, uuid=uuid, g=g, request=request, jsonify=jsonify,
               make_response=make_response, wraps=wraps, hmac=hmac, datetime=datetime,
               timedelta=timedelta, logger=logging.getLogger(__name__),
               ADMIN_SECRET='offline-admin', DEBUG_ROUTES_ENABLED=False,
