@@ -21,7 +21,7 @@ import requests
 
 
 MALFORMED = "An error occurred while evaluating the response."
-VALID = json.dumps({"verses": [], "tafsir_explanations": [], "metadata": {}})
+VALID = json.dumps({"verses": [], "tafsir_explanations": [{"source": "Ibn Kathir", "explanation": "Grounded explanation."}], "metadata": {}, "cross_references": [], "hadith": [], "lessons_practical_applications": [], "summary": "Summary.", "reflection_prompt": "Reflection."})
 
 
 def gemini_response(text, status=200, finish_reason="STOP"):
@@ -42,7 +42,7 @@ def route_env(monkeypatch):
     path = Path(__file__).resolve().parents[1] / "app.py"
     names = {
         "tafsir_handler_enhanced", "debug_query", "extract_json_from_response",
-        "fix_malformed_json", "extract_gemini_text", "safe_get_nested", "_single_line_log",
+        "fix_malformed_json", "extract_gemini_text", "safe_get_nested", "_single_line_log", "valid_answer_contract",
     }
     functions = [node for node in ast.parse(path.read_text()).body
                  if isinstance(node, ast.FunctionDef) and node.name in names]
@@ -60,6 +60,7 @@ def route_env(monkeypatch):
     ))
     verse = {"surah_number": 2, "verse_number": 255, "surah_name": "Al-Baqarah"}
     namespace = {
+        "VerseStoreUnavailable": type("VerseStoreUnavailable", (Exception,), {}),
         "Any": Any, "Dict": Dict, "Optional": Optional,
         "datetime": datetime, "hashlib": hashlib, "json": json, "re": re,
         "traceback": traceback, "logger": logging.getLogger("tafsir_retry_test"),
@@ -76,6 +77,9 @@ def route_env(monkeypatch):
         "classify_query_enhanced": lambda _: {"verse_ref": (2, 255), "confidence": 1},
         "validate_verse_reference": lambda *args: (True, ""),
         "is_rate_limited": lambda *args, **kwargs: False,
+        "record_query_analytics": lambda value: None,
+        "normalize_verse_query": lambda value: value,
+        "resolve_answer_profile": lambda value: value,
         "get_cache_key": lambda *args: "fixture-cache-key",
         "get_cached_tafsir_response": lambda *args: None,
         "get_verse_from_firestore": lambda *args: verse,
@@ -116,6 +120,26 @@ def assert_attempt_budget(env, attempts):
     timeouts = [call.kwargs["timeout"] for call in env.post.call_args_list]
     assert timeouts == [120] * attempts
     assert sum(timeouts) + sum(call.args[0] for call in env.sleep.call_args_list) <= 242
+
+
+@pytest.mark.parametrize('bad', [{}, {'summary': 'Plausible'},
+    {**json.loads(VALID), 'tafsir_explanations': []},
+    {**json.loads(VALID), 'tafsir_explanations': [{'source': 'Ibn Kathir', 'explanation': 5}]},
+    {**json.loads(VALID), 'hadith': 'invalid'},
+    {**json.loads(VALID), 'metadata': []}])
+def test_wrong_answer_contract_uses_two_attempts_without_cache(route_env, bad):
+    route_env.post.side_effect = [gemini_response(json.dumps(bad))] * 2
+    response = route_env.client.post('/tafsir', json={'query': '2:255'})
+    assert response.status_code == 502
+    assert_attempt_budget(route_env, 2)
+    route_env.store.assert_not_called()
+    assert not route_env.cache
+
+
+def test_truncated_json_is_retried_even_when_it_parses(route_env):
+    route_env.post.side_effect = [gemini_response(VALID, finish_reason='MAX_TOKENS'), gemini_response(VALID)]
+    assert route_env.client.post('/tafsir', json={'query': '2:255'}).status_code == 200
+    assert_attempt_budget(route_env, 2)
 
 
 def test_malformed_then_valid_retries_logs_and_caches(route_env, caplog):

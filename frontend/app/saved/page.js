@@ -1,67 +1,100 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { onAuthStateChanged } from 'firebase/auth';
+import { useState, useEffect, useRef } from 'react';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 import Link from 'next/link';
+import { createRequestIdentity } from '../lib/requestIdentity';
+import { requestErrorFrom, userMessage } from '../lib/errors';
 import { auth } from '../lib/firebase';
 import { BACKEND_URL } from '../lib/config';
+import ReactMarkdown from 'react-markdown';
 import ConfirmDialog from '../components/ConfirmDialog';
 import ErrorNotice from '../components/ErrorNotice';
 import BottomNav from '../components/BottomNav';
 import { reportBackendFailure, reportBackendSuccess } from '../lib/backendHealth';
 
 export default function SavedSearchesPage() {
+  const requests = useRef(createRequestIdentity()).current;
+  const [snapshot, setSnapshot] = useState(null);
+  const [folderCursor, setFolderCursor] = useState(null);
+  const [nextCursor, setNextCursor] = useState(null);
   const [user, setUser] = useState(null);
   const [saved, setSaved] = useState([]);
   const [folders, setFolders] = useState([]);
   const [selectedFolder, setSelectedFolder] = useState(null);
+  const [loadError, setLoadError] = useState(null);
+  const [needsSignIn, setNeedsSignIn] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      requests.reset(); setNextCursor(null); setSnapshot(null); setFolderCursor(null);
+      const authTicket = requests.start("auth", currentUser?.uid ?? null);
+      setSaved([]); setFolders([]); setSelectedFolder(null); setDeleteTarget(null); setDeleteError(null); setLoadError(null);
+      setIsLoading(true);
       setUser(currentUser);
       if (currentUser) {
         await Promise.all([fetchSaved(currentUser), fetchFolders(currentUser)]);
       }
-      setIsLoading(false);
+      if (requests.current(authTicket, auth.currentUser?.uid ?? null)) setIsLoading(false);
     });
-    return () => unsubscribe();
+    return () => { requests.reset(); unsubscribe(); };
   }, []);
 
-  const fetchSaved = async (currentUser, folder = null) => {
+  const fetchSaved = async (currentUser, folder = null, cursor = null) => {
+    if (!cursor) setNextCursor(null);
+    const ticket = requests.start('saved', currentUser?.uid ?? null);
+    const current = () => requests.current(ticket, auth.currentUser?.uid ?? null);
+    setLoadError(null); setNeedsSignIn(false);
     try {
       const token = await currentUser.getIdToken();
       const url = folder
         ? `${BACKEND_URL}/saved-searches?folder=${encodeURIComponent(folder)}`
         : `${BACKEND_URL}/saved-searches`;
 
-      const res = await fetch(url, {
+      const pagedUrl = `${url}${url.includes('?') ? '&' : '?'}limit=50${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`;
+      const res = await fetch(pagedUrl, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      reportBackendSuccess();
 
+      if (!res.ok) throw await requestErrorFrom(res, { fallback: "We couldn't load your saved activity. Please try again." });
       if (res.ok) {
+        reportBackendSuccess();
         const data = await res.json();
-        setSaved(data.saved || []);
+        if (!current()) return;
+        setSaved(previous => cursor ? [...previous, ...(data.saved || [])] : data.saved || []);
+        setNextCursor(data.next_cursor || null);
       }
     } catch (err) {
+      if (!current()) return;
       if (err instanceof TypeError) reportBackendFailure();
-      // Fetch failed — non-critical
+      setNeedsSignIn(err.status === 401);
+      setLoadError(userMessage(err, "We couldn't load your saved activity. Please try again."));
     }
   };
 
-  const fetchFolders = async (currentUser) => {
+  const fetchFolders = async (currentUser, cursor = null) => {
+    const ticket = requests.start('folders', currentUser?.uid ?? null);
+    const current = () => requests.current(ticket, auth.currentUser?.uid ?? null);
+    setLoadError(null); setNeedsSignIn(false);
     try {
       const token = await currentUser.getIdToken();
-      const res = await fetch(`${BACKEND_URL}/saved-searches/folders`, {
+      const res = await fetch(`${BACKEND_URL}/saved-searches/folders${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
+      if (!res.ok) throw await requestErrorFrom(res, { fallback: "We couldn't load your saved activity. Please try again." });
       if (res.ok) {
+        reportBackendSuccess();
         const data = await res.json();
-        setFolders(data.folders || []);
+        if (!current()) return;
+        setFolders(previous => cursor ? [...new Map([...previous, ...(data.folders || [])].map(folder => [folder.name, folder])).values()] : data.folders || []);
+        setFolderCursor(data.next_cursor || null);
       }
     } catch (err) {
-      // Folders fetch failed — non-critical
+      if (!current()) return;
+      if (err instanceof TypeError) reportBackendFailure();
+      setNeedsSignIn(err.status === 401);
+      setLoadError(userMessage(err, "We couldn't load your saved activity. Please try again."));
     }
   };
 
@@ -69,6 +102,9 @@ export default function SavedSearchesPage() {
   const [deleteError, setDeleteError] = useState(null);
 
   const handleDelete = async (id) => {
+    // One ticket per item, so a second delete cannot make the first look stale.
+    const ticket = requests.start(`delete:${id}`, user?.uid ?? null);
+    const current = () => requests.current(ticket, auth.currentUser?.uid ?? null);
     setDeleteError(null);
     try {
       const token = await user.getIdToken();
@@ -77,13 +113,35 @@ export default function SavedSearchesPage() {
         headers: { Authorization: `Bearer ${token}` }
       });
 
+      if (!current()) return;
       if (res.ok) {
-        setSaved(saved.filter(item => item.id !== id));
+        setSaved(previous => previous.filter(item => item.id !== id));
+        if (id === nextCursor) {
+          // The page cursor was the deleted item: continue from the one before it.
+          const index = saved.findIndex(item => item.id === id);
+          if (index > 0) setNextCursor(saved[index - 1].id);
+          else fetchSaved(user, selectedFolder, null);
+        }
       } else {
         setDeleteError('Could not delete this item. Please try again.');
       }
     } catch {
+      if (!current()) return;
       setDeleteError('Could not delete this item. Please try again.');
+    }
+  };
+
+  const viewSavedAnswer = async (item) => {
+    const ticket = requests.start('snapshot', user?.uid ?? null);
+    setSnapshot(null); setLoadError(null);
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch(`${BACKEND_URL}/saved-searches/${encodeURIComponent(item.id)}`, { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) throw await requestErrorFrom(res);
+      const data = await res.json();
+      if (requests.current(ticket, auth.currentUser?.uid ?? null)) setSnapshot(data);
+    } catch (err) {
+      if (requests.current(ticket, auth.currentUser?.uid ?? null)) { setNeedsSignIn(err.status === 401); setLoadError(userMessage(err, 'This saved answer could not be loaded. Please try again.')); }
     }
   };
 
@@ -157,6 +215,19 @@ export default function SavedSearchesPage() {
           <div className="saved-count">{saved.length}</div>
         </div>
 
+        {snapshot && <section className="card">
+          <h2>Saved answer: {snapshot.query}</h2>
+          <p>This stored snapshot may predate current citation checks.</p>
+          <button onClick={() => setSnapshot(null)}>Close saved answer</button>
+          {(snapshot.response?.verses || []).map((verse, i) => <section key={i}><h3>{verse.surah}:{verse.verse_number}</h3><p lang="ar" dir="rtl">{verse.arabic_text}</p><p>{verse.text_saheeh_international}</p></section>)}
+          <ReactMarkdown>{snapshot.response?.summary || ''}</ReactMarkdown>
+          {(snapshot.response?.tafsir_explanations || []).map((item, i) => <section key={i}><h3>{item.source}</h3><ReactMarkdown>{item.explanation || ''}</ReactMarkdown></section>)}
+          {(snapshot.response?.hadith || []).map((item, i) => <section key={i}><p>{typeof item.reference === 'string' ? item.reference : 'Source excerpt'}</p><ReactMarkdown>{item.text || ''}</ReactMarkdown><p>{item.relevance}</p></section>)}
+          {(snapshot.response?.lessons_practical_applications || []).map((item, i) => <section key={i}><h3>{item.point}</h3>{['body', 'core_principle', 'contemplation', 'prophetic_anchor', 'baseline', 'ascent', 'peak'].map(field => item[field] && <ReactMarkdown key={field}>{item[field]}</ReactMarkdown>)}</section>)}
+          {(snapshot.response?.cross_references || []).map((item, i) => <p key={i}>{item.verse}: {item.relevance}</p>)}
+          <p>{snapshot.response?.reflection_prompt}</p>
+        </section>}
+        {folderCursor && <button onClick={() => fetchFolders(user, folderCursor)}>Load more folders</button>}
         {/* Folder Filter */}
         {folders.length > 0 && (
           <div style={{ marginBottom: '24px' }}>
@@ -175,7 +246,7 @@ export default function SavedSearchesPage() {
                   fontSize: '0.9rem'
                 }}
               >
-                All Folders ({folders.reduce((sum, f) => sum + f.count, 0)})
+                All folders
               </button>
               {folders.map((folder) => (
                 <button
@@ -190,7 +261,7 @@ export default function SavedSearchesPage() {
                     fontSize: '0.9rem'
                   }}
                 >
-                  {folder.name} ({folder.count})
+                  {folder.name}
                 </button>
               ))}
             </div>
@@ -199,7 +270,10 @@ export default function SavedSearchesPage() {
 
         <ErrorNotice message={deleteError} compact />
 
-        {saved.length === 0 ? (
+        <ErrorNotice message={loadError} actionLabel={needsSignIn ? 'Sign in again' : 'Retry'}
+          onAction={async () => needsSignIn ? signOut(auth).then(() => window.location.assign('/')) : Promise.all([fetchSaved(user, selectedFolder), fetchFolders(user)])} />
+
+        {saved.length === 0 && !loadError ? (
           <div style={{ textAlign: 'center', padding: '60px 20px', color: '#999' }}>
             <p style={{ fontSize: '1.5rem', marginBottom: '16px', color: 'var(--primary-teal)' }}>No saved items</p>
             <p style={{ fontSize: '1.2rem' }}>No saved answers yet</p>
@@ -258,6 +332,7 @@ export default function SavedSearchesPage() {
                   {item.responseSnippet}...
                 </div>
 
+                <button onClick={() => viewSavedAnswer(item)}>View saved answer</button>
                 {/* Link to view the verse */}
                 {item.query && (
                   <a
@@ -281,6 +356,7 @@ export default function SavedSearchesPage() {
             ))}
           </div>
         )}
+        {nextCursor && <button onClick={() => fetchSaved(user, selectedFolder, nextCursor)}>Load more saved answers</button>}
       </div>
 
       <style jsx>{`

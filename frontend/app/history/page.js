@@ -1,44 +1,67 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { onAuthStateChanged } from 'firebase/auth';
+import { useState, useEffect, useRef } from 'react';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 import Link from 'next/link';
+import { createRequestIdentity } from '../lib/requestIdentity';
+import { requestErrorFrom, userMessage } from '../lib/errors';
 import { auth } from '../lib/firebase';
 import { BACKEND_URL } from '../lib/config';
+import ErrorNotice from '../components/ErrorNotice';
+import { reportBackendFailure, reportBackendSuccess } from '../lib/backendHealth';
 import BottomNav from '../components/BottomNav';
 
 export default function QueryHistoryPage() {
+  const requests = useRef(createRequestIdentity()).current;
+  const [nextCursor, setNextCursor] = useState(null);
   const [user, setUser] = useState(null);
   const [history, setHistory] = useState([]);
+  const [loadError, setLoadError] = useState(null);
+  const [needsSignIn, setNeedsSignIn] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      requests.reset(); setNextCursor(null);
+      const authTicket = requests.start("auth", currentUser?.uid ?? null);
+      setHistory([]); setLoadError(null);
+      setIsLoading(true);
       setUser(currentUser);
       if (currentUser) {
         await fetchHistory(currentUser);
       }
-      setIsLoading(false);
+      if (requests.current(authTicket, auth.currentUser?.uid ?? null)) setIsLoading(false);
     });
-    return () => unsubscribe();
+    return () => { requests.reset(); unsubscribe(); };
   }, []);
 
-  const fetchHistory = async (currentUser) => {
+  const fetchHistory = async (currentUser, cursor = null) => {
+    if (!cursor) setNextCursor(null);
+    const ticket = requests.start('history', currentUser?.uid ?? null);
+    const current = () => requests.current(ticket, auth.currentUser?.uid ?? null);
+    setLoadError(null); setNeedsSignIn(false);
     try {
       const token = await currentUser.getIdToken();
-      const res = await fetch(`${BACKEND_URL}/query-history?limit=50`, {
+      const res = await fetch(`${BACKEND_URL}/query-history?limit=50${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
+      if (!res.ok) throw await requestErrorFrom(res, { fallback: "We couldn't load your saved activity. Please try again." });
       if (res.ok) {
+        reportBackendSuccess();
         const data = await res.json();
+        if (!current()) return;
         // Filter to only show Deep Tafsir entries (exclude Explore mode queries)
         const tafsirHistory = (data.history || []).filter(
           item => !item.approach || item.approach === 'tafsir'
         );
-        setHistory(tafsirHistory);
+        setHistory(previous => cursor ? [...previous, ...tafsirHistory] : tafsirHistory);
+        setNextCursor(data.next_cursor || null);
       }
     } catch (err) {
-      // History fetch failed — non-critical
+      if (!current()) return;
+      if (err instanceof TypeError) reportBackendFailure();
+      setNeedsSignIn(err.status === 401);
+      setLoadError(userMessage(err, "We couldn't load your saved activity. Please try again."));
     }
   };
 
@@ -110,7 +133,10 @@ export default function QueryHistoryPage() {
           Your recent queries are saved here. Click any query to run it again.
         </p>
 
-        {history.length === 0 ? (
+        <ErrorNotice message={loadError} actionLabel={needsSignIn ? 'Sign in again' : 'Retry'}
+          onAction={async () => needsSignIn ? signOut(auth).then(() => window.location.assign('/')) : fetchHistory(user)} />
+
+        {history.length === 0 && !loadError ? (
           <div style={{ textAlign: 'center', padding: '60px 20px', color: '#999' }}>
             <p style={{ fontSize: '1.5rem', marginBottom: '16px', color: 'var(--primary-teal)' }}>No history yet</p>
             <p style={{ fontSize: '1.2rem' }}>No queries yet</p>
@@ -163,6 +189,7 @@ export default function QueryHistoryPage() {
             ))}
           </div>
         )}
+        {nextCursor && <button onClick={() => fetchHistory(user, nextCursor)}>Load more history</button>}
       </div>
 
       <style jsx>{`

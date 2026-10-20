@@ -1,8 +1,9 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { onAuthStateChanged } from 'firebase/auth';
 import { ChevronRight, ChevronDown } from 'lucide-react';
+import { createRequestIdentity } from '../lib/requestIdentity';
 import { auth } from '../lib/firebase';
 import { BACKEND_URL } from '../lib/config';
 import ErrorNotice from '../components/ErrorNotice';
@@ -14,6 +15,7 @@ import BottomNav from '../components/BottomNav';
 import { reportBackendFailure, reportBackendSuccess } from '../lib/backendHealth';
 
 export default function PlansPage() {
+  const requests = useRef(createRequestIdentity()).current;
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -30,10 +32,12 @@ export default function PlansPage() {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      requests.reset();
+      setActivePlans([]); setQuranProgress(null); setPlans([]); setError(null); setActionLoading(false); setExpandedPlanId(null);
       setUser(currentUser);
       setIsLoading(false);
     });
-    return () => unsubscribe();
+    return () => { requests.reset(); unsubscribe(); };
   }, []);
 
   const fetchActivePlans = useCallback(async () => {
@@ -55,7 +59,7 @@ export default function PlansPage() {
     let res;
     try {
       res = await fetch(`${BACKEND_URL}/reading-plans`);
-      reportBackendSuccess();
+      if (res.ok) reportBackendSuccess();
     } catch (err) {
       if (err instanceof TypeError) reportBackendFailure();
       throw err;
@@ -68,16 +72,17 @@ export default function PlansPage() {
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
+    const ticket = requests.start("plans", user.uid);
     async function load() {
       setError(null);
       try {
         const [planList, active] = await Promise.all([fetchPlans(), fetchActivePlans()]);
-        if (cancelled) return;
+        if (cancelled || !requests.current(ticket, auth.currentUser?.uid ?? null)) return;
         setPlans(planList);
         setActivePlans(active);
         if (active.length === 0) setTab('browse');
       } catch (err) {
-        if (!cancelled) setError(userMessage(err, PLANS_ERROR));
+        if (!cancelled && requests.current(ticket, auth.currentUser?.uid ?? null)) setError(userMessage(err, PLANS_ERROR));
       }
     }
     load();
@@ -87,13 +92,15 @@ export default function PlansPage() {
   // Quran progress (lazy)
   const fetchQuranProgress = useCallback(async () => {
     if (!user || quranProgress) return;
+    const ticket = requests.start("progress", user.uid);
     try {
       const token = await user.getIdToken();
       const res = await fetch(`${BACKEND_URL}/progress`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (!res.ok) throw new Error('Failed to load progress');
-      setQuranProgress(await res.json());
+      const data = await res.json();
+      if (requests.current(ticket, auth.currentUser?.uid ?? null)) setQuranProgress(data);
     } catch { /* non-critical */ }
   }, [user, quranProgress]);
 
@@ -107,7 +114,7 @@ export default function PlansPage() {
     try {
       const token = await user.getIdToken();
       await fetch(`${BACKEND_URL}/streak`, {
-        method: 'POST',
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
@@ -120,6 +127,8 @@ export default function PlansPage() {
 
   const handleStart = async (planId) => {
     if (!user) return;
+    const ticket = requests.start("action", user.uid);
+    const current = () => requests.current(ticket, auth.currentUser?.uid ?? null);
     setActionLoading(true);
     try {
       const token = await user.getIdToken();
@@ -130,17 +139,21 @@ export default function PlansPage() {
       });
       if (!res.ok) throw new Error('Failed to start plan');
       const active = await fetchActivePlans();
+      if (!current()) return;
       setActivePlans(active);
       setTab('plans');
     } catch {
+      if (!current()) return;
       setError('Could not start plan. Please try again.');
     } finally {
-      setActionLoading(false);
+      if (current()) setActionLoading(false);
     }
   };
 
   const handleCompleteDay = async (planId, day) => {
     if (!user) return;
+    const ticket = requests.start("action", user.uid);
+    const current = () => requests.current(ticket, auth.currentUser?.uid ?? null);
     setActionLoading(true);
     try {
       const token = await user.getIdToken();
@@ -152,11 +165,13 @@ export default function PlansPage() {
       if (!res.ok) throw new Error('Failed to complete day');
       await updateStreak();
       const active = await fetchActivePlans();
+      if (!current()) return;
       setActivePlans(active);
     } catch {
+      if (!current()) return;
       setError('Could not complete day. Please try again.');
     } finally {
-      setActionLoading(false);
+      if (current()) setActionLoading(false);
     }
   };
 
@@ -435,7 +450,7 @@ export default function PlansPage() {
                 background: 'var(--cream, #faf6f0)', borderRadius: 10,
                 border: '1px solid var(--border-light, #e5e7eb)',
               }}>
-                <BadgeDisplay user={user} compact={false} />
+                <BadgeDisplay key={user?.uid || "guest"} user={user} compact={false} />
               </div>
             )}
 

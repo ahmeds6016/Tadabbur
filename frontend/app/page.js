@@ -1,7 +1,7 @@
 'use client';
+import { createRequestIdentity } from './lib/requestIdentity';
 import ReactMarkdown from 'react-markdown';
 import remarkBreaks from 'remark-breaks';
-import rehypeRaw from 'rehype-raw';
 import { Suspense, useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
@@ -88,6 +88,10 @@ export default function HomePage() {
     };
   }, []);
 
+  const profileRequests = useRef(createRequestIdentity()).current;
+  const authGeneration = useRef(0);
+  const lastAuthUid = useRef(undefined);
+  const authEpoch = authGeneration.current;
   const [user, setUser] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -96,14 +100,16 @@ export default function HomePage() {
 
   const fetchUserProfile = async (currentUser) => {
     if (!currentUser) return;
+    const ticket = profileRequests.start("profile", currentUser.uid);
     try {
       const token = await currentUser.getIdToken();
       const response = await fetch(`${BACKEND_URL}/get_profile`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      reportBackendSuccess();
       if (!response.ok) throw new Error('Network error fetching profile');
       const data = await response.json();
+      if (!profileRequests.current(ticket, auth.currentUser?.uid ?? null)) return;
+      reportBackendSuccess();
       if (data?.is_new_user) {
         // New user — no profile yet, will proceed to onboarding
         return;
@@ -121,16 +127,25 @@ export default function HomePage() {
     let isMounted = true;
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (!isMounted) return;
+      profileRequests.reset();
+      authGeneration.current += 1;
+      const authTicket = profileRequests.start("auth", currentUser?.uid ?? null);
+      const previousUid = lastAuthUid.current;
+      lastAuthUid.current = currentUser?.uid ?? null;
+      setUserProfile(null); setIsGuest(false); setIsLoading(true);
       setUser(currentUser);
       if (currentUser) {
         await fetchUserProfile(currentUser);
       } else {
+        // A real sign-out (not a guest page load): drop the last answer from this tab.
+        if (previousUid) clearSearchState();
         setUserProfile(null);
       }
-      setIsLoading(false);
+      if (profileRequests.current(authTicket, auth.currentUser?.uid ?? null)) setIsLoading(false);
     });
     return () => {
       isMounted = false;
+      profileRequests.reset();
       unsubscribe();
     };
   }, [refreshKey]);
@@ -157,11 +172,14 @@ export default function HomePage() {
   }
 
   if (user && !isGuest && !userProfile) {
-    return <OnboardingComponent user={user} onProfileComplete={setUserProfile} />;
+    return <OnboardingComponent key={user.uid} user={user} onProfileComplete={profile => {
+      if (authGeneration.current === authEpoch && auth.currentUser?.uid === user.uid) setUserProfile(profile);
+    }} />;
   }
 
   return (
     <MainApp
+      key={user?.uid || "guest"}
       user={user}
       userProfile={userProfile}
       onResetProfile={() => setUserProfile(null)}
@@ -515,6 +533,7 @@ function AuthComponent({ onGuestBrowse }) {
           </>
         )}
 
+        <p style={{ textAlign: 'center' }}><a href="/privacy">Privacy notice draft</a></p>
         <RecaptchaAttribution />
 
       </div>
@@ -973,6 +992,20 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
 
   // Ref to track pending share request (for ensureShareId)
   const pendingShareRequest = useRef(null);
+  const answerGeneration = useRef(0);
+  const answerQuery = useRef(query);
+  const searchRequests = useRef(createRequestIdentity()).current;
+  useEffect(() => {
+    answerGeneration.current += 1;
+    setCurrentShareId(null);
+    pendingShareRequest.current = null;
+  }, [response]);
+  useEffect(() => () => {
+    searchRequests.reset();
+    answerGeneration.current += 1;
+    abortControllerRef.current?.abort();
+    clearTimeout(searchTimeoutRef.current);
+  }, []);
 
   // Focus targets for progressive loading, completed results, and errors.
   const previewRegionRef = useRef(null);
@@ -1011,7 +1044,7 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
   useEffect(() => {
     fetch(`${BACKEND_URL}/daily-verse`)
       .then(res => {
-        reportBackendSuccess();
+        if (res.ok) reportBackendSuccess();
         return res.ok ? res.json() : null;
       })
       .then(data => { if (data) setDailyVerse(data); })
@@ -1019,11 +1052,11 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
 
     if (user) {
       user.getIdToken().then(token => {
-        fetch(`${BACKEND_URL}/streak`, {
+        return fetch(`${BACKEND_URL}/streak`, {
           headers: { Authorization: `Bearer ${token}` }
         })
           .then(res => {
-            reportBackendSuccess();
+            if (res.ok) reportBackendSuccess();
             return res.ok ? res.json() : null;
           })
           .then(data => {
@@ -1032,7 +1065,7 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
             }
           })
           .catch((err) => { if (err instanceof TypeError) reportBackendFailure(); });
-      });
+      }).catch((err) => { if (err instanceof TypeError) reportBackendFailure(); });
     }
   }, [user]);
 
@@ -1042,7 +1075,7 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
     try {
       const token = await user.getIdToken();
       const res = await fetch(`${BACKEND_URL}/streak`, {
-        method: 'POST',
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
@@ -1064,8 +1097,9 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
   // Helper to navigate to a verse (used by collections, recommendations, reading plans)
   // Load saved search state on mount (survives page refresh)
   useEffect(() => {
-    const savedState = loadSearchState();
+    const savedState = loadSearchState(user?.uid || 'guest');
     if (savedState) {
+      answerQuery.current = savedState.query;
       setQuery(savedState.query);
       setResponse(savedState.response);
     }
@@ -1106,7 +1140,7 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
   // Save search state when response changes
   useEffect(() => {
     if (response && query) {
-      saveSearchState(query, approach, response);
+      saveSearchState(answerQuery.current, approach, response, user?.uid || 'guest');
     }
   }, [response, query, approach]);
 
@@ -1269,6 +1303,9 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
+    abortControllerRef.current = null;
+    clearTimeout(searchTimeoutRef.current);
+    searchTimeoutRef.current = null;
     setIsTafsirLoading(false);
     setVersePreview(null);
     setError('');
@@ -1298,20 +1335,20 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
       clearTimeout(searchTimeoutRef.current);
     }
 
-    // Create new AbortController for this request
-    abortControllerRef.current = new AbortController();
-
-    // Set timeout for tafsir requests (3 minutes: scholarly planning + generation + retries)
-    const timeoutMs = 180000;
-    searchTimeoutRef.current = setTimeout(() => {
-      // Clear the ref BEFORE aborting so the catch handler knows it was a timeout
-      searchTimeoutRef.current = null;
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-        setError('The request took too long. Please try again or simplify your query.');
-        setIsTafsirLoading(false);
-      }
-    }, timeoutMs);
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    const ticket = searchRequests.start('search', user?.uid ?? null);
+    const current = () => searchRequests.current(ticket, auth.currentUser?.uid ?? null) && abortControllerRef.current === controller;
+    answerGeneration.current += 1;
+    setCurrentShareId(null);
+    pendingShareRequest.current = null;
+    const timeout = setTimeout(() => {
+      if (!current()) return;
+      controller.abort();
+      setError('The request took too long. Please try again.');
+      setIsTafsirLoading(false);
+    }, 180000);
+    searchTimeoutRef.current = timeout;
 
     setIsTafsirLoading(true);
     setResponse(null);
@@ -1351,9 +1388,9 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
         method: 'POST',
         headers,
         body: JSON.stringify({ approach, query }),
-        signal: abortControllerRef.current.signal
+        signal: controller.signal
       });
-      reportBackendSuccess();
+      if (!current()) return;
 
       if (!res.ok) {
         if (res.status === 429) {
@@ -1367,13 +1404,17 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
       }
 
       const data = await res.json();
+      if (!current()) return;
+      reportBackendSuccess();
 
       // Check if backend needs clarification (fuzzy match suggestions)
       if (data.needs_clarification) {
-        setResponse(data);  // Show suggestions in response area
+        answerQuery.current = query;
+      setResponse(data);  // Show suggestions in response area
         return;
       }
 
+      answerQuery.current = query;
       setResponse(data);
 
       // Guest query counter for soft sign-up prompt
@@ -1392,6 +1433,7 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
         await saveQueryToHistory(query, approach, userProfile?.persona || '', true);
       }
     } catch (err) {
+      if (!current()) return;
       if (err instanceof TypeError) reportBackendFailure();
       // Don't show error for user-initiated cancellations (but show for timeouts)
       if (err.name === 'AbortError') {
@@ -1409,12 +1451,9 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
         await saveQueryToHistory(query, approach, userProfile?.persona || '', false);
       }
     } finally {
-      // Clear the timeout when request completes
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current);
-        searchTimeoutRef.current = null;
-      }
-      setIsTafsirLoading(false);
+      clearTimeout(timeout);
+      if (searchTimeoutRef.current === timeout) searchTimeoutRef.current = null;
+      if (current()) setIsTafsirLoading(false);
     }
   };
 
@@ -1443,45 +1482,34 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
 
   // Ensure share ID exists (lifted from EnhancedResultsDisplay)
   const ensureShareId = useCallback(async () => {
+    if (!response || response.needs_clarification) return null;
     if (currentShareId) return currentShareId;
-
-    // Prevent duplicate requests
-    if (pendingShareRequest.current) {
-      return pendingShareRequest.current;
-    }
-
-    try {
-      const sharePromise = (async () => {
+    if (pendingShareRequest.current) return pendingShareRequest.current;
+    const generation = answerGeneration.current;
+    const uid = user?.uid ?? null;
+    const current = () => generation === answerGeneration.current && uid === (auth.currentUser?.uid ?? null);
+    const sharePromise = (async () => {
+      try {
         const token = user ? await user.getIdToken() : null;
+        if (!current()) return null;
         const res = await fetch(`${BACKEND_URL}/share`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {})
-          },
-          body: JSON.stringify({
-            query,
-            approach
-          })
+          headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+          body: JSON.stringify({ query: answerQuery.current, approach }),
         });
-
-        if (!res.ok) throw new Error('Failed to create share');
-
+        if (!res.ok) throw new Error('Share unavailable');
         const data = await res.json();
-        const shareId = data.share_id;
-        setCurrentShareId(shareId);
-        pendingShareRequest.current = null;
-        return shareId;
-      })();
-
-      pendingShareRequest.current = sharePromise;
-      return await sharePromise;
-    } catch (error) {
-      // Share creation failed — non-critical
-      pendingShareRequest.current = null;
-      return null;
-    }
-  }, [currentShareId, query, approach, user]);
+        if (!current()) return null;
+        setCurrentShareId(data.share_id);
+        return data.share_id;
+      } catch { return null; }
+      finally {
+        if (current()) pendingShareRequest.current = null;
+      }
+    })();
+    pendingShareRequest.current = sharePromise;
+    return sharePromise;
+  }, [currentShareId, response, approach, user]);
 
   // Annotation handlers (centralized in MainApp) - CORRECTED
   const handleAnnotateClick = useCallback(() => {
@@ -1569,7 +1597,7 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
 
       if (successful) {
         // Show success notification
-        button.innerHTML = 'Copied!';
+        button.innerHTML = 'Copied.';
         button.style.background = 'var(--primary-teal)';
 
         setTimeout(() => {
@@ -1601,41 +1629,32 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
     const originalText = button.innerHTML;
 
     // Show loading state
-    button.innerHTML = '⏳ Creating link...';
+    button.innerHTML = 'Creating link...';
     button.disabled = true;
 
     try {
-      // Create shareable link via backend
-      const token = user ? await user.getIdToken() : null;
-      const res = await fetch(`${BACKEND_URL}/share`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
-        },
-        body: JSON.stringify({
-          query: query,
-          approach: approach
-        })
-      });
-
-      if (!res.ok) {
-        throw new Error('Failed to create shareable link');
+      const generation = answerGeneration.current;
+      const shareId = await ensureShareId();
+      if (generation !== answerGeneration.current) {
+        // The reader moved to another answer; restore the button without a message.
+        button.innerHTML = originalText;
+        button.disabled = false;
+        return;
       }
-
-      const data = await res.json();
-      const shareUrl = `${window.location.origin}/shared/${data.share_id}`;
+      if (!shareId) throw new Error('Share link unavailable');
+      const sharedQuery = answerQuery.current || query;
+      const shareUrl = `${window.location.origin}/shared/${shareId}`;
 
       // PWA-compatible clipboard: Use Web Share API first on mobile
       if (navigator.share && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
         try {
           await navigator.share({
-            title: `Tadabbur — ${query}`,
-            text: `A deeper understanding of ${query.includes('-') ? 'these ayat' : 'this ayah'} [${query}].`,
+            title: `Tadabbur — ${sharedQuery}`,
+            text: `A deeper understanding of ${sharedQuery.includes('-') ? 'these ayat' : 'this ayah'} [${sharedQuery}].`,
             url: shareUrl
           });
 
-          button.innerHTML = 'Shared!';
+          button.innerHTML = 'Shared.';
           button.style.background = 'var(--primary-teal)';
           if (!onboardingState.hasSharedContent) {
             markStepComplete('hasSharedContent');
@@ -1665,7 +1684,7 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
         try {
           await navigator.clipboard.writeText(shareUrl);
 
-          button.innerHTML = 'Link Copied!';
+          button.innerHTML = 'Link copied.';
           button.style.background = 'var(--primary-teal)';
           if (!onboardingState.hasSharedContent) {
             markStepComplete('hasSharedContent');
@@ -1697,7 +1716,7 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
           document.body.removeChild(textArea);
 
           if (successful) {
-            button.innerHTML = 'Link Copied!';
+            button.innerHTML = 'Link copied.';
             button.style.background = 'var(--primary-teal)';
             if (!onboardingState.hasSharedContent) {
               markStepComplete('hasSharedContent');
@@ -1720,7 +1739,7 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
       // Share link failed — button shows retry
 
       // Show error in button
-      button.innerHTML = 'Share Failed - Tap to retry';
+      button.innerHTML = "Couldn't create a link. Tap to try again.";
       button.style.background = 'var(--primary-teal)';
 
       setTimeout(() => {
@@ -2845,10 +2864,17 @@ function EnhancedResultsDisplay({
   onGeneralReflection,
   onGuestSignUp
 }) {
+  const annotationRequests = useRef(createRequestIdentity()).current;
+  useEffect(() => {
+    annotationRequests.reset();
+    return () => annotationRequests.reset();
+  }, [data, user?.uid]);
+
   // All state and hooks now come from MainApp via props
   // Local state and useTextSelection hook removed
 
   const fetchVerseAnnotations = useCallback(async (surah, verse) => {
+    const ticket = annotationRequests.start(`${surah}:${verse}`, user?.uid ?? null);
     try {
       const token = await user.getIdToken();
       const res = await fetch(`${BACKEND_URL}/annotations/verse/${surah}/${verse}`, {
@@ -2857,6 +2883,7 @@ function EnhancedResultsDisplay({
 
       if (res.ok) {
         const data = await res.json();
+        if (!annotationRequests.current(ticket, auth.currentUser?.uid ?? null)) return;
         setAnnotations(prev => ({
           ...prev,
           [`${surah}:${verse}`]: data.annotations || []
@@ -2891,6 +2918,7 @@ function EnhancedResultsDisplay({
     const fromVerse = Math.min(...verseNums);
     const toVerse = Math.max(...verseNums);
 
+    const ticket = annotationRequests.start("batch", user.uid);
     async function fetchBatchAnnotations() {
       try {
         const token = await user.getIdToken();
@@ -2900,6 +2928,7 @@ function EnhancedResultsDisplay({
         );
         if (res.ok) {
           const data = await res.json();
+          if (!annotationRequests.current(ticket, auth.currentUser?.uid ?? null)) return;
           const batchResult = {};
           for (const [verseKey, anns] of Object.entries(data.annotations || {})) {
             batchResult[`${surahNum}:${verseKey}`] = anns;
@@ -2907,6 +2936,7 @@ function EnhancedResultsDisplay({
           setAnnotations(prev => ({ ...prev, ...batchResult }));
         }
       } catch {
+        if (!annotationRequests.current(ticket, auth.currentUser?.uid ?? null)) return;
         // Batch annotation fetch failed — fall back to individual fetches
         verses.forEach(verse => {
           fetchVerseAnnotations(verse.surah, verse.verse_number);
@@ -3093,7 +3123,7 @@ function EnhancedResultsDisplay({
                 )}
               </summary>
               <div className="explanation-content markdown-content">
-                <ReactMarkdown remarkPlugins={[remarkBreaks]} rehypePlugins={[rehypeRaw]}>
+                <ReactMarkdown remarkPlugins={[remarkBreaks]}>
                   {tafsir.explanation}
                 </ReactMarkdown>
               </div>

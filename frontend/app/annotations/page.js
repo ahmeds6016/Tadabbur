@@ -1,9 +1,10 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import Link from 'next/link';
 import ReflectionDetailPanel from '../components/ReflectionDetailPanel';
 import { Lightbulb, HelpCircle, CheckSquare, Heart, Link2, BookOpen, ChevronDown, Search, X } from 'lucide-react';
+import { createRequestIdentity } from '../lib/requestIdentity';
 import { auth } from '../lib/firebase';
 import { BACKEND_URL } from '../lib/config';
 import BottomNav from '../components/BottomNav';
@@ -51,6 +52,9 @@ const getTypeConfig = (type) => {
 };
 
 export default function MyReflectionsPage() {
+  const requests = useRef(createRequestIdentity()).current;
+  const [tagCursor, setTagCursor] = useState(null);
+  const [nextCursor, setNextCursor] = useState(null);
   const [user, setUser] = useState(null);
   const [annotations, setAnnotations] = useState([]);
   const [allTags, setAllTags] = useState([]);
@@ -64,65 +68,89 @@ export default function MyReflectionsPage() {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      requests.reset(); setNextCursor(null); setTagCursor(null);
+      const authTicket = requests.start("auth", currentUser?.uid ?? null);
+      setAnnotations([]); setAllTags([]); setSelectedTag(null); setSelectedType(null); setSearchQuery(''); setSelectedAnnotation(null);
+      setIsLoading(true);
       setUser(currentUser);
       if (currentUser) {
         await Promise.all([fetchAnnotations(currentUser), fetchTags(currentUser)]);
       }
-      setIsLoading(false);
+      if (requests.current(authTicket, auth.currentUser?.uid ?? null)) setIsLoading(false);
     });
-    return () => unsubscribe();
+    return () => { requests.reset(); unsubscribe(); };
   }, []);
 
-  const fetchAnnotations = async (currentUser, tag = null, type = null) => {
+  const fetchAnnotations = async (currentUser, tag = null, type = null, cursor = null) => {
+    if (!cursor) setNextCursor(null);
+    const ticket = requests.start('annotations', currentUser?.uid ?? null);
+    const current = () => requests.current(ticket, auth.currentUser?.uid ?? null);
     try {
       const token = await currentUser.getIdToken();
       let url = `${BACKEND_URL}/annotations/user?limit=100`;
+      if (cursor) url += `&cursor=${encodeURIComponent(cursor)}`;
       if (tag) url += `&tag=${encodeURIComponent(tag)}`;
       if (type) url += `&type=${type}`;
 
       const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      reportBackendSuccess();
 
       if (res.ok) {
+        reportBackendSuccess();
         const data = await res.json();
-        setAnnotations(data.annotations || []);
+        if (!current()) return;
+        setAnnotations(previous => cursor ? [...previous, ...(data.annotations || [])] : data.annotations || []);
+        setNextCursor(data.next_cursor || null);
       }
     } catch (err) {
+      if (!current()) return;
       if (err instanceof TypeError) reportBackendFailure();
       console.error('Failed to fetch annotations:', err);
     }
   };
 
-  const fetchTags = async (currentUser) => {
+  const fetchTags = async (currentUser, cursor = null) => {
+    const ticket = requests.start('tags', currentUser?.uid ?? null);
+    const current = () => requests.current(ticket, auth.currentUser?.uid ?? null);
     try {
       const token = await currentUser.getIdToken();
-      const res = await fetch(`${BACKEND_URL}/annotations/tags`, {
+      const res = await fetch(`${BACKEND_URL}/annotations/tags${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
       if (res.ok) {
+        reportBackendSuccess();
         const data = await res.json();
-        setAllTags(data.tags || []);
+        if (!current()) return;
+        setAllTags(previous => cursor ? [...new Set([...previous, ...(data.tags || [])])] : data.tags || []);
+        setTagCursor(data.next_cursor || null);
       }
     } catch (err) {
+      if (!current()) return;
       console.error('Failed to fetch tags:', err);
     }
   };
 
-  const handleSearch = async () => {
+  const handleSearch = async (cursor = null) => {
     if (!searchQuery.trim()) return;
+    if (!cursor) setNextCursor(null);
+    const ticket = requests.start('annotations', user?.uid ?? null);
+    const current = () => requests.current(ticket, auth.currentUser?.uid ?? null);
     try {
       const token = await user.getIdToken();
-      const res = await fetch(`${BACKEND_URL}/annotations/search?q=${encodeURIComponent(searchQuery)}`, {
+      const res = await fetch(`${BACKEND_URL}/annotations/search?q=${encodeURIComponent(searchQuery)}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
+        reportBackendSuccess();
         const data = await res.json();
-        setAnnotations(data.results || []);
+        if (!current()) return;
+        setAnnotations(previous => cursor ? [...previous, ...(data.results || [])] : data.results || []);
+        setNextCursor(data.next_cursor || null);
       }
     } catch (err) {
+      if (!current()) return;
       console.error('Search failed:', err);
     }
   };
@@ -152,14 +180,22 @@ export default function MyReflectionsPage() {
 
   const handleDeleteAnnotation = async (annotationId) => {
     if (!user) return;
+    // One ticket per item, so a second delete cannot make the first look stale.
+    const ticket = requests.start(`delete:${annotationId}`, user.uid);
     try {
       const token = await user.getIdToken();
       const response = await fetch(`${BACKEND_URL}/annotations/${annotationId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      if (response.ok) {
+      if (requests.current(ticket, auth.currentUser?.uid ?? null) && response.ok) {
         setAnnotations(prev => prev.filter(a => a.id !== annotationId));
+        if (annotationId === nextCursor) {
+          // The page cursor was the deleted item: continue from the one before it.
+          const index = annotations.findIndex(a => a.id === annotationId);
+          if (index > 0) setNextCursor(annotations[index - 1].id);
+          else fetchAnnotations(user, selectedTag, selectedType, null);
+        }
       }
     } catch (error) {
       console.error('Error deleting annotation:', error);
@@ -292,7 +328,7 @@ export default function MyReflectionsPage() {
         <div className="empty-state">
           <BookOpen size={40} strokeWidth={1.2} color="#d1d5db" />
           <p className="empty-title">
-            {hasActiveFilters ? 'No matches' : 'No reflections yet'}
+            {nextCursor ? 'No matches in this page. Load more to continue.' : hasActiveFilters ? 'No matches' : 'No reflections yet'}
           </p>
           <p className="empty-desc">
             {hasActiveFilters
@@ -672,6 +708,8 @@ export default function MyReflectionsPage() {
         onDelete={handleDeleteAnnotation}
       />
 
+      {nextCursor && <button onClick={() => searchQuery.trim() ? handleSearch(nextCursor) : fetchAnnotations(user, selectedTag, selectedType, nextCursor)}>Load more reflections</button>}
+      {tagCursor && <button onClick={() => fetchTags(user, tagCursor)}>Load more tags</button>}
       <BottomNav user={user} />
     </div>
   );

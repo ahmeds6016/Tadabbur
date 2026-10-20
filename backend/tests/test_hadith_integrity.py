@@ -86,7 +86,7 @@ def test_legitimate_verbatim_item_is_kept_with_display_reference():
     assert dropped == []
     assert len(kept) == 1
     assert kept[0]["reference"] == (
-        "Sahih Muslim; narrated by Abu Hurayrah; As cited in Riyad al-Saliheen"
+        "Sahih Muslim; narrated by Abu Hurayrah; As cited in the supplied source excerpts"
     )
     assert kept[0]["collection"] == "Sahih Muslim"
     assert kept[0]["text"] == text
@@ -158,3 +158,65 @@ def test_unsupported_hyphenated_collection_is_still_stripped():
     assert kept[0]["collection"] == ""
     assert kept[0]["_downgraded_collection"] == "Sahih al-Bukhari"
     assert "Bukhari" not in kept[0]["reference"]
+
+
+@pytest.mark.parametrize('field', ['attribution', 'narrator'])
+def test_collection_cannot_bypass_downgrade_through_other_fields(field):
+    context = f"--- IBN KATHIR ---\nImam Ahmad recorded from Ubayy ibn Kab: {AHMAD_WORDING} Muslim omitted this wording."
+    reference = {'collection': 'Sahih Muslim', 'narrator': 'Ubayy ibn Kab',
+                 'attribution': 'A model-written claim'}
+    reference[field] = 'Sahih Muslim 999999'
+    kept, dropped = validate_hadith_items([{'reference': reference, 'text': AHMAD_WORDING}], context)
+    assert not dropped
+    assert 'Muslim' not in kept[0]['reference']
+    assert kept[0]['attribution'] == "As cited in Ibn Kathir's tafsir of this verse"
+
+
+def test_wrong_narrator_is_removed_but_wording_survives():
+    context = f"Ahmad recorded from Ubayy ibn Kab: {AHMAD_WORDING}"
+    kept, _ = validate_hadith_items([{'text': AHMAD_WORDING, 'narrator': 'Abu Hurayrah'}], context)
+    assert kept[0]['narrator'] == ''
+    assert kept[0]['text'] == AHMAD_WORDING
+
+
+@pytest.mark.parametrize('narrator', ['Bukhari', 'Muslim', 'Ahmad'])
+def test_short_collection_labels_cannot_be_displayed_as_narrators(narrator):
+    context = f'{narrator} recorded: {AHMAD_WORDING}'
+    kept, _ = validate_hadith_items([{'text': AHMAD_WORDING, 'narrator': narrator}], context)
+    assert kept[0]['narrator'] == ''
+    assert narrator not in kept[0]['reference']
+
+
+def test_additional_source_boundary_cannot_inherit_previous_tafsir_attribution():
+    context = f'--- IBN KATHIR ---\nAn unrelated discussion.\n--- ADDITIONAL SCHOLARLY EXCERPTS ---\n{AHMAD_WORDING}'
+    kept, _ = validate_hadith_items([{'text': AHMAD_WORDING}], context)
+    assert kept[0]['attribution'] == 'As cited in the supplied source excerpts'
+
+
+# --- Server-derived attribution names the real source section (Claude review fixup) ----
+
+@pytest.mark.parametrize("heading, expected", [
+    ("--- IBN KATHIR ---", "As cited in Ibn Kathir's tafsir of this verse"),
+    ("--- AL-QURTUBI ---", "As cited in al-Qurtubi's tafsir of this verse"),
+    ("### Related Hadith — Riyad al-Salihin", "As cited in Riyad al-Salihin"),
+    ("### Context of Revelation (Asbab al-Nuzul)", "As cited in al-Wahidi's Asbab al-Nuzul"),
+    ("### Spiritual Teaching — Ihya Ulum al-Din", "As cited in al-Ghazali's Ihya Ulum al-Din"),
+    ("### Spiritual Development — Madarij al-Salikin", "As cited in Ibn al-Qayyim's Madarij al-Salikin"),
+    ("### Thematic Commentary — Al-Baqarah", "As cited in A Thematic Commentary on the Qurʼan"),
+    ("--- RELATED VERSES ---", "As cited in the supplied source excerpts"),
+])
+def test_attribution_comes_from_the_matched_source_section(heading, expected):
+    text = "The strong believer is better and more beloved to Allah than the weak believer while there is good in both of them."
+    context = f"--- ARABIC TEXT ---\nArabic.\n\n{heading}\nAbu Hurayrah narrated: {text}\n\n--- OTHER ---\nUnrelated."
+    item = {"reference": {"collection": "", "narrator": "Abu Hurayrah", "attribution": "model-written text"}, "text": text}
+    kept, dropped = validate_hadith_items([item], context)
+    assert dropped == []
+    assert kept[0]["attribution"] == expected
+    assert "model-written" not in kept[0]["reference"]
+
+
+def test_attribution_uses_the_section_containing_the_match_not_a_later_one():
+    text = "The strong believer is better and more beloved to Allah than the weak believer while there is good in both of them."
+    context = f"### Related Hadith — Riyad al-Salihin\nAbu Hurayrah narrated: {text}\n\n--- IBN KATHIR ---\nLater text."
+    kept, _ = validate_hadith_items([{"reference": {"narrator": "Abu Hurayrah"}, "text": text}], context)
+    assert kept[0]["attribution"] == "As cited in Riyad al-Salihin"
