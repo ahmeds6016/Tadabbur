@@ -196,6 +196,15 @@ Q14. **✅ DEPLOYED 2026-08-13 — Reliability quick wins**
 
 ## Session log
 
+### 2026-10-20 — Codex: Session 13 Unit 5 — progress and bounded reads
+
+- Branch `codex/s13-progress`, implementation `64963db`, stacked on Unit 4. Explored maps/counts, collections, plans, streak updates and badge awards use Firestore transactions. Study transactions also derive collection progress from canonical verse membership, making collection badges reachable through normal study. Transactions read deletion markers before writes.
+- Plan days require non-boolean integers within the plan before any transaction. Completion is idempotent; current_day is the first incomplete day, so out-of-order completion/retries do not rewind. Repeated start preserves existing progress. Removed advertised comeback/daily-verse/first-week badges because those events are not recorded; retained activity badges use counts, never journal-content inference.
+- Annotation create/delete and maintained annotation_count commit together; repeated deletion cannot decrement twice. Legacy counts seed once through a server index count aggregation, not full annotation document streams. One bounded badge check per backend study event. Frontend streak refreshes now GET, avoiding duplicate checks.
+- Saved/history metadata, reflection candidate searches/lists, folder and tag metadata use bounded cursor pages. Saved lists project out full snapshots; an owner-scoped GET and explicit View saved answer load a snapshot on demand. Cursor reads project only ordering fields. Client Load more actions retain UID/generation guards. Progress uses the maintained reflection total instead of fetching 500 reflections. Each request reuses a surah snapshot, so catalog loops read each surah once.
+- Offline verification: **524 backend tests**, **15 frontend tests**, build **15/15**. Regressions cover concurrent study writes, completion/retry ordering, highest reflection badge, one-time aggregation, exact annotation counts, deletion markers, projected/scoped pagination and per-request surah reads. Firestore transaction/aggregation behavior follows the installed SDK; no live Firestore/emulator call was made. Backend + frontend deploy needed.
+- LOG-09/10 remain out of scope behind the Iman gate; PERF-03 remains accepted/deferred at current traffic. No deployment/cloud mutation.
+
 ### 2026-10-20 — Codex: Session 13 Unit 4 — private data
 
 - Branch `codex/s13-privacy`, implementation `df5bba4`, stacked on Unit 3. Missing production encryption secret logs a startup warning without crashing. New reflection ciphertext has `fernet:v1:` prefix; reads accept legacy plaintext and unprefixed Fernet. Versioned ciphertext fails safely if a key is unavailable. Migration `backend/scripts/encrypt_existing_reflections.py` is dry-run by default, recognizes already migrated fields and uses update-time preconditions. **Migration was not run.** Tests imported pure helpers only.
