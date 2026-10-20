@@ -5188,8 +5188,11 @@ def update_plan_progress(plan_id):
                 plans[legacy['plan_id']] = legacy
             active = plans.get(plan_id)
             if action == 'start':
-                active = active or {'plan_id': plan_id, 'current_day': 1, 'completed_days': [],
-                                    'started_at': datetime.now(timezone.utc).isoformat(), 'completed_at': None}
+                # Keep an in-progress plan (repeat Start is idempotent); a completed plan
+                # restarts fresh, since the plans page offers Start again once it is done.
+                if not active or active.get('completed_at'):
+                    active = {'plan_id': plan_id, 'current_day': 1, 'completed_days': [],
+                              'started_at': datetime.now(timezone.utc).isoformat(), 'completed_at': None}
             elif not active:
                 return {}, None
             else:
@@ -5221,18 +5224,22 @@ def update_plan_progress(plan_id):
 # QUERY HISTORY & SAVED SEARCHES ENDPOINTS
 # ============================================================================
 
+class PageRequestError(ValueError):
+    """A reader-correctable paging request; its message is written for readers."""
+
+
 def _page_documents(query, collection, sort_field, default=50):
     raw_limit = request.args.get('limit', str(default))
     if not raw_limit.isdigit() or not 1 <= int(raw_limit) <= 100:
-        raise ValueError('Choose a page size from 1 to 100.')
+        raise PageRequestError('Choose a page size from 1 to 100.')
     limit = int(raw_limit)
     cursor = request.args.get('cursor')
     if cursor:
         if '/' in cursor or len(cursor) > 1500:
-            raise ValueError('Invalid page cursor.')
+            raise PageRequestError('Invalid page cursor.')
         snapshot = collection.document(cursor).get(field_paths=[sort_field] if sort_field != '__name__' else [])
         if not snapshot.exists:
-            raise ValueError('This page cursor is no longer available. Reload the list.')
+            raise PageRequestError('This page cursor is no longer available. Reload the list.')
         query = query.start_after(snapshot)
     documents = list(query.limit(limit + 1).stream())
     more = len(documents) > limit
@@ -5271,7 +5278,7 @@ def get_query_history():
 
         return jsonify({'history': history, 'count': len(history), 'next_cursor': next_cursor}), 200
 
-    except ValueError as error:
+    except PageRequestError as error:
         return jsonify({"error": str(error)}), 400
     except Exception as e:
         print(f"ERROR in /query-history: {type(e).__name__} - {e}")
@@ -5351,7 +5358,7 @@ def get_saved_searches():
 
         return jsonify({'saved': saved, 'count': len(saved), 'next_cursor': next_cursor}), 200
 
-    except ValueError as error:
+    except PageRequestError as error:
         return jsonify({"error": str(error)}), 400
     except Exception as e:
         print(f"ERROR in /saved-searches: {type(e).__name__} - {e}")
@@ -5452,7 +5459,7 @@ def get_folders():
 
         return jsonify({'folders': folder_list, 'totalFolders': len(folder_list), 'next_cursor': next_cursor}), 200
 
-    except ValueError as error:
+    except PageRequestError as error:
         return jsonify({"error": str(error)}), 400
     except Exception as e:
         print(f"ERROR in /saved-searches/folders: {type(e).__name__} - {e}")
@@ -5684,7 +5691,7 @@ def get_user_annotations():
 
         return jsonify({'annotations': annotations, 'count': len(annotations), 'next_cursor': next_cursor}), 200
 
-    except ValueError as error:
+    except PageRequestError as error:
         return jsonify({"error": str(error)}), 400
     except Exception as e:
         print(f"ERROR in /annotations/user: {type(e).__name__} - {e}")
@@ -5910,7 +5917,7 @@ def search_annotations():
 
         return jsonify({'results': results, 'count': len(results), 'next_cursor': next_cursor}), 200
 
-    except ValueError as error:
+    except PageRequestError as error:
         return jsonify({"error": str(error)}), 400
     except Exception as e:
         print(f"ERROR in /annotations/search: {type(e).__name__} - {e}")
@@ -5935,7 +5942,7 @@ def get_all_tags():
 
         return jsonify({'tags': tag_list, 'count': len(tag_list), 'next_cursor': next_cursor}), 200
 
-    except ValueError as error:
+    except PageRequestError as error:
         return jsonify({"error": str(error)}), 400
     except Exception as e:
         print(f"ERROR in /annotations/tags: {type(e).__name__} - {e}")

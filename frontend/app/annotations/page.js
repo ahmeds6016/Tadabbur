@@ -180,7 +180,8 @@ export default function MyReflectionsPage() {
 
   const handleDeleteAnnotation = async (annotationId) => {
     if (!user) return;
-    const ticket = requests.start("delete", user.uid);
+    // One ticket per item, so a second delete cannot make the first look stale.
+    const ticket = requests.start(`delete:${annotationId}`, user.uid);
     try {
       const token = await user.getIdToken();
       const response = await fetch(`${BACKEND_URL}/annotations/${annotationId}`, {
@@ -189,6 +190,12 @@ export default function MyReflectionsPage() {
       });
       if (requests.current(ticket, auth.currentUser?.uid ?? null) && response.ok) {
         setAnnotations(prev => prev.filter(a => a.id !== annotationId));
+        if (annotationId === nextCursor) {
+          // The page cursor was the deleted item: continue from the one before it.
+          const index = annotations.findIndex(a => a.id === annotationId);
+          if (index > 0) setNextCursor(annotations[index - 1].id);
+          else fetchAnnotations(user, selectedTag, selectedType, null);
+        }
       }
     } catch (error) {
       console.error('Error deleting annotation:', error);

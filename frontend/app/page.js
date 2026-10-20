@@ -90,6 +90,7 @@ export default function HomePage() {
 
   const profileRequests = useRef(createRequestIdentity()).current;
   const authGeneration = useRef(0);
+  const lastAuthUid = useRef(undefined);
   const authEpoch = authGeneration.current;
   const [user, setUser] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
@@ -129,11 +130,15 @@ export default function HomePage() {
       profileRequests.reset();
       authGeneration.current += 1;
       const authTicket = profileRequests.start("auth", currentUser?.uid ?? null);
+      const previousUid = lastAuthUid.current;
+      lastAuthUid.current = currentUser?.uid ?? null;
       setUserProfile(null); setIsGuest(false); setIsLoading(true);
       setUser(currentUser);
       if (currentUser) {
         await fetchUserProfile(currentUser);
       } else {
+        // A real sign-out (not a guest page load): drop the last answer from this tab.
+        if (previousUid) clearSearchState();
         setUserProfile(null);
       }
       if (profileRequests.current(authTicket, auth.currentUser?.uid ?? null)) setIsLoading(false);
@@ -1092,7 +1097,7 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
   // Helper to navigate to a verse (used by collections, recommendations, reading plans)
   // Load saved search state on mount (survives page refresh)
   useEffect(() => {
-    const savedState = loadSearchState();
+    const savedState = loadSearchState(user?.uid || 'guest');
     if (savedState) {
       answerQuery.current = savedState.query;
       setQuery(savedState.query);
@@ -1135,7 +1140,7 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
   // Save search state when response changes
   useEffect(() => {
     if (response && query) {
-      saveSearchState(answerQuery.current, approach, response);
+      saveSearchState(answerQuery.current, approach, response, user?.uid || 'guest');
     }
   }, [response, query, approach]);
 
@@ -1592,7 +1597,7 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
 
       if (successful) {
         // Show success notification
-        button.innerHTML = 'Copied!';
+        button.innerHTML = 'Copied.';
         button.style.background = 'var(--primary-teal)';
 
         setTimeout(() => {
@@ -1630,15 +1635,22 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
     try {
       const generation = answerGeneration.current;
       const shareId = await ensureShareId();
-      if (!shareId || generation !== answerGeneration.current) return;
+      if (generation !== answerGeneration.current) {
+        // The reader moved to another answer; restore the button without a message.
+        button.innerHTML = originalText;
+        button.disabled = false;
+        return;
+      }
+      if (!shareId) throw new Error('Share link unavailable');
+      const sharedQuery = answerQuery.current || query;
       const shareUrl = `${window.location.origin}/shared/${shareId}`;
 
       // PWA-compatible clipboard: Use Web Share API first on mobile
       if (navigator.share && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
         try {
           await navigator.share({
-            title: `Tadabbur — ${query}`,
-            text: `A deeper understanding of ${query.includes('-') ? 'these ayat' : 'this ayah'} [${query}].`,
+            title: `Tadabbur — ${sharedQuery}`,
+            text: `A deeper understanding of ${sharedQuery.includes('-') ? 'these ayat' : 'this ayah'} [${sharedQuery}].`,
             url: shareUrl
           });
 
@@ -1672,7 +1684,7 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
         try {
           await navigator.clipboard.writeText(shareUrl);
 
-          button.innerHTML = 'Link Copied!';
+          button.innerHTML = 'Link copied.';
           button.style.background = 'var(--primary-teal)';
           if (!onboardingState.hasSharedContent) {
             markStepComplete('hasSharedContent');
@@ -1704,7 +1716,7 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
           document.body.removeChild(textArea);
 
           if (successful) {
-            button.innerHTML = 'Link Copied!';
+            button.innerHTML = 'Link copied.';
             button.style.background = 'var(--primary-teal)';
             if (!onboardingState.hasSharedContent) {
               markStepComplete('hasSharedContent');
@@ -1727,7 +1739,7 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
       // Share link failed — button shows retry
 
       // Show error in button
-      button.innerHTML = 'Share Failed - Tap to retry';
+      button.innerHTML = "Couldn't create a link. Tap to try again.";
       button.style.background = 'var(--primary-teal)';
 
       setTimeout(() => {

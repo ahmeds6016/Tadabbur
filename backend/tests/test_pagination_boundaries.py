@@ -48,7 +48,9 @@ class Query:
 def lists():
     db = Database()
     names = {'_page_documents', 'get_saved_searches', 'get_saved_answer', 'get_query_history'}
-    nodes = [n for n in ast.parse(PATH.read_text()).body if isinstance(n, ast.FunctionDef) and n.name in names]
+    nodes = [n for n in ast.parse(PATH.read_text()).body
+             if (isinstance(n, ast.FunctionDef) and n.name in names)
+             or (isinstance(n, ast.ClassDef) and n.name == 'PageRequestError')]
     for node in nodes: node.decorator_list = []
     ns = dict(users_db=db, jsonify=jsonify, request=request, api_error=lambda: (jsonify({'error': 'Failed'}), 500))
     exec(compile(ast.Module(body=nodes, type_ignores=[]), str(PATH), 'exec'), ns)

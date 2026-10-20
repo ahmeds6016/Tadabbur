@@ -60,7 +60,8 @@ def progress():
              '_track_explored_verse', '_check_and_award_badges', 'update_plan_progress', '_surah_snapshot', '_page_documents'}
     names.update({'create_annotation', 'delete_annotation'})
     tree = ast.parse(PATH.read_text())
-    nodes = [n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name in names]
+    nodes = [n for n in tree.body if (isinstance(n, ast.FunctionDef) and n.name in names)
+             or (isinstance(n, ast.ClassDef) and n.name == 'PageRequestError')]
     for node in nodes: node.decorator_list = []
     ns = dict(users_db=store, gcp_firestore=SimpleNamespace(transactional=store.transactional),
               datetime=datetime, timedelta=timedelta, timezone=timezone, hashlib=hashlib,
@@ -163,3 +164,25 @@ def test_annotation_create_delete_and_delete_retry_keep_exact_count(progress):
         assert ns['delete_annotation']('new-annotation')[1] == 200
         assert ns['delete_annotation']('new-annotation')[1] == 200
     assert store.docs['users/reader']['annotation_count'] == 0
+
+
+def test_completed_plan_restarts_fresh_but_in_progress_start_is_idempotent(progress):
+    store, ns = progress
+    app = Flask(__name__)
+    def action(payload):
+        with app.test_request_context(json=payload):
+            request.user = {'uid': 'reader'}
+            response, status = ns['update_plan_progress']('fixture')
+            assert status == 200
+            return response.json
+    action({'action': 'start'})
+    action({'action': 'complete_day', 'day': 1})
+    action({'action': 'start'})  # repeat Start mid-plan keeps progress
+    assert store.docs['users/reader']['active_plans']['fixture']['completed_days'] == [1]
+    for day in (2, 3):
+        action({'action': 'complete_day', 'day': day})
+    assert store.docs['users/reader']['active_plans']['fixture']['completed_at']
+    action({'action': 'start'})  # the plans page offers Start again once complete
+    restarted = store.docs['users/reader']['active_plans']['fixture']
+    assert restarted['completed_days'] == [] and restarted['current_day'] == 1
+    assert restarted['completed_at'] is None

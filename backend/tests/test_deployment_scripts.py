@@ -36,6 +36,14 @@ elif args[:3] == ['run', 'revisions', 'describe']:
     output({'metadata': {'name': state['revision'], 'generation': 1},
             'status': {'observedGeneration': 0 if scenario == 'reconciling' else 1,
                        'conditions': conditions, 'imageDigest': 'gcr.io/image@' + ('sha256:' + 'b' * 64 if scenario == 'wrong-digest' else digest)}})
+elif args[:3] == ['run', 'services', 'describe'] and 'revision' not in state:
+    # Preflight, before anything is built or deployed.
+    if scenario == 'pre-pinned':
+        traffic = [{'revisionName': 'old-revision', 'percent': 100},
+                   {'revisionName': 'canary-revision', 'percent': 0, 'tag': 'r-canary', 'url': 'https://offline.invalid/c'}]
+    else:
+        traffic = [{'revisionName': 'old-revision', 'percent': 100, 'latestRevision': True}]
+    output({'status': {'traffic': traffic, 'latestReadyRevisionName': 'old-revision'}})
 elif args[:3] == ['run', 'services', 'describe']:
     percent = 0 if state['no_traffic'] or scenario in ['pinned', 'canary-latest'] else 100
     if scenario == 'unexpected-canary-traffic': percent = 100
@@ -59,6 +67,7 @@ else:
     ('reconciling', None, 'reconciliation is incomplete'),
     ('unexpected-canary-traffic', '--no-traffic', 'expected 0%'),
     ('old-latest-good-traffic', None, 'traffic=100%'),
+    ('pre-pinned', None, 'is pinned'),
 ])
 def test_entrypoints_verify_created_digest_readiness_and_actual_traffic(tmp_path, service, scenario, flag, expected):
     binary = tmp_path / 'gcloud'
@@ -72,5 +81,9 @@ def test_entrypoints_verify_created_digest_readiness_and_actual_traffic(tmp_path
     successful = scenario in ('success', 'old-latest-good-traffic')
     assert (result.returncode == 0) == successful, result.stdout + result.stderr
     assert expected in result.stdout + result.stderr
+    if scenario == 'pre-pinned':
+        # Refused before building: no image was submitted and nothing was deployed.
+        assert not state.exists() or 'image' not in json.loads(state.read_text())
+        assert '--to-revisions' in result.stderr and '--to-latest' in result.stderr
     if state.exists() and 'image_arg' in json.loads(state.read_text()):
         assert '@sha256:' in json.loads(state.read_text())['image_arg']

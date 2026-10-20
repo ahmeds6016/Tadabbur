@@ -13,12 +13,13 @@ const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes in milliseconds
  * @param {string} approach - The search approach (tafsir/explore)
  * @param {Object} response - The search response data
  */
-export const saveSearchState = (query, approach, response) => {
+export const saveSearchState = (query, approach, response, owner) => {
   try {
     const searchState = {
       query,
       approach,
       response,
+      owner,
       timestamp: Date.now()
     };
 
@@ -34,12 +35,18 @@ export const saveSearchState = (query, approach, response) => {
  * Load search state from session storage
  * @returns {Object|null} The saved search state or null if none/expired
  */
-export const loadSearchState = () => {
+export const loadSearchState = (owner) => {
   try {
     const cached = sessionStorage.getItem(SEARCH_CACHE_KEY);
     if (!cached) return null;
 
     const state = JSON.parse(cached);
+
+    // Another account (or a guest) may have used this tab; never show their answer.
+    if (state.owner !== owner) {
+      clearSearchState();
+      return null;
+    }
 
     // Check if cache has expired
     const age = Date.now() - state.timestamp;

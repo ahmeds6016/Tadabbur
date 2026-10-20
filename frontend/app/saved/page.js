@@ -102,7 +102,8 @@ export default function SavedSearchesPage() {
   const [deleteError, setDeleteError] = useState(null);
 
   const handleDelete = async (id) => {
-    const ticket = requests.start("delete", user?.uid ?? null);
+    // One ticket per item, so a second delete cannot make the first look stale.
+    const ticket = requests.start(`delete:${id}`, user?.uid ?? null);
     const current = () => requests.current(ticket, auth.currentUser?.uid ?? null);
     setDeleteError(null);
     try {
@@ -114,7 +115,13 @@ export default function SavedSearchesPage() {
 
       if (!current()) return;
       if (res.ok) {
-        setSaved(saved.filter(item => item.id !== id));
+        setSaved(previous => previous.filter(item => item.id !== id));
+        if (id === nextCursor) {
+          // The page cursor was the deleted item: continue from the one before it.
+          const index = saved.findIndex(item => item.id === id);
+          if (index > 0) setNextCursor(saved[index - 1].id);
+          else fetchSaved(user, selectedFolder, null);
+        }
       } else {
         setDeleteError('Could not delete this item. Please try again.');
       }

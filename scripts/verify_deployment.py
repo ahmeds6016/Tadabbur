@@ -63,6 +63,31 @@ def verify(service, revision, digest, project, region, no_traffic=False):
     return f'Verified {revision}: digest={digest}, Ready=True, traffic={share}% ({mode}). Service URL: {svc.get("status", {}).get("url", "unknown")}'
 
 
+def preflight(service, project, region):
+    """Refuse a normal deploy unless traffic follows LATEST at 100%.
+
+    A `--no-traffic` canary makes gcloud rewrite "100% LATEST" into a pin on the
+    then-current revision, so the next normal deploy would build, create a 0% revision
+    and only then fail. Catch that before building, and print the reviewed switch.
+    """
+    svc = gcloud_json('run', 'services', 'describe', service, '--project', project, '--region', region)
+    traffic = svc.get('status', {}).get('traffic', [])
+    latest = sum(t.get('percent', 0) or 0 for t in traffic if t.get('latestRevision'))
+    if latest == 100:
+        return f'Traffic follows LATEST at 100% for {service}; safe to deploy.'
+    serving = ', '.join(
+        f"{t.get('revisionName', 'LATEST')}={t.get('percent', 0) or 0}%" + (f" tag={t['tag']}" if t.get('tag') else '')
+        for t in traffic)
+    raise ValueError(
+        f'Traffic for {service} is pinned ({serving or "none"}), probably by an earlier --no-traffic canary. '
+        'A normal deploy would create a revision that serves 0%. Resolve it first with the reviewed switch:\n'
+        f'  1. gcloud run services update-traffic {service} --project {project} --region {region} '
+        '--to-revisions <REVIEWED_REVISION>=100 --remove-tags <CANARY_TAG>\n'
+        '  2. verify that revision is serving, then\n'
+        f'  3. gcloud run services update-traffic {service} --project {project} --region {region} --to-latest\n'
+        '     (only once latestReadyRevisionName is the revision you want; a retired revision is skipped).')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest='command', required=True)
@@ -71,9 +96,12 @@ def main():
     check = sub.add_parser('verify')
     for name in ('project', 'region', 'service', 'revision', 'digest'): check.add_argument('--' + name, required=True)
     check.add_argument('--no-traffic', action='store_true')
+    pre = sub.add_parser('preflight')
+    for name in ('project', 'region', 'service'): pre.add_argument('--' + name, required=True)
     args = parser.parse_args()
     try:
         if args.command == 'build-digest': print(build_digest(args.project, args.build_id, args.image))
+        elif args.command == 'preflight': print(preflight(args.service, args.project, args.region))
         else: print(verify(args.service, args.revision, args.digest, args.project, args.region, args.no_traffic))
     except (ValueError, KeyError, subprocess.CalledProcessError, json.JSONDecodeError) as error:
         print(f'Deployment verification failed: {error}', file=sys.stderr)

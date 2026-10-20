@@ -24,6 +24,11 @@ if [[ -z "$(gcloud auth list --filter=status:ACTIVE --format='value(account)')" 
   exit 1
 fi
 
+if [[ "$NO_TRAFFIC" == 0 ]]; then
+  # Before building: a pinned service would leave this deploy's revision at 0%.
+  python3 "$VERIFY" preflight --project "$PROJECT_ID" --region "$REGION" --service "$SERVICE_NAME"
+fi
+
 echo "Building ${IMAGE_TAG}"
 BUILD_ID=$(gcloud builds submit "${SCRIPT_DIR}/${SOURCE_DIR}" --project "$PROJECT_ID" --tag "$IMAGE_TAG" --suppress-logs --format='value(id)')
 DIGEST=$(python3 "$VERIFY" build-digest --project "$PROJECT_ID" --build-id "$BUILD_ID" --image "$IMAGE_TAG")
@@ -49,3 +54,8 @@ fi
 
 python3 "$VERIFY" verify --project "$PROJECT_ID" --region "$REGION" --service "$SERVICE_NAME" \
   --revision "$CREATED_REVISION" --digest "$DIGEST" ${VERIFY_ARGS[@]+"${VERIFY_ARGS[@]}"}
+
+if [[ "$NO_TRAFFIC" == 1 ]]; then
+  echo "NOTE: gcloud has now pinned production traffic to the previously serving revision." >&2
+  echo "The next normal deploy will refuse to run until traffic is switched; see AI.md (3.6 -> 3.8 migration notes)." >&2
+fi
