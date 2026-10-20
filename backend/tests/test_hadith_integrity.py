@@ -177,3 +177,17 @@ def test_wrong_narrator_is_removed_but_wording_survives():
     kept, _ = validate_hadith_items([{'text': AHMAD_WORDING, 'narrator': 'Abu Hurayrah'}], context)
     assert kept[0]['narrator'] == ''
     assert kept[0]['text'] == AHMAD_WORDING
+
+
+@pytest.mark.parametrize('narrator', ['Bukhari', 'Muslim', 'Ahmad'])
+def test_short_collection_labels_cannot_be_displayed_as_narrators(narrator):
+    context = f'{narrator} recorded: {AHMAD_WORDING}'
+    kept, _ = validate_hadith_items([{'text': AHMAD_WORDING, 'narrator': narrator}], context)
+    assert kept[0]['narrator'] == ''
+    assert narrator not in kept[0]['reference']
+
+
+def test_additional_source_boundary_cannot_inherit_previous_tafsir_attribution():
+    context = f'--- IBN KATHIR ---\nAn unrelated discussion.\n--- ADDITIONAL SCHOLARLY EXCERPTS ---\n{AHMAD_WORDING}'
+    kept, _ = validate_hadith_items([{'text': AHMAD_WORDING}], context)
+    assert kept[0]['attribution'] == 'As cited in the supplied source excerpts'

@@ -89,6 +89,8 @@ export default function HomePage() {
   }, []);
 
   const profileRequests = useRef(createRequestIdentity()).current;
+  const authGeneration = useRef(0);
+  const authEpoch = authGeneration.current;
   const [user, setUser] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -125,6 +127,7 @@ export default function HomePage() {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (!isMounted) return;
       profileRequests.reset();
+      authGeneration.current += 1;
       const authTicket = profileRequests.start("auth", currentUser?.uid ?? null);
       setUserProfile(null); setIsGuest(false); setIsLoading(true);
       setUser(currentUser);
@@ -164,7 +167,9 @@ export default function HomePage() {
   }
 
   if (user && !isGuest && !userProfile) {
-    return <OnboardingComponent key={user.uid} user={user} onProfileComplete={setUserProfile} />;
+    return <OnboardingComponent key={user.uid} user={user} onProfileComplete={profile => {
+      if (authGeneration.current === authEpoch && auth.currentUser?.uid === user.uid) setUserProfile(profile);
+    }} />;
   }
 
   return (
@@ -1130,7 +1135,7 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
   // Save search state when response changes
   useEffect(() => {
     if (response && query) {
-      saveSearchState(query, approach, response);
+      saveSearchState(answerQuery.current, approach, response);
     }
   }, [response, query, approach]);
 
@@ -1481,6 +1486,7 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
     const sharePromise = (async () => {
       try {
         const token = user ? await user.getIdToken() : null;
+        if (!current()) return null;
         const res = await fetch(`${BACKEND_URL}/share`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },

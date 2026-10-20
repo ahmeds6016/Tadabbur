@@ -10,6 +10,7 @@ from copy import deepcopy
 import hashlib
 import hmac
 import os
+import re
 
 from cryptography.fernet import Fernet
 
@@ -34,6 +35,8 @@ def migrate_fields(data, collection, cipher):
         try:
             plaintext = cipher.decrypt(value.encode()).decode()
         except Exception:
+            if len(value) >= 100 and re.fullmatch(r'gAAAA[A-Za-z0-9_=-]+', value):
+                raise ValueError('Legacy ciphertext could not be decrypted; verify the existing encryption key before applying.')
             plaintext = value
         mapping[key] = PREFIX + cipher.encrypt(plaintext.encode()).decode()
 

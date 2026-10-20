@@ -869,7 +869,7 @@ QUERY_SUGGESTIONS_BANK = {
 
         # Metadata-specific queries for tafsir approach
         "What hadith are mentioned in verse 2:255?",
-        "Linguistic analysis of Ayatul Kursi",
+        "2:255",
         "Cross references for verse 30:21",
         "Legal rulings from verse 2:282 about debt",
         "Scholar opinions on verse 2:256",
@@ -3334,10 +3334,15 @@ def get_suggestions():
 
     # Select suggestions from persona-specific bank
     # More tafsir suggestions (8) since they're shorter, fewer explore (6) since they're detailed
-    tafsir_suggestions = random.sample(
-        persona_bank["tafsir"],
-        min(8, len(persona_bank["tafsir"]))
-    )
+    canonical_bank = []
+    for suggestion in persona_bank['tafsir']:
+        try:
+            canonical = normalize_verse_query(suggestion)
+        except ValueError:
+            continue
+        if canonical not in canonical_bank:
+            canonical_bank.append(canonical)
+    tafsir_suggestions = random.sample(canonical_bank, min(8, len(canonical_bank)))
     explore_suggestions = random.sample(
         persona_bank["explore"],
         min(6, len(persona_bank["explore"]))
@@ -6694,7 +6699,7 @@ def tafsir_handler_enhanced():
         perf_metrics['stages']['scholarly_retrieval'] = (time.time() - stage_start) * 1000
         hadith_source_context = "\n\n".join(filter(None, [
             build_structured_context(context_by_source, arabic_text, cross_refs),
-            scholarly_ctx,
+            ("--- ADDITIONAL SCHOLARLY EXCERPTS ---\n" + scholarly_ctx) if scholarly_ctx else "",
         ]))
 
         # Compute dynamic verse limit from token budget
@@ -7162,8 +7167,7 @@ def debug_query(query):
             final_json["_scholarly_pipeline"] = scholarly_pipeline
             final_json["source_coverage"] = source_coverage
 
-            with cache_lock:
-                RESPONSE_CACHE[cache_key] = final_json
+            # Diagnostic generation must never populate the shared reader cache.
 
             trace["response"] = final_json
             trace["timings"] = step_timings
@@ -7252,12 +7256,21 @@ def create_share():
     Returns: { "share_id": str, "share_url": str }
     """
     try:
-        data = request.get_json(silent=True) or {}
-        query = str(data.get('query', '')).strip()
-        approach = str(data.get('approach', 'tafsir')).strip()
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict) or not isinstance(data.get('query', ''), str) or not isinstance(data.get('approach', 'tafsir'), str):
+            return jsonify({'error': 'Query and approach must be text.'}), 400
+        query = data.get('query', '').strip()
+        approach = data.get('approach', 'tafsir').strip()
 
         if not query:
             return jsonify({"error": "Query is required"}), 400
+
+        if len(query) > 500:
+            return jsonify({'error': 'Please use a verse reference under 500 characters.'}), 400
+        try:
+            query = normalize_verse_query(query)
+        except ValueError as error:
+            return jsonify({'error': str(error)}), 400
 
         # Match /tafsir's current routing contract: all public approaches are
         # normalized to the direct tafsir pipeline before cache lookup.
@@ -9763,7 +9776,7 @@ def _enrich_feedback_with_gemini(feedback_type, raw_message):
             return None
 
     except Exception as e:
-        print(f"[FEEDBACK] Gemini enrichment error: {e}")
+        logger.warning("Feedback operation failed; exception type=%s", type(sys.exc_info()[1]).__name__)
         return None
 
 
@@ -9802,7 +9815,7 @@ def _create_github_issue(feedback_type, title, body, labels):
             return None
 
     except Exception as e:
-        print(f"[FEEDBACK] GitHub issue error: {e}")
+        logger.warning("Feedback operation failed; exception type=%s", type(sys.exc_info()[1]).__name__)
         return None
 
 
@@ -9857,14 +9870,14 @@ def submit_feedback():
                 try:
                     ref.update({"github_issue_url": issue_url})
                 except Exception as e:
-                    print(f"[FEEDBACK] Failed to update doc with issue URL: {e}")
+                    logger.warning("Feedback operation failed; exception type=%s", type(sys.exc_info()[1]).__name__)
 
         threading.Thread(target=_bg_github, args=(doc_ref,), daemon=True).start()
 
         return jsonify({"message": "Feedback submitted. Thank you."}), 200
 
     except Exception as e:
-        print(f"ERROR in POST /feedback: {e}")
+        logger.warning("Feedback operation failed; exception type=%s", type(sys.exc_info()[1]).__name__)
         return api_error()
 
 
@@ -9958,16 +9971,16 @@ def feedback_daily_summary():
                 logger.info("FEEDBACK summary delivered")
 
             except Exception as mail_err:
-                print(f"[FEEDBACK] Email send failed: {mail_err}")
+                logger.warning("Feedback operation failed; exception type=%s", type(sys.exc_info()[1]).__name__)
                 logger.warning("FEEDBACK summary delivery failed; body omitted from logs")
         else:
-            print("[FEEDBACK] SMTP not configured — logging summary instead")
+            logger.info("FEEDBACK SMTP is not configured; summary body omitted")
             logger.info("FEEDBACK summary prepared; body omitted from logs")
 
         return jsonify({"message": f"Summary generated for {len(items)} items"}), 200
 
     except Exception as e:
-        print(f"ERROR in POST /feedback/daily-summary: {e}")
+        logger.warning("Feedback operation failed; exception type=%s", type(sys.exc_info()[1]).__name__)
         return api_error()
 
 

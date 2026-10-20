@@ -24,7 +24,9 @@ def content():
     for node in tree.body:
         if isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id in {'QURAN_METADATA', 'NAMED_VERSES', 'PERSONAS', 'SCHOLARLY_PIPELINE_VERSION'} for t in node.targets):
             exec(compile(ast.Module(body=[node], type_ignores=[]), str(path), 'exec'), ns)
-    ns['SURAHS_BY_NAME'] = {v['name'].lower(): k for k, v in ns['QURAN_METADATA'].items()}
+    source = path.read_text()
+    aliases = source[source.index('SURAHS_BY_NAME ='):source.index('# Persona-specific query suggestions')]
+    exec(aliases, ns)
     ns.update(build_structured_context=lambda *a: 'Source fixture', VERSE_LIMIT_DEFAULT=5,
               build_persona_learning_contract=lambda *a: 'Contract fixture')
     exec(compile(ast.Module(body=nodes, type_ignores=[]), str(path), 'exec'), ns)

@@ -156,6 +156,9 @@ def _verified_narrator(narrator, source_tokens, matched_start):
     if _infer_collection(narrator):
         return ""
     tokens = _normalize_tokens(narrator)
+    # Short collection labels must not masquerade as narrator names either.
+    if set(tokens) & {"bukhari", "muslim", "ahmad", "tirmidhi", "dawud", "nasai", "majah", "riyad"}:
+        return ""
     if not tokens or matched_start is None:
         return ""
     window = source_tokens[max(0, matched_start - COLLECTION_CONTEXT_WORDS):matched_start]

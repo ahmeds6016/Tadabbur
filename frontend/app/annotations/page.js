@@ -180,13 +180,14 @@ export default function MyReflectionsPage() {
 
   const handleDeleteAnnotation = async (annotationId) => {
     if (!user) return;
+    const ticket = requests.start("delete", user.uid);
     try {
       const token = await user.getIdToken();
       const response = await fetch(`${BACKEND_URL}/annotations/${annotationId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      if (response.ok) {
+      if (requests.current(ticket, auth.currentUser?.uid ?? null) && response.ok) {
         setAnnotations(prev => prev.filter(a => a.id !== annotationId));
       }
     } catch (error) {

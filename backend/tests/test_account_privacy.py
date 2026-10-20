@@ -35,6 +35,8 @@ def test_versioned_crypto_and_idempotent_migration_functions():
     updates = migration.migrate_fields({'content': old_ciphertext, 'highlighted_text': 'Highlight'}, 'annotations', cipher)
     assert ns['_decrypt_text'](updates['content'], 'reader') == 'Old encrypted text'
     assert migration.migrate_fields(updates, 'annotations', cipher) == {}
+    with pytest.raises(ValueError):
+        migration.migrate_fields({'content': old_ciphertext}, 'annotations', Fernet(Fernet.generate_key()))
     ns['REFLECTION_ENCRYPTION_SECRET'] = ''
     assert ns['_decrypt_text']('Legacy plain text', 'reader') == 'Legacy plain text'
     with pytest.raises(RuntimeError): ns['_decrypt_text'](value, 'reader')
