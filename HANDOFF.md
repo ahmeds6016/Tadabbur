@@ -196,6 +196,25 @@ Q14. **✅ DEPLOYED 2026-08-13 — Reliability quick wins**
 
 ## Session log
 
+### 2026-10-20 — Codex: Session 13 Unit 6 — deploy verification and real boundaries
+
+- Branch `codex/s13-verification`; implementation **`9dc4ca6`**, stacked on Unit 5 and containing all six units. Both deploy entrypoints build unique tags, obtain the exact successful build digest, deploy by digest with an explicit revision suffix, capture the created revision and verify image/readiness/reconciliation/retirement/actual resolved traffic. Normal deploys require 100%; `--no-traffic` requires a ready tagged 0% canary. Wrong latest, pinned traffic and retired revisions fail with exact diagnoses. Verification never changes traffic. **22 stubbed-gcloud entrypoint scenarios pass; no real deploy ran.**
+- Real route fixtures retain decorators/parser/cache/share helpers with fake clients: guest/required/admin/debug/cron boundaries, cache hits through /tafsir, profiles/versions/syntax identity, invalid references, server-only share snapshots, public legacy snapshots and deletion markers. Added actual frontend handler regressions for search timer/loading ownership, late share promises, and A/B/A onboarding completion.
+- Verification-driven follow-ups: debug generation cannot write the reader cache; share entry validates input; served tafsir suggestions are canonical; bare collection labels cannot survive as narrators; scholarly excerpt boundaries prevent inheriting the wrong source attribution; migration rejects unreadable legacy ciphertext; feedback mail errors omit raw recipient-bearing messages; late onboarding/annotation changes and persisted answer queries retain ownership. The 0.80 wording threshold remains untouched.
+- **Final checks: 571 backend tests, 18 frontend tests, build 15/15, shell syntax and diff checks pass.** No window-is-not-defined error. Exact commands, source links and limitations: `docs/SESSION-13-VERIFICATION.md`. Unit 6 also contains backend/frontend follow-up fixes, so both need deployment.
+- **All six implementation units completed locally; no unit skipped or ballooned.** No push, deployment, cloud mutation, live application/model call, secret creation/access, account erasure or migration execution. Claude still owns the encryption secret, budget/quota cloud controls, pipeline-17.0 paid canary, proxy-hop smoke check and all deployment. Ahmed must review the privacy draft/contact, public-share policy and deletion-marker retention. Dependency scan debt remains as recorded in Unit 2; native rebuild is separate. Existing snapshots predate trust fixes. LOG-09/10 and PERF-03 remain explicitly out of scope; OPS-01 cloud protection was not redone (restore drill/runbook remain Claude's follow-up).
+
+| Unit | Branch | Implementation commit | Findings addressed | Verified | Deploy needed |
+|---|---|---|---|---|---|
+| 1 | `codex/s13-content` | `0c461d7` | LOG-01–05; SEC-01/02; ERR-02 | 485 backend, 12 frontend, build 14/14 | backend + frontend |
+| 2 | `codex/s13-surface` | `c6a27e7` | SEC-03/05/06; requested SEC-04 patches; OPS-03; Iman gate | 494 backend, 12 frontend, build 14/14; audits recorded | backend + frontend |
+| 3 | `codex/s13-client` | `4cd77ae` | ERR-01/03–06; LOG-11 | 497 backend, 15 frontend, build 14/14 | backend + frontend |
+| 4 | `codex/s13-privacy` | `df5bba4` | PRIV-01–04 code and privacy draft | 501 backend, 15 frontend, build 15/15 | backend + frontend, after prerequisites/review |
+| 5 | `codex/s13-progress` | `64963db` | LOG-06–08; PERF-01/02 | 524 backend, 15 frontend, build 15/15 | backend + frontend |
+| 6 | `codex/s13-verification` | `9dc4ca6` | OPS-02; MAINT-01; boundary follow-ups | 571 backend, 18 frontend, build 15/15; 22 deploy scenarios | backend + frontend |
+
+Each branch includes its predecessor's code and handoff commits; the commits above identify implementation changes. The final branch is the complete review stack.
+
 ### 2026-10-20 — Codex: Session 13 Unit 5 — progress and bounded reads
 
 - Branch `codex/s13-progress`, implementation `64963db`, stacked on Unit 4. Explored maps/counts, collections, plans, streak updates and badge awards use Firestore transactions. Study transactions also derive collection progress from canonical verse membership, making collection badges reachable through normal study. Transactions read deletion markers before writes.
