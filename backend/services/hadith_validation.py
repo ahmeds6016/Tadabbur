@@ -168,16 +168,26 @@ def _verified_narrator(narrator, source_tokens, matched_start):
 def _source_attribution(source_text, matched_start):
     # Only our structured source headings establish the source of the matched
     # excerpt. Incidental author names inside prose do not establish provenance.
+    # Classical tafsir sections use "--- IBN KATHIR ---"; scholarly sections from
+    # source_service use "### Related Hadith — Riyad al-Salihin" and similar.
     heading = None
-    for match in re.finditer(r"(?m)^--- ([^\n]+) ---$", source_text):
+    for match in re.finditer(r"(?m)^(?:--- ([^\n]+) ---|### ([^\n]+))$", source_text):
         if len(_normalize_tokens(source_text[:match.end()])) > matched_start:
             break
-        heading = match.group(1).casefold().replace("-", " ")
-    labels = {
-        "ibn kathir": "As cited in Ibn Kathir's tafsir of this verse",
-        "al qurtubi": "As cited in al-Qurtubi's tafsir of this verse",
-    }
-    return labels.get(heading, "As cited in the supplied source excerpts")
+        heading = " ".join(_normalize_tokens(match.group(1) or match.group(2)))
+    labels = (
+        ("ibn kathir", "As cited in Ibn Kathir's tafsir of this verse"),
+        ("qurtubi", "As cited in al-Qurtubi's tafsir of this verse"),
+        ("riyad al salihin", "As cited in Riyad al-Salihin"),
+        ("asbab al nuzul", "As cited in al-Wahidi's Asbab al-Nuzul"),
+        ("ihya ulum al din", "As cited in al-Ghazali's Ihya Ulum al-Din"),
+        ("madarij al salikin", "As cited in Ibn al-Qayyim's Madarij al-Salikin"),
+        ("thematic commentary", "As cited in A Thematic Commentary on the Qurʼan"),
+    )
+    for marker, label in labels:
+        if heading and marker in heading:
+            return label
+    return "As cited in the supplied source excerpts"
 
 
 def validate_hadith_items(hadith_list, source_context_text):

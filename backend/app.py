@@ -6199,7 +6199,9 @@ def valid_answer_contract(answer):
                 return False
             for field in required:
                 value = item.get(field)
-                if key == 'verses' and field == 'verse_number' and type(value) is int:
+                # The model writes surah as a name; post-processing stores the number,
+                # and both shapes must pass so cached answers can be served.
+                if key == 'verses' and field in ('surah', 'verse_number') and type(value) is int:
                     continue
                 if not isinstance(value, str):
                     return False
@@ -6395,7 +6397,11 @@ def tafsir_handler_enhanced():
                         ]
                     }, 400)
 
-        query = normalize_verse_query(query)
+        # Non-tafsir approaches (e.g. replayed history entries) skip the guarded parse above.
+        try:
+            query = normalize_verse_query(query)
+        except ValueError as error:
+            return tafsir_response({'error': str(error), 'needs_clarification': True}, 400)
 
         # Rate limiting — guests use IP with stricter limits
         rate_limit_id = user_id or f"guest_{request.remote_addr}"
