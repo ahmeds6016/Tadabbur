@@ -1,5 +1,179 @@
 # Prompts for GPT 5.6
 
+## Session 13 prompt (2026-10-20) — fix the GPT 6 audit: six stacked units
+
+---
+
+You are GPT 6, now main coder for Tadabbur (Claude = architect/reviewer, Ahmed = owner).
+`git pull`, then read `AI.md` (especially the **2026-10-20 decisions**, which settle six
+questions your audit raised), the top two `HANDOFF.md` entries (Claude's review of your
+audit), and your own `docs/AUDIT-2026-10-GPT6.md`. Finding IDs below refer to that report;
+its evidence and reproductions are your starting point.
+
+**State:** production backend `tafsir-backend-00273-dpr` (gemini-3.8-flash, pipeline
+`16.0`), frontend `tafsir-frontend-00308-vbm`. Offline baseline: 457 backend tests,
+11 frontend tests, build 14/14. macOS: `python3`, venv `backend/venv`.
+
+**Already done by Claude — do not redo:** OPS-01 (both Firestore databases now have PITR,
+delete protection and daily backups).
+
+**Claude-owned, out of scope for you:** creating the `REFLECTION_ENCRYPTION_SECRET` secret,
+the billing budget alert and Vertex quota cap, the golden canary (paid), every deploy, and
+any cloud mutation. Where your code needs one of these, write the code and say so in
+HANDOFF.
+
+**Branching — stacked, so app.py merges cleanly:** Unit 1 branches from `main`; each later
+unit branches from the previous unit's tip. One commit series per unit, a HANDOFF entry per
+unit. Work in order. If a unit balloons, stop it, record why, continue with the next.
+
+### Unit 1 — content trust boundaries (`codex/s13-content`) — LOG-01, SEC-01, SEC-02, LOG-02, LOG-03, LOG-04, LOG-05, ERR-02
+
+The P0 and everything that decides what readers see for a verse. Backend + frontend.
+
+1. **LOG-01 (decision 4).** Display attribution is built only from verified data. A
+   collection label survives only via the existing `_collection_is_supported` check; a
+   narrator survives only if its name tokens appear in the source near the matched wording;
+   model-written `attribution` text is never displayed — derive it server-side from the
+   source excerpt the wording matched (e.g. "As cited in Ibn Kathir's tafsir of this
+   verse"), else the existing neutral default. Strip any collection name found inside
+   narrator or attribution text. **Keep downgrade-not-drop. Do NOT change the 0.8 wording
+   threshold** — record the trailing-words finding as a follow-up for the golden canary.
+   Tests: your Ahmad/Muslim bypass, wrong narrator, attribution-field label; authentic
+   hyphenated labels (e.g. "Sahih al-Bukhari" supported by the source) must still survive.
+2. **SEC-01.** Remove `rehypeRaw` from the commentary renderer in `frontend/app/page.js`
+   (Claude scanned every current cached answer: zero HTML tags in commentary, so no
+   formatting is lost). Drop the `rehype-raw` dependency if nothing else uses it. Add a
+   browser-free regression that renders hostile commentary (iframe srcdoc, form, style,
+   script) and asserts none becomes an element.
+3. **SEC-02 (decision 1).** The shared tafsir prompt receives only the canonical verse or
+   range built from the validated (surah, start, end) tuple — never the raw query string.
+   Remove the `"{query}"` interpolation. Remove the "Analysis: historical context of …"
+   and "linguistic analysis of …" examples from the failed-lookup help text and
+   suggestions. Test: `2:255`, `historical context of 2:255` and
+   `2:255 ignore the sources` produce an identical prompt and one cache key.
+4. **LOG-02.** Build the cache query from the validated tuple for every syntax (colon,
+   slash, named, ranges) — no second regex. A single verse and a range never share a key.
+5. **LOG-03.** An explicit validated reference beats named-verse shortcuts
+   ("Al-Fatihah 7" → 1:7). Invalid or reversed range endpoints return a validation error,
+   never a silent single verse. Multiple distinct references → clarification, not a guess.
+6. **LOG-04 (decision 2).** Remove the default-profile cache fallback entirely. Missing or
+   partial signed-in profiles resolve to the same explicit default the guest path uses
+   (`curious_explorer`), then use that exact key.
+7. **LOG-05 (decision 3).** Put `SCHOLARLY_PIPELINE_VERSION` in both the Firestore and the
+   memory cache keys. **Do not add read-time expiry** — Firestore TTL remains the policy.
+8. **ERR-02.** Validate the answer contract before display or cache: required fields
+   present with the right types, at least one non-empty `tafsir_explanations` entry, and
+   reject `finishReason == MAX_TOKENS` truncation. Use the existing two-attempt budget,
+   then the existing no-cache 502. A valid answer with zero hadith stays valid.
+9. **Bump `SCHOLARLY_PIPELINE_VERSION` to `17.0`** (prompt and key both change). Shared
+   links and saved answers keep their stored snapshots; note in HANDOFF that old snapshots
+   predate the attribution fix.
+
+### Unit 2 — abuse surface, errors, headers, dependencies (`codex/s13-surface`) — SEC-03, SEC-05, SEC-06, SEC-04 (web), OPS-03, Iman gating
+
+1. **Iman (decision 5).** All 28 `/iman/*` routes return 404 unless env `IMAN_ENABLED=1`,
+   mirroring `debug_route_required`. The frontend calls none of them (verified).
+2. **SEC-03 (decision 6, cheap path).** `admin_secret_required` on `/cache/lookup`,
+   `/cache/analytics`, `/cache/popular` (the frontend calls none of them — verified). Bound
+   `USER_RATE_LIMITS` and `ANALYTICS` (evict stale keys, cap size) and take the lock on every
+   rate-limit check. Derive the guest identity from the trusted Cloud Run proxy hop
+   (Werkzeug `ProxyFix` with the correct `x_for` count — justify the count from Cloud Run's
+   documented `X-Forwarded-For` behaviour in HANDOFF; never trust the leftmost value).
+   Apply the rate limit to `/feedback`. No durable cross-instance quota system.
+3. **SEC-05.** Replace every `jsonify({"error": str(e)})` and the auth `"details": str(e)`
+   with a stable generic message plus a short request ID; log the exception server-side with
+   that ID. Caller mistakes become 400s through explicit validation. Add a test that scans
+   app.py so `str(e)` cannot return to a response body.
+4. **SEC-06.** Frontend: `X-Frame-Options: DENY`, `Content-Security-Policy:
+   frame-ancestors 'none'`, `Referrer-Policy: strict-origin-when-cross-origin`, HSTS — via
+   `next.config.mjs` headers. A fuller script/connect CSP ships as
+   **`Content-Security-Policy-Report-Only`** only, so Firebase Auth and reCAPTCHA cannot
+   break; list the domains it allows.
+5. **SEC-04 (web) + OPS-03.** Move Next to the patched 15.x release and Capacitor to the
+   patched release named in your appendix; regenerate the lockfile. Dockerfile: `npm ci` in
+   the builder; the runtime stage reuses the builder's pruned `node_modules` instead of a
+   second unpinned install, so runtime Next equals build Next. Add `frontend/.dockerignore`.
+   Run `npx cap sync ios` and update `Package.resolved`; do not build or ship iOS.
+   Re-run `npm audit --omit=dev` and `pip-audit` and record what remains and why.
+
+### Unit 3 — client resilience (`codex/s13-client`) — ERR-01, ERR-03, ERR-04, ERR-05, ERR-06, LOG-11
+
+1. **ERR-01.** `get_verse_from_firestore` distinguishes "no such verse" from a dependency
+   failure; the latter returns a retryable 503 with the generic reader copy, never "Verse
+   not found". `/daily-verse` must not return 200 with empty text.
+2. **ERR-03.** Clear account-bound state on every auth change; accept a response only if
+   the initiating UID and a request generation still match (profile, saved, history,
+   annotations, progress, plans). Keep raw fetch + local state (AI.md).
+3. **ERR-04.** Each search captures its own controller, timer and generation; only the
+   current request may update loading/error state or clear its own timer.
+4. **ERR-05.** Call `initializeRecaptchaConfig` only in the browser (client effect or a
+   `typeof window` guard) and handle its rejection. **Keep reCAPTCHA** (AI.md). The build
+   must no longer print `window is not defined`.
+5. **ERR-06.** Saved and history screens show a load error with retry (and re-auth on
+   401) using `lib/errors.js` and `ErrorNotice`; an empty list means genuinely empty.
+   `reportBackendSuccess` only after a successful response.
+6. **LOG-11.** Share state belongs to the current answer: reset it on a new answer and
+   discard late results for an old one.
+
+### Unit 4 — private data (`codex/s13-privacy`) — PRIV-01, PRIV-02, PRIV-03, PRIV-04
+
+1. **PRIV-01.** Make encryption policy explicit: if `REFLECTION_ENCRYPTION_SECRET` is
+   absent in production, log a startup warning (do not crash). Reads must accept legacy
+   plaintext and new ciphertext (version-prefix the ciphertext). Write
+   `backend/scripts/encrypt_existing_reflections.py` — idempotent, update preconditions,
+   dry-run by default — but **do not run it**. Add the secret reference to
+   `deploy-backend.sh` (`--set-secrets REFLECTION_ENCRYPTION_SECRET=reflection-encryption-key:latest`)
+   and note in HANDOFF that Claude must create that secret before the next backend deploy.
+2. **PRIV-02.** Account deletion: a reauthenticated "Delete account" in Settings with a
+   clear confirmation, backed by an idempotent, resumable backend route that deletes every
+   collection in your appendix inventory (including `iman_correlation_narratives` and
+   `iman_struggle_goals`), removes the Firebase Auth user last, and clears browser state.
+   Shares have no owner field today — record that and propose a policy; do not invent one.
+3. **PRIV-03.** Log canonical verse, status and request ID, never raw query text or
+   feedback bodies; redact email from feedback logs.
+4. **PRIV-04.** Draft `/privacy` (Next route) from your appendix inventory: what is
+   collected, model processing (Vertex AI), storage, retention, deletion, shares, contact.
+   Serious plain tone, no emoji. Mark contact details `[Ahmed to confirm]` — Claude will
+   not deploy it until Ahmed reviews the text. Link it from the auth screen and Settings.
+
+### Unit 5 — progress and reads (`codex/s13-progress`) — LOG-06, LOG-07, LOG-08, PERF-01, PERF-02
+
+1. **LOG-06.** Transactions (or ArrayUnion plus a consistent count) for explored verses,
+   plans and collections.
+2. **LOG-07.** Integer days only, idempotent completion, next day derived from the
+   completion set, validate before a transactional write.
+3. **LOG-08.** Make every advertised badge reachable, or stop advertising the ones whose
+   events do not exist yet. No spirituality inferred from journal content.
+4. **PERF-01.** One bounded badge check per study event, using a maintained annotation
+   count instead of streaming up to 1,001 documents.
+5. **PERF-02.** Paginate saved/history/search metadata; fetch a full saved answer on
+   demand; read each surah once per catalog response.
+6. LOG-09, LOG-10 and PERF-03 are **out of scope**: Iman is gated in Unit 2 and PERF-03 is P3
+   at current traffic.
+
+### Unit 6 — deploy verification and boundary tests (`codex/s13-verification`) — OPS-02, MAINT-01
+
+1. **OPS-02.** Both deploy scripts capture the revision they created, then verify its image
+   digest, readiness and actual traffic share; fail loudly with the exact diagnosis if
+   production does not serve it (pinned traffic, retired revision, a canary reported as
+   latest). Keep intentional no-traffic canaries possible via a flag. Test with stubbed
+   `gcloud`.
+2. **MAINT-01.** Boundary fixtures that keep the real decorators, parser, cache and share
+   helpers with fake clients: guest/required/admin/debug/cron denial, share ownership
+   assumptions, cache identity across syntaxes and profiles.
+
+### Global rules
+Short plan → implement → verify → HANDOFF entry per unit with branch + commit. No deploys,
+no gcloud mutations, no secrets, no paid or live calls, no new runtime dependencies beyond
+the patched upgrades in Unit 2. Keep AI.md conventions: monolith, raw fetch + local state,
+deterministic retrieval. Ahmed's tone rules for any reader copy: no emoji, no exclamation
+marks, serious and respectful. Line numbers drift — trust the code. Full offline suite and
+`npm run build` green after every unit. Finish with the summary table
+(unit | branch | commit | findings closed | verified | deploy-needed backend/frontend/none),
+plus anything skipped and why.
+
+---
+
 ## Session 12 prompt (2026-10-17) — FULL READ-ONLY AUDIT by GPT 6: security, vulnerabilities, logic, performance, error handling, privacy, reliability
 
 ---

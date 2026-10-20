@@ -196,6 +196,31 @@ Q14. **✅ DEPLOYED 2026-08-13 — Reliability quick wins**
 
 ## Session log
 
+### 2026-10-20 — Claude: Ahmed approved all six audit decisions; OPS-01 done; Session 13 issued
+
+- **Decisions recorded in AI.md (2026-10-20):** canonical-verse-only shared prompt (SEC-02,
+  option A); no cross-persona cache fallback (LOG-04); pipeline version in the cache key, TTL
+  stays the expiry policy (LOG-05); verified-only hadith attribution, 0.8 threshold untouched
+  without the golden canary (LOG-01); Iman routes off unless `IMAN_ENABLED=1`; cheap abuse
+  controls first, durable quotas deferred (SEC-03).
+- **OPS-01 DONE (Claude, cloud config):** both Firestore databases (`(default)`, `tafsir-db`,
+  project `tafsir-simplified-6b262`) now have **PITR enabled** (7-day version retention,
+  `earliestVersionTime` 2026-10-20T14:43Z), **delete protection enabled**, and **daily backup
+  schedules** — `(default)` 14-day retention, `tafsir-db` 7-day. App verified unaffected
+  (`/daily-verse` reads Firestore fine). Still open from OPS-01: a restore drill into a
+  disposable database, and a written restore runbook.
+- **Facts verified for the spec:** the frontend calls none of `/cache/lookup|analytics|popular`
+  and none of the 28 `/iman/*` routes (both safe to gate); the guest default persona is
+  `curious_explorer`; all 10 cached answers contain zero HTML tags in commentary, so removing
+  `rehype-raw` loses no formatting.
+- **Session 13 issued** (`docs/PROMPT-GPT56.md`): six stacked units — content boundaries
+  (P0 + pipeline 17.0), abuse surface/errors/headers/dependencies, client resilience, private
+  data (deletion, encryption code, privacy page draft), progress and reads, deploy verification
+  and boundary tests.
+- **Claude-owned follow-ups:** create `reflection-encryption-key` in Secret Manager before the
+  first Session 13 backend deploy; billing budget alert + Vertex quota cap (need Ahmed's
+  monthly amount); golden canary for pipeline 17.0; the OPS-01 restore drill.
+
 ### 2026-10-20 — Claude: review of the GPT 6 audit — dispositions, and where findings meet recorded decisions
 
 - **Merged** the audit (docs only) to `main`. Report: `docs/AUDIT-2026-10-GPT6.md`,

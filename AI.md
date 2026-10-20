@@ -164,6 +164,32 @@ The Gemini migration harness is intentionally live and paid. Claude's canary pro
   user-report-only detection). P2.9's `--workers 2` evaluation is likewise deferred
   until traffic exists.
 
+- **2026-10-20 (Ahmed-approved, from the GPT 6 audit review):**
+  1. **The shared tafsir answer is about the verse, never the reader's wording.** The
+     prompt for a cached answer receives only the validated canonical verse/range (plus
+     approach and profile); raw query text never reaches it. Free-text questions belong to
+     topic discovery, which resolves them to verses through a closed vocabulary. Help text
+     no longer advertises "historical context of 2:255"-style queries. (Audit SEC-02.)
+  2. **No cross-persona cache fallback.** An answer is served only to the exact
+     answer-affecting profile it was generated for; the default-profile fallback predates
+     the Session 6 persona learning contracts and is removed. (LOG-04.)
+  3. **The pipeline version is part of the cache key** (Firestore and memory), so canaries
+     and future versions cannot overwrite each other. **Expiry stays with Firestore TTL** —
+     no read-time expiry check; an answer served a day past 90 days is an accepted risk.
+     (LOG-05.)
+  4. **Hadith display attribution is built only from verified data** — model-written
+     narrator/attribution text is never shown unless supported by the source. Downgrade-not-
+     drop stays. **The 0.8 wording-match threshold is not tightened without the golden
+     canary**, because over-strict matching stripped every 2:255 hadith in the 3.6 canary.
+     (LOG-01.)
+  5. **Suspended features are switched off, not just hidden.** Iman Journal routes return
+     404 unless `IMAN_ENABLED=1`, matching README's suspension. (LOG-09/10, parts of ERR-02,
+     SEC-03, PRIV-02.)
+  6. **Abuse and spend: cheap controls first.** Admin-gate operational cache routes, bound
+     in-process counters, derive guest identity from the trusted proxy hop, a GCP billing
+     budget alert and a Vertex quota cap. Durable cross-instance quotas (new shared state) are
+     deferred until traffic justifies them. (SEC-03.)
+
 - **2026-08-01 (Claude):** Frontend /tafsir abort timer stays at 180s although the
   backend's bounded worst case is 242s (P1.4). Rationale: a >3-minute spinner is
   worse UX than a "took too long, try again" message, and the backend request
