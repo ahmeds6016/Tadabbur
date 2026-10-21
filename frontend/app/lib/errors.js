@@ -103,6 +103,7 @@ export async function requestErrorFrom(res, context = {}) {
   else if (res.status === 403) message = "You don't have access to that.";
   else if (res.status === 404) message = context.notFound || fallback;
   else if (res.status === 429) message = 'You are sending requests faster than we can answer. Please wait a minute and try again.';
+  else if (res.status === 503) message = 'Tadabbur is temporarily unavailable. Please try again in a moment.';
   else if (res.status >= 400 && res.status < 500) {
     // Prefer a written explanation over a code (e.g. verse_range_too_large carries `message`).
     message = [body?.message, body?.error].find(isSafeServerText) || fallback;

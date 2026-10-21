@@ -2289,6 +2289,8 @@ def handle_errors(f):
             return api_error("The service is taking longer than expected. Please try again.", 503)
         except requests.HTTPError:
             return api_error("The service is temporarily unavailable. Please try again.", 502)
+        except VerseStoreUnavailable:
+            raise
         except Exception:
             return api_error()
     return wrapper
@@ -5975,6 +5977,8 @@ def get_specific_verse(surah, verse):
             return jsonify(verse_data)
         else:
             return jsonify({'error': f'Verse {surah}:{verse} not found'}), 404
+    except VerseStoreUnavailable:
+        raise
     except Exception as e:
         print(f"Error in verse lookup: {e}")
         return api_error()
@@ -6963,7 +6967,7 @@ def tafsir_handler_enhanced():
             return tafsir_response(response)
 
     except VerseStoreUnavailable:
-        return api_error()
+        raise
     except requests.exceptions.Timeout:
         return tafsir_response({"error": "AI service timed out"}, 504)
     except Exception as e:

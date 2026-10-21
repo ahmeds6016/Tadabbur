@@ -18,7 +18,7 @@ from types import SimpleNamespace
 from unittest.mock import Mock
 import uuid
 
-from flask import Flask, g, jsonify, make_response, request
+from flask import Flask, g, has_request_context, jsonify, make_response, request
 import pytest
 import requests
 
@@ -38,6 +38,8 @@ class MemoryDocument:
     def document(self, key): return MemoryDocument(self.db, self.path + '/' + key)
     def get(self, **kwargs):
         self.db.reads.append(self.path)
+        if self.path.startswith('quran_texts/') and getattr(self.db, 'outage', False):
+            raise RuntimeError('Firestore credentials/private-path must not leak')
         value = deepcopy(self.db.data.get(self.path))
         return SimpleNamespace(exists=value is not None, to_dict=lambda: value)
     def set(self, value): self.db.data[self.path] = deepcopy(value)
@@ -55,7 +57,7 @@ def boundary(content, monkeypatch):
     auth = SimpleNamespace(verify_id_token=Mock(return_value=claims), InvalidIdTokenError=type("InvalidToken", (Exception,), {}), ExpiredIdTokenError=type("ExpiredToken", (Exception,), {}))
     ns = content
     ns.update(requests=SimpleNamespace(post=Mock(side_effect=AssertionError("No live/model requests permitted")), Timeout=requests.Timeout, HTTPError=requests.HTTPError, exceptions=requests.exceptions), app=app, os=os, sys=sys, uuid=uuid, g=g, request=request, jsonify=jsonify,
-              make_response=make_response, wraps=wraps, hmac=hmac, time=time,
+              make_response=make_response, has_request_context=has_request_context, wraps=wraps, hmac=hmac, time=time,
               datetime=datetime, timedelta=timedelta, timezone=timezone, threading=threading,
               auth=auth, users_db=users, quran_db=quran, ADMIN_SECRET='offline-admin',
               DEBUG_ROUTES_ENABLED=False, logger=logging.getLogger(__name__),
@@ -70,8 +72,11 @@ def boundary(content, monkeypatch):
              '_verify_admin_secret', 'admin_secret_required', 'debug_route_required',
              '_deletion_job_ref', '_account_is_deleting', 'is_rate_limited', '_single_line_log',
              'get_user_profile', 'create_share', 'get_shared_content', 'feedback_daily_summary', 'submit_feedback'}
-    names.update({'tafsir_handler_enhanced', 'handle_errors', 'record_query_analytics'})
-    nodes = [n for n in ast.parse(PATH.read_text()).body if isinstance(n, ast.FunctionDef) and n.name in names]
+    names.update({'tafsir_handler_enhanced', 'handle_errors', 'record_query_analytics', 'verse_store_error',
+                  'get_specific_verse', 'get_verse_from_firestore', 'get_verses_range_from_firestore',
+                  '_surah_snapshot', 'classify_query_enhanced'})
+    nodes = [n for n in ast.parse(PATH.read_text()).body if (isinstance(n, ast.FunctionDef) and n.name in names)
+             or (isinstance(n, ast.ClassDef) and n.name == 'VerseStoreUnavailable')]
     # Keep ALL decorators. No app initialization or live credentials/corpora.
     exec(compile(ast.Module(body=nodes, type_ignores=[]), str(PATH), 'exec'), ns)
     @app.get('/offline/debug')
@@ -199,3 +204,22 @@ def test_study_awards_are_request_only_headers_never_cached_or_shared(boundary, 
         shared = boundary.client.post('/share', json={'query': '2:255'})
         public = boundary.client.get('/share/' + shared.json['share_id'])
         assert 'explore_10' not in json.dumps(public.json)
+
+
+@pytest.mark.parametrize('path,payload', [('/verse/2/255', None), ('/tafsir', {'query': '2:255'}), ('/tafsir', {'query': '2:255-256'})])
+def test_real_verse_outage_reaches_flask_error_handler_with_safe_retry(boundary, path, payload):
+    boundary.quran.outage = True
+    error = boundary.ns['VerseStoreUnavailable']
+    handlers = boundary.client.application.error_handler_spec[None][None]
+    actual = handlers[error]
+    spy = Mock(wraps=actual)
+    handlers[error] = spy
+    response = boundary.client.open(path, method='POST' if payload else 'GET', json=payload)
+    assert response.status_code == 503
+    assert response.json == {'error': 'The verse service is temporarily unavailable. Please try again.',
+                             'request_id': response.json['request_id'], 'retry': True}
+    assert len(response.json['request_id']) == 12
+    assert response.headers['Retry-After'] == '30'
+    spy.assert_called_once()
+    assert isinstance(spy.call_args.args[0], error)
+    boundary.ns['requests'].post.assert_not_called()

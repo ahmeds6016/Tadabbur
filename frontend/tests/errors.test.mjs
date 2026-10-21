@@ -49,7 +49,6 @@ test('server exception text never reaches the reader', async () => {
     [400, { error: "KeyError: 'query'" }],
     [400, { error: "Invalid input: {'verse': None}" }],
     [502, undefined],
-    [503, { error: 'AI service timeout' }],
   ]) {
     const err = await requestErrorFrom(response(status, body), { fallback });
     assert.ok(err instanceof RequestError);
@@ -94,5 +93,14 @@ test('isSafeServerText rejects codes, stack traces and markup', () => {
   assert.ok(isSafeServerText('Please narrow your range to 5 verses.'));
   for (const bad of ['verse_range_too_large', 'ValueError: bad', 'see https://x.io', '<b>hi there</b>', 'x'.repeat(401), '', null]) {
     assert.ok(!isSafeServerText(bad), String(bad).slice(0, 30));
+  }
+});
+
+
+test('503 has stable retry copy without exposing dependency details', async () => {
+  for (const body of [undefined, { error: 'Firestore PermissionDenied projects/private', retry: true }]) {
+    const error = await requestErrorFrom(response(503, body), { fallback: 'Other failure.' });
+    assert.equal(userMessage(error), 'Tadabbur is temporarily unavailable. Please try again in a moment.');
+    assert.doesNotMatch(error.userMessage, LEAKY);
   }
 });

@@ -27,7 +27,7 @@ elif args[:2] == ['builds', 'describe']:
     output({'status': 'SUCCESS', 'results': {'images': [{'name': state['image'], 'digest': digest}]}})
 elif args[:2] == ['run', 'deploy']:
     state.update(service=args[2], revision=args[2] + '-' + value('--revision-suffix'),
-                 no_traffic='--no-traffic' in args, image_arg=value('--image'))
+                 no_traffic='--no-traffic' in args, image_arg=value('--image'), deploy_args=args)
     if '--tag' in args: state['tag'] = value('--tag')
     save(); print('old-revision' if scenario == 'wrong-latest' else state['revision'])
 elif args[:3] == ['run', 'revisions', 'describe']:
@@ -86,4 +86,22 @@ def test_entrypoints_verify_created_digest_readiness_and_actual_traffic(tmp_path
         assert not state.exists() or 'image' not in json.loads(state.read_text())
         assert '--to-revisions' in result.stderr and '--to-latest' in result.stderr
     if state.exists() and 'image_arg' in json.loads(state.read_text()):
-        assert '@sha256:' in json.loads(state.read_text())['image_arg']
+        deployed = json.loads(state.read_text())
+        assert '@sha256:' in deployed['image_arg']
+        args = deployed['deploy_args']
+        if service == 'frontend':
+            assert '--set-env-vars' not in args and '--set-secrets' not in args
+        else:
+            pairs = lambda flag: dict(pair.split('=', 1) for pair in args[args.index(flag) + 1].split(','))
+            assert pairs('--set-env-vars') == {
+                'FIREBASE_PROJECT': 'tafsir-simplified-6b262',
+                'GCP_INFRASTRUCTURE_PROJECT': 'tafsir-simplified', 'GCP_LOCATION': 'us-central1',
+                'GEMINI_API_LOCATION': 'global', 'GEMINI_MODEL_ID': 'gemini-3.8-flash',
+                'GEMINI_LITE_MODEL_ID': 'gemini-3.5-flash-lite',
+                'GCS_BUCKET_NAME': 'tafsir-simplified-sources',
+                'FIREBASE_SECRET_FULL_PATH': 'projects/612616741510/secrets/firebase-sa-key/versions/latest',
+            }
+            assert pairs('--set-secrets') == {
+                'ADMIN_SECRET': 'admin-secret:latest',
+                'REFLECTION_ENCRYPTION_SECRET': 'reflection-encryption-key:latest',
+            }
