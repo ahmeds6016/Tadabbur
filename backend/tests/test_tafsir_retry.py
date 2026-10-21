@@ -112,7 +112,7 @@ def route_env(monkeypatch):
     app.add_url_rule("/tafsir", view_func=namespace["tafsir_handler_enhanced"], methods=["POST"])
     app.add_url_rule("/debug/test/<path:query>", view_func=namespace["debug_query"])
     return SimpleNamespace(client=app.test_client(), post=post, sleep=sleep,
-                           store=store, cache=namespace["RESPONSE_CACHE"])
+                           store=store, cache=namespace["RESPONSE_CACHE"], app=app, ns=namespace)
 
 
 def assert_attempt_budget(env, attempts):
@@ -244,3 +244,19 @@ def test_failed_lookup_help_has_no_pictographic_emoji(route_env, query):
     assert not emoji.search(help_copy)
     assert "!" not in help_copy
     route_env.post.assert_not_called()
+
+
+def test_fresh_study_awards_are_outside_both_cache_writes(route_env):
+    env = route_env
+    env.ns['get_user_profile'] = lambda uid: {}
+    env.ns['_track_explored_verse'] = Mock(return_value=[{'id': 'explore_10'}])
+    @env.app.before_request
+    def signed_reader():
+        request.user = {'uid': 'reader'}
+    env.post.return_value = gemini_response(VALID)
+    response = env.client.post('/tafsir', json={'query': '2:255'})
+    assert response.status_code == 200
+    assert json.loads(response.headers['X-Newly-Earned-Badges']) == ['explore_10']
+    env.ns['_track_explored_verse'].assert_called_once_with('reader', 2, 255, 255)
+    assert 'explore_10' not in json.dumps(response.json) + json.dumps(env.cache)
+    assert 'explore_10' not in json.dumps(env.store.call_args.args[2])

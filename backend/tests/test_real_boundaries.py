@@ -19,6 +19,7 @@ from unittest.mock import Mock
 import uuid
 
 from flask import Flask, g, has_request_context, jsonify, make_response, request
+from flask_cors import CORS
 import pytest
 import requests
 
@@ -79,6 +80,10 @@ def boundary(content, monkeypatch):
              or (isinstance(n, ast.ClassDef) and n.name == 'VerseStoreUnavailable')]
     # Keep ALL decorators. No app initialization or live credentials/corpora.
     exec(compile(ast.Module(body=nodes, type_ignores=[]), str(PATH), 'exec'), ns)
+    cors = next(node for node in ast.parse(PATH.read_text()).body
+                if isinstance(node, ast.Expr) and isinstance(node.value, ast.Call)
+                and isinstance(node.value.func, ast.Name) and node.value.func.id == 'CORS')
+    exec(compile(ast.Module(body=[cors], type_ignores=[]), str(PATH), 'exec'), {**ns, 'CORS': CORS})
     @app.get('/offline/debug')
     @ns['debug_route_required']
     def debug_boundary(): raise AssertionError('Denied debug request reached handler')
@@ -190,10 +195,11 @@ def test_study_awards_are_request_only_headers_never_cached_or_shared(boundary, 
         boundary.quran.data.clear()
         ns['RESPONSE_CACHE'][info['cache_key']] = json.loads(VALID)
     ns['_track_explored_verse'].return_value = [{'id': 'explore_10', 'name': 'Explorer'}]
-    signed = boundary.client.post('/tafsir', headers={'Authorization': 'Bearer offline'}, json={'query': '2:255'})
+    signed = boundary.client.post('/tafsir', headers={'Authorization': 'Bearer offline', 'Origin': 'http://localhost:3000'}, json={'query': '2:255'})
     assert signed.status_code == 200
     assert json.loads(signed.headers['X-Newly-Earned-Badges']) == ['explore_10']
     assert 'no-store' in signed.headers['Cache-Control']
+    assert 'X-Newly-Earned-Badges' in signed.headers['Access-Control-Expose-Headers']
     assert 'newly_earned_badges' not in signed.json
     assert 'explore_10' not in json.dumps(boundary.quran.data, default=str) + json.dumps(ns['RESPONSE_CACHE'])
     ns['_track_explored_verse'].reset_mock()
