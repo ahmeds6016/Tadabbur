@@ -75,3 +75,21 @@ def test_cache_miss_reads_only_requested_profile(content):
     db.collection.return_value.document.return_value.get.return_value.exists = False
     assert content['get_cached_tafsir_response']('2:255', {'persona': 'student'}) is None
     db.collection.return_value.document.assert_called_once()
+
+
+@pytest.mark.parametrize('query,expected', [
+    ('2:255', (2, 255, 255)), ('2.255', (2, 255, 255)),
+    ('s2v255', (2, 255, 255)), ('surah 2 verse 255', (2, 255, 255)),
+    ('verse 255 of surah 2', (2, 255, 255)), ('Al-Fatihah 7', (1, 7, 7)),
+    ('2:255 and 256', (2, 255, 256)), ('Al-Baqarah 255 and 256', (2, 255, 256)),
+    # A bare surah needs a verse choice, rather than silently opening verse 1.
+    ('Al-Fatihah', None),
+])
+def test_parser_compatibility_table(content, query, expected):
+    assert content['parse_verse_query'](query) == expected
+
+
+@pytest.mark.parametrize('query', ['2:255 and 3:190', '2:255 and 999', '2:256 and 255', '2:255 and 256 and 257'])
+def test_and_ranges_never_silently_drop_invalid_or_additional_verses(content, query):
+    with pytest.raises(ValueError):
+        content['parse_verse_query'](query)

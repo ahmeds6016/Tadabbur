@@ -1126,12 +1126,13 @@ def parse_verse_query(query):
     def add(match, surah, start, end):
         if any(match.start() < b and match.end() > a for a, b in spans):
             return
-        if text[match.end():].lstrip().startswith('-'):
+        remainder = text[match.end():].lstrip()
+        if remainder.startswith('-') or re.match(r'and\b\s*\d', remainder):
             raise ValueError('Please provide a valid end verse for the range.')
         found.append((int(surah), int(start), int(end or start)))
         spans.append(match.span())
 
-    tail = r'(?:\s*-\s*(\d+)(?![\d:./]))?'
+    tail = r'(?:\s*(?:-|\band\b)\s*(\d+)(?![\d:./]))?'
     patterns = [
         r'\b(\d+)\s*[:./]\s*(\d+)' + tail,
         r'\bsurah\s+(\d+)\s+(?:verse|ayah)\s+(\d+)' + tail,
