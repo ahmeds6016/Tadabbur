@@ -1084,15 +1084,28 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
       if (res.ok) {
         const data = await res.json();
         setStreak(data);
-        // Show badge popup if newly earned
-        if (data.newly_earned_badges?.length > 0) {
-          setBadgePopup(data.newly_earned_badges[0]);
-        }
       }
     } catch {
       // Non-critical
     }
   }, [user]);
+
+  // Awards belong to this study request, outside the reusable answer body.
+  const showStudyBadges = async (awardHeader, current) => {
+    if (!awardHeader || !user) return;
+    try {
+      const ids = JSON.parse(awardHeader);
+      if (!Array.isArray(ids) || !ids.length) return;
+      const token = await user.getIdToken();
+      if (!current()) return;
+      const res = await fetch(`${BACKEND_URL}/badges`, { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!current()) return;
+      const badge = data.badges?.find(item => item.earned && ids.includes(item.id));
+      if (badge) setBadgePopup(badge);
+    } catch { /* Awards must not interrupt studying. */ }
+  };
 
   // Helper to navigate to a verse (used by collections, recommendations, reading plans)
   // Load saved search state on mount (survives page refresh)
@@ -1427,6 +1440,7 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
         if (!onboardingState.hasSearched) {
           markStepComplete('hasSearched');
         }
+        showStudyBadges(res.headers?.get('X-Newly-Earned-Badges'), current);
         // Update streak on successful search
         updateStreak();
         // Save to query history

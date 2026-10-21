@@ -7,10 +7,10 @@ const { transform } = require('next/dist/build/swc');
 const { createRequestIdentity } = require('../app/lib/requestIdentity.js');
 const settle = async () => { for (let i = 0; i < 16; i++) await Promise.resolve(); };
 
-async function mount() {
+async function mount(user = null) {
   let source = readFileSync(`${__dirname}/../app/page.js`, 'utf8');
   source = source.replace('  const saveQueryToHistory = async',
-    '  globalThis.testSearch = { handleGetTafsir, handleCancelSearch, setQuery, loading: isTafsirLoading, searchTimeoutRef };\n  const saveQueryToHistory = async');
+    '  globalThis.testSearch = { handleGetTafsir, handleCancelSearch, setQuery, loading: isTafsirLoading, searchTimeoutRef, badgePopup };\n  const saveQueryToHistory = async');
   source = source.replace('  // Annotation handlers (centralized',
     '  globalThis.testShare = { ensureShareId, pendingShareRequest, currentShareId };\n  // Annotation handlers (centralized');
   source += '\nexport { MainAppContent };';
@@ -18,7 +18,7 @@ async function mount() {
     jsc: { parser: { syntax: 'ecmascript', jsx: true }, transform: { react: { runtime: 'automatic' } } }, module: { type: 'commonjs' } });
   const state = [], refs = [], effectState = [], effects = [], timers = new Map(), pending = [];
   let cursor = 0, refCursor = 0, effectCursor = 0, timer = 0;
-  const exports = {}, auth = { currentUser: null };
+  const exports = {}, auth = { currentUser: user };
   const context = {
     exports, AbortController, TypeError, console,
     window: { location: { origin: 'https://offline.invalid' } },
@@ -58,7 +58,7 @@ async function mount() {
   vm.createContext(context); vm.runInContext(compiled.code, context);
   function render() {
     cursor = refCursor = effectCursor = 0;
-    exports.MainAppContent({ user: null, isGuest: true, userProfile: { persona: 'curious_explorer' } });
+    exports.MainAppContent({ user, isGuest: !user, userProfile: { persona: 'curious_explorer' } });
     effects.splice(0).forEach(effect => effect());
   }
   render();
@@ -105,4 +105,20 @@ test('a late old-answer share cannot replace or clear a new answer share', async
   view.pending.filter(p => p.url.endsWith('/share'))[1].resolve({ ok: true, json: async () => ({ share_id: 'new' }) });
   assert.equal(await shareB, 'new'); view.render();
   assert.equal(view.context.testShare.currentShareId, 'new');
+});
+
+
+test('a study award header shows the earned badge without putting it in the answer', async () => {
+  const view = await mount({ uid: 'reader', getIdToken: async () => 'offline' });
+  const search = await view.start('2:255');
+  view.pending.find(p => p.url.endsWith('/tafsir')).resolve({
+    ...answer('Study answer'), headers: { get: key => key === 'X-Newly-Earned-Badges' ? '["explore_10"]' : null },
+  });
+  await settle();
+  const lookup = view.pending.find(p => p.url.endsWith('/badges'));
+  assert.ok(lookup, 'study awards must be resolved for the popup');
+  lookup.resolve({ ok: true, json: async () => ({ badges: [{ id: 'explore_10', name: 'Explorer', earned: true }] }) });
+  view.pending.find(p => p.url.endsWith('/query-history')).resolve({ ok: true });
+  await search.result; await settle(); view.render();
+  assert.equal(view.context.testSearch.badgePopup.id, 'explore_10');
 });

@@ -62,7 +62,7 @@ def boundary(content, monkeypatch):
               VerseStoreUnavailable=type('VerseStoreUnavailable', (Exception,), {}),
               USER_RATE_LIMITS=defaultdict(list), rate_limit_lock=threading.RLock(), COUNTER_MAX_KEYS=10000,
               ANALYTICS=defaultdict(int), ANALYTICS_LAST_SEEN={}, cache_lock=threading.RLock(), RESPONSE_CACHE={},
-              traceback=traceback, _track_explored_verse=Mock(), _check_and_award_badges=Mock(),
+              traceback=traceback, _track_explored_verse=Mock(return_value=[]), _check_and_award_badges=Mock(),
               build_source_coverage=lambda *a: {}, filter_unavailable_sources=lambda value: value,
               normalize_source_spellings=lambda value: None, _generate_recommendations=lambda *a: [],
               firestore=SimpleNamespace(Increment=lambda n: SimpleNamespace(increment=n), SERVER_TIMESTAMP='offline-timestamp'))
@@ -175,3 +175,27 @@ def test_real_tafsir_invalid_reference_is_rejected_before_cache_or_generation(bo
     assert response.status_code == 400
     assert response.json['needs_clarification']
     assert not boundary.quran.reads
+
+
+@pytest.mark.parametrize('cache_kind', ['firestore', 'memory'])
+def test_study_awards_are_request_only_headers_never_cached_or_shared(boundary, cache_kind):
+    ns = boundary.ns
+    info = cache(boundary)
+    if cache_kind == 'memory':
+        boundary.quran.data.clear()
+        ns['RESPONSE_CACHE'][info['cache_key']] = json.loads(VALID)
+    ns['_track_explored_verse'].return_value = [{'id': 'explore_10', 'name': 'Explorer'}]
+    signed = boundary.client.post('/tafsir', headers={'Authorization': 'Bearer offline'}, json={'query': '2:255'})
+    assert signed.status_code == 200
+    assert json.loads(signed.headers['X-Newly-Earned-Badges']) == ['explore_10']
+    assert 'no-store' in signed.headers['Cache-Control']
+    assert 'newly_earned_badges' not in signed.json
+    assert 'explore_10' not in json.dumps(boundary.quran.data, default=str) + json.dumps(ns['RESPONSE_CACHE'])
+    ns['_track_explored_verse'].reset_mock()
+    guest = boundary.client.post('/tafsir', json={'query': '2:255'})
+    assert 'X-Newly-Earned-Badges' not in guest.headers
+    ns['_track_explored_verse'].assert_not_called()
+    if cache_kind == 'firestore':
+        shared = boundary.client.post('/share', json={'query': '2:255'})
+        public = boundary.client.get('/share/' + shared.json['share_id'])
+        assert 'explore_10' not in json.dumps(public.json)

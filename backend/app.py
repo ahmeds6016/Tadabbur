@@ -127,7 +127,7 @@ CORS(app, resources={r"/*": {
     ],
     "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     "allow_headers": ["Content-Type", "Authorization"],
-    "expose_headers": ["Server-Timing", "X-Cache-Status"],
+    "expose_headers": ["Server-Timing", "X-Cache-Status", "X-Newly-Earned-Badges"],
 }}, supports_credentials=True, max_age=86400)
 
 
@@ -6278,6 +6278,8 @@ def tafsir_handler_enhanced():
         'llm_calls': 0
     }
 
+    newly_earned_badges = []
+
     def tafsir_response(payload, status=200, cache_status="miss"):
         """Build a /tafsir response without adding timing data to its body."""
         timings = dict(perf_metrics['stages'])
@@ -6290,6 +6292,11 @@ def tafsir_handler_enhanced():
         response = make_response(jsonify(payload), status)
         response.headers['X-Cache-Status'] = cache_status
         response.headers['Server-Timing'] = ', '.join(server_timing)
+        if request.user:
+            response.headers['Cache-Control'] = 'private, no-store'
+            response.vary.add('Authorization')
+            if newly_earned_badges:
+                response.headers['X-Newly-Earned-Badges'] = json.dumps([badge['id'] for badge in newly_earned_badges])
         return response
 
     try:
@@ -6527,7 +6534,7 @@ def tafsir_handler_enhanced():
                 firestore_cached = filter_unavailable_sources(firestore_cached)
                 firestore_cached = attach_source_coverage(firestore_cached)
                 attach_recommendations(firestore_cached)
-                track_authenticated_cache_hit()
+                newly_earned_badges = track_authenticated_cache_hit() or []
                 return tafsir_response(firestore_cached, cache_status="hit-firestore")
 
         # For semantic/explore queries, also check Firestore cache
@@ -6544,7 +6551,7 @@ def tafsir_handler_enhanced():
                 firestore_cached = filter_unavailable_sources(firestore_cached)
                 firestore_cached = attach_source_coverage(firestore_cached)
                 attach_recommendations(firestore_cached)
-                track_authenticated_cache_hit()
+                newly_earned_badges = track_authenticated_cache_hit() or []
                 return tafsir_response(firestore_cached, cache_status="hit-firestore")
 
         # Check in-memory cache as fallback
@@ -6563,7 +6570,7 @@ def tafsir_handler_enhanced():
         if cached_response is not None:
             cached_response = attach_source_coverage(cached_response)
             attach_recommendations(cached_response)
-            track_authenticated_cache_hit()
+            newly_earned_badges = track_authenticated_cache_hit() or []
             return tafsir_response(cached_response, cache_status="hit-memory")
         perf_metrics['stages']['cache_check'] = (time.time() - stage_start) * 1000
 
@@ -6942,7 +6949,7 @@ def tafsir_handler_enhanced():
                 store_tafsir_cache(query, user_profile, final_json, approach)
 
             if user_id:
-                _track_explored_verse(user_id, surah, start_verse, end_verse)
+                newly_earned_badges = _track_explored_verse(user_id, surah, start_verse, end_verse) or []
 
             logger.info("Formatted by AI from %s source(s)", len(verse_metadata_list))
             perf_metrics['stages']['post_processing'] = (time.time() - stage_start) * 1000
