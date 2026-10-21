@@ -1170,17 +1170,29 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
   // Open folder picker before saving
   const handleSaveSearch = useCallback(async () => {
     if (!response || !query || !user) return;
-    // Fetch existing folders first
+    const ticket = searchRequests.start('folders', user.uid);
+    const generation = answerGeneration.current;
+    const current = () => searchRequests.current(ticket, auth.currentUser?.uid ?? null) && generation === answerGeneration.current;
+    setExistingFolders([]);
+    // Folder summaries are small; read every page so later names stay available.
+    const names = new Set();
     try {
       const token = await user.getIdToken();
-      const res = await fetch(`${BACKEND_URL}/saved-searches/folders`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.ok) {
+      let cursor = null;
+      do {
+        if (!current()) return;
+        const res = await fetch(`${BACKEND_URL}/saved-searches/folders?limit=100${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!res.ok) break;
         const data = await res.json();
-        setExistingFolders((data.folders || []).map(f => f.name));
-      }
+        if (!current()) return;
+        for (const folder of data.folders || []) names.add(folder.name);
+        cursor = data.next_cursor || null;
+      } while (cursor);
     } catch { /* non-critical */ }
+    if (!current()) return;
+    setExistingFolders([...names]);
     setNewFolderName('');
     setShowFolderPicker(true);
   }, [response, query, user]);

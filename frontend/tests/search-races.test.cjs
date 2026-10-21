@@ -13,6 +13,7 @@ async function mount(user = null) {
     '  globalThis.testSearch = { handleGetTafsir, handleCancelSearch, setQuery, loading: isTafsirLoading, searchTimeoutRef, badgePopup };\n  const saveQueryToHistory = async');
   source = source.replace('  // Annotation handlers (centralized',
     '  globalThis.testShare = { ensureShareId, pendingShareRequest, currentShareId };\n  // Annotation handlers (centralized');
+  source = source.replace('  // Actually save with the chosen folder', '  globalThis.testSave = { handleSaveSearch, existingFolders, showFolderPicker };\n  // Actually save with the chosen folder');
   source += '\nexport { MainAppContent };';
   const compiled = await transform(source, { filename: 'page.jsx',
     jsc: { parser: { syntax: 'ecmascript', jsx: true }, transform: { react: { runtime: 'automatic' } } }, module: { type: 'commonjs' } });
@@ -121,4 +122,23 @@ test('a study award header shows the earned badge without putting it in the answ
   view.pending.find(p => p.url.endsWith('/query-history')).resolve({ ok: true });
   await search.result; await settle(); view.render();
   assert.equal(view.context.testSearch.badgePopup.id, 'explore_10');
+});
+
+
+test('the save dialog follows folder cursors beyond the first 100 documents', async () => {
+  const view = await mount({ uid: 'reader', getIdToken: async () => 'offline' });
+  const search = await view.start('2:255');
+  view.pending.find(p => p.url.endsWith('/tafsir')).resolve(answer('Study answer'));
+  await settle();
+  view.pending.find(p => p.url.endsWith('/query-history')).resolve({ ok: true });
+  await search.result; view.render();
+  const saving = view.context.testSave.handleSaveSearch(); await settle();
+  view.pending.find(p => p.url.includes('/saved-searches/folders')).resolve({ ok: true, json: async () => ({ folders: [{ name: 'First' }], next_cursor: 'doc100' }) });
+  await settle();
+  const secondPage = view.pending.find(p => p.url.includes('cursor=doc100'));
+  assert.ok(secondPage, 'folder picker must follow next_cursor');
+  secondPage.resolve({ ok: true, json: async () => ({ folders: [{ name: 'First' }, { name: 'Later' }], next_cursor: null }) });
+  await saving; view.render();
+  assert.deepEqual(Array.from(view.context.testSave.existingFolders), ['First', 'Later']);
+  assert.equal(view.context.testSave.showFolderPicker, true);
 });
