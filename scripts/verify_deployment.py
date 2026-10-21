@@ -22,7 +22,7 @@ def build_digest(project, build_id, image):
     return matched[0]
 
 
-def verify(service, revision, digest, project, region, no_traffic=False):
+def verify(service, revision, digest, project, region, no_traffic=False, tag=None, print_health_url=False):
     rev = gcloud_json('run', 'revisions', 'describe', revision, '--project', project, '--region', region)
     svc = gcloud_json('run', 'services', 'describe', service, '--project', project, '--region', region)
     status = rev.get('status', {})
@@ -57,10 +57,19 @@ def verify(service, revision, digest, project, region, no_traffic=False):
         failures.append(f'Actual traffic for {revision} is {share}%, expected {expected_share}%. Serving: {serving or "none"}. Traffic may be pinned to an older revision; latestReady={latest} is not proof of production traffic.')
     if no_traffic and not any(t.get('revisionName') == revision and t.get('tag') and t.get('url') for t in traffic):
         failures.append('The zero-traffic canary has no tagged URL; it may be retired. Keep an explicit canary tag.')
+    targets = [t['url'] for t in traffic if t.get('revisionName') == revision and t.get('tag') == tag and t.get('url')]
+    if tag and (len(targets) != 1 or not targets[0].startswith('https://')):
+        failures.append(f'Revision {revision} has no unambiguous HTTPS URL for verification tag {tag}.')
     if failures:
         raise ValueError('\n'.join(failures))
     mode = 'tagged zero-traffic canary' if no_traffic else 'production traffic'
-    return f'Verified {revision}: digest={digest}, Ready=True, traffic={share}% ({mode}). Service URL: {svc.get("status", {}).get("url", "unknown")}'
+    summary = f'Verified {revision}: digest={digest}, Ready=True, traffic={share}% ({mode}). Service URL: {svc.get("status", {}).get("url", "unknown")}'
+    if print_health_url:
+        if not tag:
+            raise ValueError('A verification tag is required for the health smoke URL.')
+        print(summary, file=sys.stderr)
+        return targets[0]
+    return summary
 
 
 def preflight(service, project, region):
@@ -88,6 +97,19 @@ def preflight(service, project, region):
         '     (only once latestReadyRevisionName is the revision you want; a retired revision is skipped).')
 
 
+def check_health(raw):
+    body, separator, status = raw.strip().rpartition('\n')
+    if not separator or status != '200':
+        raise ValueError(f'Health smoke failed: expected HTTP 200, received {status or "none"}.')
+    try:
+        data = json.loads(body)
+    except json.JSONDecodeError as error:
+        raise ValueError('Health smoke failed: response is not JSON.') from error
+    if not isinstance(data, dict) or data.get('status') != 'healthy':
+        raise ValueError('Health smoke failed: response does not report healthy.')
+    return 'Health smoke passed.'
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest='command', required=True)
@@ -96,13 +118,17 @@ def main():
     check = sub.add_parser('verify')
     for name in ('project', 'region', 'service', 'revision', 'digest'): check.add_argument('--' + name, required=True)
     check.add_argument('--no-traffic', action='store_true')
+    check.add_argument('--tag')
+    check.add_argument('--print-health-url', action='store_true')
+    sub.add_parser('check-health')
     pre = sub.add_parser('preflight')
     for name in ('project', 'region', 'service'): pre.add_argument('--' + name, required=True)
     args = parser.parse_args()
     try:
         if args.command == 'build-digest': print(build_digest(args.project, args.build_id, args.image))
+        elif args.command == 'check-health': print(check_health(sys.stdin.read()))
         elif args.command == 'preflight': print(preflight(args.service, args.project, args.region))
-        else: print(verify(args.service, args.revision, args.digest, args.project, args.region, args.no_traffic))
+        else: print(verify(args.service, args.revision, args.digest, args.project, args.region, args.no_traffic, args.tag, args.print_health_url))
     except (ValueError, KeyError, subprocess.CalledProcessError, json.JSONDecodeError) as error:
         print(f'Deployment verification failed: {error}', file=sys.stderr)
         return 1

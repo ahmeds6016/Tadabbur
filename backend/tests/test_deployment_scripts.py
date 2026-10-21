@@ -48,7 +48,8 @@ elif args[:3] == ['run', 'services', 'describe']:
     percent = 0 if state['no_traffic'] or scenario in ['pinned', 'canary-latest'] else 100
     if scenario == 'unexpected-canary-traffic': percent = 100
     traffic = [{'revisionName': 'old-revision', 'percent': 100 - percent}, {'revisionName': state['revision'], 'percent': percent}]
-    if state.get('tag'): traffic[-1].update(tag=state['tag'], url='https://offline.invalid/tag')
+    if state.get('tag') and scenario != 'missing-tag':
+        traffic[-1].update(tag='wrong-tag' if scenario == 'wrong-tag' else state['tag'], url='https://offline.invalid/tag')
     output({'metadata': {'generation': 1}, 'status': {'observedGeneration': 1,
        'conditions': [{'type': 'Ready', 'status': 'True'}], 'traffic': traffic,
        'latestReadyRevisionName': 'old-revision' if scenario == 'old-latest-good-traffic' else state['revision'],
@@ -56,6 +57,35 @@ elif args[:3] == ['run', 'services', 'describe']:
 else:
     sys.exit('Unexpected stub command: ' + repr(args))
 '''
+
+
+CURL_STUB = r'''
+import json, os, sys
+from pathlib import Path
+path = Path(os.environ['DEPLOY_STUB_STATE'])
+state = json.loads(path.read_text())
+state['curl_args'] = sys.argv[1:]
+path.write_text(json.dumps(state))
+scenario = os.environ['DEPLOY_STUB_SCENARIO']
+if scenario == 'health-network-error': sys.exit(7)
+if scenario == 'health-http-error': sys.exit(22)
+if scenario == 'invalid-health': print('not JSON')
+else: print(json.dumps({'status': 'unhealthy' if scenario == 'unhealthy' else 'healthy'}))
+print('302' if scenario == 'health-redirect' else '200')
+'''
+
+
+def run_entrypoint(tmp_path, service, scenario, flag):
+    for name, source in [('gcloud', STUB), ('curl', CURL_STUB)]:
+        binary = tmp_path / name
+        binary.write_text(f'#!{sys.executable}\n' + source); binary.chmod(0o755)
+    state = tmp_path / 'state.json'
+    env = {**os.environ, 'PATH': str(tmp_path) + os.pathsep + os.environ['PATH'],
+           'DEPLOY_STUB_STATE': str(state), 'DEPLOY_STUB_SCENARIO': scenario}
+    command = ['bash', str(ROOT / f'deploy-{service}.sh')]
+    if flag: command.append(flag)
+    result = subprocess.run(command, env=env, text=True, capture_output=True, timeout=15)
+    return result, state
 
 
 @pytest.mark.parametrize('service', ['backend', 'frontend'])
@@ -70,17 +100,18 @@ else:
     ('pre-pinned', None, 'is pinned'),
 ])
 def test_entrypoints_verify_created_digest_readiness_and_actual_traffic(tmp_path, service, scenario, flag, expected):
-    binary = tmp_path / 'gcloud'
-    binary.write_text(f'#!{sys.executable}\n' + STUB); binary.chmod(0o755)
-    state = tmp_path / 'state.json'
-    env = {**os.environ, 'PATH': str(tmp_path) + os.pathsep + os.environ['PATH'],
-           'DEPLOY_STUB_STATE': str(state), 'DEPLOY_STUB_SCENARIO': scenario}
-    command = ['bash', str(ROOT / f'deploy-{service}.sh')]
-    if flag: command.append(flag)
-    result = subprocess.run(command, env=env, text=True, capture_output=True, timeout=15)
+    result, state = run_entrypoint(tmp_path, service, scenario, flag)
     successful = scenario in ('success', 'old-latest-good-traffic')
     assert (result.returncode == 0) == successful, result.stdout + result.stderr
     assert expected in result.stdout + result.stderr
+    deployed = json.loads(state.read_text()) if state.exists() else {}
+    if successful:
+        assert deployed['curl_args'][-1] == 'https://offline.invalid/tag/health'
+        assert '--fail' in deployed['curl_args'] and '--max-time' in deployed['curl_args']
+        assert deployed['tag'] == deployed['revision'].removeprefix(deployed['service'] + '-')
+        assert 'Health smoke passed' in result.stdout
+    else:
+        assert 'curl_args' not in deployed  # No smoke until verification passes.
     if scenario == 'pre-pinned':
         # Refused before building: no image was submitted and nothing was deployed.
         assert not state.exists() or 'image' not in json.loads(state.read_text())
@@ -105,3 +136,17 @@ def test_entrypoints_verify_created_digest_readiness_and_actual_traffic(tmp_path
                 'ADMIN_SECRET': 'admin-secret:latest',
                 'REFLECTION_ENCRYPTION_SECRET': 'reflection-encryption-key:latest',
             }
+
+
+@pytest.mark.parametrize('service', ['backend', 'frontend'])
+@pytest.mark.parametrize('flag', [None, '--no-traffic'])
+@pytest.mark.parametrize('scenario', ['unhealthy', 'invalid-health', 'health-http-error', 'health-network-error', 'health-redirect', 'missing-tag', 'wrong-tag'])
+def test_entrypoints_fail_closed_on_bad_health_or_unverified_tag(tmp_path, service, flag, scenario):
+    result, state = run_entrypoint(tmp_path, service, scenario, flag)
+    assert result.returncode != 0, result.stdout + result.stderr
+    deployed = json.loads(state.read_text())
+    if scenario in ('missing-tag', 'wrong-tag'):
+        assert 'curl_args' not in deployed
+    else:
+        assert deployed['curl_args'][-1] == 'https://offline.invalid/tag/health'
+    assert 'Health smoke passed' not in result.stdout

@@ -33,10 +33,10 @@ echo "Building ${IMAGE_TAG}"
 BUILD_ID=$(gcloud builds submit "${SCRIPT_DIR}/${SOURCE_DIR}" --project "$PROJECT_ID" --tag "$IMAGE_TAG" --suppress-logs --format='value(id)')
 DIGEST=$(python3 "$VERIFY" build-digest --project "$PROJECT_ID" --build-id "$BUILD_ID" --image "$IMAGE_TAG")
 
-TRAFFIC_ARGS=()
+TRAFFIC_ARGS=(--tag "$REVISION_SUFFIX")
 VERIFY_ARGS=()
 if [[ "$NO_TRAFFIC" == 1 ]]; then
-  TRAFFIC_ARGS=(--no-traffic --tag "$REVISION_SUFFIX")
+  TRAFFIC_ARGS+=(--no-traffic)
   VERIFY_ARGS=(--no-traffic)
 fi
 
@@ -52,8 +52,13 @@ if [[ "$CREATED_REVISION" != "$EXPECTED_REVISION" ]]; then
   exit 1
 fi
 
-python3 "$VERIFY" verify --project "$PROJECT_ID" --region "$REGION" --service "$SERVICE_NAME" \
-  --revision "$CREATED_REVISION" --digest "$DIGEST" ${VERIFY_ARGS[@]+"${VERIFY_ARGS[@]}"}
+HEALTH_URL=$(python3 "$VERIFY" verify --project "$PROJECT_ID" --region "$REGION" --service "$SERVICE_NAME" \
+  --revision "$CREATED_REVISION" --digest "$DIGEST" --tag "$REVISION_SUFFIX" --print-health-url ${VERIFY_ARGS[@]+"${VERIFY_ARGS[@]}"})
+
+# Smoke the verified revision's tag, including zero-traffic canaries. Never use LATEST.
+HEALTH_RESPONSE=$(curl --fail --silent --show-error --connect-timeout 10 --max-time 60 \
+  --write-out '\n%{http_code}' "${HEALTH_URL%/}/health")
+printf '%s' "$HEALTH_RESPONSE" | python3 "$VERIFY" check-health
 
 if [[ "$NO_TRAFFIC" == 1 ]]; then
   echo "NOTE: gcloud has now pinned production traffic to the previously serving revision." >&2
