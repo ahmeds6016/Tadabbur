@@ -18,10 +18,11 @@ PATH = Path(__file__).resolve().parents[1] / 'app.py'
 class Store:
     def __init__(self):
         self.docs = {'users/reader': {'annotation_count': 1000}}
-        self.lock = threading.RLock(); self.commits = 0; self.aggregations = 0
+        self.lock = threading.RLock(); self.commits = 0; self.aggregations = 0; self.writes = 0
     def collection(self, name): return Collection(self, name)
     def transaction(self): return self
     def set(self, reference, data, merge=False):
+        self.writes += 1
         self.docs[reference.path] = {**self.docs.get(reference.path, {}), **deepcopy(data)}
     def delete(self, reference): self.docs.pop(reference.path, None)
     def transactional(self, function):
@@ -58,7 +59,7 @@ def progress():
     store = Store()
     names = {'_deletion_job_ref', '_update_user_transaction', '_streak_updates', '_annotation_count',
              '_track_explored_verse', '_check_and_award_badges', 'update_plan_progress', '_surah_snapshot', '_page_documents'}
-    names.update({'create_annotation', 'delete_annotation'})
+    names.update({'create_annotation', 'delete_annotation', '_badge_updates', 'get_progress', 'get_badges'})
     tree = ast.parse(PATH.read_text())
     nodes = [n for n in tree.body if (isinstance(n, ast.FunctionDef) and n.name in names)
              or (isinstance(n, ast.ClassDef) and n.name == 'PageRequestError')]
@@ -70,6 +71,7 @@ def progress():
               firestore=SimpleNamespace(SERVER_TIMESTAMP='timestamp'), traceback=traceback,
               _encrypt_text=lambda text, uid: text,
               READING_PLANS=[{'id': 'fixture', 'duration_days': 3, 'days': [{'verse': (2, v)} for v in (1, 2, 3)]}],
+              QURAN_METADATA={2: {'name': 'Al-Baqarah', 'verses': 286}},
               THEMED_COLLECTIONS=[{'id': 'fixture', 'verses': [(2, 1, 'One'), (2, 2, 'Two')]}],
               _VERSE_TO_COLLECTIONS={'2:1': ['fixture'], '2:2': ['fixture']},
               api_error=lambda: (jsonify({'error': 'Failed'}), 500))
@@ -186,3 +188,54 @@ def test_completed_plan_restarts_fresh_but_in_progress_start_is_idempotent(progr
     restarted = store.docs['users/reader']['active_plans']['fixture']
     assert restarted['completed_days'] == [] and restarted['current_day'] == 1
     assert restarted['completed_at'] is None
+
+
+def test_collection_badges_backfill_from_explored_verses(progress):
+    store, ns = progress
+    store.docs['users/reader'] = {'annotation_count': 0, 'explored_verses': {'2': [1, 2]}}
+    awards = ns['_check_and_award_badges']('reader')
+    assert 'collection_complete' in {badge['id'] for badge in awards}
+    assert ns['_check_and_award_badges']('reader') == []
+
+
+def test_badge_check_does_not_write_when_awards_and_count_are_unchanged(progress):
+    store, ns = progress
+    ns['_check_and_award_badges']('reader')
+    writes = store.writes
+    assert ns['_check_and_award_badges']('reader') == []
+    assert store.writes == writes
+    assert store.aggregations == 0
+
+
+def test_study_awards_in_the_same_transaction(progress):
+    store, ns = progress
+    awarded = ns['_track_explored_verse']('reader', 2, 1, 10)
+    assert 'explore_10' in {badge['id'] for badge in (awarded or [])}
+    assert store.commits == 1 and store.writes == 1
+
+
+def test_badge_total_excludes_retired_definitions(progress):
+    store, ns = progress
+    store.docs['users/reader']['badges_earned'] = {
+        'reflect_1': {'earned_at': 'then'}, 'first_week': {'earned_at': 'then'}}
+    with Flask(__name__).test_request_context():
+        request.user = {'uid': 'reader'}
+        response, status = ns['get_badges']()
+    assert status == 200
+    assert response.json['total_earned'] == sum(b['earned'] for b in response.json['badges']) == 1
+
+
+@pytest.mark.parametrize('stored', [0, 50, None])
+def test_progress_reconciles_count_drift_and_skips_unchanged_writes(progress, stored):
+    store, ns = progress
+    store.docs['users/reader'] = {'annotation_count': stored}
+    store.docs['users/reader/annotations/legacy-write'] = {'content': 'private'}
+    with Flask(__name__).test_request_context():
+        request.user = {'uid': 'reader'}
+        response, status = ns['get_progress']()
+        assert status == 200 and response.json['annotation_count'] == 1
+        assert store.docs['users/reader']['annotation_count'] == 1
+        writes = store.writes
+        ns['get_progress']()
+        assert store.writes == writes
+    assert store.aggregations == 2
