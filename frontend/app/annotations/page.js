@@ -54,7 +54,9 @@ const getTypeConfig = (type) => {
 export default function MyReflectionsPage() {
   const requests = useRef(createRequestIdentity()).current;
   const [tagCursor, setTagCursor] = useState(null);
-  const [nextCursor, setNextCursor] = useState(null);
+  const [page, setPage] = useState({ cursor: null, mode: 'list', query: '', tag: null, type: null });
+  const nextCursor = page.cursor;
+  const setNextCursor = cursor => setPage(previous => ({ ...previous, cursor }));
   const [user, setUser] = useState(null);
   const [annotations, setAnnotations] = useState([]);
   const [allTags, setAllTags] = useState([]);
@@ -101,7 +103,7 @@ export default function MyReflectionsPage() {
         const data = await res.json();
         if (!current()) return;
         setAnnotations(previous => cursor ? [...previous, ...(data.annotations || [])] : data.annotations || []);
-        setNextCursor(data.next_cursor || null);
+        setPage({ cursor: data.next_cursor || null, mode: 'list', query: '', tag, type });
       }
     } catch (err) {
       if (!current()) return;
@@ -132,14 +134,14 @@ export default function MyReflectionsPage() {
     }
   };
 
-  const handleSearch = async (cursor = null) => {
-    if (!searchQuery.trim()) return;
+  const handleSearch = async (cursor = null, submittedQuery = searchQuery.trim()) => {
+    if (!submittedQuery) return;
     if (!cursor) setNextCursor(null);
     const ticket = requests.start('annotations', user?.uid ?? null);
     const current = () => requests.current(ticket, auth.currentUser?.uid ?? null);
     try {
       const token = await user.getIdToken();
-      const res = await fetch(`${BACKEND_URL}/annotations/search?q=${encodeURIComponent(searchQuery)}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`, {
+      const res = await fetch(`${BACKEND_URL}/annotations/search?q=${encodeURIComponent(submittedQuery)}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -147,13 +149,17 @@ export default function MyReflectionsPage() {
         const data = await res.json();
         if (!current()) return;
         setAnnotations(previous => cursor ? [...previous, ...(data.results || [])] : data.results || []);
-        setNextCursor(data.next_cursor || null);
+        setPage({ cursor: data.next_cursor || null, mode: 'search', query: submittedQuery, tag: null, type: null });
       }
     } catch (err) {
       if (!current()) return;
       console.error('Search failed:', err);
     }
   };
+
+  const loadAnnotationPage = (cursor = page.cursor) => page.mode === 'search'
+    ? handleSearch(cursor, page.query)
+    : fetchAnnotations(user, page.tag, page.type, cursor);
 
   const handleTagFilter = (tag) => {
     setSelectedTag(tag);
@@ -194,7 +200,7 @@ export default function MyReflectionsPage() {
           // The page cursor was the deleted item: continue from the one before it.
           const index = annotations.findIndex(a => a.id === annotationId);
           if (index > 0) setNextCursor(annotations[index - 1].id);
-          else fetchAnnotations(user, selectedTag, selectedType, null);
+          else loadAnnotationPage(null);
         }
       }
     } catch (error) {
@@ -708,7 +714,7 @@ export default function MyReflectionsPage() {
         onDelete={handleDeleteAnnotation}
       />
 
-      {nextCursor && <button onClick={() => searchQuery.trim() ? handleSearch(nextCursor) : fetchAnnotations(user, selectedTag, selectedType, nextCursor)}>Load more reflections</button>}
+      {nextCursor && <button onClick={() => loadAnnotationPage()}>Load more reflections</button>}
       {tagCursor && <button onClick={() => fetchTags(user, tagCursor)}>Load more tags</button>}
       <BottomNav user={user} />
     </div>
