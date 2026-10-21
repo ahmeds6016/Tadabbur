@@ -3297,7 +3297,11 @@ def delete_account():
             auth.delete_user(uid)
         except auth.UserNotFoundError:
             pass  # A prior attempt removed Auth but lost its final response.
-        job_ref.set({'phase': 'complete', 'completed_at': firestore.SERVER_TIMESTAMP}, merge=True)
+        # The privacy notice promises removal 30 days after completion; the Firestore
+        # TTL policy on account_deletions.expires_at deletes the marker. Incomplete
+        # jobs carry no expiry because the marker is what gates the half-erased account.
+        job_ref.set({'phase': 'complete', 'completed_at': firestore.SERVER_TIMESTAMP,
+                     'expires_at': datetime.now(timezone.utc) + timedelta(days=30)}, merge=True)
         return jsonify({'complete': True}), 200
     except Exception:
         return api_error()

@@ -54,10 +54,10 @@ export default function SettingsPage() {
 
   return <main className="container"><div className="card">
     <h1>Settings</h1>
-    <p><Link href="/">Study and profile</Link> · <Link href="/privacy">Privacy notice draft</Link></p>
+    <p><Link href="/">Study and profile</Link> · <Link href="/privacy">Privacy notice</Link></p>
     <h2>Delete account</h2>
     <p>This permanently removes your profile, reflections, saved answers, history, progress and private journal data, then your sign-in account. It cannot be undone. Deletion may take several minutes while active requests finish.</p>
-    <p>Public shared snapshots have no owner record. Their removal policy is awaiting review; account deletion does not remove those snapshots or external feedback copies. See the privacy draft.</p>
+    <p>Public share links contain only the verse explanation, so they stay available after deletion. To remove one, send the link to the contact address in the <Link href="/privacy">privacy notice</Link>.</p>
     {user ? <form onSubmit={deleteAccount} className="form">
       <label>Current password<input type="password" autoComplete="current-password" required value={password} onChange={e => setPassword(e.target.value)} disabled={busy} /></label>
       <label>Type DELETE to confirm<input value={confirmation} onChange={e => setConfirmation(e.target.value)} disabled={busy} required /></label>

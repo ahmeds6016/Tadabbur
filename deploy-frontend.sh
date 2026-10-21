@@ -1,5 +1,5 @@
 #!/bin/bash
-# Claude-owned execution. Review the privacy draft with Ahmed before deployment.
+# Claude-owned execution. Deploy the backend first; this frontend depends on its routes.
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SERVICE_NAME="tafsir-frontend"
