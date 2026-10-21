@@ -219,7 +219,8 @@ Q14. **✅ DEPLOYED 2026-08-13 — Reliability quick wins**
   none depend on the Session 14 code.
 - **Clean state prepared, not deployed:** branch `claude/s13-deploy-clean` = `a625aab` +
   only Claude's privacy changes (`258fefc`) + these docs. It passes 605 backend tests, all
-  frontend tests and build 15/15. `main` now points here. The redeploy of this tree was
+  frontend tests and build 15/15. It is local only: pushing it and moving `main` here were
+  also blocked, so `main` is still `a625aab`. The redeploy of this tree was
   **blocked by the permission classifier** as a new production deploy, so Ahmed decides:
   (A) redeploy this clean tree now (no paid calls; Session 14 then follows a normal review),
   or (B) Claude reviews Session 14 first and deploys `codex/s14-followups` if it passes.
