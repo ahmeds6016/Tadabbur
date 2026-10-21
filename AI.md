@@ -34,7 +34,7 @@ Flask backend — backend/app.py, ~9,800 lines, 83 routes
         ├── Secret Manager — firebase-sa-key (service account for the 6b262 project),
         │     admin-secret, reflection-encryption-key (NEVER delete: reflections are
         │     encrypted with it since 2026-10-21; backend revisions before Session 13
-        │     cannot read them, so do not roll back past r-20261021065435-1426)
+        │     cannot read them, so never roll back to a revision older than r-20261021065435-1426)
         └── Vertex AI (project tafsir-simplified) — Gemini via raw REST calls
               (global endpoint on the canary-gated Gemini 3 branch)
 ```
@@ -65,7 +65,7 @@ persona prompt → Gemini REST generation → JSON extraction → hadith groundi
 
 | Where | Value | Status |
 |---|---|---|
-| Production (rev tafsir-backend-r-20261021065435-1426) | `gemini-3.8-flash` / `gemini-3.5-flash-lite`, `GEMINI_API_LOCATION=global`, pipeline `17.0` | **DEPLOYED & canary-validated 2026-10-21** (Session 13; golden 5/6, the miss is a token-list false negative). Model unchanged since 3.8 went live 2026-10-17. Built from `eba6f8c`, which also holds unreviewed Session 14 items 4–7; see HANDOFF 2026-10-21 |
+| Production (rev tafsir-backend-r-20261021073136-24731, built from `6c91191`) | `gemini-3.8-flash` / `gemini-3.5-flash-lite`, `GEMINI_API_LOCATION=global`, pipeline `17.0` | **DEPLOYED & canary-validated 2026-10-21** (Session 13; golden 5/6, the miss is a token-list false negative). Model unchanged since 3.8 went live 2026-10-17. The canary itself was built from `eba6f8c` (accidentally including Session 14 items 4–7); production was redeployed clean the same day, see HANDOFF 2026-10-21 |
 | app.py defaults + deploy-backend.sh | same values | in sync with production |
 | Vertex retirement dates | `gemini-3.8-flash` "September 2, 2027 or later"; `gemini-3.5-flash-lite` "July 21, 2027 or later" | check the Vertex model pages, not the Gemini API deprecations page — they disagree |
 | Retired | `gemini-3.6-flash` (Vertex retirement 2026-11-19); `gemini-2.5-flash` (Oct 16-20, 2026) | 3.6 → 3.8 migration complete 33 days ahead of deadline |

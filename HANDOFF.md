@@ -196,6 +196,23 @@ Q14. **✅ DEPLOYED 2026-08-13 — Reliability quick wins**
 
 ## Session log
 
+### 2026-10-21 — Claude: INCIDENT RESOLVED — production restored to the reviewed Session 13 + privacy build
+
+- **Ahmed chose (A).** Redeployed from the clean worktree at `6c91191` (now `main`):
+  backend **`tafsir-backend-r-20261021073136-24731`**, frontend
+  **`tafsir-frontend-r-20261021085449-10333`**, both 100%, verified by the scripts.
+  The live backend upload matches `6c91191` exactly (0 differing tracked files; no
+  `_badge_updates`). Smoke checks: `/health` healthy, `/daily-verse` 200, `/iman/config`
+  404, `/cache/analytics` 403; 2:255 served `hit-firestore` in 1.6s with the correct hadith
+  attribution (cache identity unchanged). Frontend `/`, `/settings`, `/saved`, `/privacy`
+  200; privacy contact and security headers present; `/health` 404 is expected (a Session
+  14 route). No errors on either service.
+- **Session 14 is now a normal review:** branch `codex/s14-followups`, not deployed. It
+  already contains Claude's privacy work (`750ea8d` etc.), so merging it into `main` should
+  produce a HANDOFF conflict only.
+- The local `main` ref in the shared checkout was not fast-forwarded (the permission
+  classifier refused it); `origin/main` is correct. Run `git pull` before the next session.
+
 ### 2026-10-21 — Claude: INCIDENT — the Session 13 deploy shipped unreviewed Session 14 code; Ahmed to decide
 
 - **What happened:** Ahmed started Codex on Session 14 while Claude was deploying. At 01:52
