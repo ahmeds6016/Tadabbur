@@ -196,6 +196,98 @@ Q14. **✅ DEPLOYED 2026-08-13 — Reliability quick wins**
 
 ## Session log
 
+### 2026-10-21 — Claude: INCIDENT — the Session 13 deploy shipped unreviewed Session 14 code; Ahmed to decide
+
+- **What happened:** Ahmed started Codex on Session 14 while Claude was deploying. At 01:52
+  (local) Codex ran `git checkout -b codex/s14-followups` **in the shared checkout**.
+  Claude's privacy commit (01:53, `750ea8d`) staged the whole `backend/app.py`, sweeping in
+  ~200 lines of Codex's unfinished Session 14 items 4–7. Both deploy scripts upload the
+  working directory, not a commit, and Codex kept committing there.
+- **Exactly what is live** (proven by downloading both Cloud Build source tarballs and
+  comparing every tracked file):
+  * backend `tafsir-backend-r-20261021065435-1426` = commit **`eba6f8c`**: Session 13 +
+    privacy + Session 14 items 4–7 (badges awarded inside the study transaction, collection
+    backfill, write skipping, `/badges` total, `/progress` count reconcile on every GET);
+  * frontend `tafsir-frontend-r-20261021070905-14345` = commit **`c37817a`**: all of
+    Session 14's frontend + privacy.
+  Neither Session 14 part has been reviewed.
+- **Impact so far: none observed.** Since the switch, the only backend traffic is Claude's
+  smoke checks. The live frontend reads `X-Newly-Earned-Badges`, which this backend does not
+  send, so the badge popup stays silent (it already was). Firestore 2.18.0 supports
+  aggregation queries in transactions, so `/progress` reconcile should work. No errors.
+  The golden canary, ProxyFix check and migration below were all run against this build;
+  none depend on the Session 14 code.
+- **Clean state prepared, not deployed:** branch `claude/s13-deploy-clean` = `a625aab` +
+  only Claude's privacy changes (`258fefc`) + these docs. It passes 605 backend tests, all
+  frontend tests and build 15/15. `main` now points here. The redeploy of this tree was
+  **blocked by the permission classifier** as a new production deploy, so Ahmed decides:
+  (A) redeploy this clean tree now (no paid calls; Session 14 then follows a normal review),
+  or (B) Claude reviews Session 14 first and deploys `codex/s14-followups` if it passes.
+- **Git state:** `codex/s14-followups` (Codex's branch, still checked out in the shared
+  checkout) contains Claude's `750ea8d`, `c37817a`, `3376161` interleaved with the
+  Session 14 commits. Review it as one branch. Expect a HANDOFF conflict on merge
+  (both put entries on top).
+- **Prevention (AI.md rule):** one working tree per agent; Claude deploys only from a clean
+  worktree at a reviewed, pushed commit. Session 15 candidate: deploy scripts refuse a dirty
+  tree and label the revision with the commit SHA.
+
+### 2026-10-21 — Claude: Session 13 DEPLOYED (pipeline 17.0); reflections encrypted; privacy notice published (see INCIDENT above)
+
+- **Ahmed's decisions (2026-10-21):** privacy contact is his personal address; deletion
+  markers are removed 30 days after deletion completes; public share links stay after account
+  deletion (they hold no account details) and are removed on request; logs follow Google
+  Cloud's 30-day default; budget $30/month; go-ahead for the encryption key, the migration and
+  the deploy.
+- **Privacy (`258fefc` on main; `750ea8d` on the Session 14 branch):** `/privacy` is final (no draft wording or placeholders). Each claim
+  was checked against production: feedback GitHub/SMTP exports are not configured; both
+  projects keep `_Default` logs 30 days; reCAPTCHA guards only sign-in/sign-up. Completed
+  deletions now set `expires_at` (+30 days) on `account_deletions/{sha256(uid)}`; a Firestore
+  TTL policy on `account_deletions.expires_at` (`(default)` DB) removes them. Unfinished jobs
+  have no expiry, because the marker gates the half-erased account.
+- **Encryption:** Secret Manager `reflection-encryption-key` (project `tafsir-simplified`,
+  version 1, `versionDestroyTtl` 30 days, runtime SA `secretAccessor`). Local backup:
+  `secret/reflection-encryption-key.txt` (gitignored, mode 600). **Never delete or rotate it
+  without a migration** — the encrypted reflections cannot be read without it. Production
+  never had a key before, so there was no legacy ciphertext. Migration applied after the
+  backend switch: **48 documents written**; a rerun finds 0; all 26 annotation fields decrypt
+  with the live key, 0 plaintext left.
+- **Canary `tafsir-backend-r-20261021065435-1426`:** golden harness (guest, 6 verses) 5/6.
+  The miss is 93:3 `reflection_prompt lacks a verse-linked token`: the prompt says
+  "abandonment"/"resting night" and the token list has "abandoned". This is a harness false
+  negative. Hadith attribution is live and correct, e.g. "narrated by Jundub; As cited in
+  al-Wahidi's Asbab al-Nuzul" (the review fixup working). Prompt and answer tokens match the
+  Oct 17 3.8 canary (2:255: 14,402 vs 14,400 prompt). Latency was 31–174s vs 18–44s on
+  Oct 17. This is Vertex, not us: a 3-sentence direct call took 26–34s at the time. 2:255's
+  first attempt hit the 120s timeout and the retry finished in 49s. Watch latency.
+- **ProxyFix verified live:** after 10 guest requests, 8 more with distinct spoofed
+  `X-Forwarded-For` all got 429. A request from a second real address (Cloud Build) on the
+  same instance got 200. Guests are keyed by their real address.
+- **Backend switched** with `--to-revisions <new>=100 --remove-tags`, then `--to-latest`;
+  the preflight passes. Smoke checks: `/health` healthy, `/daily-verse` and `/suggestions`
+  200, `/iman/config` 404 (gated), `/cache/analytics` 403, `/debug/routes` 404; no warnings
+  after the switch.
+- **Frontend `tafsir-frontend-r-20261021070905-14345`** (100%, verified by the script,
+  health smoke passed). Live `/privacy` has the contact address and no draft wording;
+  `/`, `/settings`, `/saved`, `/privacy` return 200; framing/HSTS/referrer headers and the
+  report-only CSP are present. Headless render at 390px: home and privacy pages fine, no
+  horizontal overflow. No ERROR logs on either service after the deploy. The TTL policy
+  `account_deletions.expires_at` is ACTIVE.
+- **Budget:** `Tadabbur monthly ($30)` (`8fb938d9-b42f-4c32-a351-ddc9f9852efd`) scoped to
+  both projects; emails at 50/90/100% actual and 100% forecast. The existing account-wide $75
+  budget is untouched. Enabled `billingbudgets.googleapis.com` on `tafsir-simplified`.
+  **No Vertex quota cap is possible:** `gemini-3.8-flash` runs on dynamic shared quota (no
+  per-model bucket to override). The ceilings are the in-process rate limits and Cloud Run
+  max 10 instances × concurrency 80. Lowering max-instances is the remaining lever if spend
+  ever spikes.
+- **Rollback caveat:** backend `00273-dpr` (pipeline 16.0) has no encryption key and does
+  not know the `fernet:v1:` prefix. Rolling back to it would show readers ciphertext in place
+  of their reflections. A rollback must redeploy that code with the secret, or roll forward.
+  Frontend rollback `00308-vbm` is safe against the new backend (progress briefly shows 0
+  reflections).
+- **Still open:** OPS-01 restore drill + runbook; Session 14 to GPT; Ahmed: `sudo
+  xcode-select -s /Applications/Xcode.app/Contents/Developer`, iOS device test; App Store
+  Guideline 4.2 native value.
+
 ### 2026-10-20 — Claude: Session 13 reviewed and MERGED with fixups (NOT deployed)
 
 - **Merged** `b1daded` (six stacked GPT 6 units + Claude fixups `97a107d`, `dd90eda`).

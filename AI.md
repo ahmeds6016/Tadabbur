@@ -31,7 +31,10 @@ Flask backend — backend/app.py, ~9,800 lines, 83 routes
         │     ├── DB "(default)": users/*, annotations, saved searches, feedback
         │     └── DB "tafsir-db": quran_texts, tafsir_cache, popular_queries, shared_content
         ├── GCS bucket tafsir-simplified-sources — 8 tafsir JSON blobs loaded at startup
-        ├── Secret Manager — firebase-sa-key (service account for the 6b262 project)
+        ├── Secret Manager — firebase-sa-key (service account for the 6b262 project),
+        │     admin-secret, reflection-encryption-key (NEVER delete: reflections are
+        │     encrypted with it since 2026-10-21; backend revisions before Session 13
+        │     cannot read them, so do not roll back past r-20261021065435-1426)
         └── Vertex AI (project tafsir-simplified) — Gemini via raw REST calls
               (global endpoint on the canary-gated Gemini 3 branch)
 ```
@@ -62,7 +65,7 @@ persona prompt → Gemini REST generation → JSON extraction → hadith groundi
 
 | Where | Value | Status |
 |---|---|---|
-| Production (rev tafsir-backend-00273-dpr) | `gemini-3.8-flash` / `gemini-3.5-flash-lite`, `GEMINI_API_LOCATION=global`, pipeline `16.0` | **DEPLOYED & canary-validated 2026-10-17** (`GEMINI_USAGE model=gemini-3.8-flash` confirmed in prod logs) |
+| Production (rev tafsir-backend-r-20261021065435-1426) | `gemini-3.8-flash` / `gemini-3.5-flash-lite`, `GEMINI_API_LOCATION=global`, pipeline `17.0` | **DEPLOYED & canary-validated 2026-10-21** (Session 13; golden 5/6, the miss is a token-list false negative). Model unchanged since 3.8 went live 2026-10-17. Built from `eba6f8c`, which also holds unreviewed Session 14 items 4–7; see HANDOFF 2026-10-21 |
 | app.py defaults + deploy-backend.sh | same values | in sync with production |
 | Vertex retirement dates | `gemini-3.8-flash` "September 2, 2027 or later"; `gemini-3.5-flash-lite` "July 21, 2027 or later" | check the Vertex model pages, not the Gemini API deprecations page — they disagree |
 | Retired | `gemini-3.6-flash` (Vertex retirement 2026-11-19); `gemini-2.5-flash` (Oct 16-20, 2026) | 3.6 → 3.8 migration complete 33 days ahead of deadline |
@@ -87,6 +90,13 @@ untagged 0%-traffic revision is "Retired", and Cloud Run's `latestReadyRevision`
 it — so `update-traffic --to-latest` can route to the OLD canary. Correct switch:
 deploy, then `update-traffic --to-revisions <new>=100 --remove-tags <canary>`, verify,
 then `update-traffic --to-latest` once `latestReadyRevisionName` is the new revision.
+Since Session 13: trap (1) is fixed (the version is in the cache key); the deploy
+scripts name revisions `<service>-r-<UTC timestamp>-<n>` and tag a canary with that
+suffix; and the preflight refuses a normal deploy while traffic is pinned. Used
+end to end for the 2026-10-21 pipeline 17.0 deploy.
+Spoofed `X-Forwarded-For` was verified on 2026-10-21: with `ProxyFix(x_for=1)`, guests
+are rate-limited by their real address (spoofed values ignored; a second real address
+on the same instance was not limited). Recheck if a load balancer is put in front.
 
 ## Conventions & constraints
 
@@ -102,8 +112,14 @@ then `update-traffic --to-latest` once `latestReadyRevisionName` is the new revi
   response pipeline materially changes. New Firestore cache documents set `expires_at`
   to creation + 90 days; the Firestore TTL policy deletes them server-side.
 - Deploys: `./deploy-backend.sh` / `./deploy-frontend.sh` (gcloud builds submit + run
-  deploy). No CI/CD; deploys are manual from a workstation with gcloud auth.
-- Windows dev machine; repo path `c:\Users\us88832\Desktop\tadabbur`.
+  deploy). No CI/CD; deploys are manual from a workstation with gcloud auth. The scripts
+  upload the working directory as it is, not a commit.
+- **One working tree per agent (2026-10-21).** Codex works in its own `git worktree`,
+  never in the shared checkout at `~/Desktop/Tadabbur`. Claude deploys only from a clean
+  worktree at a pushed, reviewed commit. On 2026-10-21 Codex switched the shared checkout
+  to `codex/s14-followups` mid-deploy: Claude's commit swept in Codex's unfinished
+  `app.py`, and both services shipped unreviewed Session 14 code.
+- Dev machine: MacBook Air (since 2026-08-28); repo path `/Users/ahmeds/Desktop/Tadabbur`.
 
 ## Testing
 
