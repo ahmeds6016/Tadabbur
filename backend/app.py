@@ -3297,7 +3297,11 @@ def delete_account():
             auth.delete_user(uid)
         except auth.UserNotFoundError:
             pass  # A prior attempt removed Auth but lost its final response.
-        job_ref.set({'phase': 'complete', 'completed_at': firestore.SERVER_TIMESTAMP}, merge=True)
+        # The privacy notice promises removal 30 days after completion; the Firestore
+        # TTL policy on account_deletions.expires_at deletes the marker. Incomplete
+        # jobs carry no expiry because the marker is what gates the half-erased account.
+        job_ref.set({'phase': 'complete', 'completed_at': firestore.SERVER_TIMESTAMP,
+                     'expires_at': datetime.now(timezone.utc) + timedelta(days=30)}, merge=True)
         return jsonify({'complete': True}), 200
     except Exception:
         return api_error()
@@ -4328,10 +4332,10 @@ def _streak_updates(data):
             'streak_last_date': date_text}
 
 
-def _annotation_count(data, uid, transaction):
-    if type(data.get('annotation_count')) is int:
+def _annotation_count(data, uid, transaction, reconcile=False):
+    if not reconcile and type(data.get('annotation_count')) is int:
         return max(0, data['annotation_count'])
-    # Seed legacy accounts once via an index aggregation, never full documents.
+    # Seed legacy accounts, or reconcile drift on /progress, using an index aggregation.
     results = users_db.collection('users').document(uid).collection('annotations').count().get(transaction=transaction)
     return int(results[0][0].value) if results else 0
 
@@ -4354,10 +4358,12 @@ def _track_explored_verse(uid, surah, start_verse, end_verse=None):
                        'stats_cache': {'total_explored_verses': sum(len(v) for v in explored.values()),
                                        'total_explored_surahs': sum(bool(v) for v in explored.values())},
                        **_streak_updates(data)}
-            return updates, None
+            badge_updates, newly = _badge_updates(uid, {**data, **updates}, transaction)
+            return {**updates, **badge_updates}, newly
         return _update_user_transaction(uid, mutate)
     except Exception:
         logger.exception('Study progress update failed')
+        return []
 
 
 @app.route("/progress", methods=["GET"])
@@ -4366,15 +4372,11 @@ def get_progress():
     """Get user's Quran exploration progress."""
     uid = request.user["uid"]
     try:
-        user_doc = users_db.collection("users").document(uid).get()
-        data = user_doc.to_dict() if user_doc.exists else {}
-        if type(data.get('annotation_count')) is not int:
-            def seed_count(value, tx):
-                count = _annotation_count(value, uid, tx)
-                return {'annotation_count': count}, count
-            count = _update_user_transaction(uid, seed_count)
-        else:
-            count = data['annotation_count']
+        def reconcile_count(data, tx):
+            count = _annotation_count(data, uid, tx, reconcile=True)
+            updates = {} if type(data.get('annotation_count')) is int and data['annotation_count'] == count else {'annotation_count': count}
+            return updates, (data, count)
+        data, count = _update_user_transaction(uid, reconcile_count)
         explored = data.get("explored_verses", {})
 
         total_explored = sum(len(v) for v in explored.values())
@@ -4783,90 +4785,102 @@ BADGE_DEFINITIONS = {
 }
 
 
+def _badge_updates(uid, data, transaction):
+    """Calculate awards inside the caller's user transaction; write only changes."""
+    earned = dict(data.get("badges_earned", {}))
+    stats = data.get("stats_cache", {})
+    streak_current = data.get("streak_current", 0)
+    streak_longest = data.get("streak_longest", 0)
+    total_verses = stats.get("total_explored_verses", 0)
+    total_surahs = stats.get("total_explored_surahs", 0)
+
+    annotation_count = _annotation_count(data, uid, transaction)
+
+    # Count completed collections
+    collection_progress = data.get("collection_progress", {})
+    explored = {f'{surah}:{verse}' for surah, verses in data.get('explored_verses', {}).items() for verse in verses}
+    completed_collections = sum(
+        {f'{s}:{v}' for s, v, _ in collection['verses']}.issubset(
+            explored | set(collection_progress.get(collection['id'], {}).get('explored', [])))
+        for collection in THEMED_COLLECTIONS
+    )
+
+    # Count completed plans (support both old single and new multi-plan format)
+    active_plans = data.get("active_plans", {})
+    old_plan = data.get("active_plan", {})
+    completed_plans = sum(1 for p in active_plans.values() if p.get("completed_at"))
+    if old_plan.get("completed_at") and old_plan.get("plan_id") not in active_plans:
+        completed_plans += 1
+
+    # Check for Ramadan plan completion
+    ramadan_completed = any(
+        p.get("plan_id") == "ramadan_30" and p.get("completed_at")
+        for p in list(active_plans.values()) + ([old_plan] if old_plan else [])
+    )
+
+    newly_earned = []
+    best_streak = max(streak_current, streak_longest)
+
+    checks = {
+        # Consistency
+        "streak_3": best_streak >= 3,
+        "streak_7": best_streak >= 7,
+        "streak_14": best_streak >= 14,
+        "streak_30": best_streak >= 30,
+        "streak_90": best_streak >= 90,
+        "streak_180": best_streak >= 180,
+        "streak_365": best_streak >= 365,
+        # Exploration
+        "explore_10": total_verses >= 10,
+        "explore_50": total_verses >= 50,
+        "explore_100": total_verses >= 100,
+        "explore_250": total_verses >= 250,
+        "explore_500": total_verses >= 500,
+        "explore_1000": total_verses >= 1000,
+        "surahs_10": total_surahs >= 10,
+        "surahs_30": total_surahs >= 30,
+        "surahs_50": total_surahs >= 50,
+        "surahs_114": total_surahs >= 114,
+        # Reflection
+        "reflect_1": annotation_count >= 1,
+        "reflect_10": annotation_count >= 10,
+        "reflect_50": annotation_count >= 50,
+        "reflect_100": annotation_count >= 100,
+        "reflect_250": annotation_count >= 250,
+        "reflect_500": annotation_count >= 500,
+        "reflect_1000": annotation_count >= 1000,
+        # Completion
+        "collection_complete": completed_collections >= 1,
+        "collection_3": completed_collections >= 3,
+        "collection_all": completed_collections >= len(THEMED_COLLECTIONS),
+        "plan_complete": completed_plans >= 1,
+        "plan_3": completed_plans >= 3,
+        "plan_7": completed_plans >= 7,
+        "plan_all": completed_plans >= len(READING_PLANS),
+        # Special
+        "ramadan_plan": ramadan_completed,
+    }
+
+    for badge_id, condition in checks.items():
+        if condition and badge_id not in earned:
+            earned[badge_id] = {"earned_at": datetime.now(timezone.utc).isoformat()}
+            newly_earned.append({
+                "id": badge_id,
+                **BADGE_DEFINITIONS[badge_id]
+            })
+
+    updates = {}
+    if type(data.get('annotation_count')) is not int or data['annotation_count'] != annotation_count:
+        updates['annotation_count'] = annotation_count
+    if newly_earned:
+        updates['badges_earned'] = earned
+    return updates, newly_earned
+
+
 def _check_and_award_badges(uid):
-    """One bounded check using maintained counts; merge awards transactionally."""
+    """Check standalone events using the same transactional award calculation."""
     def mutate(data, transaction):
-        earned = data.get("badges_earned", {})
-        stats = data.get("stats_cache", {})
-        streak_current = data.get("streak_current", 0)
-        streak_longest = data.get("streak_longest", 0)
-        total_verses = stats.get("total_explored_verses", 0)
-        total_surahs = stats.get("total_explored_surahs", 0)
-
-        annotation_count = _annotation_count(data, uid, transaction)
-
-        # Count completed collections
-        collection_progress = data.get("collection_progress", {})
-        completed_collections = sum(
-            1 for cid, cp in collection_progress.items()
-            if any(c["id"] == cid and {f"{s}:{v}" for s, v, _ in c["verses"]}.issubset(set(cp.get("explored", []))) for c in THEMED_COLLECTIONS)
-        )
-
-        # Count completed plans (support both old single and new multi-plan format)
-        active_plans = data.get("active_plans", {})
-        old_plan = data.get("active_plan", {})
-        completed_plans = sum(1 for p in active_plans.values() if p.get("completed_at"))
-        if old_plan.get("completed_at") and old_plan.get("plan_id") not in active_plans:
-            completed_plans += 1
-
-        # Check for Ramadan plan completion
-        ramadan_completed = any(
-            p.get("plan_id") == "ramadan_30" and p.get("completed_at")
-            for p in list(active_plans.values()) + ([old_plan] if old_plan else [])
-        )
-
-        newly_earned = []
-        best_streak = max(streak_current, streak_longest)
-
-        checks = {
-            # Consistency
-            "streak_3": best_streak >= 3,
-            "streak_7": best_streak >= 7,
-            "streak_14": best_streak >= 14,
-            "streak_30": best_streak >= 30,
-            "streak_90": best_streak >= 90,
-            "streak_180": best_streak >= 180,
-            "streak_365": best_streak >= 365,
-            # Exploration
-            "explore_10": total_verses >= 10,
-            "explore_50": total_verses >= 50,
-            "explore_100": total_verses >= 100,
-            "explore_250": total_verses >= 250,
-            "explore_500": total_verses >= 500,
-            "explore_1000": total_verses >= 1000,
-            "surahs_10": total_surahs >= 10,
-            "surahs_30": total_surahs >= 30,
-            "surahs_50": total_surahs >= 50,
-            "surahs_114": total_surahs >= 114,
-            # Reflection
-            "reflect_1": annotation_count >= 1,
-            "reflect_10": annotation_count >= 10,
-            "reflect_50": annotation_count >= 50,
-            "reflect_100": annotation_count >= 100,
-            "reflect_250": annotation_count >= 250,
-            "reflect_500": annotation_count >= 500,
-            "reflect_1000": annotation_count >= 1000,
-            # Completion
-            "collection_complete": completed_collections >= 1,
-            "collection_3": completed_collections >= 3,
-            "collection_all": completed_collections >= len(THEMED_COLLECTIONS),
-            "plan_complete": completed_plans >= 1,
-            "plan_3": completed_plans >= 3,
-            "plan_7": completed_plans >= 7,
-            "plan_all": completed_plans >= len(READING_PLANS),
-            # Special
-            "ramadan_plan": ramadan_completed,
-        }
-
-        for badge_id, condition in checks.items():
-            if condition and badge_id not in earned:
-                earned[badge_id] = {"earned_at": datetime.now(timezone.utc).isoformat()}
-                newly_earned.append({
-                    "id": badge_id,
-                    **BADGE_DEFINITIONS[badge_id]
-                })
-
-        return {'annotation_count': annotation_count, 'badges_earned': earned}, newly_earned
+        return _badge_updates(uid, data, transaction)
     try:
         return _update_user_transaction(uid, mutate)
     except Exception:
@@ -4896,7 +4910,7 @@ def get_badges():
 
         return jsonify({
             "badges": badges,
-            "total_earned": len(earned),
+            "total_earned": len(earned.keys() & BADGE_DEFINITIONS.keys()),
             "total_available": len(BADGE_DEFINITIONS),
         }), 200
     except Exception as e:
@@ -5210,8 +5224,7 @@ def update_plan_progress(plan_id):
         newly = []
         if action == 'complete_day':
             surah, verse = plan['days'][day - 1]['verse']
-            _track_explored_verse(uid, surah, verse)
-            newly = _check_and_award_badges(uid)
+            newly = _track_explored_verse(uid, surah, verse)
         return jsonify({'status': 'started' if action == 'start' else 'day_complete',
                         'plan_id': plan_id, 'day': day, 'current_day': active['current_day'],
                         'completed_days': active['completed_days'], 'is_complete': bool(active.get('completed_at')),
@@ -6467,8 +6480,7 @@ def tafsir_handler_enhanced():
                     return
                 cached_surah, cached_start = cached_ref
                 cached_end = cached_start
-            _track_explored_verse(user_id, cached_surah, cached_start, cached_end)
-            _check_and_award_badges(user_id)
+            return _track_explored_verse(user_id, cached_surah, cached_start, cached_end)
 
         def attach_recommendations(response_data):
             """Attach deterministic follow-on verses to fresh and cached responses."""
@@ -6931,7 +6943,6 @@ def tafsir_handler_enhanced():
 
             if user_id:
                 _track_explored_verse(user_id, surah, start_verse, end_verse)
-                _check_and_award_badges(user_id)
 
             logger.info("Formatted by AI from %s source(s)", len(verse_metadata_list))
             perf_metrics['stages']['post_processing'] = (time.time() - stage_start) * 1000

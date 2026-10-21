@@ -1,6 +1,7 @@
 import ast
 import base64
 from copy import deepcopy
+from datetime import datetime, timedelta, timezone
 import hashlib
 import hmac
 import importlib.util
@@ -74,6 +75,7 @@ def erasure():
     firebase = SimpleNamespace(revoke_refresh_tokens=Mock(), delete_user=Mock(), UserNotFoundError=type('MissingUser', (Exception,), {}))
     ns = dict(users_db=db, hashlib=hashlib, request=request, jsonify=jsonify, make_response=make_response,
               time=SimpleNamespace(time=lambda: now[0]), auth=firebase,
+              datetime=datetime, timedelta=timedelta, timezone=timezone,
               firestore=SimpleNamespace(SERVER_TIMESTAMP='timestamp'), FieldFilter=lambda *a: a,
               api_error=lambda: (jsonify({'error': 'Please retry.'}), 500))
     names = {'_deletion_job_ref', '_account_is_deleting', '_erase_descendants_page', 'delete_account'}
@@ -107,9 +109,14 @@ def test_erasure_is_bounded_resumable_and_auth_is_last(erasure):
         assert not list(db.collection('feedback').stream())
         assert all(not list(col.stream()) for col in root.collections())
     firebase.delete_user.side_effect = auth_last
+    marker = ns['_deletion_job_ref']('reader')
+    assert 'expires_at' not in marker.to_dict()  # An unfinished job must keep gating the account.
     assert client.post('/', json={'confirmation': 'DELETE'}).json['complete']
     assert client.post('/', json={'confirmation': 'DELETE'}).json['complete']
     firebase.delete_user.assert_called_once()
+    # The privacy notice promises the marker is removed 30 days after completion.
+    remaining = marker.to_dict()['expires_at'] - datetime.now(timezone.utc)
+    assert timedelta(days=29, hours=23) < remaining <= timedelta(days=30)
 
 
 def test_deletion_requires_recent_auth_and_confirmation(erasure):

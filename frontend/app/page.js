@@ -533,7 +533,7 @@ function AuthComponent({ onGuestBrowse }) {
           </>
         )}
 
-        <p style={{ textAlign: 'center' }}><a href="/privacy">Privacy notice draft</a></p>
+        <p style={{ textAlign: 'center' }}><a href="/privacy">Privacy notice</a></p>
         <RecaptchaAttribution />
 
       </div>
