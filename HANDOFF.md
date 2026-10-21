@@ -196,6 +196,61 @@ Q14. **✅ DEPLOYED 2026-08-13 — Reliability quick wins**
 
 ## Session log
 
+### 2026-10-21 — Codex: Session 14 review follow-ups (NOT deployed)
+
+- Branch: `codex/s14-followups`, from current `main` after `git pull --ff-only`.
+  Read Claude's Session 13 review and both `97a107d` / `dd90eda` messages; preserved their fixups.
+  No deployments, cloud calls, paid calls, dependencies, migrations, or secret reads.
+- Verification: **659 backend tests, 29 frontend tests, build 15/15, lint zero warnings/errors**.
+  `bash -n` on both deploy entrypoints and common script; `git diff --check` clean.
+- Badge awards now travel as IDs in `X-Newly-Earned-Badges`, exposed by CORS, on the
+  requesting authenticated reader's response only (`private, no-store`, `Vary: Authorization`).
+  The UI resolves display metadata from `/badges`; stale requests cannot set the popup.
+  Fresh generation, Firestore/memory hits, guest access, and public shares are tested:
+  personal awards never enter the answer, either cache write, or public share snapshot.
+- Study tracking calculates badges in the same user transaction. Standalone badge checks
+  skip writes when awards/count are unchanged. Collection completion recognises the union of
+  global exploration and collection progress. `/progress` runs an index count in its user
+  transaction on every read and repairs drift, writing only when the stored count differs.
+- Annotation cursors retain mode, submitted query, and filters together, including cursor
+  repair after deletion. The save picker follows all folder cursors and deduplicates names.
+- Parser table covers `2:255 and 256` as 2:255–256 and bare `Al-Fatihah` as requiring a verse
+  choice. Cross-surah, invalid, reversed, and extra `and` references require clarification.
+- Real verse lookup failures propagate through Flask's registered error handler for `/verse`
+  and `/tafsir` (single and range), with safe 503 copy, retry flag, correlation ID, and
+  `Retry-After`. The frontend has stable 503 copy. Deployment tests assert every backend
+  environment/secret pair and no such frontend flags. Offline mutations removing a required
+  environment variable or encryption-secret binding both fail those assertions.
+- Both deploy scripts now tag the created revision, verify its exact digest/readiness/traffic
+  and matching tag URL, then curl that URL's `/health`. HTTP must be 200 and JSON status
+  `healthy`; redirects, non-JSON, unhealthy bodies, connection/HTTP failures, or wrong/missing
+  tags fail the command. Verification failure prevents curl. All executions in tests use
+  PATH stubs for **both gcloud and curl**. Frontend `/health` is dynamic and uncached; its
+  TypeScript route avoids Next 15's unused generated imports for a JavaScript route.
+
+| Item | Commit | Regression test | Deploy needed |
+| --- | --- | --- | --- |
+| 1. Badge popup | `34a5f78`, `d9d6aa5` | `test_real_boundaries.py`, `test_tafsir_retry.py`, `search-races.test.cjs`: header/CORS/cache/share isolation and popup | backend + frontend |
+| 2. Search Load more | `f2dd003` | `annotation-paging.test.cjs`: edited/cleared draft and list filters | frontend |
+| 3. Folder picker | `f6047ac` | `search-races.test.cjs`: second folder page and duplicate names | frontend |
+| 4. Collection backfill | `750ea8d`, `eba6f8c`* | `test_collection_badges_backfill_from_explored_verses` | backend |
+| 5. Badge writes | `750ea8d`, `eba6f8c`* | unchanged checks do not write; study awards use one transaction | backend |
+| 6. Badge total | `750ea8d`, `eba6f8c`* | retired badge IDs excluded from total | backend |
+| 7. Count drift | `750ea8d`, `eba6f8c`* | stale/missing counts repaired; unchanged reads do not write | backend |
+| 8. Parser | `46d7817` | parser compatibility table and invalid/ambiguous `and` ranges | backend |
+| 9. Missing coverage | `ecc09f1` | real Flask 503 handler, frontend copy, exact env/secrets; configuration mutations | backend + frontend |
+| 10. Hook lint | `c4acf92` | ESLint regression plus account/search race tests | frontend |
+| 11. Health smoke | `61f4551` | 52 deploy stub cases; frontend health response test | frontend (scripts apply to both services) |
+
+* Concurrent workspace commit `750ea8d` (privacy notice with Ahmed's decisions) captured the
+  Session 14 accounting edits before my test commit; preserved that commit and recorded the
+  regression tests separately in `eba6f8c`. A subsequent, nonfunctional `deploy-frontend.sh`
+  comment edit from the concurrent writer remains unstaged; Session 14 did not alter it.
+
+Next: Claude reviews this branch and owns any later canary/deployment, following the existing
+backend-before-frontend and traffic-switch prerequisites. Health smoke is a future deploy
+step; it has not been run against production in this session.
+
 ### 2026-10-20 — Claude: Session 13 reviewed and MERGED with fixups (NOT deployed)
 
 - **Merged** `b1daded` (six stacked GPT 6 units + Claude fixups `97a107d`, `dd90eda`).
