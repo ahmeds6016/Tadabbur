@@ -11,7 +11,7 @@ import { reportBackendFailure, reportBackendSuccess } from '../lib/backendHealth
 import BottomNav from '../components/BottomNav';
 
 export default function QueryHistoryPage() {
-  const requests = useRef(createRequestIdentity()).current;
+  const requests = useRef(createRequestIdentity());
   const [nextCursor, setNextCursor] = useState(null);
   const [user, setUser] = useState(null);
   const [history, setHistory] = useState([]);
@@ -20,24 +20,25 @@ export default function QueryHistoryPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    const requestsIdentity = requests.current;
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      requests.reset(); setNextCursor(null);
-      const authTicket = requests.start("auth", currentUser?.uid ?? null);
+      requestsIdentity.reset(); setNextCursor(null);
+      const authTicket = requestsIdentity.start("auth", currentUser?.uid ?? null);
       setHistory([]); setLoadError(null);
       setIsLoading(true);
       setUser(currentUser);
       if (currentUser) {
         await fetchHistory(currentUser);
       }
-      if (requests.current(authTicket, auth.currentUser?.uid ?? null)) setIsLoading(false);
+      if (requestsIdentity.current(authTicket, auth.currentUser?.uid ?? null)) setIsLoading(false);
     });
-    return () => { requests.reset(); unsubscribe(); };
+    return () => { requestsIdentity.reset(); unsubscribe(); };
   }, []);
 
   const fetchHistory = async (currentUser, cursor = null) => {
     if (!cursor) setNextCursor(null);
-    const ticket = requests.start('history', currentUser?.uid ?? null);
-    const current = () => requests.current(ticket, auth.currentUser?.uid ?? null);
+    const ticket = requests.current.start('history', currentUser?.uid ?? null);
+    const current = () => requests.current.current(ticket, auth.currentUser?.uid ?? null);
     setLoadError(null); setNeedsSignIn(false);
     try {
       const token = await currentUser.getIdToken();

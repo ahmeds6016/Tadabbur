@@ -11,8 +11,8 @@ test('commentary treats hostile HTML as text', () => {
   assert.doesNotMatch(page, /rehypeRaw|rehype-raw/);
   const hostile = '<iframe srcdoc="<script>alert(1)</script>"></iframe>\n\n<form action="/steal"><input></form>\n\n<style>body{display:none}</style>\n\n<script>alert(1)</script>';
   const html = renderToStaticMarkup(React.createElement(ReactMarkdown, {
-    remarkPlugins: [remarkBreaks], children: hostile,
-  }));
+    remarkPlugins: [remarkBreaks],
+  }, hostile));
   assert.doesNotMatch(html, /<(iframe|form|input|style|script)\b/i);
   assert.match(html, /&lt;iframe/);
 });

@@ -52,11 +52,10 @@ const getTypeConfig = (type) => {
 };
 
 export default function MyReflectionsPage() {
-  const requests = useRef(createRequestIdentity()).current;
+  const requests = useRef(createRequestIdentity());
   const [tagCursor, setTagCursor] = useState(null);
   const [page, setPage] = useState({ cursor: null, mode: 'list', query: '', tag: null, type: null });
   const nextCursor = page.cursor;
-  const setNextCursor = cursor => setPage(previous => ({ ...previous, cursor }));
   const [user, setUser] = useState(null);
   const [annotations, setAnnotations] = useState([]);
   const [allTags, setAllTags] = useState([]);
@@ -69,24 +68,25 @@ export default function MyReflectionsPage() {
   const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
+    const requestsIdentity = requests.current;
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      requests.reset(); setNextCursor(null); setTagCursor(null);
-      const authTicket = requests.start("auth", currentUser?.uid ?? null);
+      requestsIdentity.reset(); setPage(previous => ({ ...previous, cursor: null })); setTagCursor(null);
+      const authTicket = requestsIdentity.start("auth", currentUser?.uid ?? null);
       setAnnotations([]); setAllTags([]); setSelectedTag(null); setSelectedType(null); setSearchQuery(''); setSelectedAnnotation(null);
       setIsLoading(true);
       setUser(currentUser);
       if (currentUser) {
         await Promise.all([fetchAnnotations(currentUser), fetchTags(currentUser)]);
       }
-      if (requests.current(authTicket, auth.currentUser?.uid ?? null)) setIsLoading(false);
+      if (requestsIdentity.current(authTicket, auth.currentUser?.uid ?? null)) setIsLoading(false);
     });
-    return () => { requests.reset(); unsubscribe(); };
+    return () => { requestsIdentity.reset(); unsubscribe(); };
   }, []);
 
   const fetchAnnotations = async (currentUser, tag = null, type = null, cursor = null) => {
-    if (!cursor) setNextCursor(null);
-    const ticket = requests.start('annotations', currentUser?.uid ?? null);
-    const current = () => requests.current(ticket, auth.currentUser?.uid ?? null);
+    if (!cursor) setPage(previous => ({ ...previous, cursor: null }));
+    const ticket = requests.current.start('annotations', currentUser?.uid ?? null);
+    const current = () => requests.current.current(ticket, auth.currentUser?.uid ?? null);
     try {
       const token = await currentUser.getIdToken();
       let url = `${BACKEND_URL}/annotations/user?limit=100`;
@@ -113,8 +113,8 @@ export default function MyReflectionsPage() {
   };
 
   const fetchTags = async (currentUser, cursor = null) => {
-    const ticket = requests.start('tags', currentUser?.uid ?? null);
-    const current = () => requests.current(ticket, auth.currentUser?.uid ?? null);
+    const ticket = requests.current.start('tags', currentUser?.uid ?? null);
+    const current = () => requests.current.current(ticket, auth.currentUser?.uid ?? null);
     try {
       const token = await currentUser.getIdToken();
       const res = await fetch(`${BACKEND_URL}/annotations/tags${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`, {
@@ -136,9 +136,9 @@ export default function MyReflectionsPage() {
 
   const handleSearch = async (cursor = null, submittedQuery = searchQuery.trim()) => {
     if (!submittedQuery) return;
-    if (!cursor) setNextCursor(null);
-    const ticket = requests.start('annotations', user?.uid ?? null);
-    const current = () => requests.current(ticket, auth.currentUser?.uid ?? null);
+    if (!cursor) setPage(previous => ({ ...previous, cursor: null }));
+    const ticket = requests.current.start('annotations', user?.uid ?? null);
+    const current = () => requests.current.current(ticket, auth.currentUser?.uid ?? null);
     try {
       const token = await user.getIdToken();
       const res = await fetch(`${BACKEND_URL}/annotations/search?q=${encodeURIComponent(submittedQuery)}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`, {
@@ -187,19 +187,19 @@ export default function MyReflectionsPage() {
   const handleDeleteAnnotation = async (annotationId) => {
     if (!user) return;
     // One ticket per item, so a second delete cannot make the first look stale.
-    const ticket = requests.start(`delete:${annotationId}`, user.uid);
+    const ticket = requests.current.start(`delete:${annotationId}`, user.uid);
     try {
       const token = await user.getIdToken();
       const response = await fetch(`${BACKEND_URL}/annotations/${annotationId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      if (requests.current(ticket, auth.currentUser?.uid ?? null) && response.ok) {
+      if (requests.current.current(ticket, auth.currentUser?.uid ?? null) && response.ok) {
         setAnnotations(prev => prev.filter(a => a.id !== annotationId));
         if (annotationId === nextCursor) {
           // The page cursor was the deleted item: continue from the one before it.
           const index = annotations.findIndex(a => a.id === annotationId);
-          if (index > 0) setNextCursor(annotations[index - 1].id);
+          if (index > 0) setPage(previous => ({ ...previous, cursor: annotations[index - 1].id }));
           else loadAnnotationPage(null);
         }
       }

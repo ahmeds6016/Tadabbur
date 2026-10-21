@@ -15,7 +15,7 @@ import BottomNav from '../components/BottomNav';
 import { reportBackendFailure, reportBackendSuccess } from '../lib/backendHealth';
 
 export default function PlansPage() {
-  const requests = useRef(createRequestIdentity()).current;
+  const requests = useRef(createRequestIdentity());
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -31,13 +31,14 @@ export default function PlansPage() {
   const [quranProgress, setQuranProgress] = useState(null);
 
   useEffect(() => {
+    const requestsIdentity = requests.current;
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      requests.reset();
+      requestsIdentity.reset();
       setActivePlans([]); setQuranProgress(null); setPlans([]); setError(null); setActionLoading(false); setExpandedPlanId(null);
       setUser(currentUser);
       setIsLoading(false);
     });
-    return () => { requests.reset(); unsubscribe(); };
+    return () => { requestsIdentity.reset(); unsubscribe(); };
   }, []);
 
   const fetchActivePlans = useCallback(async () => {
@@ -70,19 +71,20 @@ export default function PlansPage() {
   }, []);
 
   useEffect(() => {
+    const requestsIdentity = requests.current;
     if (!user) return;
     let cancelled = false;
-    const ticket = requests.start("plans", user.uid);
+    const ticket = requestsIdentity.start("plans", user.uid);
     async function load() {
       setError(null);
       try {
         const [planList, active] = await Promise.all([fetchPlans(), fetchActivePlans()]);
-        if (cancelled || !requests.current(ticket, auth.currentUser?.uid ?? null)) return;
+        if (cancelled || !requestsIdentity.current(ticket, auth.currentUser?.uid ?? null)) return;
         setPlans(planList);
         setActivePlans(active);
         if (active.length === 0) setTab('browse');
       } catch (err) {
-        if (!cancelled && requests.current(ticket, auth.currentUser?.uid ?? null)) setError(userMessage(err, PLANS_ERROR));
+        if (!cancelled && requestsIdentity.current(ticket, auth.currentUser?.uid ?? null)) setError(userMessage(err, PLANS_ERROR));
       }
     }
     load();
@@ -92,7 +94,7 @@ export default function PlansPage() {
   // Quran progress (lazy)
   const fetchQuranProgress = useCallback(async () => {
     if (!user || quranProgress) return;
-    const ticket = requests.start("progress", user.uid);
+    const ticket = requests.current.start("progress", user.uid);
     try {
       const token = await user.getIdToken();
       const res = await fetch(`${BACKEND_URL}/progress`, {
@@ -100,7 +102,7 @@ export default function PlansPage() {
       });
       if (!res.ok) throw new Error('Failed to load progress');
       const data = await res.json();
-      if (requests.current(ticket, auth.currentUser?.uid ?? null)) setQuranProgress(data);
+      if (requests.current.current(ticket, auth.currentUser?.uid ?? null)) setQuranProgress(data);
     } catch { /* non-critical */ }
   }, [user, quranProgress]);
 
@@ -127,8 +129,8 @@ export default function PlansPage() {
 
   const handleStart = async (planId) => {
     if (!user) return;
-    const ticket = requests.start("action", user.uid);
-    const current = () => requests.current(ticket, auth.currentUser?.uid ?? null);
+    const ticket = requests.current.start("action", user.uid);
+    const current = () => requests.current.current(ticket, auth.currentUser?.uid ?? null);
     setActionLoading(true);
     try {
       const token = await user.getIdToken();
@@ -152,8 +154,8 @@ export default function PlansPage() {
 
   const handleCompleteDay = async (planId, day) => {
     if (!user) return;
-    const ticket = requests.start("action", user.uid);
-    const current = () => requests.current(ticket, auth.currentUser?.uid ?? null);
+    const ticket = requests.current.start("action", user.uid);
+    const current = () => requests.current.current(ticket, auth.currentUser?.uid ?? null);
     setActionLoading(true);
     try {
       const token = await user.getIdToken();

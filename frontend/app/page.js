@@ -88,7 +88,7 @@ export default function HomePage() {
     };
   }, []);
 
-  const profileRequests = useRef(createRequestIdentity()).current;
+  const profileRequests = useRef(createRequestIdentity());
   const authGeneration = useRef(0);
   const lastAuthUid = useRef(undefined);
   const authEpoch = authGeneration.current;
@@ -100,7 +100,7 @@ export default function HomePage() {
 
   const fetchUserProfile = async (currentUser) => {
     if (!currentUser) return;
-    const ticket = profileRequests.start("profile", currentUser.uid);
+    const ticket = profileRequests.current.start("profile", currentUser.uid);
     try {
       const token = await currentUser.getIdToken();
       const response = await fetch(`${BACKEND_URL}/get_profile`, {
@@ -108,7 +108,7 @@ export default function HomePage() {
       });
       if (!response.ok) throw new Error('Network error fetching profile');
       const data = await response.json();
-      if (!profileRequests.current(ticket, auth.currentUser?.uid ?? null)) return;
+      if (!profileRequests.current.current(ticket, auth.currentUser?.uid ?? null)) return;
       reportBackendSuccess();
       if (data?.is_new_user) {
         // New user — no profile yet, will proceed to onboarding
@@ -124,12 +124,13 @@ export default function HomePage() {
   };
 
   useEffect(() => {
+    const profileRequestsIdentity = profileRequests.current;
     let isMounted = true;
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (!isMounted) return;
-      profileRequests.reset();
+      profileRequestsIdentity.reset();
       authGeneration.current += 1;
-      const authTicket = profileRequests.start("auth", currentUser?.uid ?? null);
+      const authTicket = profileRequestsIdentity.start("auth", currentUser?.uid ?? null);
       const previousUid = lastAuthUid.current;
       lastAuthUid.current = currentUser?.uid ?? null;
       setUserProfile(null); setIsGuest(false); setIsLoading(true);
@@ -141,11 +142,11 @@ export default function HomePage() {
         if (previousUid) clearSearchState();
         setUserProfile(null);
       }
-      if (profileRequests.current(authTicket, auth.currentUser?.uid ?? null)) setIsLoading(false);
+      if (profileRequestsIdentity.current(authTicket, auth.currentUser?.uid ?? null)) setIsLoading(false);
     });
     return () => {
       isMounted = false;
-      profileRequests.reset();
+      profileRequestsIdentity.reset();
       unsubscribe();
     };
   }, [refreshKey]);
@@ -994,14 +995,14 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
   const pendingShareRequest = useRef(null);
   const answerGeneration = useRef(0);
   const answerQuery = useRef(query);
-  const searchRequests = useRef(createRequestIdentity()).current;
+  const searchRequests = useRef(createRequestIdentity());
   useEffect(() => {
     answerGeneration.current += 1;
     setCurrentShareId(null);
     pendingShareRequest.current = null;
   }, [response]);
   useEffect(() => () => {
-    searchRequests.reset();
+    searchRequests.current.reset();
     answerGeneration.current += 1;
     abortControllerRef.current?.abort();
     clearTimeout(searchTimeoutRef.current);
@@ -1116,7 +1117,7 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
       setQuery(savedState.query);
       setResponse(savedState.response);
     }
-  }, []);
+  }, [user?.uid]);
 
   // Handle URL parameters (for history re-run functionality)
   useEffect(() => {
@@ -1155,7 +1156,7 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
     if (response && query) {
       saveSearchState(answerQuery.current, approach, response, user?.uid || 'guest');
     }
-  }, [response, query, approach]);
+  }, [response, query, approach, user?.uid]);
 
   // Define handler functions BEFORE keyboard shortcuts useEffect that references them
   const handleNewSearch = useCallback(() => {
@@ -1170,9 +1171,9 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
   // Open folder picker before saving
   const handleSaveSearch = useCallback(async () => {
     if (!response || !query || !user) return;
-    const ticket = searchRequests.start('folders', user.uid);
+    const ticket = searchRequests.current.start('folders', user.uid);
     const generation = answerGeneration.current;
-    const current = () => searchRequests.current(ticket, auth.currentUser?.uid ?? null) && generation === answerGeneration.current;
+    const current = () => searchRequests.current.current(ticket, auth.currentUser?.uid ?? null) && generation === answerGeneration.current;
     setExistingFolders([]);
     // Folder summaries are small; read every page so later names stay available.
     const names = new Set();
@@ -1362,8 +1363,8 @@ function MainAppContent({ user, userProfile, onResetProfile, isGuest = false, on
 
     const controller = new AbortController();
     abortControllerRef.current = controller;
-    const ticket = searchRequests.start('search', user?.uid ?? null);
-    const current = () => searchRequests.current(ticket, auth.currentUser?.uid ?? null) && abortControllerRef.current === controller;
+    const ticket = searchRequests.current.start('search', user?.uid ?? null);
+    const current = () => searchRequests.current.current(ticket, auth.currentUser?.uid ?? null) && abortControllerRef.current === controller;
     answerGeneration.current += 1;
     setCurrentShareId(null);
     pendingShareRequest.current = null;
@@ -2890,17 +2891,18 @@ function EnhancedResultsDisplay({
   onGeneralReflection,
   onGuestSignUp
 }) {
-  const annotationRequests = useRef(createRequestIdentity()).current;
+  const annotationRequests = useRef(createRequestIdentity());
   useEffect(() => {
-    annotationRequests.reset();
-    return () => annotationRequests.reset();
+    const annotationRequestsIdentity = annotationRequests.current;
+    annotationRequestsIdentity.reset();
+    return () => annotationRequestsIdentity.reset();
   }, [data, user?.uid]);
 
   // All state and hooks now come from MainApp via props
   // Local state and useTextSelection hook removed
 
   const fetchVerseAnnotations = useCallback(async (surah, verse) => {
-    const ticket = annotationRequests.start(`${surah}:${verse}`, user?.uid ?? null);
+    const ticket = annotationRequests.current.start(`${surah}:${verse}`, user?.uid ?? null);
     try {
       const token = await user.getIdToken();
       const res = await fetch(`${BACKEND_URL}/annotations/verse/${surah}/${verse}`, {
@@ -2909,7 +2911,7 @@ function EnhancedResultsDisplay({
 
       if (res.ok) {
         const data = await res.json();
-        if (!annotationRequests.current(ticket, auth.currentUser?.uid ?? null)) return;
+        if (!annotationRequests.current.current(ticket, auth.currentUser?.uid ?? null)) return;
         setAnnotations(prev => ({
           ...prev,
           [`${surah}:${verse}`]: data.annotations || []
@@ -2935,6 +2937,7 @@ function EnhancedResultsDisplay({
 
   // Fetch annotations for all verses when component mounts (batch)
   useEffect(() => {
+    const annotationRequestsIdentity = annotationRequests.current;
     if (verses.length === 0 || !user) return;
 
     const surahNum = verses[0]?.surah;
@@ -2944,7 +2947,7 @@ function EnhancedResultsDisplay({
     const fromVerse = Math.min(...verseNums);
     const toVerse = Math.max(...verseNums);
 
-    const ticket = annotationRequests.start("batch", user.uid);
+    const ticket = annotationRequestsIdentity.start("batch", user.uid);
     async function fetchBatchAnnotations() {
       try {
         const token = await user.getIdToken();
@@ -2954,7 +2957,7 @@ function EnhancedResultsDisplay({
         );
         if (res.ok) {
           const data = await res.json();
-          if (!annotationRequests.current(ticket, auth.currentUser?.uid ?? null)) return;
+          if (!annotationRequestsIdentity.current(ticket, auth.currentUser?.uid ?? null)) return;
           const batchResult = {};
           for (const [verseKey, anns] of Object.entries(data.annotations || {})) {
             batchResult[`${surahNum}:${verseKey}`] = anns;
@@ -2962,7 +2965,7 @@ function EnhancedResultsDisplay({
           setAnnotations(prev => ({ ...prev, ...batchResult }));
         }
       } catch {
-        if (!annotationRequests.current(ticket, auth.currentUser?.uid ?? null)) return;
+        if (!annotationRequestsIdentity.current(ticket, auth.currentUser?.uid ?? null)) return;
         // Batch annotation fetch failed — fall back to individual fetches
         verses.forEach(verse => {
           fetchVerseAnnotations(verse.surah, verse.verse_number);

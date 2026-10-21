@@ -13,7 +13,7 @@ import BottomNav from '../components/BottomNav';
 import { reportBackendFailure, reportBackendSuccess } from '../lib/backendHealth';
 
 export default function SavedSearchesPage() {
-  const requests = useRef(createRequestIdentity()).current;
+  const requests = useRef(createRequestIdentity());
   const [snapshot, setSnapshot] = useState(null);
   const [folderCursor, setFolderCursor] = useState(null);
   const [nextCursor, setNextCursor] = useState(null);
@@ -26,24 +26,25 @@ export default function SavedSearchesPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    const requestsIdentity = requests.current;
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      requests.reset(); setNextCursor(null); setSnapshot(null); setFolderCursor(null);
-      const authTicket = requests.start("auth", currentUser?.uid ?? null);
+      requestsIdentity.reset(); setNextCursor(null); setSnapshot(null); setFolderCursor(null);
+      const authTicket = requestsIdentity.start("auth", currentUser?.uid ?? null);
       setSaved([]); setFolders([]); setSelectedFolder(null); setDeleteTarget(null); setDeleteError(null); setLoadError(null);
       setIsLoading(true);
       setUser(currentUser);
       if (currentUser) {
         await Promise.all([fetchSaved(currentUser), fetchFolders(currentUser)]);
       }
-      if (requests.current(authTicket, auth.currentUser?.uid ?? null)) setIsLoading(false);
+      if (requestsIdentity.current(authTicket, auth.currentUser?.uid ?? null)) setIsLoading(false);
     });
-    return () => { requests.reset(); unsubscribe(); };
+    return () => { requestsIdentity.reset(); unsubscribe(); };
   }, []);
 
   const fetchSaved = async (currentUser, folder = null, cursor = null) => {
     if (!cursor) setNextCursor(null);
-    const ticket = requests.start('saved', currentUser?.uid ?? null);
-    const current = () => requests.current(ticket, auth.currentUser?.uid ?? null);
+    const ticket = requests.current.start('saved', currentUser?.uid ?? null);
+    const current = () => requests.current.current(ticket, auth.currentUser?.uid ?? null);
     setLoadError(null); setNeedsSignIn(false);
     try {
       const token = await currentUser.getIdToken();
@@ -73,8 +74,8 @@ export default function SavedSearchesPage() {
   };
 
   const fetchFolders = async (currentUser, cursor = null) => {
-    const ticket = requests.start('folders', currentUser?.uid ?? null);
-    const current = () => requests.current(ticket, auth.currentUser?.uid ?? null);
+    const ticket = requests.current.start('folders', currentUser?.uid ?? null);
+    const current = () => requests.current.current(ticket, auth.currentUser?.uid ?? null);
     setLoadError(null); setNeedsSignIn(false);
     try {
       const token = await currentUser.getIdToken();
@@ -103,8 +104,8 @@ export default function SavedSearchesPage() {
 
   const handleDelete = async (id) => {
     // One ticket per item, so a second delete cannot make the first look stale.
-    const ticket = requests.start(`delete:${id}`, user?.uid ?? null);
-    const current = () => requests.current(ticket, auth.currentUser?.uid ?? null);
+    const ticket = requests.current.start(`delete:${id}`, user?.uid ?? null);
+    const current = () => requests.current.current(ticket, auth.currentUser?.uid ?? null);
     setDeleteError(null);
     try {
       const token = await user.getIdToken();
@@ -132,16 +133,16 @@ export default function SavedSearchesPage() {
   };
 
   const viewSavedAnswer = async (item) => {
-    const ticket = requests.start('snapshot', user?.uid ?? null);
+    const ticket = requests.current.start('snapshot', user?.uid ?? null);
     setSnapshot(null); setLoadError(null);
     try {
       const token = await user.getIdToken();
       const res = await fetch(`${BACKEND_URL}/saved-searches/${encodeURIComponent(item.id)}`, { headers: { Authorization: `Bearer ${token}` } });
       if (!res.ok) throw await requestErrorFrom(res);
       const data = await res.json();
-      if (requests.current(ticket, auth.currentUser?.uid ?? null)) setSnapshot(data);
+      if (requests.current.current(ticket, auth.currentUser?.uid ?? null)) setSnapshot(data);
     } catch (err) {
-      if (requests.current(ticket, auth.currentUser?.uid ?? null)) { setNeedsSignIn(err.status === 401); setLoadError(userMessage(err, 'This saved answer could not be loaded. Please try again.')); }
+      if (requests.current.current(ticket, auth.currentUser?.uid ?? null)) { setNeedsSignIn(err.status === 401); setLoadError(userMessage(err, 'This saved answer could not be loaded. Please try again.')); }
     }
   };
 

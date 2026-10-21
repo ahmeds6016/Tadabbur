@@ -13,7 +13,7 @@ import BottomNav from '../components/BottomNav';
 import BadgeDisplay from '../components/BadgeDisplay';
 
 export default function ProgressPage() {
-  const requests = useRef(createRequestIdentity()).current;
+  const requests = useRef(createRequestIdentity());
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [progress, setProgress] = useState(null);
@@ -22,23 +22,24 @@ export default function ProgressPage() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    const requestsIdentity = requests.current;
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      requests.reset();
-      const authTicket = requests.start("auth", currentUser?.uid ?? null);
+      requestsIdentity.reset();
+      const authTicket = requestsIdentity.start("auth", currentUser?.uid ?? null);
       setProgress(null); setReflectionCount(0); setStreak({ current_streak: 0, longest_streak: 0 }); setError(null);
       setIsLoading(true);
       setUser(currentUser);
       if (currentUser) {
         await fetchProgress(currentUser);
       }
-      if (requests.current(authTicket, auth.currentUser?.uid ?? null)) setIsLoading(false);
+      if (requestsIdentity.current(authTicket, auth.currentUser?.uid ?? null)) setIsLoading(false);
     });
-    return () => { requests.reset(); unsubscribe(); };
+    return () => { requestsIdentity.reset(); unsubscribe(); };
   }, []);
 
   const fetchProgress = async (currentUser) => {
-    const ticket = requests.start('progress', currentUser?.uid ?? null);
-    const current = () => requests.current(ticket, auth.currentUser?.uid ?? null);
+    const ticket = requests.current.start('progress', currentUser?.uid ?? null);
+    const current = () => requests.current.current(ticket, auth.currentUser?.uid ?? null);
     try {
       const token = await currentUser.getIdToken();
       const headers = { Authorization: `Bearer ${token}` };
