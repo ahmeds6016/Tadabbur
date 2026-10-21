@@ -196,6 +196,63 @@ Q14. **✅ DEPLOYED 2026-08-13 — Reliability quick wins**
 
 ## Session log
 
+### 2026-10-21 — Claude: Session 13 DEPLOYED (pipeline 17.0); reflections encrypted; privacy notice published
+
+- **Ahmed's decisions (2026-10-21):** privacy contact is his personal address; deletion
+  markers are removed 30 days after deletion completes; public share links stay after account
+  deletion (they hold no account details) and are removed on request; logs follow Google
+  Cloud's 30-day default; budget $30/month; go-ahead for the encryption key, the migration and
+  the deploy.
+- **Privacy (`750ea8d`):** `/privacy` is final (no draft wording or placeholders). Each claim
+  was checked against production: feedback GitHub/SMTP exports are not configured; both
+  projects keep `_Default` logs 30 days; reCAPTCHA guards only sign-in/sign-up. Completed
+  deletions now set `expires_at` (+30 days) on `account_deletions/{sha256(uid)}`; a Firestore
+  TTL policy on `account_deletions.expires_at` (`(default)` DB) removes them. Unfinished jobs
+  have no expiry, because the marker gates the half-erased account.
+- **Encryption:** Secret Manager `reflection-encryption-key` (project `tafsir-simplified`,
+  version 1, `versionDestroyTtl` 30 days, runtime SA `secretAccessor`). Local backup:
+  `secret/reflection-encryption-key.txt` (gitignored, mode 600). **Never delete or rotate it
+  without a migration** — the encrypted reflections cannot be read without it. Production
+  never had a key before, so there was no legacy ciphertext. Migration applied after the
+  backend switch: **48 documents written**; a rerun finds 0; all 26 annotation fields decrypt
+  with the live key, 0 plaintext left.
+- **Canary `tafsir-backend-r-20261021065435-1426`:** golden harness (guest, 6 verses) 5/6.
+  The miss is 93:3 `reflection_prompt lacks a verse-linked token`: the prompt says
+  "abandonment"/"resting night" and the token list has "abandoned". This is a harness false
+  negative. Hadith attribution is live and correct, e.g. "narrated by Jundub; As cited in
+  al-Wahidi's Asbab al-Nuzul" (the review fixup working). Prompt and answer tokens match the
+  Oct 17 3.8 canary (2:255: 14,402 vs 14,400 prompt). Latency was 31–174s vs 18–44s on
+  Oct 17. This is Vertex, not us: a 3-sentence direct call took 26–34s at the time. 2:255's
+  first attempt hit the 120s timeout and the retry finished in 49s. Watch latency.
+- **ProxyFix verified live:** after 10 guest requests, 8 more with distinct spoofed
+  `X-Forwarded-For` all got 429. A request from a second real address (Cloud Build) on the
+  same instance got 200. Guests are keyed by their real address.
+- **Backend switched** with `--to-revisions <new>=100 --remove-tags`, then `--to-latest`;
+  the preflight passes. Smoke checks: `/health` healthy, `/daily-verse` and `/suggestions`
+  200, `/iman/config` 404 (gated), `/cache/analytics` 403, `/debug/routes` 404; no warnings
+  after the switch.
+- **Frontend `tafsir-frontend-r-20261021070905-14345`** (100%, verified by the script,
+  health smoke passed). Live `/privacy` has the contact address and no draft wording;
+  `/`, `/settings`, `/saved`, `/privacy` return 200; framing/HSTS/referrer headers and the
+  report-only CSP are present. Headless render at 390px: home and privacy pages fine, no
+  horizontal overflow. No ERROR logs on either service after the deploy. The TTL policy
+  `account_deletions.expires_at` is ACTIVE.
+- **Budget:** `Tadabbur monthly ($30)` (`8fb938d9-b42f-4c32-a351-ddc9f9852efd`) scoped to
+  both projects; emails at 50/90/100% actual and 100% forecast. The existing account-wide $75
+  budget is untouched. Enabled `billingbudgets.googleapis.com` on `tafsir-simplified`.
+  **No Vertex quota cap is possible:** `gemini-3.8-flash` runs on dynamic shared quota (no
+  per-model bucket to override). The ceilings are the in-process rate limits and Cloud Run
+  max 10 instances × concurrency 80. Lowering max-instances is the remaining lever if spend
+  ever spikes.
+- **Rollback caveat:** backend `00273-dpr` (pipeline 16.0) has no encryption key and does
+  not know the `fernet:v1:` prefix. Rolling back to it would show readers ciphertext in place
+  of their reflections. A rollback must redeploy that code with the secret, or roll forward.
+  Frontend rollback `00308-vbm` is safe against the new backend (progress briefly shows 0
+  reflections).
+- **Still open:** OPS-01 restore drill + runbook; Session 14 to GPT; Ahmed: `sudo
+  xcode-select -s /Applications/Xcode.app/Contents/Developer`, iOS device test; App Store
+  Guideline 4.2 native value.
+
 ### 2026-10-21 — Codex: Session 14 review follow-ups (NOT deployed)
 
 - Branch: `codex/s14-followups`, from current `main` after `git pull --ff-only`.
