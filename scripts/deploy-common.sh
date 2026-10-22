@@ -63,4 +63,11 @@ printf '%s' "$HEALTH_RESPONSE" | python3 "$VERIFY" check-health
 if [[ "$NO_TRAFFIC" == 1 ]]; then
   echo "NOTE: gcloud has now pinned production traffic to the previously serving revision." >&2
   echo "The next normal deploy will refuse to run until traffic is switched; see AI.md (3.6 -> 3.8 migration notes)." >&2
+else
+  # The tag existed only for the smoke check. Left in place it would keep this revision
+  # publicly reachable after later deploys replace it, old bugs included. A canary keeps
+  # its tag until the traffic switch removes it.
+  gcloud run services update-traffic "$SERVICE_NAME" --project "$PROJECT_ID" --region "$REGION" \
+    --remove-tags "$REVISION_SUFFIX" --format='none'
+  python3 "$VERIFY" preflight --project "$PROJECT_ID" --region "$REGION" --service "$SERVICE_NAME"
 fi

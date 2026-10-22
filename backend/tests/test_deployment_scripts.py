@@ -44,6 +44,13 @@ elif args[:3] == ['run', 'services', 'describe'] and 'revision' not in state:
     else:
         traffic = [{'revisionName': 'old-revision', 'percent': 100, 'latestRevision': True}]
     output({'status': {'traffic': traffic, 'latestReadyRevisionName': 'old-revision'}})
+elif args[:3] == ['run', 'services', 'update-traffic']:
+    state['removed_tags'] = value('--remove-tags'); save()
+elif args[:3] == ['run', 'services', 'describe'] and 'removed_tags' in state:
+    # After the smoke tag is removed: traffic must still follow LATEST.
+    entry = {'revisionName': state['revision'], 'percent': 100}
+    if scenario != 'pinned-after-untag': entry['latestRevision'] = True
+    output({'status': {'traffic': [entry], 'latestReadyRevisionName': state['revision']}})
 elif args[:3] == ['run', 'services', 'describe']:
     percent = 0 if state['no_traffic'] or scenario in ['pinned', 'canary-latest'] else 100
     if scenario == 'unexpected-canary-traffic': percent = 100
@@ -98,6 +105,7 @@ def run_entrypoint(tmp_path, service, scenario, flag):
     ('unexpected-canary-traffic', '--no-traffic', 'expected 0%'),
     ('old-latest-good-traffic', None, 'traffic=100%'),
     ('pre-pinned', None, 'is pinned'),
+    ('pinned-after-untag', None, 'is pinned'),
 ])
 def test_entrypoints_verify_created_digest_readiness_and_actual_traffic(tmp_path, service, scenario, flag, expected):
     result, state = run_entrypoint(tmp_path, service, scenario, flag)
@@ -105,13 +113,17 @@ def test_entrypoints_verify_created_digest_readiness_and_actual_traffic(tmp_path
     assert (result.returncode == 0) == successful, result.stdout + result.stderr
     assert expected in result.stdout + result.stderr
     deployed = json.loads(state.read_text()) if state.exists() else {}
-    if successful:
+    if successful or scenario == 'pinned-after-untag':
         assert deployed['curl_args'][-1] == 'https://offline.invalid/tag/health'
         assert '--fail' in deployed['curl_args'] and '--max-time' in deployed['curl_args']
         assert deployed['tag'] == deployed['revision'].removeprefix(deployed['service'] + '-')
         assert 'Health smoke passed' in result.stdout
+        # A production revision must not stay reachable through its smoke tag;
+        # a canary keeps its tag until the traffic switch.
+        assert deployed.get('removed_tags') == (None if flag else deployed['tag'])
     else:
         assert 'curl_args' not in deployed  # No smoke until verification passes.
+        assert 'removed_tags' not in deployed
     if scenario == 'pre-pinned':
         # Refused before building: no image was submitted and nothing was deployed.
         assert not state.exists() or 'image' not in json.loads(state.read_text())
