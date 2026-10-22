@@ -1,5 +1,54 @@
 # Prompts for GPT 5.6
 
+## Session 15 prompt (2026-10-21) — Session 14 review follow-ups (one branch, `codex/s15-followups`)
+
+---
+
+You are GPT 6, main coder for Tadabbur (Claude = architect/reviewer, Ahmed = owner).
+
+**First, a new rule (AI.md "One working tree per agent"):** never work in the shared checkout
+at `~/Desktop/Tadabbur`. Create your own worktree:
+`git -C ~/Desktop/Tadabbur fetch && git -C ~/Desktop/Tadabbur worktree add ../Tadabbur-codex -b codex/s15-followups origin/main`
+and work only there. On 2026-10-21 Session 14 ran in the shared checkout while Claude was
+deploying; your unfinished `app.py` was swept into Claude's commit and shipped to production.
+Claude restored production; you did nothing wrong under the old rules, which no longer apply.
+
+Read the top HANDOFF entries (Claude's Session 14 review and the incident). Session 14 is
+merged on `main` with Claude's fixup `1856037` (the deploy scripts remove the smoke tag from
+production revisions); keep it. Baseline: 661 backend tests, 29 frontend tests, build 15/15,
+lint clean. Same global rules (no deploys, no cloud or paid calls, no new dependencies, AI.md
+conventions, Ahmed's tone rules). Small commits; each item needs a test that fails without it.
+
+1. **Deploy scripts refuse an unreviewable source.** `deploy-common.sh` uploads the working
+   directory, not a commit. Refuse to build when `git status --porcelain` is not empty
+   (tracked or untracked files), print the commit SHA being deployed, and record it on the
+   revision (`--labels commit-sha=<short sha>`). Stub `git` on PATH in
+   `test_deployment_scripts.py` as gcloud and curl already are; no override flag that skips
+   the check.
+2. **Parser: commas and "&" still drop a verse.** "2:255, 256" and "2:255 & 256" silently
+   return 2:255 only — the bug item 8 fixed for "and". Treat them like "and" (same-surah
+   range) or return a clarification. "2:255 and 2:256" currently says "Please provide a valid
+   end verse for the range"; treat a repeated same-surah reference as the range, and give
+   cross-surah lists ("2:255 and 3:1") a clear one-verse-or-one-range message. Add all of
+   these to the parser table test.
+3. **Delete and Load-more races (found by Claude's review agent; already in production).**
+   `app/annotations/page.js:199-203` and `app/saved/page.js:119-123`:
+   (a) cursor repair after a delete compares against the cursor and list captured when Delete
+   was clicked. Delete the cursor item, click Load more before the DELETE returns, and the
+   cursor rewinds, duplicating page 2. Repair inside the functional update, against the
+   current cursor;
+   (b) the index-0 repair re-runs the search or filters captured at click time. If the reader
+   changed search, tag or type meanwhile, the old list replaces the new one. Re-run the
+   current mode, or skip the repair when the mode changed. Probes reproducing both are in
+   Claude's scratchpad; write your own as frontend tests.
+4. **Golden harness false negative.** `tests/golden_regression.py` failed 93:3 because the
+   reflection used "abandonment" and the token list has "abandoned". Match on word stems or
+   prefixes so inflections count, and keep the check able to fail on a generic prompt.
+
+Finish with the usual table (item | commit | test | deploy-needed backend/frontend/none).
+
+---
+
 ## Session 14 prompt (2026-10-20) — Session 13 review follow-ups (one branch, `codex/s14-followups`)
 
 ---

@@ -196,6 +196,40 @@ Q14. **✅ DEPLOYED 2026-08-13 — Reliability quick wins**
 
 ## Session log
 
+### 2026-10-21 — Claude: Session 14 reviewed and MERGED with one fixup (NOT deployed)
+
+- **Merged** `codex/s14-followups` via review branch `claude/s14-review` (merge of `main` +
+  fixup `1856037`). Checks on the merged tree: **661 backend tests, 29 frontend tests, lint
+  clean, build 15/15**, shell syntax OK. Verdict: approve with one fixup.
+- **Claude reviewed the backend and deploy scripts.**
+  * Badges: the header carries only IDs, only for the signed-in reader, and the response is
+    `private, no-store` with `Vary: Authorization`. Study awards run inside the progress
+    transaction, with reads before writes. Plan completion commits before the study
+    transaction, so plan badges are still awarded.
+  * Collection backfill matches the `"surah:verse"` keys on both sides. `/badges` totals
+    count only defined IDs.
+  * `VerseStoreUnavailable` reaches the registered 503 handler (`Retry-After`, request ID).
+  * Parser: "and" works as specified. Commas and "&" still drop a verse; queued as Session 15
+    item 2.
+- **Fixup `1856037` (Claude):** Session 14 tagged every normal deploy for the health smoke
+  and never removed the tag, so each replaced production revision would stay publicly
+  reachable at its tag URL. It had already happened: the accidental Session 14 frontend
+  (`r-20261021070905-14345`) was still reachable. Claude removed that tag live (routing
+  unchanged, LATEST 100%, old URL now 404); removing a tag alone does not pin traffic. The
+  scripts now untag after the smoke and re-run the preflight. 6 deploy tests fail on the old
+  script.
+- **A review agent took the frontend: no regressions.** It confirmed all six claims with 15
+  extra probes against the real components. The hook refactor keeps one request identity per
+  page (A→B and A→out→A late responses are dropped). Share, owner-scoped search state, delete
+  tickets and sign-out clearing all still hold. It confirmed two LOW races **already in
+  production** (delete then Load more or a filter change); queued as Session 15 item 3.
+- **Deploy (not done; needs Ahmed's OK):** no prompt, model or cache-identity change, so no
+  paid canary. Backend first, then frontend, both normal deploys from a clean worktree at
+  `main`. These are the first deploys to run the health smoke and the untagging.
+- **Session 15 issued** (`docs/PROMPT-GPT56.md`): GPT must use its own worktree; deploy
+  scripts refuse a dirty tree and label the commit SHA; parser commas and "&"; the delete
+  races; the golden token-stem false negative.
+
 ### 2026-10-21 — Claude: INCIDENT RESOLVED — production restored to the reviewed Session 13 + privacy build
 
 - **Ahmed chose (A).** Redeployed from the clean worktree at `6c91191` (now `main`):
