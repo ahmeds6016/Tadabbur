@@ -196,14 +196,67 @@ Q14. **✅ DEPLOYED 2026-08-13 — Reliability quick wins**
 
 ## Session log
 
-### 2026-10-21 — Claude: Session 13 DEPLOYED (pipeline 17.0); reflections encrypted; privacy notice published
+### 2026-10-21 — Claude: INCIDENT RESOLVED — production restored to the reviewed Session 13 + privacy build
+
+- **Ahmed chose (A).** Redeployed from the clean worktree at `6c91191` (now `main`):
+  backend **`tafsir-backend-r-20261021073136-24731`**, frontend
+  **`tafsir-frontend-r-20261021085449-10333`**, both 100%, verified by the scripts.
+  The live backend upload matches `6c91191` exactly (0 differing tracked files; no
+  `_badge_updates`). Smoke checks: `/health` healthy, `/daily-verse` 200, `/iman/config`
+  404, `/cache/analytics` 403; 2:255 served `hit-firestore` in 1.6s with the correct hadith
+  attribution (cache identity unchanged). Frontend `/`, `/settings`, `/saved`, `/privacy`
+  200; privacy contact and security headers present; `/health` 404 is expected (a Session
+  14 route). No errors on either service.
+- **Session 14 is now a normal review:** branch `codex/s14-followups`, not deployed. It
+  already contains Claude's privacy work (`750ea8d` etc.), so merging it into `main` should
+  produce a HANDOFF conflict only.
+- The local `main` ref in the shared checkout was not fast-forwarded (the permission
+  classifier refused it); `origin/main` is correct. Run `git pull` before the next session.
+
+### 2026-10-21 — Claude: INCIDENT — the Session 13 deploy shipped unreviewed Session 14 code; Ahmed to decide
+
+- **What happened:** Ahmed started Codex on Session 14 while Claude was deploying. At 01:52
+  (local) Codex ran `git checkout -b codex/s14-followups` **in the shared checkout**.
+  Claude's privacy commit (01:53, `750ea8d`) staged the whole `backend/app.py`, sweeping in
+  ~200 lines of Codex's unfinished Session 14 items 4–7. Both deploy scripts upload the
+  working directory, not a commit, and Codex kept committing there.
+- **Exactly what is live** (proven by downloading both Cloud Build source tarballs and
+  comparing every tracked file):
+  * backend `tafsir-backend-r-20261021065435-1426` = commit **`eba6f8c`**: Session 13 +
+    privacy + Session 14 items 4–7 (badges awarded inside the study transaction, collection
+    backfill, write skipping, `/badges` total, `/progress` count reconcile on every GET);
+  * frontend `tafsir-frontend-r-20261021070905-14345` = commit **`c37817a`**: all of
+    Session 14's frontend + privacy.
+  Neither Session 14 part has been reviewed.
+- **Impact so far: none observed.** Since the switch, the only backend traffic is Claude's
+  smoke checks. The live frontend reads `X-Newly-Earned-Badges`, which this backend does not
+  send, so the badge popup stays silent (it already was). Firestore 2.18.0 supports
+  aggregation queries in transactions, so `/progress` reconcile should work. No errors.
+  The golden canary, ProxyFix check and migration below were all run against this build;
+  none depend on the Session 14 code.
+- **Clean state prepared, not deployed:** branch `claude/s13-deploy-clean` = `a625aab` +
+  only Claude's privacy changes (`258fefc`) + these docs. It passes 605 backend tests, all
+  frontend tests and build 15/15. It is local only: pushing it and moving `main` here were
+  also blocked, so `main` is still `a625aab`. The redeploy of this tree was
+  **blocked by the permission classifier** as a new production deploy, so Ahmed decides:
+  (A) redeploy this clean tree now (no paid calls; Session 14 then follows a normal review),
+  or (B) Claude reviews Session 14 first and deploys `codex/s14-followups` if it passes.
+- **Git state:** `codex/s14-followups` (Codex's branch, still checked out in the shared
+  checkout) contains Claude's `750ea8d`, `c37817a`, `3376161` interleaved with the
+  Session 14 commits. Review it as one branch. Expect a HANDOFF conflict on merge
+  (both put entries on top).
+- **Prevention (AI.md rule):** one working tree per agent; Claude deploys only from a clean
+  worktree at a reviewed, pushed commit. Session 15 candidate: deploy scripts refuse a dirty
+  tree and label the revision with the commit SHA.
+
+### 2026-10-21 — Claude: Session 13 DEPLOYED (pipeline 17.0); reflections encrypted; privacy notice published (see INCIDENT above)
 
 - **Ahmed's decisions (2026-10-21):** privacy contact is his personal address; deletion
   markers are removed 30 days after deletion completes; public share links stay after account
   deletion (they hold no account details) and are removed on request; logs follow Google
   Cloud's 30-day default; budget $30/month; go-ahead for the encryption key, the migration and
   the deploy.
-- **Privacy (`750ea8d`):** `/privacy` is final (no draft wording or placeholders). Each claim
+- **Privacy (`258fefc` on main; `750ea8d` on the Session 14 branch):** `/privacy` is final (no draft wording or placeholders). Each claim
   was checked against production: feedback GitHub/SMTP exports are not configured; both
   projects keep `_Default` logs 30 days; reCAPTCHA guards only sign-in/sign-up. Completed
   deletions now set `expires_at` (+30 days) on `account_deletions/{sha256(uid)}`; a Firestore
